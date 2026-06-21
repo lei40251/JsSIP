@@ -1,8 +1,8 @@
 /* eslint-disable no-console */
 const assert = require('assert');
-const MediaEffectsComposer = require('../lib/MediaEffectsComposer');
+const MediaEffectsComposer = require('../lib/MediaEffectsComposer/MediaEffectsComposer');
 const ComposerConfig = require('../lib/MediaEffectsComposer/ComposerConfig');
-const WatermarkManager = require('../lib/MediaEffectsComposer/WatermarkManager');
+const Watermark = require('../lib/MediaEffectsComposer/Watermark');
 const WorkerRenderer = require('../lib/MediaEffectsComposer/renderers/WorkerRenderer');
 const workerScript = require('../lib/MediaEffectsComposer/renderers/workerScript');
 const vm = require('vm');
@@ -2388,7 +2388,7 @@ async function testWatermarkPresetAndCoordinatePositions()
 {
   resetMockState();
 
-  const manager = new WatermarkManager();
+  const manager = new Watermark();
 
   await manager.setWatermarks([
     { id: 'top-center', text: 'AB', position: 'top-center', margin: 10 },

@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.3.20266211357
+ * CRTC v2.0.3.20266212151
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -183,397 +183,7 @@ exports.normalizeAssetConfig = function (assetConfig) {
   }
   return Object.keys(normalized).length > 0 ? normalized : null;
 };
-},{"../Logger":45}],2:[function(require,module,exports){
-"use strict";
-
-var Logger = require('../Logger');
-var issueUtils = require('../MediaEffectsIssue');
-var AiNSConfig = require('./AiNSConfig');
-var AiNSWorkletRuntime = require('./AiNSWorkletRuntime');
-var logger = new Logger('AiNSMediaStreamProcessor');
-var getErrorMessage = issueUtils.getErrorMessage;
-function isAiNSSupported() {
-  return typeof AudioContext !== 'undefined' && typeof AudioWorkletNode !== 'undefined' && typeof WebAssembly !== 'undefined';
-}
-
-/**
- * AiNS 的 MediaStream 处理器。
- *
- * 职责：
- * 1. 接收原始 MediaStream / MediaStreamTrack；
- * 2. 搭建 AudioContext -> MediaStreamSource -> AudioWorkletNode -> Destination 图；
- * 3. 输出一个新的、可直接送入 JsSIP/RTCSession 的降噪后 MediaStream；
- * 4. 负责 AudioContext 和音频节点的生命周期。
- *
- * 这个类是“音频图编排层”，不会关心 RTCSession 之类的会话状态。
- */
-module.exports = class AiNSMediaStreamProcessor {
-  /**
-   * @param {Object} [options]
-   * @param {boolean} [options.enabled=true]
-   * @param {boolean} [options.preserveOtherTracks=true]
-   * @param {number} [options.sampleRate=48000]
-   * @param {number} [options.noiseReductionLevel=80]
-   * @param {Object} [options.assetConfig]
-   */
-  constructor(options = {}) {
-    this._onIssue = typeof options.onIssue === 'function' ? options.onIssue : null;
-    var normalizedOptions = AiNSConfig.create(options);
-    this.name = 'ai-noise-suppression-media-stream-processor';
-    this.processedTrack = null;
-    this.processedStream = null;
-    this.audioContext = null;
-    this.sourceNode = null;
-    this.workletNode = null;
-    this.destination = null;
-    this.enabled = normalizedOptions.enabled;
-    this.originalTrack = null;
-    this.originalStream = null;
-    this.preserveOtherTracks = normalizedOptions.preserveOtherTracks;
-    this.config = normalizedOptions;
-    this.processor = new AiNSWorkletRuntime({
-      sampleRate: normalizedOptions.sampleRate,
-      noiseReductionLevel: normalizedOptions.noiseReductionLevel,
-      assetConfig: normalizedOptions.assetConfig,
-      onIssue: this._reportIssue.bind(this)
-    });
-    logger.debug(`constructor: ${JSON.stringify(this.config)}`);
-  }
-
-  /**
-   * 内部异常报告方法。
-   *
-   * 将 AiNSWorkletRuntime 上报的问题统一格式化后记录日志，并根据 severity 级别
-   * 将问题通过 `onIssue` 回调向上传递给 AiNoiseSuppressionEngine。
-   *
-   * issue 对象包含以下字段：
-   * - module (string): 问题所属模块，如 'AiNS'
-   * - component (string): 报告问题的组件名，如 'AiNSMediaStreamProcessor'
-   * - stage (string): 问题发生的阶段，如 'audio-context-resume'
-   * - severity (string): 严重级别，可选值为 'debug' | 'warn' | 'error'
-   * - message (string): 问题描述信息
-   * - fallbackApplied (boolean): 是否已应用降级方案
-   * - degraded (boolean): 当前是否处于降级运行状态
-   * - details (object): 与问题相关的额外上下文信息
-   *
-   * 异常处理机制：
-   * - 日志记录：根据 severity 自动选择 logger.debug / logger.warn / logger.error
-   * - 向上传递：调用构造函数传入的 onIssue 回调，回调异常时会被 catch 后记录警告日志
-   * - 传参给下游时会将自身 _reportIssue 方法绑定后传给 AiNSWorkletRuntime，形成自底向上的问题上报链
-   *
-   * @param {Object} [issue] - 问题描述对象
-   */
-  _reportIssue(issue) {
-    if (!this._onIssue) return;
-    try {
-      this._onIssue(Object.assign({
-        component: 'AiNSMediaStreamProcessor',
-        severity: 'error'
-      }, issue));
-    } catch (e) {
-      logger.warn('AiNSMediaStreamProcessor issue callback failed: ' + (e.message || String(e)));
-    }
-  }
-
-  /**
-   * 浏览器能力检查。
-   *
-   * 只有同时具备：
-   * - AudioContext
-   * - AudioWorkletNode
-   * - WebAssembly
-   *
-   * 才认为当前环境可以跑 AI 降噪。
-   */
-  static isSupported() {
-    return isAiNSSupported();
-  }
-
-  /**
-   * 初始化处理图并返回降噪后的 MediaStream。
-   *
-   * @param {MediaStream|MediaStreamTrack} input
-   * @returns {Promise<MediaStream>}
-   */
-  async init(input) {
-    logger.debug('init()');
-    this.setInput(input);
-    await this.ensureGraph();
-    if (!this.processedStream) {
-      throw new Error('AiNSMediaStreamProcessor.init: failed to create processed MediaStream');
-    }
-    return this.processedStream;
-  }
-
-  /**
-   * 重启处理链。
-   *
-   * 用于切换输入流、切换麦克风或重新建图的场景。
-   *
-   * @param {MediaStream|MediaStreamTrack} [input]
-   * @returns {Promise<MediaStream>}
-   */
-  async restart(input) {
-    logger.debug(`restart(): hasNewInput=${Boolean(input)}`);
-    if (input) {
-      this.setInput(input);
-    }
-    return this.init(this.originalStream || this.originalTrack);
-  }
-
-  /**
-   * 用新的音频轨替换当前输入流中的音频轨。
-   *
-   * 若当前处理器已经绑定了一路包含视频的原始流，则会保留原来的非音频轨道，
-   * 只替换音频输入，方便 RTC 场景下切换麦克风或重新补音频轨。
-   *
-   * @param {MediaStream|MediaStreamTrack} input
-   * @returns {Promise<MediaStream>}
-   */
-  async replaceAudioTrack(input) {
-    logger.debug('replaceAudioTrack()');
-    var nextAudioTrack = this._getInputAudioTrack(input);
-    if (!nextAudioTrack) {
-      throw new Error('AiNSMediaStreamProcessor: replacement input has no audio track');
-    }
-    var nextStream = this._buildReplacedAudioStream(nextAudioTrack);
-    this.originalTrack = nextAudioTrack;
-    this.originalStream = nextStream;
-    await this.ensureGraph();
-    if (!this.processedStream) {
-      throw new Error('AiNSMediaStreamProcessor.replaceAudioTrack: failed to create processed MediaStream');
-    }
-    return this.processedStream;
-  }
-
-  /**
-   * 运行时开关 AI 降噪，不销毁图。
-   *
-   * @param {boolean} enable
-   * @returns {Promise<boolean>}
-   */
-  async setEnabled(enable) {
-    this.enabled = AiNSConfig.normalizeBoolean(enable, this.enabled);
-    logger.debug(`setEnabled(): enabled=${this.enabled}`);
-    this.processor.setNsEnabled(this.enabled);
-    return this.enabled;
-  }
-  setSuppressionLevel(level) {
-    var nextLevel = AiNSConfig.normalizeSuppressionLevel(level, this.config.noiseReductionLevel);
-    this.config.noiseReductionLevel = nextLevel;
-    logger.debug(`setSuppressionLevel(): level=${nextLevel}`);
-    this.processor.setSuppressionLevel(nextLevel);
-  }
-  isEnabled() {
-    return this.enabled;
-  }
-
-  /**
-   * 暂停 AudioContext，用于页面隐藏、临时节能等场景。
-   */
-  async suspend() {
-    logger.debug(`suspend(): state=${this.audioContext ? this.audioContext.state : 'none'}`);
-    if (this.audioContext && this.audioContext.state === 'running') {
-      await this.audioContext.suspend();
-    }
-  }
-
-  /**
-   * 恢复 AudioContext。
-   */
-  async resume() {
-    logger.debug(`resume(): state=${this.audioContext ? this.audioContext.state : 'none'}`);
-    if (this.audioContext && this.audioContext.state === 'suspended') {
-      await this.audioContext.resume();
-    }
-  }
-
-  /**
-   * 销毁完整处理图。
-   *
-   * 会释放：
-   * - source/worklet/destination 节点
-   * - AudioContext
-   * - Core 内部的 WorkletNode 引用
-   */
-  async destroy() {
-    logger.debug('destroy()');
-    await this.teardownGraph();
-    this.processor.destroy();
-    this.originalTrack = null;
-    this.originalStream = null;
-  }
-
-  /**
-   * 统一规范输入类型，允许传入整个流或单个音轨。
-   *
-   * @param {MediaStream|MediaStreamTrack} input
-   */
-  setInput(input) {
-    logger.debug(`setInput(): type=${this._getInputType(input)}`);
-    if (input instanceof MediaStream) {
-      var audioTrack = this._getInputAudioTrack(input);
-      if (!audioTrack) {
-        throw new Error('AiNSMediaStreamProcessor: input stream has no audio track');
-      }
-      this.originalStream = input;
-      this.originalTrack = audioTrack;
-      logger.debug(`setInput() stream resolved: audioTracks=${input.getAudioTracks().length} totalTracks=${input.getTracks().length}`);
-      return;
-    }
-    if (!input || input.kind !== 'audio') {
-      throw new Error('AiNSMediaStreamProcessor: input track must be audio');
-    }
-    this.originalTrack = input;
-    this.originalStream = new MediaStream([input]);
-    logger.debug('setInput() single audio track wrapped into MediaStream');
-  }
-  _getInputAudioTrack(input) {
-    if (input instanceof MediaStream) {
-      return input.getAudioTracks()[0] || null;
-    }
-    if (input && input.kind === 'audio') {
-      return input;
-    }
-    return null;
-  }
-  _getInputType(input) {
-    if (input instanceof MediaStream) {
-      return 'MediaStream';
-    }
-    if (input && typeof input.kind === 'string') {
-      return `MediaStreamTrack:${input.kind}`;
-    }
-    return typeof input;
-  }
-  _buildReplacedAudioStream(audioTrack) {
-    if (!this.originalStream) {
-      return new MediaStream([audioTrack]);
-    }
-    var outputTracks = [audioTrack];
-    this.originalStream.getTracks().forEach(track => {
-      if (track.kind !== 'audio') {
-        outputTracks.push(track);
-      }
-    });
-    return new MediaStream(outputTracks);
-  }
-
-  /**
-   * 真正创建或重建音频处理图。
-   *
-   * 调用顺序：
-   * 1. 保证 AudioContext 可用
-   * 2. 初始化 Core 资源
-   * 3. 创建 WorkletNode
-   * 4. 创建 source/destination
-   * 5. 连接整张图
-   * 6. 生成 processedStream
-   */
-  async ensureGraph() {
-    logger.debug('ensureGraph() start');
-    if (!this.originalTrack || !this.originalStream) {
-      throw new Error('AiNSMediaStreamProcessor: missing source audio track');
-    }
-    this.audioContext = this.audioContext || new AudioContext({
-      sampleRate: this.config.sampleRate
-    });
-    if (this.audioContext.state !== 'running') {
-      try {
-        await this.audioContext.resume();
-      } catch (error) {
-        logger.warn(`ensureGraph() | audioContext resume failed: ${getErrorMessage(error)}`);
-        this._reportIssue({
-          stage: 'audio-context-resume',
-          severity: 'warn',
-          message: getErrorMessage(error),
-          degraded: true,
-          details: {
-            contextState: this.audioContext ? this.audioContext.state : 'unknown',
-            sampleRate: this.audioContext ? this.audioContext.sampleRate : this.config.sampleRate
-          }
-        });
-      }
-    }
-    await this.processor.initialize();
-    if (!this.workletNode) {
-      this.workletNode = await this.processor.createAudioWorkletNode(this.audioContext);
-    }
-    if (!this.destination) {
-      this.destination = this.audioContext.createMediaStreamDestination();
-    }
-    if (this.sourceNode) {
-      this.sourceNode.disconnect();
-    }
-    this.sourceNode = this.audioContext.createMediaStreamSource(new MediaStream([this.originalTrack]));
-    this.sourceNode.connect(this.workletNode).connect(this.destination);
-    this.rebuildProcessedStream();
-    await this.setEnabled(this.enabled);
-    logger.debug(`ensureGraph() complete: contextState=${this.audioContext.state} preserveOtherTracks=${this.preserveOtherTracks}`);
-  }
-
-  /**
-   * 根据 destination 中的音轨重建最终输出流。
-   *
-   * 默认保留原始流中的非音频轨道，这样接入 RTCSession 时：
-   * - 音频会换成降噪后的轨
-   * - 视频轨仍沿用原始轨道
-   */
-  rebuildProcessedStream() {
-    if (!this.destination) {
-      throw new Error('AiNSMediaStreamProcessor: missing destination node');
-    }
-    var processedTrack = this.destination.stream.getAudioTracks()[0];
-    if (!processedTrack) {
-      throw new Error('AiNSMediaStreamProcessor: worklet destination did not produce an audio track');
-    }
-    this.processedTrack = processedTrack;
-    var outputTracks = [processedTrack];
-    if (this.preserveOtherTracks && this.originalStream) {
-      this.originalStream.getTracks().forEach(track => {
-        if (track.kind !== 'audio') {
-          outputTracks.push(track);
-        }
-      });
-    }
-    this.processedStream = new MediaStream(outputTracks);
-    logger.debug(`rebuildProcessedStream(): trackCount=${outputTracks.length}`);
-  }
-
-  /**
-   * 拆除音频图并尽量吞掉清理阶段的非关键异常。
-   *
-   * 这么做是为了避免会话结束时因个别节点状态异常而阻断整体清理流程。
-   */
-  async teardownGraph() {
-    logger.debug('teardownGraph() start');
-    try {
-      if (this.workletNode) {
-        this.workletNode.disconnect();
-        this.workletNode = null;
-      }
-      if (this.sourceNode) {
-        this.sourceNode.disconnect();
-        this.sourceNode = null;
-      }
-      if (this.destination) {
-        this.destination.disconnect();
-        this.destination = null;
-      }
-      if (this.audioContext) {
-        await this.audioContext.close();
-        this.audioContext = null;
-      }
-    } catch (error) {
-      logger.warn('teardownGraph() | ignore cleanup error', error);
-    } finally {
-      this.processedTrack = null;
-      this.processedStream = null;
-      logger.debug('teardownGraph() complete');
-    }
-  }
-};
-},{"../Logger":45,"../MediaEffectsIssue":69,"./AiNSConfig":1,"./AiNSWorkletRuntime":3}],3:[function(require,module,exports){
+},{"../Logger":37}],2:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
@@ -593,64 +203,46 @@ var WORKLET_EVENT_TYPES = {
 var getErrorMessage = issueUtils.getErrorMessage;
 
 /**
- * AiNS 资源地址解析与抓取辅助器。
- *
- * 负责把 assetConfig 中的 cdnUrl 展开成具体资源 URL，并执行 fetch。
+ * 根据 cdnUrl 拼接 WASM 和模型文件的完整 URL。
+ * @param {string} cdnUrl
+ * @returns {{wasm: string, model: string}}
  */
-class AiNSAssetLoader {
-  constructor(config = {}) {
-    this.cdnUrl = config.cdnUrl || DEFAULT_CDN_URL;
-  }
-  getAssetUrls() {
-    return {
-      wasm: this.getAssetUrl('ans.wasm'),
-      model: this.getAssetUrl('ans_onnx.tar.gz')
-    };
-  }
-  getAssetUrl(relativePath) {
-    return `${this.cdnUrl}/${relativePath}`;
-  }
+function getAssetUrls(cdnUrl) {
+  var base = cdnUrl || DEFAULT_CDN_URL;
+  return {
+    wasm: `${base}/ans.wasm`,
+    model: `${base}/ans_onnx.tar.gz`
+  };
+}
 
-  /**
-   * 获取 AI 降噪所需的静态资源（WASM / 模型文件）。
-   *
-   * 引入 DEFAULT_FETCH_TIMEOUT_MS 超时机制（默认 15000ms），解决弱网环境下
-   * fetch() 长时间挂起导致整个初始化流程卡死的问题。超时后 Promise 会被 reject，
-   * 由上层 initialize() 捕获并通过 _reportIssue 上报，最终业务侧可通过
-   * 'mediaEffectsIssue' 事件获知并执行降级。
-   *
-   * 实现细节：
-   * - 使用 Promise.race 竞速：fetch 请求 vs 超时 Promise
-   * - 超时 Promise 在 finally 块中通过 clearTimeout 清理，防止内存泄漏
-   * - 超时错误信息包含 URL 和超时毫秒数，方便排查
-   *
-   * @param {string} url - 资源 URL
-   * @returns {Promise<ArrayBuffer>}
-   */
-  async fetchAsset(url) {
-    logger.debug(`AiNSAssetLoader.fetchAsset() start: url=${url} timeoutMs=${DEFAULT_FETCH_TIMEOUT_MS}`);
-    var timeoutResolve = null;
-    var trackedTimeoutPromise = new Promise((_, reject) => {
-      var timerId = setTimeout(() => {
-        reject(new Error(`Timed out fetching asset after ${DEFAULT_FETCH_TIMEOUT_MS}ms: ${url}`));
-      }, DEFAULT_FETCH_TIMEOUT_MS);
-      timeoutResolve = () => clearTimeout(timerId);
-    });
-    var response = null;
-    try {
-      response = await Promise.race([fetch(url), trackedTimeoutPromise]);
-    } finally {
-      if (timeoutResolve) {
-        timeoutResolve();
-      }
-    }
-    if (!response.ok) {
-      throw new Error(`Failed to fetch asset: url=${url} status=${response.status} statusText=${response.statusText}`);
-    }
-    var bytes = await response.arrayBuffer();
-    logger.debug(`AiNSAssetLoader.fetchAsset() complete: url=${url} bytes=${bytes.byteLength}`);
-    return bytes;
+/**
+ * 带超时的资源 fetch。解决弱网环境下 fetch() 长时间挂起的问题。
+ *
+ * @param {string} url - 资源 URL
+ * @param {number} [timeoutMs=15000] - 超时毫秒
+ * @returns {Promise<ArrayBuffer>}
+ */
+async function fetchAsset(url, timeoutMs = DEFAULT_FETCH_TIMEOUT_MS) {
+  logger.debug(`fetchAsset() start: url=${url} timeoutMs=${timeoutMs}`);
+  var timeoutResolve = null;
+  var trackedTimeoutPromise = new Promise((_, reject) => {
+    var timerId = setTimeout(() => {
+      reject(new Error(`Timed out fetching asset after ${timeoutMs}ms: ${url}`));
+    }, timeoutMs);
+    timeoutResolve = () => clearTimeout(timerId);
+  });
+  var response = null;
+  try {
+    response = await Promise.race([fetch(url), trackedTimeoutPromise]);
+  } finally {
+    if (timeoutResolve) timeoutResolve();
   }
+  if (!response.ok) {
+    throw new Error(`Failed to fetch asset: url=${url} status=${response.status} statusText=${response.statusText}`);
+  }
+  var bytes = await response.arrayBuffer();
+  logger.debug(`fetchAsset() complete: url=${url} bytes=${bytes.byteLength}`);
+  return bytes;
 }
 
 /**
@@ -682,7 +274,7 @@ async function registerWorkletModule(audioContext, inlineCode) {
  * - 向 Worklet 发送运行时控制消息
  *
  * 它不直接处理 MediaStream，也不管理 AudioContext 生命周期。
- * MediaStream 图的搭建由 `AiNSMediaStreamProcessor` 负责。
+ * MediaStream 图的搭建由 `AiNoiseSuppressionEngine` 负责。
  */
 module.exports = class AiNSWorkletRuntime {
   /**
@@ -694,7 +286,7 @@ module.exports = class AiNSWorkletRuntime {
   constructor(config = {}) {
     var normalizedConfig = AiNSConfig.create(config);
     this._onIssue = typeof config.onIssue === 'function' ? config.onIssue : null;
-    this.assetLoader = new AiNSAssetLoader(normalizedConfig.assetConfig || {});
+    this._cdnUrl = normalizedConfig.assetConfig && normalizedConfig.assetConfig.cdnUrl || DEFAULT_CDN_URL;
     this.assets = null;
     this.workletNode = null;
     this.isInitialized = false;
@@ -712,7 +304,7 @@ module.exports = class AiNSWorkletRuntime {
    *
    * 将 Worklet 运行时层面的问题（资源拉取失败、Worklet 节点初始化失败、
    * Worklet 内部线程初始化失败等）统一格式化后记录日志，并通过 onIssue 回调
-   * 向上传递给 AiNSMediaStreamProcessor。
+   * 向上传递给 AiNoiseSuppressionEngine。
    *
    * 上报的问题类型包括：
    * - asset-fetch: WASM/模型资源拉取失败
@@ -720,7 +312,7 @@ module.exports = class AiNSWorkletRuntime {
    * - worklet-internal-init: Worker 线程内部 DeepFilter 初始化失败
    *   （通过 AudioWorklet port 的 onmessage 监听 WORKLET_EVENT_TYPES.INIT_FAILED 事件）
    *
-   * 与 AiNSMediaStreamProcessor._reportIssue 的区别：
+   * 与 AiNoiseSuppressionEngine._reportIssue 的区别：
    * - 本方法位于调用链的最底层，直接面对运行时错误
    * - 上报后会设置 error.__mediaEffectsIssueReported = true，防止上层重复上报
    * - 对 AiNSWorkletSource 发来的 INIT_FAILED 消息，会将 fallbackApplied 和 degraded
@@ -736,7 +328,7 @@ module.exports = class AiNSWorkletRuntime {
         severity: 'error'
       }, issue));
     } catch (e) {
-      logger.warn('AiNSWorkletRuntime issue callback failed: ' + (e.message || String(e)));
+      logger.warn(`AiNSWorkletRuntime issue callback failed: ${e.message || String(e)}`);
     }
   }
 
@@ -755,11 +347,11 @@ module.exports = class AiNSWorkletRuntime {
       return;
     }
     logger.debug('initialize() start');
-    var assetUrls = this.assetLoader.getAssetUrls();
+    var assetUrls = getAssetUrls(this._cdnUrl);
     logger.debug(`initialize() asset urls: ${JSON.stringify(assetUrls)}`);
     var assets = null;
     try {
-      assets = await Promise.all([this.assetLoader.fetchAsset(assetUrls.wasm), this.assetLoader.fetchAsset(assetUrls.model)]);
+      assets = await Promise.all([fetchAsset(assetUrls.wasm), fetchAsset(assetUrls.model)]);
     } catch (error) {
       this._reportIssue({
         stage: 'asset-fetch',
@@ -768,7 +360,7 @@ module.exports = class AiNSWorkletRuntime {
         fallbackApplied: true,
         degraded: true,
         details: {
-          cdnUrl: this.assetLoader.cdnUrl,
+          cdnUrl: this._cdnUrl,
           assetUrls: assetUrls
         }
       });
@@ -846,7 +438,7 @@ module.exports = class AiNSWorkletRuntime {
           details: Object.assign({
             sampleRate: audioContext && audioContext.sampleRate,
             noiseReductionLevel: this.config.noiseReductionLevel,
-            cdnUrl: this.assetLoader.cdnUrl
+            cdnUrl: this._cdnUrl
           }, data.details || {})
         });
       }
@@ -932,7 +524,7 @@ module.exports = class AiNSWorkletRuntime {
     }
   }
 };
-},{"../Logger":45,"../MediaEffectsIssue":69,"./AiNSConfig":1,"./AiNSWorkletSource":4}],4:[function(require,module,exports){
+},{"../Logger":37,"../MediaEffectsIssue":56,"./AiNSConfig":1,"./AiNSWorkletSource":3}],3:[function(require,module,exports){
 (function (global){(function (){
 "use strict";
 
@@ -1350,29 +942,29 @@ module.exports = function () {
 };
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{}],5:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 "use strict";
 
-var AiNSMediaStreamProcessor = require('./AiNSMediaStreamProcessor');
 var Logger = require('../Logger');
 var issueUtils = require('../MediaEffectsIssue');
-var logger = new Logger('AiNoiseSuppressionEngine');
-var MAX_REPORTED_ISSUES = 20;
-var ISSUE_DEFAULTS = {
-  module: 'AiNS',
-  message: 'Unknown AiNS issue'
-};
+var AiNSConfig = require('./AiNSConfig');
+var AiNSWorkletRuntime = require('./AiNSWorkletRuntime');
+var logger = new Logger('AiNoiseSuppression');
+var getErrorMessage = issueUtils.getErrorMessage;
 function cloneIssue(issue) {
   return issue && typeof issue === 'object' ? JSON.parse(JSON.stringify(issue)) : null;
 }
+function isAiNSSupported() {
+  return typeof AudioContext !== 'undefined' && typeof AudioWorkletNode !== 'undefined' && typeof WebAssembly !== 'undefined';
+}
 
 /**
- * 汇总浏览器能力与当前处理器运行态快照。
+ * 汇总浏览器能力与当前引擎运行态快照。
  *
- * @param {AiNSMediaStreamProcessor|null} processor
+ * @param {AiNoiseSuppressionEngine|null} engine
  * @returns {Object}
  */
-function collectCapabilityReport(processor) {
+function collectCapabilityReport(engine) {
   var requirements = {
     audioContext: typeof AudioContext !== 'undefined',
     audioWorklet: typeof AudioWorkletNode !== 'undefined',
@@ -1380,26 +972,28 @@ function collectCapabilityReport(processor) {
     mediaStream: typeof MediaStream !== 'undefined'
   };
   var missing = Object.keys(requirements).filter(key => !requirements[key]);
-  var supported = missing.length === 0 && AiNSMediaStreamProcessor.isSupported();
+  var supported = missing.length === 0 && isAiNSSupported();
   return {
     supported: supported,
     requirements: requirements,
     missing: missing,
     reason: missing.length > 0 ? `Missing browser capabilities: ${missing.join(', ')}` : '',
-    runtime: processor ? {
-      initialized: Boolean(processor.processedStream),
-      enabled: typeof processor.isEnabled === 'function' ? processor.isEnabled() : Boolean(processor.enabled),
-      preserveOtherTracks: Boolean(processor.preserveOtherTracks),
-      sampleRate: processor.config && processor.config.sampleRate,
-      noiseReductionLevel: processor.config && processor.config.noiseReductionLevel
+    runtime: engine ? {
+      initialized: Boolean(engine.processedStream),
+      enabled: typeof engine.isEnabled === 'function' ? engine.isEnabled() : Boolean(engine.enabled),
+      preserveOtherTracks: Boolean(engine.preserveOtherTracks),
+      sampleRate: engine.config && engine.config.sampleRate,
+      noiseReductionLevel: engine.config && engine.config.noiseReductionLevel
     } : null
   };
 }
 
 /**
- * AINoiseSuppression 对外门面。
+ * AI 降噪引擎。
  *
- * 这个类作为唯一公开入口，负责实例化和管理降噪处理器。
+ * 负责接收原始 MediaStream/MediaStreamTrack 输入，管理 AudioContext +
+ * AudioWorkletNode 音频处理图，通过 WASM 降噪模型实时处理音频，并提供
+ * 问题记录与能力报告。
  */
 class AiNoiseSuppressionEngine {
   /**
@@ -1407,51 +1001,77 @@ class AiNoiseSuppressionEngine {
    * @param {boolean} [options.enabled=true]
    * @param {boolean} [options.preserveOtherTracks=true]
    * @param {number} [options.sampleRate=48000]
-   * @param {number} [options.noiseReductionLevel=80]
-   * @param {Object} [options.assetConfig]
+   * @param {number} [options.noiseReductionLevel=80] - 降噪强度 (0-100)
+   * @param {Object} [options.assetConfig] - 模型资源 CDN 配置
    */
   constructor(options = {}) {
     this.options = options;
     this._issues = [];
     this._onIssue = typeof options.onIssue === 'function' ? options.onIssue : null;
-    this.processor = new AiNSMediaStreamProcessor(Object.assign({}, options, {
-      onIssue: this._handleIssue.bind(this)
-    }));
+    var normalizedOptions = AiNSConfig.create(options);
+
+    // -- 音频图相关状态 --
+    this.processedTrack = null;
+    this.processedStream = null;
+    this.audioContext = null;
+    this.sourceNode = null;
+    this.workletNode = null;
+    this.destination = null;
+    this.enabled = normalizedOptions.enabled;
+    this.originalTrack = null;
+    this.originalStream = null;
+    this.preserveOtherTracks = normalizedOptions.preserveOtherTracks;
+    this.config = normalizedOptions;
+
+    // -- 引擎入口处使用的输入/输出流引用 --
     this.inputStream = null;
     this.outputStream = null;
-    logger.debug(`constructor: ${JSON.stringify(this.processor.config)}`);
+
+    // -- Worklet 运行时 --
+    this._workletRuntime = new AiNSWorkletRuntime({
+      sampleRate: normalizedOptions.sampleRate,
+      noiseReductionLevel: normalizedOptions.noiseReductionLevel,
+      assetConfig: normalizedOptions.assetConfig,
+      onIssue: this._reportIssue.bind(this)
+    });
+    logger.debug(`constructor: ${JSON.stringify(this.config)}`);
   }
 
+  // ===========================================================================
+  //  问题管理
+  // ===========================================================================
+
   /**
-   * 统一的问题处理入口。
-   *
-   * 接收来自 AiNSMediaStreamProcessor 的上报后执行以下操作：
-   *
-   * 1. **内存缓存**：将 clone 后的 issue 推入 this._issues 数组，供 getIssues() 查询。
-   *    通过 MAX_REPORTED_ISSUES（默认 20）限制缓存条数，超出时丢弃最旧记录（FIFO 策略），
-   *    防止内存无限增长。
-   *
-   * 2. **向上传递**：调用构造函数传入的 onIssue 回调（通常由 MediaPipeline 提供，
-   *    最终通过 RTCSession._emitMediaEffectsIssue 发出 'mediaEffectsIssue' 事件），
-   *    回调异常时会被 catch 后记录警告日志，不中断问题处理流程。
-   *
-   * 3. **能力报告：** 在 getCapabilityReport() 中将问题列表和最后一条问题写入
-   *    report.issues 和 report.runtime.lastIssue，方便上层调试与监控。
-   *
-   * @param {Object} [issue] - 问题描述对象，字段由下层组件定义
+   * 内部异常报告（来自 WorkletRuntime / 音频图组件）。
    */
-  _handleIssue(issue) {
-    var normalizedIssue = issueUtils.normalizeIssue(ISSUE_DEFAULTS, issue);
-    this._issues.push(cloneIssue(normalizedIssue));
-    if (this._issues.length > MAX_REPORTED_ISSUES) {
-      this._issues.shift();
+  _reportIssue(issue) {
+    if (!this._onIssue) return;
+    try {
+      this._onIssue(Object.assign({
+        component: 'AiNoiseSuppression',
+        severity: 'error'
+      }, issue));
+    } catch (e) {
+      logger.warn(`AiNoiseSuppression issue callback failed: ${e.message || String(e)}`);
     }
-    issueUtils.forwardIssue(this._onIssue, normalizedIssue, logger, 'AiNS issue callback failed', cloneIssue);
   }
 
+  /** @returns {Object[]} 问题列表深拷贝 */
+  getIssues() {
+    return this._issues.map(cloneIssue);
+  }
+
+  /** @returns {Object|null} 最近一条问题 */
+  getLastIssue() {
+    return this._issues.length > 0 ? cloneIssue(this._issues[this._issues.length - 1]) : null;
+  }
+
+  // ===========================================================================
+  //  初始化 / 处理
+  // ===========================================================================
+
   /**
-   * 以“引擎模式”初始化降噪输出流。
-   *
+   * 初始化降噪输出流。
    * @param {{inputStream: MediaStream}} [params]
    * @returns {Promise<MediaStream>}
    */
@@ -1461,23 +1081,23 @@ class AiNoiseSuppressionEngine {
       throw new Error('inputStream required');
     }
     this.inputStream = params.inputStream;
-    this.outputStream = await this.processor.init(this.inputStream);
+    this.setInput(this.inputStream);
+    await this.ensureGraph();
+    if (!this.processedStream) {
+      throw new Error('AiNoiseSuppression.init: failed to create processed MediaStream');
+    }
+    this.outputStream = this.processedStream;
     logger.debug(`init() complete: hasOutput=${Boolean(this.outputStream)}`);
     return this.outputStream;
   }
 
-  /**
-   * 获取最近一次 init 后的输出流。
-   *
-   * @returns {MediaStream|null}
-   */
+  /** @returns {MediaStream|null} */
   getOutputStream() {
     return this.outputStream;
   }
 
   /**
-   * 兼容 RTCSession 的实例式 mediaStreamProcessor 接口。
-   *
+   * 兼容 RTCSession 的 mediaStreamProcessor 接口。
    * @param {MediaStream} inputStream
    * @returns {Promise<MediaStream>}
    */
@@ -1489,41 +1109,88 @@ class AiNoiseSuppressionEngine {
   }
 
   /**
-   * 用新的音频输入替换当前处理链中的音频轨，并返回最新输出流。
-   *
+   * 用新的音频轨替换当前处理链，保留非音频轨道。
    * @param {MediaStream|MediaStreamTrack} input
    * @returns {Promise<MediaStream>}
    */
   async replaceAudioTrack(input) {
     logger.debug('replaceAudioTrack()');
-    this.outputStream = await this.processor.replaceAudioTrack(input);
-    this.inputStream = this.processor.originalStream;
+    var nextAudioTrack = this._getInputAudioTrack(input);
+    if (!nextAudioTrack) {
+      throw new Error('AiNoiseSuppression: replacement input has no audio track');
+    }
+    var nextStream = this._buildReplacedAudioStream(nextAudioTrack);
+    this.originalTrack = nextAudioTrack;
+    this.originalStream = nextStream;
+    await this.ensureGraph();
+    if (!this.processedStream) {
+      throw new Error('AiNoiseSuppression.replaceAudioTrack: failed to create processed MediaStream');
+    }
+    this.outputStream = this.processedStream;
+    this.inputStream = this.originalStream;
     return this.outputStream;
   }
 
   /**
-   * 暴露当前实例内部处理器，供业务层在已实例化前提下调试或调参。
-   *
-   * 注意：这是调试逃生口，属于 internal/unstable API，不建议在正式业务逻辑里依赖。
-   *
-   * @returns {AiNSMediaStreamProcessor}
+   * 暴露内部 WorkletRuntime（调试用，internal/unstable API）。
+   * @returns {AiNSWorkletRuntime}
    */
   getProcessor() {
-    return this.processor;
+    return this._workletRuntime;
   }
 
+  // ===========================================================================
+  //  运行时控制
+  // ===========================================================================
+
   /**
-   * 动态开关 AI 降噪。
-   *
+   * 动态开关降噪，不销毁处理图。
    * @param {boolean} enable
    * @returns {Promise<boolean>}
    */
   setEnabled(enable) {
-    logger.debug(`setEnabled(): requested=${enable}`);
-    return this.processor.setEnabled(enable);
+    this.enabled = AiNSConfig.normalizeBoolean(enable, this.enabled);
+    logger.debug(`setEnabled(): enabled=${this.enabled}`);
+    this._workletRuntime.setNsEnabled(this.enabled);
+    return Promise.resolve(this.enabled);
   }
+
+  /**
+   * 动态调整降噪强度 (0-100)。
+   * @param {number} level
+   */
+  setSuppressionLevel(level) {
+    var nextLevel = AiNSConfig.normalizeSuppressionLevel(level, this.config.noiseReductionLevel);
+    this.config.noiseReductionLevel = nextLevel;
+    logger.debug(`setSuppressionLevel(): level=${nextLevel}`);
+    this._workletRuntime.setSuppressionLevel(nextLevel);
+  }
+  isEnabled() {
+    return this.enabled;
+  }
+
+  /** 暂停 AudioContext */
+  async suspend() {
+    logger.debug(`suspend(): state=${this.audioContext ? this.audioContext.state : 'none'}`);
+    if (this.audioContext && this.audioContext.state === 'running') {
+      await this.audioContext.suspend();
+    }
+  }
+
+  /** 恢复 AudioContext */
+  async resume() {
+    logger.debug(`resume(): state=${this.audioContext ? this.audioContext.state : 'none'}`);
+    if (this.audioContext && this.audioContext.state === 'suspended') {
+      await this.audioContext.resume();
+    }
+  }
+
+  // ===========================================================================
+  //  能力报告
+  // ===========================================================================
+
   getCapabilityReport() {
-    var report = collectCapabilityReport(this.processor);
+    var report = collectCapabilityReport(this);
     if (report.runtime) {
       report.runtime.issueCount = this._issues.length;
       report.runtime.lastIssue = this._issues.length > 0 ? cloneIssue(this._issues[this._issues.length - 1]) : null;
@@ -1531,79 +1198,170 @@ class AiNoiseSuppressionEngine {
     report.issues = this._issues.map(cloneIssue);
     return report;
   }
-
-  /**
-   * 动态调整降噪强度。
-   *
-   * @param {number} level
-   */
-  setSuppressionLevel(level) {
-    logger.debug(`setSuppressionLevel(): requested=${level}`);
-    this.processor.setSuppressionLevel(level);
-  }
-
-  /**
-   * 销毁引擎内部所有运行时资源。
-   */
-  async destroy() {
-    logger.debug('destroy()');
-    await this.processor.destroy();
-    this.inputStream = null;
-    this.outputStream = null;
-  }
-
-  /**
-   * 获取当前引擎记录的所有问题列表。
-   *
-   * 返回的是深拷贝副本，外部修改不会影响内部缓存。
-   * 最多保留 MAX_REPORTED_ISSUES 条（默认 20 条），FIFO 淘汰。
-   *
-   * @returns {Object[]}
-   */
-  getIssues() {
-    return this._issues.map(cloneIssue);
-  }
-
-  /**
-   * 获取最近一次记录的问题，若无则返回 null。
-   *
-   * 返回深拷贝副本，通常用于健康检查或状态快照（如 getCapabilityReport()）。
-   *
-   * @returns {Object|null}
-   */
-  getLastIssue() {
-    return this._issues.length > 0 ? cloneIssue(this._issues[this._issues.length - 1]) : null;
-  }
-
-  /**
-   * 浏览器能力探测。
-   *
-   * @returns {boolean}
-   */
   static isSupported() {
-    return AiNSMediaStreamProcessor.isSupported();
+    return isAiNSSupported();
   }
-
-  /**
-   * 获取静态能力报告（不依赖实例状态）。
-   *
-   * @returns {Object}
-   */
   static getCapabilityReport() {
     var report = collectCapabilityReport(null);
     report.issues = [];
     return report;
   }
+
+  // ===========================================================================
+  //  销毁
+  // ===========================================================================
+
+  async destroy() {
+    logger.debug('destroy()');
+    await this.teardownGraph();
+    this._workletRuntime.destroy();
+    this.originalTrack = null;
+    this.originalStream = null;
+    this.inputStream = null;
+    this.outputStream = null;
+  }
+
+  // ===========================================================================
+  //  内部：输入处理
+  // ===========================================================================
+
+  setInput(input) {
+    logger.debug(`setInput(): type=${this._getInputType(input)}`);
+    if (input instanceof MediaStream) {
+      var audioTrack = this._getInputAudioTrack(input);
+      if (!audioTrack) {
+        throw new Error('AiNoiseSuppression: input stream has no audio track');
+      }
+      this.originalStream = input;
+      this.originalTrack = audioTrack;
+      logger.debug(`setInput() stream resolved: audioTracks=${input.getAudioTracks().length} totalTracks=${input.getTracks().length}`);
+      return;
+    }
+    if (!input || input.kind !== 'audio') {
+      throw new Error('AiNoiseSuppression: input track must be audio');
+    }
+    this.originalTrack = input;
+    this.originalStream = new MediaStream([input]);
+    logger.debug('setInput() single audio track wrapped into MediaStream');
+  }
+  _getInputAudioTrack(input) {
+    if (input instanceof MediaStream) {
+      return input.getAudioTracks()[0] || null;
+    }
+    if (input && input.kind === 'audio') {
+      return input;
+    }
+    return null;
+  }
+  _getInputType(input) {
+    if (input instanceof MediaStream) return 'MediaStream';
+    if (input && typeof input.kind === 'string') return `MediaStreamTrack:${input.kind}`;
+    return typeof input;
+  }
+  _buildReplacedAudioStream(audioTrack) {
+    if (!this.originalStream) {
+      return new MediaStream([audioTrack]);
+    }
+    var outputTracks = [audioTrack];
+    this.originalStream.getTracks().forEach(track => {
+      if (track.kind !== 'audio') outputTracks.push(track);
+    });
+    return new MediaStream(outputTracks);
+  }
+
+  // ===========================================================================
+  //  内部：音频图
+  // ===========================================================================
+
+  async ensureGraph() {
+    logger.debug('ensureGraph() start');
+    if (!this.originalTrack || !this.originalStream) {
+      throw new Error('AiNoiseSuppression: missing source audio track');
+    }
+    this.audioContext = this.audioContext || new AudioContext({
+      sampleRate: this.config.sampleRate
+    });
+    if (this.audioContext.state !== 'running') {
+      try {
+        await this.audioContext.resume();
+      } catch (error) {
+        logger.warn(`ensureGraph() | audioContext resume failed: ${getErrorMessage(error)}`);
+        this._reportIssue({
+          stage: 'audio-context-resume',
+          severity: 'warn',
+          message: getErrorMessage(error),
+          degraded: true,
+          details: {
+            contextState: this.audioContext ? this.audioContext.state : 'unknown',
+            sampleRate: this.audioContext ? this.audioContext.sampleRate : this.config.sampleRate
+          }
+        });
+      }
+    }
+    await this._workletRuntime.initialize();
+    if (!this.workletNode) {
+      this.workletNode = await this._workletRuntime.createAudioWorkletNode(this.audioContext);
+    }
+    if (!this.destination) {
+      this.destination = this.audioContext.createMediaStreamDestination();
+    }
+    if (this.sourceNode) {
+      this.sourceNode.disconnect();
+    }
+    this.sourceNode = this.audioContext.createMediaStreamSource(new MediaStream([this.originalTrack]));
+    this.sourceNode.connect(this.workletNode).connect(this.destination);
+    this.rebuildProcessedStream();
+    await this.setEnabled(this.enabled);
+    logger.debug(`ensureGraph() complete: contextState=${this.audioContext.state} preserveOtherTracks=${this.preserveOtherTracks}`);
+  }
+  rebuildProcessedStream() {
+    if (!this.destination) {
+      throw new Error('AiNoiseSuppression: missing destination node');
+    }
+    var processedTrack = this.destination.stream.getAudioTracks()[0];
+    if (!processedTrack) {
+      throw new Error('AiNoiseSuppression: worklet destination did not produce an audio track');
+    }
+    this.processedTrack = processedTrack;
+    var outputTracks = [processedTrack];
+    if (this.preserveOtherTracks && this.originalStream) {
+      this.originalStream.getTracks().forEach(track => {
+        if (track.kind !== 'audio') outputTracks.push(track);
+      });
+    }
+    this.processedStream = new MediaStream(outputTracks);
+    logger.debug(`rebuildProcessedStream(): trackCount=${outputTracks.length}`);
+  }
+  async teardownGraph() {
+    logger.debug('teardownGraph() start');
+    try {
+      if (this.workletNode) {
+        this.workletNode.disconnect();
+        this.workletNode = null;
+      }
+      if (this.sourceNode) {
+        this.sourceNode.disconnect();
+        this.sourceNode = null;
+      }
+      if (this.destination) {
+        this.destination.disconnect();
+        this.destination = null;
+      }
+      if (this.audioContext) {
+        await this.audioContext.close();
+        this.audioContext = null;
+      }
+    } catch (error) {
+      logger.warn('teardownGraph() | ignore cleanup error', error);
+    } finally {
+      this.processedTrack = null;
+      this.processedStream = null;
+      logger.debug('teardownGraph() complete');
+    }
+  }
 }
 module.exports = AiNoiseSuppressionEngine;
-},{"../Logger":45,"../MediaEffectsIssue":69,"./AiNSMediaStreamProcessor":2}],6:[function(require,module,exports){
-"use strict";
-
-/**
- * AINoiseSuppression public entry point.
- */
-module.exports = require('./AiNoiseSuppressionEngine');
-},{"./AiNoiseSuppressionEngine":5}],7:[function(require,module,exports){
+},{"../Logger":37,"../MediaEffectsIssue":56,"./AiNSConfig":1,"./AiNSWorkletRuntime":2}],5:[function(require,module,exports){
 "use strict";
 
 /**
@@ -1614,7 +1372,7 @@ module.exports = require('./AiNoiseSuppressionEngine');
 var User = require('./lib/user/user.js');
 var Primitive = require('./lib/messages/primitive.js');
 var RequestStatusValue = require('./lib/messages/requestStatusValue.js');
-var AttributeName = require('./lib/attributes/name.js');
+var AttributeName = require('./lib/attributeName.js');
 var BFCPLib = {
   'User': User,
   'Primitive': Primitive,
@@ -1622,7 +1380,323 @@ var BFCPLib = {
   'AttributeName': AttributeName
 };
 module.exports = BFCPLib;
-},{"./lib/attributes/name.js":15,"./lib/messages/primitive.js":32,"./lib/messages/requestStatusValue.js":33,"./lib/user/user.js":36}],8:[function(require,module,exports){
+},{"./lib/attributeName.js":7,"./lib/messages/primitive.js":24,"./lib/messages/requestStatusValue.js":25,"./lib/user/user.js":28}],6:[function(require,module,exports){
+"use strict";
+
+/**
+ * BFCP 属性子类合集。
+ *
+ * 将所有简单的属性子类集中在一个文件中，
+ * 避免每个属性一个文件导致的过度拆分。
+ *
+ * 每个子类都继承 Attribute 基类，仅需在构造函数中设置
+ * type、length、format、content 参数。
+ *
+ * @see {@link module:bfcp-lib.Attribute}
+ */
+
+var Attribute = require('./attributes/attribute.js');
+var Format = require('./attributes/format.js');
+var Length = require('./attributes/length.js');
+var Type = require('./attributes/type.js');
+var Primitive = require('./messages/primitive.js');
+
+/**
+ * BeneficiaryId 属性 — RFC 4582 §5.2.1
+ * @extends Attribute
+ */
+class BeneficiaryId extends Attribute {
+  constructor(beneficiaryId) {
+    super(Type.BeneficiaryId, Length.BeneficiaryId, Format.Unsigned16, beneficiaryId);
+  }
+}
+
+/**
+ * FloorId 属性 — RFC 4582 §5.2.2
+ * @extends Attribute
+ */
+class FloorId extends Attribute {
+  constructor(floorId) {
+    super(Type.FloorId, Length.FloorId, Format.Unsigned16, floorId);
+  }
+}
+
+/**
+ * FloorRequestId 属性 — RFC 4582 §5.2.3
+ * @extends Attribute
+ */
+class FloorRequestId extends Attribute {
+  constructor(floorRequestId) {
+    super(Type.FloorRequestId, Length.FloorRequestId, Format.Unsigned16, floorRequestId);
+  }
+}
+
+/**
+ * RequestStatus 属性 — RFC 4582 §5.2.5
+ * @extends Attribute
+ */
+class RequestStatus extends Attribute {
+  constructor(requestStatus, queuePosition) {
+    if (queuePosition == null || queuePosition == undefined) {
+      queuePosition = 0;
+    }
+    super(Type.RequestStatus, Length.RequestStatus, Format.OctetString16, [requestStatus, queuePosition]);
+  }
+}
+
+/**
+ * SupportedAttributes 属性 — RFC 4582 §5.2.10
+ * @extends Attribute
+ */
+class SupportedAttributes extends Attribute {
+  constructor(attributes) {
+    var list;
+    if (!attributes || attributes == undefined) {
+      list = [Type.BeneficiaryId, Type.FloorId, Type.FloorRequestId, Type.Priority, Type.RequestStatus, Type.ErrorCode, Type.ErrorInfo, Type.ParticipantProvidedInfo, Type.StatusInfo, Type.SupportedAttributes, Type.SupportedPrimitives, Type.UserDisplayName, Type.UserUri, Type.RequestedByInformation, Type.FloorRequestInformation, Type.RequestedByInformation, Type.FloorRequestStatus, Type.OverallRequestStatus];
+    } else {
+      list = attributes;
+    }
+    super(Type.SupportedAttributes, list.length + Length.SupportedAttributes, Format.OctetString, list);
+  }
+}
+
+/**
+ * SupportedPrimitives 属性 — RFC 4582 §5.2.11
+ * @extends Attribute
+ */
+class SupportedPrimitives extends Attribute {
+  constructor(primitives) {
+    var list;
+    if (!primitives || primitives == undefined) {
+      list = [Primitive.FloorRequest, Primitive.FloorRequestStatus, Primitive.FloorStatus, Primitive.Hello, Primitive.HelloAck, Primitive.Error, Primitive.FloorRequestStatusAck];
+    } else {
+      list = primitives;
+    }
+    super(Type.SupportedPrimitives, list.length + Length.SupportedPrimitives, Format.OctetString, list);
+  }
+}
+
+/**
+ * FloorRequestStatus 属性 — RFC 4582 §5.2.17
+ * @extends Attribute
+ */
+class FloorRequestStatus extends Attribute {
+  constructor(floorId, requestStatus) {
+    super(Type.FloorRequestStatus, Length.FloorRequestStatus, Format.Grouped, [floorId, new RequestStatus(requestStatus)]);
+  }
+}
+
+/**
+ * FloorRequestInformation 属性 — RFC 4582 §5.2.15
+ * @extends Attribute
+ */
+class FloorRequestInformation extends Attribute {
+  constructor(floorRequestId, floorId, requestStatus) {
+    super(Type.FloorRequestInformation, Length.FloorRequestInformation, Format.Grouped, [floorRequestId, new FloorRequestStatus(floorId, requestStatus)]);
+  }
+}
+module.exports = {
+  BeneficiaryId,
+  FloorId,
+  FloorRequestId,
+  RequestStatus,
+  SupportedAttributes,
+  SupportedPrimitives,
+  FloorRequestStatus,
+  FloorRequestInformation
+};
+},{"./attributes/attribute.js":8,"./attributes/format.js":9,"./attributes/length.js":10,"./attributes/type.js":11,"./messages/primitive.js":24}],7:[function(require,module,exports){
+"use strict";
+
+/**
+ * @classdesc
+ * Name class is a abstraction of the attribute Names
+ * @memberof bfcp-lib.Name
+ * @static
+ */
+class Name {
+  /**
+   * Gets BeneficiaryId Name string
+   * @type {String}
+   * @static
+   * @public
+   */
+  static get BeneficiaryId() {
+    return 'BeneficiaryId';
+  }
+
+  /**
+   * Gets FloorId Name string
+   * @type {String}
+   * @static
+   * @public
+   */
+  static get FloorId() {
+    return 'FloorId';
+  }
+
+  /**
+   * Gets FloorRequestId Name string
+   * @type {String}
+   * @static
+   * @public
+   */
+  static get FloorRequestId() {
+    return 'FloorRequestId';
+  }
+
+  /**
+   * Gets Priority Name string
+   * @type {String}
+   * @static
+   * @public
+   */
+  static get Priority() {
+    return 'Priority';
+  }
+
+  /**
+   * Gets RequestStatus Name string
+   * @type {String}
+   * @static
+   * @public
+   */
+  static get RequestStatus() {
+    return 'RequestStatus';
+  }
+
+  /**
+   * Gets ErrorCode Name string
+   * @type {String}
+   * @static
+   * @public
+   */
+  static get ErrorCode() {
+    return 'ErrorCode';
+  }
+
+  /**
+   * Gets ErrorInfo Name string
+   * @type {String}
+   * @static
+   * @public
+   */
+  static get ErrorInfo() {
+    return 'ErrorInfo';
+  }
+
+  /**
+   * Gets ParticipantProvidedInfo Name string
+   * @type {String}
+   * @static
+   * @public
+   */
+  static get ParticipantProvidedInfo() {
+    return 'ParticipantProvidedInfo';
+  }
+
+  /**
+   * Gets StatusInfo Name string
+   * @type {String}
+   * @static
+   * @public
+   */
+  static get StatusInfo() {
+    return 'StatusInfo';
+  }
+
+  /**
+   * Gets SupportedAttributes Name string
+   * @type {String}
+   * @static
+   * @public
+   */
+  static get SupportedAttributes() {
+    return 'SupportedAttributes';
+  }
+
+  /**
+   * Gets SupportedPrimitives Name string
+   * @type {String}
+   * @static
+   * @public
+   */
+  static get SupportedPrimitives() {
+    return 'SupportedPrimitives';
+  }
+
+  /**
+   * Gets UserDisplayName Name string
+   * @type {String}
+   * @static
+   * @public
+   */
+  static get UserDisplayName() {
+    return 'UserDisplayName';
+  }
+
+  /**
+   * Gets UserUri Name string
+   * @type {String}
+   * @static
+   * @public
+   */
+  static get UserUri() {
+    return 'UserUri';
+  }
+
+  /**
+   * Gets BeneficiaryInformation Name string
+   * @type {String}
+   * @static
+   * @public
+   */
+  static get BeneficiaryInformation() {
+    return 'BeneficiaryInformation';
+  }
+
+  /**
+   * Gets FloorRequestInformation Name string
+   * @type {String}
+   * @static
+   * @public
+   */
+  static get FloorRequestInformation() {
+    return 'FloorRequestInformation';
+  }
+
+  /**
+   * Gets RequestedByInformation Name string
+   * @type {String}
+   * @static
+   * @public
+   */
+  static get RequestedByInformation() {
+    return 'RequestedByInformation';
+  }
+
+  /**
+   * Gets FloorRequestStatus Name string
+   * @type {String}
+   * @static
+   * @public
+   */
+  static get FloorRequestStatus() {
+    return 'FloorRequestStatus';
+  }
+
+  /**
+   * Gets OverallRequestStatus Name string
+   * @type {String}
+   * @static
+   * @public
+   */
+  static get OverallRequestStatus() {
+    return 'OverallRequestStatus';
+  }
+}
+module.exports = Name;
+},{}],8:[function(require,module,exports){
 "use strict";
 
 var Complements = require('../parser/complements.js');
@@ -1792,122 +1866,7 @@ class Attribute {
   }
 }
 module.exports = Attribute;
-},{"../parser/complements.js":34,"./format.js":13,"./type.js":19}],9:[function(require,module,exports){
-"use strict";
-
-var Attribute = require('./attribute.js');
-var Format = require('./format.js');
-var Length = require('./length.js');
-var Type = require('./type.js');
-
-/**
- * @classdesc
- * FloorId class is a abstraction of the FloorId attribute
- * as defined in the RFC 4582 - BFCP
- * https://tools.ietf.org/html/rfc4582#section-5.2.2
- * @extends Attribute
- * @memberof bfcp-lib.Attribute
- */
-class FloorId extends Attribute {
-  /**
-   * @constructor
-   * @param {Integer} floorId The floor id
-   */
-  constructor(floorId) {
-    super(Type.FloorId, Length.FloorId, Format.Unsigned16, floorId);
-  }
-}
-module.exports = FloorId;
-},{"./attribute.js":8,"./format.js":13,"./length.js":14,"./type.js":19}],10:[function(require,module,exports){
-"use strict";
-
-var Attribute = require('./attribute.js');
-var Format = require('./format.js');
-var Length = require('./length.js');
-var Type = require('./type.js');
-
-/**
- * @classdesc
- * FloorRequestId class is a abstraction of the FloorRequestId attribute
- * as defined in the RFC 4582 - BFCP
- * https://tools.ietf.org/html/rfc4582#section-5.2.3
- * @extends Attribute
- * @memberof bfcp-lib.Attribute
- */
-class FloorRequestId extends Attribute {
-  /**
-   * @constructor
-   * @param {Integer} floorRequestId The floor request id
-   */
-  constructor(floorRequestId) {
-    super(Type.FloorRequestId, Length.FloorRequestId, Format.Unsigned16, floorRequestId);
-  }
-}
-module.exports = FloorRequestId;
-},{"./attribute.js":8,"./format.js":13,"./length.js":14,"./type.js":19}],11:[function(require,module,exports){
-"use strict";
-
-var Attribute = require('./attribute.js');
-var FloorRequestStatus = require('./floorRequestStatus.js');
-var Format = require('./format.js');
-var Length = require('./length.js');
-var Type = require('./type.js');
-
-/**
- * @classdesc
- * FloorRequestInformation class is a abstraction of the FloorRequestInformation
- * attribute as defined in the RFC 4582 - BFCP
- * https://tools.ietf.org/html/rfc4582#section-5.2.15
- * @extends Attribute
- * @memberof bfcp-lib.Attribute
- */
-class FloorRequestInformation extends Attribute {
-  /**
-   * @constructor
-   * @param {Integer} floorRequestId The floor request id
-   * @param {Integer} floorId        The floor id
-   * @param {Integer} requestStatus  The request status
-   */
-  constructor(floorRequestId, floorId, requestStatus) {
-    var content = [];
-    content.push(floorRequestId);
-    content.push(new FloorRequestStatus(floorId, requestStatus));
-    super(Type.FloorRequestInformation, Length.FloorRequestInformation, Format.Grouped, content);
-  }
-}
-module.exports = FloorRequestInformation;
-},{"./attribute.js":8,"./floorRequestStatus.js":12,"./format.js":13,"./length.js":14,"./type.js":19}],12:[function(require,module,exports){
-"use strict";
-
-var Attribute = require('./attribute.js');
-var Format = require('./format.js');
-var Length = require('./length.js');
-var RequestStatus = require('./requestStatus.js');
-var Type = require('./type.js');
-
-/**
- * @classdesc
- * FloorRequestStatus class is a abstraction of the FloorRequestStatus
- * attribute as defined in the RFC 4582 - BFCP
- * https://tools.ietf.org/html/rfc4582#section-5.2.17
- * @extends Attribute
- * @memberof bfcp-lib.Attribute
- */
-class FloorRequestStatus extends Attribute {
-  /**
-   * @constructor
-   * @param {Integer} floorId       The floor id
-   * @param {Integer} requestStatus The request status
-   */
-  constructor(floorId, requestStatus) {
-    var content = [];
-    content.push(floorId);
-    content.push(new RequestStatus(requestStatus));
-    super(Type.FloorRequestStatus, Length.FloorRequestStatus, Format.Grouped, content);
-  }
-}
-module.exports = FloorRequestStatus;
-},{"./attribute.js":8,"./format.js":13,"./length.js":14,"./requestStatus.js":16,"./type.js":19}],13:[function(require,module,exports){
+},{"../parser/complements.js":26,"./format.js":9,"./type.js":11}],9:[function(require,module,exports){
 "use strict";
 
 /**
@@ -1960,7 +1919,7 @@ class Format {
   }
 }
 module.exports = Format;
-},{}],14:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 "use strict";
 
 /**
@@ -2153,309 +2112,7 @@ class Length {
   }
 }
 module.exports = Length;
-},{}],15:[function(require,module,exports){
-"use strict";
-
-/**
- * @classdesc
- * Name class is a abstraction of the attribute Names
- * @memberof bfcp-lib.Name
- * @static
- */
-class Name {
-  /**
-   * Gets BeneficiaryId Name string
-   * @type {String}
-   * @static
-   * @public
-   */
-  static get BeneficiaryId() {
-    return 'BeneficiaryId';
-  }
-
-  /**
-   * Gets FloorId Name string
-   * @type {String}
-   * @static
-   * @public
-   */
-  static get FloorId() {
-    return 'FloorId';
-  }
-
-  /**
-   * Gets FloorRequestId Name string
-   * @type {String}
-   * @static
-   * @public
-   */
-  static get FloorRequestId() {
-    return 'FloorRequestId';
-  }
-
-  /**
-   * Gets Priority Name string
-   * @type {String}
-   * @static
-   * @public
-   */
-  static get Priority() {
-    return 'Priority';
-  }
-
-  /**
-   * Gets RequestStatus Name string
-   * @type {String}
-   * @static
-   * @public
-   */
-  static get RequestStatus() {
-    return 'RequestStatus';
-  }
-
-  /**
-   * Gets ErrorCode Name string
-   * @type {String}
-   * @static
-   * @public
-   */
-  static get ErrorCode() {
-    return 'ErrorCode';
-  }
-
-  /**
-   * Gets ErrorInfo Name string
-   * @type {String}
-   * @static
-   * @public
-   */
-  static get ErrorInfo() {
-    return 'ErrorInfo';
-  }
-
-  /**
-   * Gets ParticipantProvidedInfo Name string
-   * @type {String}
-   * @static
-   * @public
-   */
-  static get ParticipantProvidedInfo() {
-    return 'ParticipantProvidedInfo';
-  }
-
-  /**
-   * Gets StatusInfo Name string
-   * @type {String}
-   * @static
-   * @public
-   */
-  static get StatusInfo() {
-    return 'StatusInfo';
-  }
-
-  /**
-   * Gets SupportedAttributes Name string
-   * @type {String}
-   * @static
-   * @public
-   */
-  static get SupportedAttributes() {
-    return 'SupportedAttributes';
-  }
-
-  /**
-   * Gets SupportedPrimitives Name string
-   * @type {String}
-   * @static
-   * @public
-   */
-  static get SupportedPrimitives() {
-    return 'SupportedPrimitives';
-  }
-
-  /**
-   * Gets UserDisplayName Name string
-   * @type {String}
-   * @static
-   * @public
-   */
-  static get UserDisplayName() {
-    return 'UserDisplayName';
-  }
-
-  /**
-   * Gets UserUri Name string
-   * @type {String}
-   * @static
-   * @public
-   */
-  static get UserUri() {
-    return 'UserUri';
-  }
-
-  /**
-   * Gets BeneficiaryInformation Name string
-   * @type {String}
-   * @static
-   * @public
-   */
-  static get BeneficiaryInformation() {
-    return 'BeneficiaryInformation';
-  }
-
-  /**
-   * Gets FloorRequestInformation Name string
-   * @type {String}
-   * @static
-   * @public
-   */
-  static get FloorRequestInformation() {
-    return 'FloorRequestInformation';
-  }
-
-  /**
-   * Gets RequestedByInformation Name string
-   * @type {String}
-   * @static
-   * @public
-   */
-  static get RequestedByInformation() {
-    return 'RequestedByInformation';
-  }
-
-  /**
-   * Gets FloorRequestStatus Name string
-   * @type {String}
-   * @static
-   * @public
-   */
-  static get FloorRequestStatus() {
-    return 'FloorRequestStatus';
-  }
-
-  /**
-   * Gets OverallRequestStatus Name string
-   * @type {String}
-   * @static
-   * @public
-   */
-  static get OverallRequestStatus() {
-    return 'OverallRequestStatus';
-  }
-}
-module.exports = Name;
-},{}],16:[function(require,module,exports){
-"use strict";
-
-var Attribute = require('./attribute.js');
-var Format = require('./format.js');
-var Length = require('./length.js');
-var Type = require('./type.js');
-
-/**
- * @classdesc
- * RequestStatus class is a abstraction of the RequestStatus attribute as
- * defined in the RFC 4582 - BFCP
- * https://tools.ietf.org/html/rfc4582#section-5.2.5
- * @extends Attribute
- * @memberof bfcp-lib.Attribute
- */
-class RequestStatus extends Attribute {
-  /**
-   * @constructor
-   * @param {Integer} requestStatus The request status
-   * @param {Integer} queuePosition The queue position
-   */
-  constructor(requestStatus, queuePosition) {
-    if (queuePosition == null || queuePosition == undefined) {
-      queuePosition = 0;
-    }
-    var content = [requestStatus, queuePosition];
-    super(Type.RequestStatus, Length.RequestStatus, Format.OctetString16, content);
-  }
-}
-module.exports = RequestStatus;
-},{"./attribute.js":8,"./format.js":13,"./length.js":14,"./type.js":19}],17:[function(require,module,exports){
-"use strict";
-
-var Attribute = require('./attribute.js');
-var Format = require('./format.js');
-var Length = require('./length.js');
-var Type = require('./type.js');
-
-/**
- * @classdesc
- * SupportedAttributes class is a abstraction of the SupportedAttributes
- * attribute as defined in the RFC 4582 - BFCP
- * https://tools.ietf.org/html/rfc4582#section-5.2.10
- * @extends Attribute
- * @memberof bfcp-lib.Attribute
- */
-class SupportedAttributes extends Attribute {
-  /**
-   * @constructor
-   * @param {bfcp-lib.Attribute.Type[]} attributes A Attribute Type list
-   * representing the supported attributes
-   */
-  constructor(attributes) {
-    var supAttributes = [];
-    if (!attributes || attributes == undefined) {
-      supAttributes = [Type.BeneficiaryId, Type.FloorId, Type.FloorRequestId, Type.Priority, Type.RequestStatus, Type.ErrorCode, Type.ErrorInfo, Type.ParticipantProvidedInfo, Type.StatusInfo, Type.SupportedAttributes, Type.SupportedPrimitives, Type.UserDisplayName, Type.UserUri, Type.RequestedByInformation, Type.FloorRequestInformation, Type.RequestedByInformation, Type.FloorRequestStatus, Type.OverallRequestStatus];
-    } else {
-      supAttributes = attributes;
-    }
-    var length = supAttributes.length + Length.SupportedAttributes;
-    super(Type.SupportedAttributes, length, Format.OctetString, supAttributes);
-  }
-}
-module.exports = SupportedAttributes;
-},{"./attribute.js":8,"./format.js":13,"./length.js":14,"./type.js":19}],18:[function(require,module,exports){
-"use strict";
-
-var Attribute = require('./attribute.js');
-var Format = require('./format.js');
-var Length = require('./length.js');
-var Primitive = require('../messages/primitive.js');
-var Type = require('./type.js');
-
-/**
- * @classdesc
- * SupportedPrimitives class is a abstraction of the SupportedPrimitives
- * attribute as defined in the RFC 4582 - BFCP
- * https://tools.ietf.org/html/rfc4582#section-5.2.11
- * @extends Attribute
- * @memberof bfcp-lib.Attribute
- */
-class SupportedPrimitives extends Attribute {
-  /**
-   * @constructor
-   * @param {bfcp-lib.Message.Primitive} primitives A Message Primitive list
-   * representing the supported primitives (messages)
-   */
-  constructor(primitives) {
-    var supPrimitives = [];
-    if (!primitives || primitives == undefined) {
-      supPrimitives = [Primitive.FloorRequest,
-      // Primitive.FloorRelease,
-      // Primitive.FloorRequestQuery,
-      Primitive.FloorRequestStatus,
-      // Primitive.UserQuery,
-      // Primitive.UserStatus,
-      // Primitive.FloorQuery,
-      Primitive.FloorStatus, Primitive.Hello, Primitive.HelloAck, Primitive.Error, Primitive.FloorRequestStatusAck
-      // Primitive.FloorStatusAck
-      // Primitive.Goodbye,
-      // Primitive.GoodbyeAck
-      ];
-    } else {
-      supPrimitives = primitives;
-    }
-    var length = supPrimitives.length + Length.SupportedPrimitives;
-    super(Type.SupportedPrimitives, length, Format.OctetString, supPrimitives);
-  }
-}
-module.exports = SupportedPrimitives;
-},{"../messages/primitive.js":32,"./attribute.js":8,"./format.js":13,"./length.js":14,"./type.js":19}],19:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 "use strict";
 
 /**
@@ -2648,7 +2305,7 @@ class Type {
   }
 }
 module.exports = Type;
-},{}],20:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 "use strict";
 
 var Complements = require('../parser/complements.js');
@@ -2756,11 +2413,11 @@ class CommonHeader {
   }
 }
 module.exports = CommonHeader;
-},{"../parser/complements.js":34}],21:[function(require,module,exports){
+},{"../parser/complements.js":26}],13:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
-var FloorId = require('../attributes/floorId.js');
+var FloorId = require('../attributeClasses.js').FloorId;
 var Message = require('./message.js');
 var PayloadLength = require('./payloadLength.js');
 var Primitive = require('./primitive.js');
@@ -2786,11 +2443,11 @@ class FloorQuery extends Message {
   }
 }
 module.exports = FloorQuery;
-},{"../attributes/floorId.js":9,"./commonHeader.js":20,"./message.js":30,"./payloadLength.js":31,"./primitive.js":32}],22:[function(require,module,exports){
+},{"../attributeClasses.js":6,"./commonHeader.js":12,"./message.js":22,"./payloadLength.js":23,"./primitive.js":24}],14:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
-var FloorRequestId = require('../attributes/floorRequestId.js');
+var FloorRequestId = require('../attributeClasses.js').FloorRequestId;
 var Message = require('./message.js');
 var PayloadLength = require('./payloadLength.js');
 var Primitive = require('./primitive.js');
@@ -2816,11 +2473,11 @@ class FloorRelease extends Message {
   }
 }
 module.exports = FloorRelease;
-},{"../attributes/floorRequestId.js":10,"./commonHeader.js":20,"./message.js":30,"./payloadLength.js":31,"./primitive.js":32}],23:[function(require,module,exports){
+},{"../attributeClasses.js":6,"./commonHeader.js":12,"./message.js":22,"./payloadLength.js":23,"./primitive.js":24}],15:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
-var FloorId = require('../attributes/floorId.js');
+var FloorId = require('../attributeClasses.js').FloorId;
 var Message = require('./message.js');
 var PayloadLength = require('./payloadLength.js');
 var Primitive = require('./primitive.js');
@@ -2846,11 +2503,11 @@ class FloorRequest extends Message {
   }
 }
 module.exports = FloorRequest;
-},{"../attributes/floorId.js":9,"./commonHeader.js":20,"./message.js":30,"./payloadLength.js":31,"./primitive.js":32}],24:[function(require,module,exports){
+},{"../attributeClasses.js":6,"./commonHeader.js":12,"./message.js":22,"./payloadLength.js":23,"./primitive.js":24}],16:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
-var FloorRequestInformation = require('../attributes/floorRequestInformation.js');
+var FloorRequestInformation = require('../attributeClasses.js').FloorRequestInformation;
 var Message = require('./message.js');
 var PayloadLength = require('./payloadLength.js');
 var Primitive = require('./primitive.js');
@@ -2878,11 +2535,11 @@ class FloorRequestStatus extends Message {
   }
 }
 module.exports = FloorRequestStatus;
-},{"../attributes/floorRequestInformation.js":11,"./commonHeader.js":20,"./message.js":30,"./payloadLength.js":31,"./primitive.js":32}],25:[function(require,module,exports){
+},{"../attributeClasses.js":6,"./commonHeader.js":12,"./message.js":22,"./payloadLength.js":23,"./primitive.js":24}],17:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
-var FloorId = require('../attributes/floorId.js');
+var FloorId = require('../attributeClasses.js').FloorId;
 var Message = require('./message.js');
 var PayloadLength = require('./payloadLength.js');
 var Primitive = require('./primitive.js');
@@ -2908,11 +2565,11 @@ class FloorRequestStatusAck extends Message {
   }
 }
 module.exports = FloorRequestStatusAck;
-},{"../attributes/floorId.js":9,"./commonHeader.js":20,"./message.js":30,"./payloadLength.js":31,"./primitive.js":32}],26:[function(require,module,exports){
+},{"../attributeClasses.js":6,"./commonHeader.js":12,"./message.js":22,"./payloadLength.js":23,"./primitive.js":24}],18:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
-var FloorRequestInformation = require('../attributes/floorRequestInformation.js');
+var FloorRequestInformation = require('../attributeClasses.js').FloorRequestInformation;
 var Message = require('./message.js');
 var PayloadLength = require('./payloadLength.js');
 var Primitive = require('./primitive.js');
@@ -2940,11 +2597,11 @@ class FloorStatus extends Message {
   }
 }
 module.exports = FloorStatus;
-},{"../attributes/floorRequestInformation.js":11,"./commonHeader.js":20,"./message.js":30,"./payloadLength.js":31,"./primitive.js":32}],27:[function(require,module,exports){
+},{"../attributeClasses.js":6,"./commonHeader.js":12,"./message.js":22,"./payloadLength.js":23,"./primitive.js":24}],19:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
-var FloorId = require('../attributes/floorId.js');
+var FloorId = require('../attributeClasses.js').FloorId;
 var Message = require('./message.js');
 var PayloadLength = require('./payloadLength.js');
 var Primitive = require('./primitive.js');
@@ -2970,11 +2627,11 @@ class FloorStatusAck extends Message {
   }
 }
 module.exports = FloorStatusAck;
-},{"../attributes/floorId.js":9,"./commonHeader.js":20,"./message.js":30,"./payloadLength.js":31,"./primitive.js":32}],28:[function(require,module,exports){
+},{"../attributeClasses.js":6,"./commonHeader.js":12,"./message.js":22,"./payloadLength.js":23,"./primitive.js":24}],20:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
-var FloorId = require('../attributes/floorId.js');
+var FloorId = require('../attributeClasses.js').FloorId;
 var Message = require('./message.js');
 var PayloadLength = require('./payloadLength.js');
 var Primitive = require('./primitive.js');
@@ -3000,15 +2657,15 @@ class Hello extends Message {
   }
 }
 module.exports = Hello;
-},{"../attributes/floorId.js":9,"./commonHeader.js":20,"./message.js":30,"./payloadLength.js":31,"./primitive.js":32}],29:[function(require,module,exports){
+},{"../attributeClasses.js":6,"./commonHeader.js":12,"./message.js":22,"./payloadLength.js":23,"./primitive.js":24}],21:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
 var Message = require('./message.js');
 var PayloadLength = require('./payloadLength.js');
 var Primitive = require('./primitive.js');
-var SupportedPrimitives = require('../attributes/supportedPrimitives.js');
-var SupportedAttributes = require('../attributes/supportedAttributes.js');
+var SupportedPrimitives = require('../attributeClasses.js').SupportedPrimitives;
+var SupportedAttributes = require('../attributeClasses.js').SupportedAttributes;
 
 /**
  * @classdesc
@@ -3030,7 +2687,7 @@ class HelloAck extends Message {
   }
 }
 module.exports = HelloAck;
-},{"../attributes/supportedAttributes.js":17,"../attributes/supportedPrimitives.js":18,"./commonHeader.js":20,"./message.js":30,"./payloadLength.js":31,"./primitive.js":32}],30:[function(require,module,exports){
+},{"../attributeClasses.js":6,"./commonHeader.js":12,"./message.js":22,"./payloadLength.js":23,"./primitive.js":24}],22:[function(require,module,exports){
 "use strict";
 
 /**
@@ -3113,7 +2770,7 @@ class Message {
   }
 }
 module.exports = Message;
-},{}],31:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 "use strict";
 
 /**
@@ -3278,7 +2935,7 @@ class PayloadLength {
   }
 }
 module.exports = PayloadLength;
-},{}],32:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 "use strict";
 
 /**
@@ -3465,7 +3122,7 @@ class Primitive {
   }
 }
 module.exports = Primitive;
-},{}],33:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 "use strict";
 
 /**
@@ -3548,7 +3205,7 @@ class RequestStatusValue {
   }
 }
 module.exports = RequestStatusValue;
-},{}],34:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 "use strict";
 
 /**
@@ -3593,7 +3250,7 @@ class Complements {
   }
 }
 module.exports = Complements;
-},{}],35:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 "use strict";
 
 var FloorRequest = require('../messages/floorRequest.js');
@@ -3606,16 +3263,16 @@ var FloorRequestStatusAck = require('../messages/floorRequestStatusAck.js');
 var FloorStatusAck = require('../messages/floorStatusAck.js');
 var FloorQuery = require('../messages/floorQuery.js');
 var AttributeType = require('../attributes/type.js');
-var FloorId = require('../attributes/floorId.js');
-var FloorRequestId = require('../attributes/floorRequestId.js');
-var FloorRequestStatusAtr = require('../attributes/floorRequestStatus.js');
-var SupportedAttributes = require('../attributes/supportedAttributes.js');
-var SupportedPrimitives = require('../attributes/supportedPrimitives.js');
-var FloorRequestInformation = require('../attributes/floorRequestInformation.js');
+var FloorId = require('../attributeClasses.js').FloorId;
+var FloorRequestId = require('../attributeClasses.js').FloorRequestId;
+var FloorRequestStatusAtr = require('../attributeClasses.js').FloorRequestStatus;
+var SupportedAttributes = require('../attributeClasses.js').SupportedAttributes;
+var SupportedPrimitives = require('../attributeClasses.js').SupportedPrimitives;
+var FloorRequestInformation = require('../attributeClasses.js').FloorRequestInformation;
 var Primitive = require('../messages/primitive.js');
 var CommonHeader = require('../messages/commonHeader.js');
 var Complements = require('../parser/complements.js');
-var RequestStatus = require('../attributes/requestStatus.js');
+var RequestStatus = require('../attributeClasses.js').RequestStatus;
 
 /**
  * @classdesc
@@ -3871,7 +3528,7 @@ class Parser {
   }
 }
 module.exports = Parser;
-},{"../attributes/floorId.js":9,"../attributes/floorRequestId.js":10,"../attributes/floorRequestInformation.js":11,"../attributes/floorRequestStatus.js":12,"../attributes/requestStatus.js":16,"../attributes/supportedAttributes.js":17,"../attributes/supportedPrimitives.js":18,"../attributes/type.js":19,"../messages/commonHeader.js":20,"../messages/floorQuery.js":21,"../messages/floorRelease.js":22,"../messages/floorRequest.js":23,"../messages/floorRequestStatus.js":24,"../messages/floorRequestStatusAck.js":25,"../messages/floorStatus.js":26,"../messages/floorStatusAck.js":27,"../messages/hello.js":28,"../messages/helloAck.js":29,"../messages/primitive.js":32,"../parser/complements.js":34}],36:[function(require,module,exports){
+},{"../attributeClasses.js":6,"../attributes/type.js":11,"../messages/commonHeader.js":12,"../messages/floorQuery.js":13,"../messages/floorRelease.js":14,"../messages/floorRequest.js":15,"../messages/floorRequestStatus.js":16,"../messages/floorRequestStatusAck.js":17,"../messages/floorStatus.js":18,"../messages/floorStatusAck.js":19,"../messages/hello.js":20,"../messages/helloAck.js":21,"../messages/primitive.js":24,"../parser/complements.js":26}],28:[function(require,module,exports){
 (function (Buffer){(function (){
 "use strict";
 
@@ -3883,7 +3540,7 @@ var FloorRequest = require('../messages/floorRequest.js');
 var HelloAck = require('../messages/helloAck.js');
 var RequestStatusValue = require('../messages/requestStatusValue.js');
 var Parser = require('../parser/parser.js');
-var AttrName = require('../attributes/name.js');
+var AttrName = require('../attributeName.js');
 var FloorRelease = require('../messages/floorRelease.js');
 var FloorRequestStatusAck = require('../messages/floorRequestStatusAck.js');
 var FloorStatusAck = require('../messages/floorStatusAck.js');
@@ -4134,7 +3791,7 @@ User.FloorRequestId = 0;
 module.exports = User;
 }).call(this)}).call(this,require("buffer").Buffer)
 
-},{"../attributes/name.js":15,"../messages/floorRelease.js":22,"../messages/floorRequest.js":23,"../messages/floorRequestStatus.js":24,"../messages/floorRequestStatusAck.js":25,"../messages/floorStatus.js":26,"../messages/floorStatusAck.js":27,"../messages/hello.js":28,"../messages/helloAck.js":29,"../messages/primitive.js":32,"../messages/requestStatusValue.js":33,"../parser/parser.js":35,"buffer":96}],37:[function(require,module,exports){
+},{"../attributeName.js":7,"../messages/floorRelease.js":14,"../messages/floorRequest.js":15,"../messages/floorRequestStatus.js":16,"../messages/floorRequestStatusAck.js":17,"../messages/floorStatus.js":18,"../messages/floorStatusAck.js":19,"../messages/hello.js":20,"../messages/helloAck.js":21,"../messages/primitive.js":24,"../messages/requestStatusValue.js":25,"../parser/parser.js":27,"buffer":83}],29:[function(require,module,exports){
 "use strict";
 
 var Utils = require('./Utils');
@@ -4383,11 +4040,11 @@ exports.load = (dst, src) => {
     }
   }
 };
-},{"./Constants":38,"./Exceptions":42,"./Grammar":43,"./Socket":84,"./URI":90,"./Utils":91}],38:[function(require,module,exports){
+},{"./Constants":30,"./Exceptions":34,"./Grammar":35,"./Socket":71,"./URI":77,"./Utils":78}],30:[function(require,module,exports){
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.3.405212422714 (Web)',
+  USER_AGENT: 'UA/2.0.3.405212424302 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -4613,9 +4270,43 @@ module.exports = {
   SESSION_EXPIRES: 90,
   MIN_SESSION_EXPIRES: 60,
   CONNECTION_RECOVERY_MAX_INTERVAL: 30,
-  CONNECTION_RECOVERY_MIN_INTERVAL: 2
+  CONNECTION_RECOVERY_MIN_INTERVAL: 2,
+  // 连接与协商超时 (ms)
+  CONNECTION_TIMEOUT: 5000,
+  // UA 连接超时
+  ICE_CANDIDATE_FORCE_TIMEOUT: 2000,
+  // ICE 候选收集强制结束超时
+  ICE_GATHERING_WAIT_TIMEOUT: 500,
+  // ICE gathering 状态等待超时
+  DISCONNECT_RECONNECT_DELAY: 5000,
+  // ICE 断开后重连延迟
+  CLOSE_TIMER_DELAY: 2000,
+  // UA 关闭等待延迟
+
+  // 视频与分享参数
+  VIDEO_KEYFRAME_INTERVAL: 0.5,
+  // 关键帧发送间隔 (秒)
+  SHARE_CAPTURE_FPS: 15,
+  // 分享流默认帧率
+  SHARE_CAPTURE_MAX_WIDTH: 1920,
+  // 分享流最大宽度
+  SHARE_CAPTURE_MAX_HEIGHT: 1080,
+  // 分享流最大高度
+  MUTED_CANVAS_FPS: 1,
+  // 静音占位视频帧率
+  MUTED_CANVAS_WIDTH: 640,
+  // 静音占位视频宽度
+  MUTED_CANVAS_HEIGHT: 480,
+  // 静音占位视频高度
+
+  // 设备兼容延迟 (ms)
+  IOS_SWITCH_DEVICE_DELAY: 500,
+  // iOS 切换设备重试延迟
+  WECHAT_AUDIO_RENDER_DELAY: 100,
+  // 微信安卓音频渲染延迟
+  BFCP_DC_RECONNECT_CHECK_DELAY: 1000 // BFCP DataChannel 断线检查延迟
 };
-},{}],39:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -4854,7 +4545,7 @@ module.exports = class Dialog {
     return true;
   }
 };
-},{"./Constants":38,"./Dialog/RequestSender":40,"./Logger":45,"./SIPMessage":83,"./Transactions":87,"./Utils":91}],40:[function(require,module,exports){
+},{"./Constants":30,"./Dialog/RequestSender":32,"./Logger":37,"./SIPMessage":70,"./Transactions":74,"./Utils":78}],32:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('../Constants');
@@ -4949,7 +4640,7 @@ module.exports = class DialogRequestSender {
     }
   }
 };
-},{"../Constants":38,"../RequestSender":82,"../Transactions":87}],41:[function(require,module,exports){
+},{"../Constants":30,"../RequestSender":69,"../Transactions":74}],33:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -5128,7 +4819,7 @@ module.exports = class DigestAuthentication {
     return `Digest ${auth_params.join(', ')}`;
   }
 };
-},{"./Logger":45,"./Utils":91}],42:[function(require,module,exports){
+},{"./Logger":37,"./Utils":78}],34:[function(require,module,exports){
 "use strict";
 
 class ConfigurationError extends Error {
@@ -5172,7 +4863,7 @@ module.exports = {
   NotSupportedError,
   NotReadyError
 };
-},{}],43:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 "use strict";
 
 module.exports = function () {
@@ -17580,7 +17271,7 @@ module.exports = function () {
   result.SyntaxError.prototype = Error.prototype;
   return result;
 }();
-},{"./NameAddrHeader":71,"./URI":90}],44:[function(require,module,exports){
+},{"./NameAddrHeader":58,"./URI":77}],36:[function(require,module,exports){
 "use strict";
 
 var C = require('./Constants');
@@ -17593,8 +17284,8 @@ var Grammar = require('./Grammar');
 var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
-var MediaEffectsComposer = require('./MediaEffectsComposer');
-debug('version %s', '2.0.3.405212422714');
+var MediaEffectsComposer = require('./MediaEffectsComposer/MediaEffectsComposer');
+debug('version %s', '2.0.3.405212424302');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17632,10 +17323,10 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.3.405212422714';
+    return '2.0.3.405212424302';
   }
 };
-},{"./Constants":38,"./Exceptions":42,"./Grammar":43,"./MediaEffectsComposer":60,"./NameAddrHeader":71,"./Stats":85,"./UA":89,"./URI":90,"./Utils":91,"./WebSocketInterface":92,"debug":97}],45:[function(require,module,exports){
+},{"./Constants":30,"./Exceptions":34,"./Grammar":35,"./MediaEffectsComposer/MediaEffectsComposer":41,"./NameAddrHeader":58,"./Stats":72,"./UA":76,"./URI":77,"./Utils":78,"./WebSocketInterface":79,"debug":84}],37:[function(require,module,exports){
 "use strict";
 
 var debugFactory = require('debug');
@@ -17737,7 +17428,7 @@ module.exports = class Logger {
 // log.debug('登录成功');  // [ts] CRTC:D:Auth 登录成功 +5ms
 // log.warn('风险提示');   // [ts] CRTC:W:Auth 风险提示 +3ms
 // log.error('异常信息');  // [ts] CRTC:E:Auth 异常信息 +1ms
-},{"debug":97}],46:[function(require,module,exports){
+},{"debug":84}],38:[function(require,module,exports){
 "use strict";
 
 /**
@@ -17758,7 +17449,7 @@ class AudioMixer {
    * @param {Object} options
    * @param {Object} options.logger - 日志记录器
    * @param {Function} options.getDestroyed - 返回混流器是否已销毁的回调
-   * @param {Object} options.sourceRegistry - SourceStore 实例
+   * @param {Object} options.sourceRegistry - Sources 实例
    * @param {Function} options.onAudioTrackAvailable - 音频轨可用时的回调（用于补充到 mixed stream）
    */
   constructor(options) {
@@ -17857,7 +17548,7 @@ class AudioMixer {
         severity: 'warn'
       }, issue));
     } catch (e) {
-      if (this._logger) this._logger.warn('AudioMixer issue callback failed: ' + (e.message || String(e)));
+      if (this._logger) this._logger.warn(`AudioMixer issue callback failed: ${e.message || String(e)}`);
     }
   }
 
@@ -19154,7 +18845,7 @@ class AudioMixer {
   }
 }
 module.exports = AudioMixer;
-},{"../MediaEffectsIssue":69}],47:[function(require,module,exports){
+},{"../MediaEffectsIssue":56}],39:[function(require,module,exports){
 "use strict";
 
 /**
@@ -19351,18 +19042,376 @@ exports.normalizeSourceOptions = function (optionsOrSlot, index, defaultGain) {
   logger.debug(`normalizeSourceOptions: index=${index} options=${JSON.stringify(options)}`);
   return options;
 };
-},{"../Logger":45}],48:[function(require,module,exports){
+},{"../Logger":37}],40:[function(require,module,exports){
+"use strict";
+
+/**
+ * LayoutEngine — 混流器布局引擎
+ *
+ * 根据输入源的数量和 slot 分配，计算每路视频在固定输出画布上的绘制位置和尺寸，
+ * 生成渲染 payload。画布尺寸由配置指定（默认 1280x720），不随源数量动态变化。
+ *
+ * @module LayoutEngine
+ */
+class LayoutEngine {
+  /**
+   * @param {Object} options
+   * @param {Object} options.sourceRegistry - Sources 实例
+   * @param {HTMLCanvasElement} options.canvas - 输出 canvas 元素
+   * @param {Object} options.config - 混流配置对象
+   * @param {Function} options.prepareCanvas - 设置 canvas 尺寸的方法
+   * @param {Function} options.resizeRenderer - 调整渲染器尺寸的方法
+   * @param {Function} options.createWatermarkItems - 创建水印绘制项的方法
+   * @param {Function} [options.resolveMirrorX] - 解析 source 是否水平镜像的方法
+   */
+  constructor(options) {
+    options = options || {};
+    this._sourceRegistry = options.sourceRegistry;
+    this._canvas = options.canvas;
+    this._config = options.config;
+    this._prepareCanvas = options.prepareCanvas;
+    this._resizeRenderer = options.resizeRenderer;
+    this._createWatermarkItems = options.createWatermarkItems;
+    this._resolveMirrorX = options.resolveMirrorX;
+    this._logger = options.logger || null;
+
+    /** @type {Object<string,HTMLCanvasElement>} 纯音频源的占位图画布缓存 */
+    this._audioPlaceholders = {};
+
+    /** @type {number|null} 上次布局的行列数缓存，用于抑制不变时的重复日志 */
+    this._lastLayoutCols = null;
+    this._lastLayoutRows = null;
+
+    /** @type {number|null} 上次 payload 的条目数/尺寸缓存 */
+    this._lastPayloadStats = null;
+    if (this._logger) {
+      this._logger.debug('LayoutEngine constructed');
+    }
+  }
+
+  /**
+   * 生成一帧的渲染 payload。
+   *
+   * 按 slot 将源排列到自动计算的网格中，画板尺寸固定。
+   * 每个源按 slot 计算所在行列位置，支持动态增减源。
+   *
+   * @returns {Object} 渲染 payload { width, height, backgroundColor, items }
+   */
+  createRenderPayload() {
+    this._prepareCanvas();
+    this._resizeRenderer(this._canvas.width, this._canvas.height);
+    var layout = this._calcLayout();
+    var cellWidth = this._canvas.width / layout.cols;
+    var cellHeight = this._canvas.height / layout.rows;
+    var items = [];
+    this._sourceRegistry.sources.forEach(source => {
+      var hasVideo = this._sourceRegistry.hasVideoTrack(source);
+      var hasAudio = this._sourceRegistry.hasLiveAudioTrack(source);
+
+      // 无视频也无音频的源完全跳过
+      if (!hasVideo && !hasAudio) {
+        return;
+      }
+      var slot = typeof source.slot === 'number' ? source.slot : 0;
+      var col = slot % layout.cols;
+      var row = Math.floor(slot / layout.cols);
+      var targetX = col * cellWidth;
+      var targetY = row * cellHeight;
+      if (hasVideo) {
+        // 有视频轨 → 按原有逻辑等比缩放后绘制
+        var draw = this._calcDrawRect(source.video, targetX, targetY, cellWidth, cellHeight);
+        var mirrorX = this._resolveMirror(source, slot);
+        if (draw) {
+          items.push({
+            id: source.id,
+            streamId: this._getSourceStreamId(source),
+            slot: slot,
+            video: source.video,
+            source: source,
+            mirrorX: mirrorX,
+            aiVirtualBackground: source.aiVirtualBackground || null,
+            draw: draw
+          });
+        }
+      } else {
+        // 纯音频源 → 生成占位图画布，填满整个格子
+        var placeholder = this._createPlaceholderCanvas(slot, cellWidth, cellHeight);
+        if (placeholder) {
+          var _mirrorX = this._resolveMirror(source, slot);
+          items.push({
+            id: source.id,
+            streamId: this._getSourceStreamId(source),
+            slot: slot,
+            video: placeholder,
+            source: source,
+            mirrorX: _mirrorX,
+            aiVirtualBackground: source.aiVirtualBackground || null,
+            draw: {
+              x: targetX,
+              y: targetY,
+              width: cellWidth,
+              height: cellHeight
+            }
+          });
+        }
+      }
+    });
+    var payload = {
+      width: this._canvas.width,
+      height: this._canvas.height,
+      backgroundColor: this._config.backgroundColor,
+      outputMirrorX: Boolean(this._config.outputMirrorX),
+      mirrorWatermarksWithOutput: this._config.mirrorWatermarksWithOutput !== false,
+      items: items,
+      sourceWatermarks: [],
+      outputWatermarks: []
+    };
+    var watermarks = this._createWatermarkItems ? this._createWatermarkItems(payload) : null;
+    if (watermarks) {
+      payload.sourceWatermarks = watermarks.sourceWatermarks || [];
+      payload.outputWatermarks = watermarks.outputWatermarks || [];
+    }
+    if (this._logger) {
+      var stats = `size=${payload.width}x${payload.height} items=${items.length} sourceWatermarks=${payload.sourceWatermarks.length} outputWatermarks=${payload.outputWatermarks.length}`;
+      if (stats !== this._lastPayloadStats) {
+        this._logger.debug(`Render payload created: ${stats}`);
+        this._lastPayloadStats = stats;
+      }
+    }
+    return payload;
+  }
+  _resolveMirror(source, slot) {
+    if (typeof this._resolveMirrorX === 'function') {
+      return Boolean(this._resolveMirrorX(source, slot));
+    }
+    return false;
+  }
+  clearAudioPlaceholderCache() {
+    this._audioPlaceholders = {};
+  }
+
+  /**
+   * 获取 source 关联的 stream id，用于 source watermark 匹配。
+   *
+   * @param {Object} source - 内部 source 对象
+   * @returns {string|null} stream id
+   */
+  _getSourceStreamId(source) {
+    var stream = this._sourceRegistry.getStream(source);
+    return stream ? stream.id : null;
+  }
+
+  /**
+   * 计算网格的行列数。
+   *
+   * 根据最大 slot 编号和总源数确定网格大小：
+   *   1 路 → 1x1         2 路 → 按画布比例 1x2 或 2x1
+   *   3~4 路 → 2x2      5~6 路 → 按比例 2x3 或 3x2
+   *   7~9 路 → 3x3      10+ 路 → 尽可能接近正方形
+   *
+   * @returns {Object} { cols: number, rows: number }
+   */
+  _calcLayout() {
+    var maxSlot = -1;
+    this._sourceRegistry.sources.forEach(source => {
+      if (typeof source.slot === 'number' && source.slot > maxSlot) {
+        maxSlot = source.slot;
+      }
+    });
+    var count = Math.max(maxSlot + 1, this._sourceRegistry.sources.length, 1);
+    var isPortrait = this._canvas.height > this._canvas.width;
+    var cols = 1;
+    var rows = 1;
+    if (count <= 1) {
+      cols = 1;
+      rows = 1;
+    } else if (count <= 2) {
+      if (isPortrait) {
+        cols = 1;
+        rows = 2;
+      } else {
+        cols = 2;
+        rows = 1;
+      }
+    } else if (count <= 4) {
+      cols = 2;
+      rows = 2;
+    } else if (count <= 6) {
+      if (isPortrait) {
+        cols = 2;
+        rows = 3;
+      } else {
+        cols = 3;
+        rows = 2;
+      }
+    } else if (count <= 9) {
+      cols = 3;
+      rows = 3;
+    } else {
+      cols = Math.ceil(Math.sqrt(count));
+      rows = Math.ceil(count / cols);
+    }
+    var layout = {
+      cols,
+      rows
+    };
+    if (this._logger && (cols !== this._lastLayoutCols || rows !== this._lastLayoutRows)) {
+      this._logger.debug(`Layout calculated: count=${count} cols=${cols} rows=${rows} portrait=${isPortrait}`);
+      this._lastLayoutCols = cols;
+      this._lastLayoutRows = rows;
+    }
+    return layout;
+  }
+
+  /**
+   * 计算一路视频在画布上的实际绘制矩形。
+   * 保持视频原始宽高比，在目标区域内居中显示。
+   *
+   * @param {HTMLVideoElement} video - video 元素
+   * @param {number} targetX - 目标区域左上角 X
+   * @param {number} targetY - 目标区域左上角 Y
+   * @param {number} targetWidth - 目标区域宽度
+   * @param {number} targetHeight - 目标区域高度
+   * @returns {Object|null} 绘制矩形 { x, y, width, height }，无法计算时返回 null
+   */
+  _calcDrawRect(video, targetX, targetY, targetWidth, targetHeight) {
+    var newVideo = this._scaleVideo(video.videoWidth, video.videoHeight, targetWidth, targetHeight);
+    if (!newVideo || !newVideo.width || !newVideo.height) {
+      return null;
+    }
+    return {
+      x: targetX + newVideo.offsetX,
+      y: targetY + newVideo.offsetY,
+      width: newVideo.width,
+      height: newVideo.height
+    };
+  }
+
+  /**
+   * 等比缩放视频，使其完整显示在目标区域内（contain）。
+   * 缩放后剩余空间居中留边，视频不会被裁剪。
+   *
+   * @param {number} width - 视频原始宽度（videoWidth）
+   * @param {number} height - 视频原始高度（videoHeight）
+   * @param {number} targetWidth - 目标区域宽度
+   * @param {number} targetHeight - 目标区域高度
+   * @returns {Object|null} { width, height, offsetX, offsetY }，无效尺寸返回 null
+   */
+  _scaleVideo(width, height, targetWidth, targetHeight) {
+    var newWidth;
+    var newHeight;
+    var scale;
+    if (!width || !height) {
+      return null;
+    }
+    if (width / height >= targetWidth / targetHeight) {
+      // 视频更宽（相对目标）：按目标宽度缩放，上下留边
+      scale = targetWidth / width;
+      newHeight = height * scale;
+      newWidth = targetWidth;
+    } else {
+      // 视频更高（相对目标）：按目标高度缩放，左右留边
+      scale = targetHeight / height;
+      newWidth = width * scale;
+      newHeight = targetHeight;
+    }
+    return {
+      width: newWidth,
+      height: newHeight,
+      offsetX: Math.max(0, (targetWidth - newWidth) / 2),
+      offsetY: Math.max(0, (targetHeight - newHeight) / 2)
+    };
+  }
+
+  /**
+   * 为纯音频源创建占位图画布。
+   *
+   * 占位符显示一个深色背景 + 居中圆形（内含 slot 编号）+ "Audio" 文字，
+   * 让用户在视频混流输出中能直观感知到该路纯音频源的存在。
+   *
+   * 结果按 slot 缓存，仅当格子尺寸变化时重建。
+   *
+   * @param {number} slot - 源所在 slot 编号
+   * @param {number} cellWidth - 格子宽度
+   * @param {number} cellHeight - 格子高度
+   * @returns {HTMLCanvasElement|null} 占位图画布，参数无效时返回 null
+   */
+  _createPlaceholderCanvas(slot, cellWidth, cellHeight) {
+    if (!cellWidth || !cellHeight) {
+      return null;
+    }
+    var key = `audio-${slot}`;
+    var cached = this._audioPlaceholders[key];
+
+    // 缓存命中且尺寸匹配 → 复用
+    if (cached && cached.width === Math.ceil(cellWidth) && cached.height === Math.ceil(cellHeight)) {
+      return cached;
+    }
+    var w = Math.ceil(cellWidth);
+    var h = Math.ceil(cellHeight);
+    var canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    var ctx = canvas.getContext('2d');
+    if (!ctx) {
+      return null;
+    }
+
+    // 深色背景
+    ctx.fillStyle = '#2a2a2a';
+    ctx.fillRect(0, 0, w, h);
+
+    // 居中绘制麦克风图标
+    var cx = w / 2;
+    var cy = h / 2;
+    this._drawMicrophone(ctx, cx, cy, Math.min(w, h) * 0.19);
+    this._audioPlaceholders[key] = canvas;
+    return canvas;
+  }
+
+  /**
+   * 在 canvas 上下文中绘制麦克风图标。
+   *
+   * 基于 Feather 麦克风图标设计，在 24x24 的虚拟坐标空间中绘制：
+   *   - 圆角矩形 pill 作为麦克风头部
+   *   - 圆弧作为麦克风网罩
+   *   - 底部直线为支架
+   *
+   * @param {CanvasRenderingContext2D} ctx - 画布上下文
+   * @param {number} cx - 中心 X 坐标
+   * @param {number} cy - 中心 Y 坐标
+   * @param {number} size - 图标尺寸（直径）
+   */
+  _drawMicrophone(ctx, cx, cy, size) {
+    // SVG path 数据，来自 1024x1024 视图的麦克风图标
+    var pathData = 'M566.215111 899.811556v118.158222h-85.333333v-114.915556C294.4 888.718222 147.342222 735.573333 147.342222 562.688a42.666667 42.666667 0 0 1 85.333334 0c0 134.257778 123.790222 256.113778 276.764444 256.113778s276.707556-121.912889 276.707556-256.113778a42.666667 42.666667 0 1 1 85.333333 0c0 164.067556-132.380444 310.385778-305.265778 337.123556zM510.976 33.336889a170.666667 170.666667 0 0 1 170.666667 170.666667v341.333333a170.666667 170.666667 0 1 1-341.333334 0v-341.333333a170.666667 170.666667 0 0 1 170.666667-170.666667z';
+    var path;
+    try {
+      path = new Path2D(pathData);
+    } catch (_error) {
+      return;
+    }
+    ctx.save();
+    ctx.translate(cx - size / 2, cy - size / 2);
+    ctx.scale(size / 1024, size / 1024);
+    ctx.fillStyle = '#888888';
+    ctx.fill(path);
+    ctx.restore();
+  }
+}
+module.exports = LayoutEngine;
+},{}],41:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
-var SourceStore = require('./SourceStore');
+var Sources = require('./Sources');
 var LayoutEngine = require('./LayoutEngine');
 var AudioMixer = require('./AudioMixer');
-var OutputStreamManager = require('./OutputStreamManager');
+var OutputStream = require('./OutputStream');
 var RenderLoop = require('./RenderLoop');
 var MediaEffectsComposerConfig = require('./ComposerConfig');
-var SourceAiVBController = require('./aiVirtualBackground/SourceAiVBController');
-var WatermarkManager = require('./WatermarkManager');
+var AiVBState = require('./aiVirtualBackground/AiVBState');
+var Watermark = require('./Watermark');
 var issueUtils = require('../MediaEffectsIssue');
 var logger = new Logger('MediaEffectsComposer');
 var MAX_REPORTED_ISSUES = 50;
@@ -19424,7 +19473,7 @@ function resolveAudioRequest(request) {
  *   const output = await composer.getMixedStream();
  *   // peerConnection.addTrack(output.getVideoTracks()[0], output);
  */
-class ComposerRuntime {
+class MediaEffectsComposer {
   // =========================================================================
   //  构造与初始化
   // =========================================================================
@@ -19520,7 +19569,7 @@ class ComposerRuntime {
      * @property {string}      renderMode      - 渲染后端选择
      */
     this._config = config;
-    this._sourceAiVBManager = new SourceAiVBController({
+    this._sourceAiVBManager = new AiVBState({
       logger: logger,
       onIssue: this._recordIssue.bind(this)
     });
@@ -19529,7 +19578,7 @@ class ComposerRuntime {
     this._config.forceMainThreadRenderer = false;
     this._config.forceMain2DRenderer = false;
     this._slotMirrorOv = Object.create(null);
-    this._watermarkManager = new WatermarkManager({
+    this._watermarkManager = new Watermark({
       logger: logger,
       onIssue: this._recordIssue.bind(this)
     });
@@ -19548,7 +19597,7 @@ class ComposerRuntime {
     this._lastRenderHeight = null;
 
     // -----------------------------------------------------------------------
-    // 输入源存储（SourceStore）—— 统一管理所有视频/音频源的生命周期。
+    // 输入源存储（Sources）—— 统一管理所有视频/音频源的生命周期。
     //
     // 职责：
     //   1. 维护源列表，处理增删查改
@@ -19563,7 +19612,7 @@ class ComposerRuntime {
     //   onAfterRemove 不直接访问 this._sourceRegistry，以减少时序耦合
     // -----------------------------------------------------------------------
 
-    this._sourceRegistry = new SourceStore({
+    this._sourceRegistry = new Sources({
       logger: logger,
       getDefaultGain: () => this._config.audioGain,
       normalizeGain: MediaEffectsComposerConfig.normalizeGain,
@@ -19581,7 +19630,7 @@ class ComposerRuntime {
     });
 
     // -----------------------------------------------------------------------
-    // 输出流管理器（OutputStreamManager）—— 将 canvas 内容导出为 MediaStream。
+    // 输出流管理器（OutputStream）—— 将 canvas 内容导出为 MediaStream。
     //
     // 职责：
     //   1. 通过 canvas.captureStream(fps) 获取输出视频轨道
@@ -19591,7 +19640,7 @@ class ComposerRuntime {
     // 依赖：需要 canvas 已创建、config 已就绪
     // -----------------------------------------------------------------------
 
-    this._outMgr = new OutputStreamManager({
+    this._outMgr = new OutputStream({
       canvas: this._canvas,
       config: this._config,
       createSinkVideo: stream => this._createSinkVideoElement(stream),
@@ -19699,7 +19748,7 @@ class ComposerRuntime {
    *   appendStream(stream, 3)            → 数字作为 slot
    *   appendStream(stream, { slot, gain, sourceMirror }) → 对象解构
    *
-   * 同时将 aiVirtualBackground 配置透传给 SourceAiVBController 做二级归一化。
+   * 同时将 aiVirtualBackground 配置透传给 AiVBState 做二级归一化。
    *
    * @param {number|Object} optionsOrSlot - 原始参数
    * @param {number} index - 数组索引，用于批量添加时 slot 递增
@@ -19739,12 +19788,12 @@ class ComposerRuntime {
    * 统一的问题记录入口。
    *
    * 接收来自以下组件的上报：
-   * - WatermarkManager（水印加载/初始化失败）
-   * - SourceAiVBController（AI 虚拟背景初始化/分割/背景图加载失败）
+   * - Watermark（水印加载/初始化失败）
+   * - AiVBState（AI 虚拟背景初始化/分割/背景图加载失败）
    * - RenderLoop（渲染器降级/回退/帧渲染失败）
-   * - OutputStreamManager（captureStream/insertable 输出失败）
+   * - OutputStream（captureStream/insertable 输出失败）
    * - AudioMixer（音频上下文/混音失败）
-   * - ComposerRuntime 自身（如水印初始化失败）
+   * - MediaEffectsComposer 自身（如水印初始化失败）
    *
    * 执行以下操作：
    * 1. 内存缓存：将 clone 后的 issue 推入 this._issues（FIFO，MAX_REPORTED_ISSUES=50）
@@ -20156,7 +20205,7 @@ class ComposerRuntime {
    * 移除并清理内部源（按 target）。
    *
    * target 为 undefined 时清空所有源；否则按 stream/id 查找后移除单个源。
-   * 移除过程由 SourceStore.remove() 驱动，触发 onBeforeRemove（断音频）
+   * 移除过程由 Sources.remove() 驱动，触发 onBeforeRemove（断音频）
    * → onAfterRemove（清理渲染器、AiVB 状态）回调链。
    *
    * @param {MediaStream|string|HTMLVideoElement|undefined} target - 移除目标
@@ -20262,7 +20311,7 @@ class ComposerRuntime {
    * 流程：
    *   1. 恢复渲染循环
    *   2. 如果已有 live 视频流 → 直接复用
-   *   3. 否则通过 OutputStreamManager 创建新流（先绘制首帧确保 canvas 有内容）
+   *   3. 否则通过 OutputStream 创建新流（先绘制首帧确保 canvas 有内容）
    *   4. 启动渲染循环
    *
    * @returns {MediaStream} 仅含视频轨的输出流
@@ -20344,7 +20393,7 @@ class ComposerRuntime {
    *   1. 检查是否已 stop（抛错）
    *   2. 统一输入为数组
    *   3. 检查最大源数限制，超出时截断
-   *   4. 逐项调用 SourceStore.add()，配置冲突时旧源被自动替换
+   *   4. 逐项调用 Sources.add()，配置冲突时旧源被自动替换
    *   5. 若音频系统已就绪，调度异步音频刷新
    *   6. 刷新渲染策略（AiVB 可能强制主线程）并启动渲染循环
    *
@@ -20846,7 +20895,7 @@ class ComposerRuntime {
     return released;
   }
 
-  // -- SourceStore 委派 --
+  // -- Sources 委派 --
   get _sources() {
     return this._sourceRegistry && this._sourceRegistry.sources || [];
   }
@@ -20870,378 +20919,14 @@ class ComposerRuntime {
     return this._audioComposer && this._audioComposer.audioContext || null;
   }
 
-  // -- OutputStreamManager 委派 --
+  // -- OutputStream 委派 --
   get _capturedStreams() {
     return this._outMgr && this._outMgr.capturedStreams || [];
   }
   get _videoStream() {
     return this._outMgr && this._outMgr.videoStream || null;
   }
-}
-module.exports = ComposerRuntime;
-},{"../Logger":45,"../MediaEffectsIssue":69,"./AudioMixer":46,"./ComposerConfig":47,"./LayoutEngine":49,"./OutputStreamManager":51,"./RenderLoop":52,"./SourceStore":53,"./WatermarkManager":54,"./aiVirtualBackground/SourceAiVBController":59}],49:[function(require,module,exports){
-"use strict";
-
-/**
- * LayoutEngine — 混流器布局引擎
- *
- * 根据输入源的数量和 slot 分配，计算每路视频在固定输出画布上的绘制位置和尺寸，
- * 生成渲染 payload。画布尺寸由配置指定（默认 1280x720），不随源数量动态变化。
- *
- * @module LayoutEngine
- */
-class LayoutEngine {
-  /**
-   * @param {Object} options
-   * @param {Object} options.sourceRegistry - SourceStore 实例
-   * @param {HTMLCanvasElement} options.canvas - 输出 canvas 元素
-   * @param {Object} options.config - 混流配置对象
-   * @param {Function} options.prepareCanvas - 设置 canvas 尺寸的方法
-   * @param {Function} options.resizeRenderer - 调整渲染器尺寸的方法
-   * @param {Function} options.createWatermarkItems - 创建水印绘制项的方法
-   * @param {Function} [options.resolveMirrorX] - 解析 source 是否水平镜像的方法
-   */
-  constructor(options) {
-    options = options || {};
-    this._sourceRegistry = options.sourceRegistry;
-    this._canvas = options.canvas;
-    this._config = options.config;
-    this._prepareCanvas = options.prepareCanvas;
-    this._resizeRenderer = options.resizeRenderer;
-    this._createWatermarkItems = options.createWatermarkItems;
-    this._resolveMirrorX = options.resolveMirrorX;
-    this._logger = options.logger || null;
-
-    /** @type {Object<string,HTMLCanvasElement>} 纯音频源的占位图画布缓存 */
-    this._audioPlaceholders = {};
-
-    /** @type {number|null} 上次布局的行列数缓存，用于抑制不变时的重复日志 */
-    this._lastLayoutCols = null;
-    this._lastLayoutRows = null;
-
-    /** @type {number|null} 上次 payload 的条目数/尺寸缓存 */
-    this._lastPayloadStats = null;
-    if (this._logger) {
-      this._logger.debug('LayoutEngine constructed');
-    }
-  }
-
-  /**
-   * 生成一帧的渲染 payload。
-   *
-   * 按 slot 将源排列到自动计算的网格中，画板尺寸固定。
-   * 每个源按 slot 计算所在行列位置，支持动态增减源。
-   *
-   * @returns {Object} 渲染 payload { width, height, backgroundColor, items }
-   */
-  createRenderPayload() {
-    this._prepareCanvas();
-    this._resizeRenderer(this._canvas.width, this._canvas.height);
-    var layout = this._calcLayout();
-    var cellWidth = this._canvas.width / layout.cols;
-    var cellHeight = this._canvas.height / layout.rows;
-    var items = [];
-    this._sourceRegistry.sources.forEach(source => {
-      var hasVideo = this._sourceRegistry.hasVideoTrack(source);
-      var hasAudio = this._sourceRegistry.hasLiveAudioTrack(source);
-
-      // 无视频也无音频的源完全跳过
-      if (!hasVideo && !hasAudio) {
-        return;
-      }
-      var slot = typeof source.slot === 'number' ? source.slot : 0;
-      var col = slot % layout.cols;
-      var row = Math.floor(slot / layout.cols);
-      var targetX = col * cellWidth;
-      var targetY = row * cellHeight;
-      if (hasVideo) {
-        // 有视频轨 → 按原有逻辑等比缩放后绘制
-        var draw = this._calcDrawRect(source.video, targetX, targetY, cellWidth, cellHeight);
-        var mirrorX = this._resolveMirror(source, slot);
-        if (draw) {
-          items.push({
-            id: source.id,
-            streamId: this._getSourceStreamId(source),
-            slot: slot,
-            video: source.video,
-            source: source,
-            mirrorX: mirrorX,
-            aiVirtualBackground: source.aiVirtualBackground || null,
-            draw: draw
-          });
-        }
-      } else {
-        // 纯音频源 → 生成占位图画布，填满整个格子
-        var placeholder = this._createPlaceholderCanvas(slot, cellWidth, cellHeight);
-        if (placeholder) {
-          var _mirrorX = this._resolveMirror(source, slot);
-          items.push({
-            id: source.id,
-            streamId: this._getSourceStreamId(source),
-            slot: slot,
-            video: placeholder,
-            source: source,
-            mirrorX: _mirrorX,
-            aiVirtualBackground: source.aiVirtualBackground || null,
-            draw: {
-              x: targetX,
-              y: targetY,
-              width: cellWidth,
-              height: cellHeight
-            }
-          });
-        }
-      }
-    });
-    var payload = {
-      width: this._canvas.width,
-      height: this._canvas.height,
-      backgroundColor: this._config.backgroundColor,
-      outputMirrorX: Boolean(this._config.outputMirrorX),
-      mirrorWatermarksWithOutput: this._config.mirrorWatermarksWithOutput !== false,
-      items: items,
-      sourceWatermarks: [],
-      outputWatermarks: []
-    };
-    var watermarks = this._createWatermarkItems ? this._createWatermarkItems(payload) : null;
-    if (watermarks) {
-      payload.sourceWatermarks = watermarks.sourceWatermarks || [];
-      payload.outputWatermarks = watermarks.outputWatermarks || [];
-    }
-    if (this._logger) {
-      var stats = `size=${payload.width}x${payload.height} items=${items.length} sourceWatermarks=${payload.sourceWatermarks.length} outputWatermarks=${payload.outputWatermarks.length}`;
-      if (stats !== this._lastPayloadStats) {
-        this._logger.debug(`Render payload created: ${stats}`);
-        this._lastPayloadStats = stats;
-      }
-    }
-    return payload;
-  }
-  _resolveMirror(source, slot) {
-    if (typeof this._resolveMirrorX === 'function') {
-      return Boolean(this._resolveMirrorX(source, slot));
-    }
-    return false;
-  }
-  clearAudioPlaceholderCache() {
-    this._audioPlaceholders = {};
-  }
-
-  /**
-   * 获取 source 关联的 stream id，用于 source watermark 匹配。
-   *
-   * @param {Object} source - 内部 source 对象
-   * @returns {string|null} stream id
-   */
-  _getSourceStreamId(source) {
-    var stream = this._sourceRegistry.getStream(source);
-    return stream ? stream.id : null;
-  }
-
-  /**
-   * 计算网格的行列数。
-   *
-   * 根据最大 slot 编号和总源数确定网格大小：
-   *   1 路 → 1x1         2 路 → 按画布比例 1x2 或 2x1
-   *   3~4 路 → 2x2      5~6 路 → 按比例 2x3 或 3x2
-   *   7~9 路 → 3x3      10+ 路 → 尽可能接近正方形
-   *
-   * @returns {Object} { cols: number, rows: number }
-   */
-  _calcLayout() {
-    var maxSlot = -1;
-    this._sourceRegistry.sources.forEach(source => {
-      if (typeof source.slot === 'number' && source.slot > maxSlot) {
-        maxSlot = source.slot;
-      }
-    });
-    var count = Math.max(maxSlot + 1, this._sourceRegistry.sources.length, 1);
-    var isPortrait = this._canvas.height > this._canvas.width;
-    var cols = 1;
-    var rows = 1;
-    if (count <= 1) {
-      cols = 1;
-      rows = 1;
-    } else if (count <= 2) {
-      if (isPortrait) {
-        cols = 1;
-        rows = 2;
-      } else {
-        cols = 2;
-        rows = 1;
-      }
-    } else if (count <= 4) {
-      cols = 2;
-      rows = 2;
-    } else if (count <= 6) {
-      if (isPortrait) {
-        cols = 2;
-        rows = 3;
-      } else {
-        cols = 3;
-        rows = 2;
-      }
-    } else if (count <= 9) {
-      cols = 3;
-      rows = 3;
-    } else {
-      cols = Math.ceil(Math.sqrt(count));
-      rows = Math.ceil(count / cols);
-    }
-    var layout = {
-      cols,
-      rows
-    };
-    if (this._logger && (cols !== this._lastLayoutCols || rows !== this._lastLayoutRows)) {
-      this._logger.debug(`Layout calculated: count=${count} cols=${cols} rows=${rows} portrait=${isPortrait}`);
-      this._lastLayoutCols = cols;
-      this._lastLayoutRows = rows;
-    }
-    return layout;
-  }
-
-  /**
-   * 计算一路视频在画布上的实际绘制矩形。
-   * 保持视频原始宽高比，在目标区域内居中显示。
-   *
-   * @param {HTMLVideoElement} video - video 元素
-   * @param {number} targetX - 目标区域左上角 X
-   * @param {number} targetY - 目标区域左上角 Y
-   * @param {number} targetWidth - 目标区域宽度
-   * @param {number} targetHeight - 目标区域高度
-   * @returns {Object|null} 绘制矩形 { x, y, width, height }，无法计算时返回 null
-   */
-  _calcDrawRect(video, targetX, targetY, targetWidth, targetHeight) {
-    var newVideo = this._scaleVideo(video.videoWidth, video.videoHeight, targetWidth, targetHeight);
-    if (!newVideo || !newVideo.width || !newVideo.height) {
-      return null;
-    }
-    return {
-      x: targetX + newVideo.offsetX,
-      y: targetY + newVideo.offsetY,
-      width: newVideo.width,
-      height: newVideo.height
-    };
-  }
-
-  /**
-   * 等比缩放视频，使其完整显示在目标区域内（contain）。
-   * 缩放后剩余空间居中留边，视频不会被裁剪。
-   *
-   * @param {number} width - 视频原始宽度（videoWidth）
-   * @param {number} height - 视频原始高度（videoHeight）
-   * @param {number} targetWidth - 目标区域宽度
-   * @param {number} targetHeight - 目标区域高度
-   * @returns {Object|null} { width, height, offsetX, offsetY }，无效尺寸返回 null
-   */
-  _scaleVideo(width, height, targetWidth, targetHeight) {
-    var newWidth;
-    var newHeight;
-    var scale;
-    if (!width || !height) {
-      return null;
-    }
-    if (width / height >= targetWidth / targetHeight) {
-      // 视频更宽（相对目标）：按目标宽度缩放，上下留边
-      scale = targetWidth / width;
-      newHeight = height * scale;
-      newWidth = targetWidth;
-    } else {
-      // 视频更高（相对目标）：按目标高度缩放，左右留边
-      scale = targetHeight / height;
-      newWidth = width * scale;
-      newHeight = targetHeight;
-    }
-    return {
-      width: newWidth,
-      height: newHeight,
-      offsetX: Math.max(0, (targetWidth - newWidth) / 2),
-      offsetY: Math.max(0, (targetHeight - newHeight) / 2)
-    };
-  }
-
-  /**
-   * 为纯音频源创建占位图画布。
-   *
-   * 占位符显示一个深色背景 + 居中圆形（内含 slot 编号）+ "Audio" 文字，
-   * 让用户在视频混流输出中能直观感知到该路纯音频源的存在。
-   *
-   * 结果按 slot 缓存，仅当格子尺寸变化时重建。
-   *
-   * @param {number} slot - 源所在 slot 编号
-   * @param {number} cellWidth - 格子宽度
-   * @param {number} cellHeight - 格子高度
-   * @returns {HTMLCanvasElement|null} 占位图画布，参数无效时返回 null
-   */
-  _createPlaceholderCanvas(slot, cellWidth, cellHeight) {
-    if (!cellWidth || !cellHeight) {
-      return null;
-    }
-    var key = `audio-${slot}`;
-    var cached = this._audioPlaceholders[key];
-
-    // 缓存命中且尺寸匹配 → 复用
-    if (cached && cached.width === Math.ceil(cellWidth) && cached.height === Math.ceil(cellHeight)) {
-      return cached;
-    }
-    var w = Math.ceil(cellWidth);
-    var h = Math.ceil(cellHeight);
-    var canvas = document.createElement('canvas');
-    canvas.width = w;
-    canvas.height = h;
-    var ctx = canvas.getContext('2d');
-    if (!ctx) {
-      return null;
-    }
-
-    // 深色背景
-    ctx.fillStyle = '#2a2a2a';
-    ctx.fillRect(0, 0, w, h);
-
-    // 居中绘制麦克风图标
-    var cx = w / 2;
-    var cy = h / 2;
-    this._drawMicrophone(ctx, cx, cy, Math.min(w, h) * 0.19);
-    this._audioPlaceholders[key] = canvas;
-    return canvas;
-  }
-
-  /**
-   * 在 canvas 上下文中绘制麦克风图标。
-   *
-   * 基于 Feather 麦克风图标设计，在 24x24 的虚拟坐标空间中绘制：
-   *   - 圆角矩形 pill 作为麦克风头部
-   *   - 圆弧作为麦克风网罩
-   *   - 底部直线为支架
-   *
-   * @param {CanvasRenderingContext2D} ctx - 画布上下文
-   * @param {number} cx - 中心 X 坐标
-   * @param {number} cy - 中心 Y 坐标
-   * @param {number} size - 图标尺寸（直径）
-   */
-  _drawMicrophone(ctx, cx, cy, size) {
-    // SVG path 数据，来自 1024x1024 视图的麦克风图标
-    var pathData = 'M566.215111 899.811556v118.158222h-85.333333v-114.915556C294.4 888.718222 147.342222 735.573333 147.342222 562.688a42.666667 42.666667 0 0 1 85.333334 0c0 134.257778 123.790222 256.113778 276.764444 256.113778s276.707556-121.912889 276.707556-256.113778a42.666667 42.666667 0 1 1 85.333333 0c0 164.067556-132.380444 310.385778-305.265778 337.123556zM510.976 33.336889a170.666667 170.666667 0 0 1 170.666667 170.666667v341.333333a170.666667 170.666667 0 1 1-341.333334 0v-341.333333a170.666667 170.666667 0 0 1 170.666667-170.666667z';
-    var path;
-    try {
-      path = new Path2D(pathData);
-    } catch (_error) {
-      return;
-    }
-    ctx.save();
-    ctx.translate(cx - size / 2, cy - size / 2);
-    ctx.scale(size / 1024, size / 1024);
-    ctx.fillStyle = '#888888';
-    ctx.fill(path);
-    ctx.restore();
-  }
-}
-module.exports = LayoutEngine;
-},{}],50:[function(require,module,exports){
-"use strict";
-
-var ComposerRuntime = require('./ComposerRuntime');
-class MediaEffectsComposer extends ComposerRuntime {
+  // -- 旧版兼容别名 --
   appendStream(videos, optionsOrSlot) {
     return this.addSource(videos, optionsOrSlot);
   }
@@ -21253,12 +20938,12 @@ class MediaEffectsComposer extends ComposerRuntime {
   }
 }
 module.exports = MediaEffectsComposer;
-},{"./ComposerRuntime":48}],51:[function(require,module,exports){
+},{"../Logger":37,"../MediaEffectsIssue":56,"./AudioMixer":38,"./ComposerConfig":39,"./LayoutEngine":40,"./OutputStream":42,"./RenderLoop":43,"./Sources":44,"./Watermark":45,"./aiVirtualBackground/AiVBState":49}],42:[function(require,module,exports){
 (function (global){(function (){
 "use strict";
 
 /**
- * OutputStreamManager — 混流器输出流管理
+ * OutputStream — 混流器输出流管理
  *
  * 负责混流器输出流的生命周期管理：
  *   - Insertable Streams 输出路径（VideoTrackGenerator/MediaStreamTrackGenerator）
@@ -21266,11 +20951,11 @@ module.exports = MediaEffectsComposer;
  *   - 音频轨注入到已返回的混合流（延迟添加音频场景）
  *   - 停止时清理所有捕获的流轨道
  *
- * @module OutputStreamManager
+ * @module OutputStream
  */
 var issueUtils = require('../MediaEffectsIssue');
 var getErrorMessage = issueUtils.getErrorMessage;
-class OutputStreamManager {
+class OutputStream {
   /**
    * @param {Object} options
    * @param {HTMLCanvasElement} options.canvas - 输出 canvas 元素
@@ -21300,7 +20985,7 @@ class OutputStreamManager {
     this._videoStream = null;
 
     /** @type {Object} Insertable 能力探测结果 */
-    this._insertableSupport = OutputStreamManager.detectInsertableStreams();
+    this._insertableSupport = OutputStream.detectInsertableStreams();
     this._insertableByCfg = Boolean(this._config && this._config.enableInsertable);
 
     /** @type {boolean} 当前是否使用 Insertable 路径 */
@@ -21339,7 +21024,7 @@ class OutputStreamManager {
     /** @type {HTMLVideoElement|null} captureStream 输出保活 sink */
     this._captureSinkVideo = null;
     if (this._logger) {
-      this._logger.debug(`OutputStreamManager constructed: insertableSupported=${this._insertableSupport.supported} ` + `enabledByConfig=${this._insertableByCfg} ` + `generator=${this._insertableSupport.generatorType || 'none'} reason=${this._insertableSupport.reason || ''}`);
+      this._logger.debug(`OutputStream constructed: insertableSupported=${this._insertableSupport.supported} ` + `enabledByConfig=${this._insertableByCfg} ` + `generator=${this._insertableSupport.generatorType || 'none'} reason=${this._insertableSupport.reason || ''}`);
     }
   }
 
@@ -21363,11 +21048,11 @@ class OutputStreamManager {
     if (!this._onIssue) return;
     try {
       this._onIssue(Object.assign({
-        component: 'OutputStreamManager',
+        component: 'OutputStream',
         severity: 'warn'
       }, issue));
     } catch (e) {
-      if (this._logger) this._logger.warn('OutputStreamManager issue callback failed: ' + (e.message || String(e)));
+      if (this._logger) this._logger.warn(`OutputStream issue callback failed: ${e.message || String(e)}`);
     }
   }
   static _getGlobalObject() {
@@ -21389,7 +21074,7 @@ class OutputStreamManager {
    * @returns {Object}
    */
   static detectInsertableStreams() {
-    var runtime = OutputStreamManager._getGlobalObject();
+    var runtime = OutputStream._getGlobalObject();
     var VideoTrackGeneratorConstructor = runtime.VideoTrackGenerator;
     var MediaStreamTrackGeneratorConstructor = runtime.MediaStreamTrackGenerator;
     var VideoFrameConstructor = runtime.VideoFrame;
@@ -21634,7 +21319,7 @@ class OutputStreamManager {
     }
   }
   _createTrackGenerator() {
-    var runtime = OutputStreamManager._getGlobalObject();
+    var runtime = OutputStream._getGlobalObject();
     var GeneratorConstructor = runtime.VideoTrackGenerator || runtime.MediaStreamTrackGenerator;
     if (!GeneratorConstructor) {
       throw new Error('TrackGenerator constructor is unavailable');
@@ -21737,7 +21422,7 @@ class OutputStreamManager {
     return this._createVideoFrame(frameCtx && frameCtx.canvas, frameCtx && frameCtx.timestamp, false);
   }
   async _createVideoFrame(source, timestamp, sourceConsumed) {
-    var runtime = OutputStreamManager._getGlobalObject();
+    var runtime = OutputStream._getGlobalObject();
     var VideoFrameConstructor = runtime.VideoFrame;
     if (!VideoFrameConstructor) {
       throw new Error('VideoFrame constructor is unavailable');
@@ -21963,10 +21648,10 @@ class OutputStreamManager {
     return this._videoStream;
   }
 }
-module.exports = OutputStreamManager;
+module.exports = OutputStream;
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"../MediaEffectsIssue":69}],52:[function(require,module,exports){
+},{"../MediaEffectsIssue":56}],43:[function(require,module,exports){
 "use strict";
 
 /**
@@ -21981,12 +21666,121 @@ module.exports = OutputStreamManager;
  * @module RenderLoop
  */
 
-var RendererFactory = require('./renderers/RendererFactory');
 var MainCanvas2DRenderer = require('./renderers/MainCanvas2DRenderer');
 var MainWebGL2Renderer = require('./renderers/MainWebGL2Renderer');
 var WorkerRenderer = require('./renderers/WorkerRenderer');
 var issueUtils = require('../MediaEffectsIssue');
 var getErrorMessage = issueUtils.getErrorMessage;
+
+/**
+ * 创建渲染器（原 RendererFactory 逻辑，已内联到 RenderLoop）。
+ * 根据 renderMode 自动选择最优渲染后端。
+ */
+function createRenderer(canvas, config, hooks) {
+  var mode = config.renderMode || 'auto';
+  var forceMainThread = config.forceMainThreadRenderer === true;
+  var forceMain2D = config.forceMain2DRenderer === true;
+  var errors = [];
+  hooks = hooks || {};
+  if (forceMain2D) {
+    return createMain2D(canvas, config, true, 'Active source AI virtual background requires main-thread Canvas2D');
+  }
+  if (mode === 'main-2d') {
+    return createMain2D(canvas, config, false, '');
+  }
+  if (forceMainThread && (mode === 'worker-webgl2' || mode === 'worker-2d')) {
+    return createMainFallback(canvas, config, mode, 'Active source/output effects require a main-thread renderer');
+  }
+
+  // Safari/WKWebView prefer main-thread WebGL2
+  if (mode === 'auto' && shouldPreferMainWebGL2()) {
+    try {
+      var renderer = new MainWebGL2Renderer(config, {
+        requestedMode: mode,
+        isFallback: true,
+        reason: 'Safari/WKWebView prefers main-thread WebGL2 because Worker WebGL2 support is limited'
+      });
+      renderer.init(canvas);
+      return renderer;
+    } catch (error) {
+      errors.push(error.message || String(error));
+    }
+  }
+
+  // Try Worker path
+  if (!forceMainThread && (mode === 'worker-webgl2' || mode === 'worker-2d' || mode === 'auto')) {
+    try {
+      var workerMode = mode === 'auto' ? 'worker-webgl2' : mode;
+      var workerConfig = Object.assign({}, config, {
+        renderMode: workerMode
+      });
+      var _renderer = new WorkerRenderer(workerConfig, {
+        requestedMode: mode,
+        isFallback: false,
+        reason: '',
+        onFatalError: hooks.onWorkerFatalError
+      });
+      _renderer.init(canvas);
+      return _renderer;
+    } catch (error) {
+      errors.push(error.message || String(error));
+      if (mode === 'worker-webgl2' || mode === 'worker-2d') {
+        return createMainFallback(canvas, config, mode, errors.join('; '));
+      }
+    }
+  }
+
+  // Try main-thread WebGL2
+  if (mode === 'main-webgl2' || mode === 'auto') {
+    try {
+      var _renderer2 = new MainWebGL2Renderer(config, {
+        requestedMode: mode,
+        isFallback: errors.length > 0,
+        reason: errors.join('; ')
+      });
+      _renderer2.init(canvas);
+      return _renderer2;
+    } catch (error) {
+      errors.push(error.message || String(error));
+    }
+  }
+
+  // Ultimate fallback: main thread Canvas2D
+  return createMain2D(canvas, config, errors.length > 0, errors.join('; '));
+}
+function createMainFallback(canvas, config, requestedMode, reason) {
+  if (config.forceMain2DRenderer === true) {
+    return createMain2D(canvas, config, true, reason);
+  }
+  if (requestedMode !== 'worker-2d') {
+    try {
+      var renderer = new MainWebGL2Renderer(config, {
+        requestedMode: requestedMode,
+        isFallback: true,
+        reason: reason
+      });
+      renderer.init(canvas);
+      return renderer;
+    } catch (error) {}
+  }
+  return createMain2D(canvas, config, true, reason);
+}
+function createMain2D(canvas, config, isFallback, reason) {
+  var renderer = new MainCanvas2DRenderer(config, {
+    requestedMode: config.renderMode || 'auto',
+    isFallback: Boolean(isFallback),
+    reason: reason || ''
+  });
+  renderer.init(canvas);
+  return renderer;
+}
+function shouldPreferMainWebGL2() {
+  if (typeof navigator === 'undefined') return false;
+  var ua = navigator.userAgent || '';
+  var isSafari = /Safari/i.test(ua) && !/Chrome|Chromium|CriOS|Edg|OPR|Firefox|FxiOS/i.test(ua);
+  var isIOSWebView = /iPhone|iPad|iPod/i.test(ua) && !/Safari/i.test(ua);
+  return isSafari || isIOSWebView;
+}
 class RenderLoop {
   /**
    * @param {Object} options
@@ -22068,7 +21862,7 @@ class RenderLoop {
         severity: 'warn'
       }, issue));
     } catch (e) {
-      if (this._logger) this._logger.warn('RenderLoop issue callback failed: ' + (e.message || String(e)));
+      if (this._logger) this._logger.warn(`RenderLoop issue callback failed: ${e.message || String(e)}`);
     }
   }
 
@@ -22123,7 +21917,7 @@ class RenderLoop {
 
   /**
    * 确保渲染后端已创建。
-   * 首次调用时通过 RendererFactory.createRenderer 根据配置创建实际渲染器。
+   * 首次调用时通过 createRenderer 根据配置创建实际渲染器。
    *
    * @returns {BaseRenderer} 当前渲染后端
    */
@@ -22132,7 +21926,7 @@ class RenderLoop {
       if (this._logger) {
         this._logger.debug(`Creating renderer: requestedMode=${this._config.renderMode}`);
       }
-      this._renderer = RendererFactory.createRenderer(this._canvas, this._config, {
+      this._renderer = createRenderer(this._canvas, this._config, {
         onWorkerFatalError: reason => {
           this.fallbackRenderer(reason || 'Worker renderer failed at runtime');
         }
@@ -22570,18 +22364,18 @@ class RenderLoop {
   }
 }
 module.exports = RenderLoop;
-},{"../MediaEffectsIssue":69,"./renderers/MainCanvas2DRenderer":62,"./renderers/MainWebGL2Renderer":63,"./renderers/RendererFactory":64,"./renderers/WorkerRenderer":65}],53:[function(require,module,exports){
+},{"../MediaEffectsIssue":56,"./renderers/MainCanvas2DRenderer":51,"./renderers/MainWebGL2Renderer":52,"./renderers/WorkerRenderer":53}],44:[function(require,module,exports){
 "use strict";
 
 /**
- * SourceStore — 混流器输入源注册表
+ * Sources — 混流器输入源注册表
  *
  * 管理所有参与混流的输入源（MediaStream / HTMLVideoElement）。
  * 负责源的增删、ID 生成、slot 分配、状态查询等。
  *
- * @module SourceStore
+ * @module Sources
  */
-class SourceStore {
+class Sources {
   /**
    * @param {Object} options
    * @param {Object} options.logger - 日志记录器
@@ -22609,7 +22403,7 @@ class SourceStore {
     /** @type {number} 内部自增 ID 序列，用于生成唯一 source ID */
     this._sourceSeq = 0;
     if (this._logger) {
-      this._logger.debug('SourceStore constructed');
+      this._logger.debug('Sources constructed');
     }
   }
 
@@ -22939,17 +22733,17 @@ class SourceStore {
     }
   }
 }
-module.exports = SourceStore;
-},{}],54:[function(require,module,exports){
+module.exports = Sources;
+},{}],45:[function(require,module,exports){
 "use strict";
 
 /**
- * WatermarkManager — Composer 水印配置、加载和布局模块
+ * Watermark — Composer 水印配置、加载和布局模块
  *
  * 负责将外部水印配置归一化为 renderer 可直接绘制的图片面，并按输出画布
  * 或每路 source 的 draw 区域计算最终绘制矩形。
  *
- * @module WatermarkManager
+ * @module Watermark
  */
 
 var DEFAULT_TEXT_COLOR = '#fff';
@@ -22958,7 +22752,7 @@ var DEFAULT_FONT_SIZE = 28;
 var DEFAULT_PADDING = 3;
 var DEFAULT_BACKGROUND_RADIUS = 3;
 var DEFAULT_MARGIN = 16;
-class WatermarkManager {
+class Watermark {
   /**
    * @param {Object} options
    * @param {Object} options.logger - 日志记录器
@@ -22970,7 +22764,7 @@ class WatermarkManager {
     this._watermarks = [];
     this._seq = 0;
     if (this._logger) {
-      this._logger.debug('WatermarkManager constructed');
+      this._logger.debug('Watermark constructed');
     }
   }
 
@@ -22992,10 +22786,10 @@ class WatermarkManager {
     if (!this._onIssue) return;
     try {
       this._onIssue(Object.assign({
-        component: 'WatermarkManager'
+        component: 'Watermark'
       }, issue));
     } catch (e) {
-      if (this._logger) this._logger.warn('WatermarkManager issue callback failed: ' + (e.message || String(e)));
+      if (this._logger) this._logger.warn(`Watermark issue callback failed: ${e.message || String(e)}`);
     }
   }
 
@@ -23444,8 +23238,8 @@ function fillRoundedRect(context, x, y, width, height, radius) {
   context.closePath();
   context.fill();
 }
-module.exports = WatermarkManager;
-},{}],55:[function(require,module,exports){
+module.exports = Watermark;
+},{}],46:[function(require,module,exports){
 "use strict";
 
 /**
@@ -23667,7 +23461,7 @@ module.exports = class AiVBAssetLoader {
     });
   }
 };
-},{"../../Logger":45,"./AiVBConfig":56,"./AiVBSegmentationCommon":57}],56:[function(require,module,exports){
+},{"../../Logger":37,"./AiVBConfig":47,"./AiVBSegmentationCommon":48}],47:[function(require,module,exports){
 "use strict";
 
 /**
@@ -23916,7 +23710,7 @@ function assertKnownKeys(sectionName, value, allowedKeys) {
     throw new Error(`Unsupported AIVirtualBackground ${sectionName} option(s): ${unknownKeys.join(', ')}`);
   }
 }
-},{"../../Logger":45}],57:[function(require,module,exports){
+},{"../../Logger":37}],48:[function(require,module,exports){
 "use strict";
 
 /**
@@ -24044,513 +23838,11 @@ exports.createSegmentationHelpers = createSegmentationHelpers;
 exports.getWorkerSegmentationHelpersFactorySource = function () {
   return createSegmentationHelpers.toString();
 };
-},{}],58:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
 "use strict";
 
 /**
- * MediaPipeSegmenterRuntime —— 封装 MediaPipe ImageSegmenter（VIDEO 模式），
- * 为 AIVirtualBackground 提供人像分割能力。
- *
- * 职责：
- *   - 通过 AiVBAssetLoader 懒加载 MediaPipe Tasks Vision 运行时
- *   - 使用 selfie-segmenter 模型初始化 ImageSegmenter
- *   - 执行逐帧分割并返回基于 canvas 的 alpha 遮罩
- *   - 最多排队一个待处理帧，避免背压积累
- *   - 销毁时干净关闭分割器并拒绝所有未完成的 Promise
- *
- * @module MediaPipeSegmenterRuntime
- */
-
-var Logger = require('../../Logger');
-var AiVBAssetLoader = require('./AiVBAssetLoader');
-var SegmentationCommon = require('./AiVBSegmentationCommon');
-var logger = new Logger('AiVBMediaPipeRuntime');
-var segmentationHelpers = SegmentationCommon.createSegmentationHelpers();
-
-/** 默认推理后端 —— 'GPU' 以获得最佳性能 */
-var DEFAULT_DELEGATE = 'GPU';
-var DEFAULT_MASK_EDGE_BLUR_PX = 2;
-var DEFAULT_MASK_ALPHA_BIAS = 0.08;
-function normalizeDelegate() {
-  return DEFAULT_DELEGATE;
-}
-module.exports = class MediaPipeSegmenterRuntime {
-  /**
-   * @param {Object} [config={}]
-   * @param {Object} [config.assetConfig] — MediaPipe 运行时包和模型文件的 CDN / 路径覆盖
-   */
-  constructor(config = {}) {
-    this._onIssue = typeof config.onIssue === 'function' ? config.onIssue : null;
-
-    /** @type {AiVBAssetLoader} 负责 MediaPipe 的动态脚本加载 */
-    this.assetLoader = new AiVBAssetLoader(config.assetConfig);
-
-    /** @type {Object|null} 解析后的资源 URL —— { moduleUrl, wasmBaseUrl, modelUrl } */
-    this.assetUrls = null;
-
-    /** @type {Object|null} MediaPipe ImageSegmenter 实例 */
-    this.segmenter = null;
-
-    /** @type {boolean} 分割器是否已成功初始化 */
-    this.initialized = false;
-
-    /** @type {Promise|null} 正在进行的初始化 Promise（用于去重，防止并发初始化） */
-    this.initializingPromise = null;
-
-    /** @type {Object|null} 当前正在执行的分割请求 —— { resolve, reject, promise } */
-    this.pendingRequest = null;
-
-    /** @type {Object|null} 排队中的分割请求，当前一个请求完成后立即处理 ——
-     *   { videoElement, resolve, reject, promise } */
-    this.queuedRequest = null;
-
-    /** @type {boolean} 是否已调用 destroy() */
-    this.destroyed = false;
-
-    /** @type {string[]} 分割模型返回的标签列表 */
-    this.labels = [];
-
-    /** @type {number} 'person' 标签在 labels 中的索引 */
-    this.personMaskIndex = 0;
-
-    /** @type {HTMLCanvasElement|null} 复用的离屏 canvas，用于生成 alpha 遮罩 */
-    this.maskCanvas = null;
-
-    /** @type {CanvasRenderingContext2D|null} maskCanvas 的 2D 上下文 */
-    this.maskContext = null;
-
-    /** @type {ImageData|null} 复用的 ImageData 缓冲区，用于遮罩输出 */
-    this.maskImageData = null;
-
-    /** @type {HTMLCanvasElement|null} 对遮罩边缘做轻量羽化的离屏 canvas */
-    this.featherCanvas = null;
-
-    /** @type {CanvasRenderingContext2D|null} featherCanvas 的 2D 上下文 */
-    this.featherContext = null;
-  }
-  _reportIssue(issue) {
-    if (!this._onIssue) return;
-    try {
-      this._onIssue(Object.assign({
-        component: 'MediaPipeSegmenterRuntime'
-      }, issue));
-    } catch (e) {
-      if (logger) logger.warn('MediaPipeSegmenterRuntime issue callback failed: ' + (e.message || String(e)));
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // 生命周期
-  // ---------------------------------------------------------------------------
-
-  /**
-   * 初始化 MediaPipe ImageSegmenter。
-   *
-   * 加载 Tasks Vision 运行时（动态 <script> 注入）、解析 WASM 和模型 URL、
-   * 创建分割器并记录标签列表，以便后续定位人物遮罩。
-   *
-   * 可安全地多次调用 —— 已初始化时立即返回，正在初始化时共享同一个 Promise。
-   *
-   * @param {Object} [options={}]
-   * @param {string} [options.modelPath] — 可选的模型 URL 覆盖
-   * @param {'GPU'} [options.delegate='GPU'] — 推理后端固定为 GPU
-   * @returns {Promise<void>}
-   * @throws {Error} 如果分割器已被销毁
-   */
-  async initialize(options = {}) {
-    if (this.destroyed) {
-      throw new Error('MediaPipe segmenter destroyed');
-    }
-    if (this.initialized) {
-      return;
-    }
-    if (this.initializingPromise) {
-      return this.initializingPromise;
-    }
-    this.initializingPromise = (async () => {
-      var tasks = null;
-      try {
-        tasks = await this.assetLoader.ensureTasksLoaded();
-      } catch (error) {
-        this._reportIssue({
-          stage: 'aivb-runtime-load',
-          severity: 'warn',
-          fallbackApplied: true,
-          degraded: true,
-          message: error && error.message ? error.message : String(error),
-          details: {
-            assetConfig: this.assetLoader && this.assetLoader.assetConfig ? Object.assign({}, this.assetLoader.assetConfig) : {}
-          }
-        });
-        if (error && typeof error === 'object') {
-          error.__mediaEffectsIssueReported = true;
-        }
-        throw error;
-      }
-      var {
-        FilesetResolver,
-        ImageSegmenter
-      } = tasks;
-      if (this.destroyed) {
-        throw new Error('MediaPipe segmenter destroyed');
-      }
-      this.assetUrls = this.assetLoader.getRuntimeOptions(options.modelPath);
-      var vision = await FilesetResolver.forVisionTasks(this.assetUrls.wasmBaseUrl);
-      var requestedDelegate = normalizeDelegate(options.delegate);
-      var segmenter = await this.createGpuSegmenter(ImageSegmenter, vision, requestedDelegate);
-      try {
-        if (this.destroyed) {
-          throw new Error('MediaPipe segmenter destroyed');
-        }
-        this.segmenter = segmenter;
-        this.labels = typeof segmenter.getLabels === 'function' ? segmenter.getLabels() : [];
-        this.initialized = true;
-        logger.debug(`initialize() complete: ${JSON.stringify(this.assetUrls)}`);
-      } catch (error) {
-        // 尽力关闭刚创建的分割器
-        if (typeof segmenter.close === 'function') {
-          try {
-            await segmenter.close();
-          } catch (closeError) {
-            logger.warn(`Failed to close MediaPipe segmenter after initialize error: ${closeError.message}`);
-          }
-        }
-        this.segmenter = null;
-        this.assetUrls = null;
-        this.initialized = false;
-        this.labels = [];
-        this.personMaskIndex = 0;
-        this.maskCanvas = null;
-        this.maskContext = null;
-        this.maskImageData = null;
-        this.featherCanvas = null;
-        this.featherContext = null;
-
-        // 拒绝正在等待初始化的请求
-        if (this.pendingRequest) {
-          var pending = this.pendingRequest;
-          this.pendingRequest = null;
-          pending.reject(error);
-        }
-        throw error;
-      }
-    })();
-    try {
-      await this.initializingPromise;
-    } finally {
-      this.initializingPromise = null;
-    }
-  }
-  async createGpuSegmenter(ImageSegmenter, vision, requestedDelegate) {
-    try {
-      return await ImageSegmenter.createFromOptions(vision, segmentationHelpers.createSegmenterOptions(this.assetUrls.modelUrl, requestedDelegate));
-    } catch (error) {
-      logger.warn(`ImageSegmenter GPU init failed; CPU fallback is disabled: ${error && error.message ? error.message : error}`);
-      throw error;
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // 分割
-  // ---------------------------------------------------------------------------
-
-  /**
-   * 为给定视频帧排期一次分割。
-   *
-   * 如果已有分割正在进行，最新的帧会被排队（仅保留一帧排队 —— 更早的排队帧会被替换）。
-   * 这样可以在不积压请求的前提下保持管线响应。
-   *
-   * @param {HTMLVideoElement} videoElement — 源视频元素
-   * @returns {Promise<{ segmentationMask: HTMLCanvasElement }>}
-   * @throws {Error} 如果分割器未初始化
-   */
-  async segmentForVideo(videoElement) {
-    if (!this.initialized || !this.segmenter) {
-      throw new Error('MediaPipe segmenter not initialized');
-    }
-    if (this.pendingRequest) {
-      if (!this.queuedRequest) {
-        var resolveQueued;
-        var rejectQueued;
-        var queuedPromise = new Promise((resolve, reject) => {
-          resolveQueued = resolve;
-          rejectQueued = reject;
-        });
-        this.queuedRequest = {
-          videoElement,
-          resolve: resolveQueued,
-          reject: rejectQueued,
-          promise: queuedPromise
-        };
-      } else {
-        // 替换之前的排队帧 —— 只有最新的帧才重要
-        this.queuedRequest.videoElement = videoElement;
-      }
-      logger.debug('segmentForVideo() queued latest frame while previous segmentation is pending');
-      return this.queuedRequest.promise;
-    }
-    return this.runSegmentation(videoElement);
-  }
-  updateQueuedFrame(videoElement) {
-    if (!this.queuedRequest) {
-      return false;
-    }
-    this.queuedRequest.videoElement = videoElement;
-    return true;
-  }
-
-  /**
-   * 执行一次分割。
-   *
-   * 调用 MediaPipe 分割器的 VIDEO 模式 API，将置信度遮罩输出转换为基于 canvas 的 alpha 遮罩。
-   *
-   * @private
-   * @param {HTMLVideoElement} videoElement
-   * @returns {Promise<{ segmentationMask: HTMLCanvasElement }>}
-   */
-  async runSegmentation(videoElement) {
-    var resolvePending;
-    var rejectPending;
-    var promise = new Promise((resolve, reject) => {
-      resolvePending = resolve;
-      rejectPending = reject;
-    });
-    this.pendingRequest = {
-      resolve: resolvePending,
-      reject: rejectPending,
-      promise
-    };
-    var timestampMs = typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now();
-    try {
-      // MediaPipe VIDEO 模式的分割是基于回调的
-      this.segmenter.segmentForVideo(videoElement, timestampMs, result => {
-        // 防止 destroy() 已将 pendingRequest 置空后的过时回调
-        if (!this.pendingRequest || this.pendingRequest.promise !== promise) {
-          return;
-        }
-        var pending = this.pendingRequest;
-        this.pendingRequest = null;
-        try {
-          pending.resolve({
-            segmentationMask: this.createSegmentationMask(result)
-          });
-        } catch (error) {
-          pending.reject(error);
-        } finally {
-          this.closeSegmentationResult(result);
-          this.processQueuedRequest();
-        }
-      });
-    } catch (error) {
-      var pending = this.pendingRequest;
-      this.pendingRequest = null;
-      pending.reject(error);
-      this.processQueuedRequest();
-    }
-    return promise;
-  }
-
-  /**
-   * 如果有排队请求且没有其他请求正在执行，将其出队并执行。
-   *
-   * @private
-   */
-  processQueuedRequest() {
-    if (!this.queuedRequest || this.pendingRequest || this.destroyed) {
-      return;
-    }
-    var queued = this.queuedRequest;
-    this.queuedRequest = null;
-    this.runSegmentation(queued.videoElement).then(queued.resolve).catch(queued.reject);
-  }
-
-  // ---------------------------------------------------------------------------
-  // 遮罩构建
-  // ---------------------------------------------------------------------------
-
-  /**
-   * 确定哪个置信度遮罩对应"人物"。
-   *
-   * 启发式策略：
-   *   1. 在标签中搜索匹配 /person/i 的项
-   *   2. 若无标签匹配且有多个遮罩，选最后一个（selfie-segmenter 模型的最后一个输出通常是人像）
-   *   3. 兜底使用索引 0
-   *
-   * @param {number} maskCount — 返回的置信度遮罩总数
-   * @returns {number} 从 0 开始的索引
-   */
-  resolvePersonMaskIndex(maskCount) {
-    return segmentationHelpers.resolvePersonMaskIndex(this.labels, maskCount);
-  }
-
-  /**
-   * 从原始分割结果构建基于 canvas 的 alpha 遮罩。
-   *
-   * 遮罩为灰度 canvas，其中：
-   *   - R=G=B=0（黑色）
-   *   - A = round(置信度 × 255)
-   *
-   * 此 canvas 可作为 destination-in 合成的源来使用。
-   *
-   * @private
-   * @param {Object} result — 原始 MediaPipe ImageSegmenterResult
-   * @returns {HTMLCanvasElement} 已绘制 alpha 遮罩的 canvas
-   * @throws {Error} 如果未找到支持的遮罩输出
-   */
-  createSegmentationMask(result) {
-    var mask = this.resolveOutputMask(result);
-    var width = mask.width;
-    var height = mask.height;
-    if (!width || !height) {
-      throw new Error('ImageSegmenter returned invalid categoryMask size');
-    }
-
-    // 懒创建 / 调整复用的遮罩 canvas
-    if (!this.maskCanvas) {
-      this.maskCanvas = document.createElement('canvas');
-      this.maskContext = this.maskCanvas.getContext('2d');
-    }
-    if (!this.maskContext) {
-      throw new Error('Unable to create segmentation mask canvas');
-    }
-    if (this.maskCanvas.width !== width || this.maskCanvas.height !== height || !this.maskImageData) {
-      this.maskCanvas.width = width;
-      this.maskCanvas.height = height;
-      this.maskImageData = this.maskContext.createImageData(width, height);
-    }
-    var confidenceValues = this.readMaskValues(mask);
-    var imageData = this.maskImageData.data;
-    segmentationHelpers.fillAlphaMaskImageData(confidenceValues, imageData, DEFAULT_MASK_ALPHA_BIAS);
-    this.maskContext.putImageData(this.maskImageData, 0, 0);
-    return this.applyMaskEdgeBlur(width, height);
-  }
-  applyMaskEdgeBlur(width, height) {
-    if (!this.maskCanvas || !this.maskContext || DEFAULT_MASK_EDGE_BLUR_PX <= 0) {
-      return this.maskCanvas;
-    }
-    if (!this.featherCanvas) {
-      this.featherCanvas = document.createElement('canvas');
-      this.featherContext = this.featherCanvas.getContext('2d');
-    }
-    if (!this.featherContext) {
-      return this.maskCanvas;
-    }
-    if (this.featherCanvas.width !== width) {
-      this.featherCanvas.width = width;
-    }
-    if (this.featherCanvas.height !== height) {
-      this.featherCanvas.height = height;
-    }
-    this.featherContext.clearRect(0, 0, width, height);
-    this.featherContext.save();
-    this.featherContext.filter = `blur(${DEFAULT_MASK_EDGE_BLUR_PX}px)`;
-    this.featherContext.drawImage(this.maskCanvas, 0, 0, width, height);
-    this.featherContext.restore();
-    return this.featherCanvas;
-  }
-
-  /**
-   * 从分割结果中解析出要使用的遮罩。
-   *
-   * 优先使用 confidenceMasks[personMaskIndex]（如果可用）；
-   * 回退到 categoryMask（兼容旧模型）。
-   *
-   * @private
-   * @param {Object} result
-   * @returns {Object} 单个遮罩对象（含 width、height 及数据访问方法）
-   * @throws {Error} 如果既没有 confidenceMasks 也没有 categoryMask
-   */
-  resolveOutputMask(result) {
-    var outputMask = segmentationHelpers.resolveOutputMask(result, this.labels);
-    this.personMaskIndex = outputMask.personMaskIndex;
-    return outputMask.mask;
-  }
-
-  /**
-   * 从 MediaPipe 遮罩中读取原始置信度值。
-   *
-   * 支持 Float32Array 输出（置信度遮罩）和 Uint8Array 输出（类别遮罩），
-   * 全部归一化为 [0, 1] 范围内的 Float32。
-   *
-   * @private
-   * @param {Object} mask — MediaPipe 遮罩对象
-   * @returns {Float32Array} [0, 1] 范围内的置信度值
-   * @throws {Error} 如果遮罩格式不受支持
-   */
-  readMaskValues(mask) {
-    return segmentationHelpers.readMaskValues(mask);
-  }
-
-  /**
-   * 释放分割结果关联的 MediaPipe 资源。
-   *
-   * MediaPipe 结果可能持有 WASM 底层资源，需要显式清理。
-   * 此方法同时关闭结果本身及其子遮罩对象。
-   *
-   * @private
-   * @param {Object} result — MediaPipe ImageSegmenterResult
-   */
-  closeSegmentationResult(result) {
-    segmentationHelpers.closeSegmentationResult(result);
-  }
-
-  // ---------------------------------------------------------------------------
-  // 销毁
-  // ---------------------------------------------------------------------------
-
-  /**
-   * 销毁分割器：关闭 MediaPipe 实例、拒绝未完成的 Promise、释放所有资源。
-   *
-   * 可安全地多次调用。
-   *
-   * @returns {Promise<void>}
-   */
-  async destroy() {
-    this.destroyed = true;
-
-    // 拒绝正在执行的分割
-    if (this.pendingRequest) {
-      var pending = this.pendingRequest;
-      this.pendingRequest = null;
-      pending.reject(new Error('MediaPipe segmenter destroyed'));
-    }
-
-    // 拒绝排队中的帧
-    if (this.queuedRequest) {
-      var queued = this.queuedRequest;
-      this.queuedRequest = null;
-      queued.reject(new Error('MediaPipe segmenter destroyed'));
-    }
-
-    // 等待初始化完成，以便安全关闭它可能已创建的分割器
-    if (this.initializingPromise) {
-      try {
-        await this.initializingPromise;
-      } catch (error) {
-        logger.debug(`destroy() ignored initialize error: ${error.message}`);
-      }
-    }
-    if (this.segmenter && typeof this.segmenter.close === 'function') {
-      await this.segmenter.close();
-    }
-    this.segmenter = null;
-    this.assetUrls = null;
-    this.initialized = false;
-    this.initializingPromise = null;
-    this.labels = [];
-    this.personMaskIndex = 0;
-    this.maskCanvas = null;
-    this.maskContext = null;
-    this.maskImageData = null;
-    this.featherCanvas = null;
-    this.featherContext = null;
-  }
-};
-},{"../../Logger":45,"./AiVBAssetLoader":55,"./AiVBSegmentationCommon":57}],59:[function(require,module,exports){
-"use strict";
-
-/**
- * SourceAiVBController —— 源级别 AI 虚拟背景控制器
+ * AiVBState —— 源级别 AI 虚拟背景控制器
  *
  * 管理每个视频源（source）的 AI 虚拟背景效果生命周期：
  *   - 配置归一化与校验
@@ -24562,7 +23854,7 @@ module.exports = class MediaPipeSegmenterRuntime {
  * 每个 source 的状态通过 WeakMap 存储，不污染 source 对象本身；
  * 但运行时、工作画布、背景图等资源仍需通过 removeSource()/destroy() 主动清理。
  *
- * @module SourceAiVBController
+ * @module AiVBState
  */
 
 var AiVBConfig = require('./AiVBConfig');
@@ -24793,10 +24085,10 @@ function createRuntimeConfigKey(config) {
 }
 
 // =============================================================================
-// SourceAiVBController 类
+// AiVBState 类
 // =============================================================================
 
-module.exports = class SourceAiVBController {
+module.exports = class AiVBState {
   /**
    * @param {Object} [options={}]
    * @param {Object} [options.logger] - 日志记录器
@@ -24833,10 +24125,10 @@ module.exports = class SourceAiVBController {
     if (!this._onIssue) return;
     try {
       this._onIssue(Object.assign({
-        component: 'SourceAiVBController'
+        component: 'AiVBState'
       }, issue));
     } catch (e) {
-      if (this._logger) this._logger.warn('SourceAiVBController issue callback failed: ' + (e.message || String(e)));
+      if (this._logger) this._logger.warn(`AiVBState issue callback failed: ${e.message || String(e)}`);
     }
   }
 
@@ -25630,155 +24922,509 @@ module.exports = class SourceAiVBController {
     return typeof performance !== 'undefined' && performance && typeof performance.now === 'function' ? performance.now() : Date.now();
   }
 };
-},{"../../MediaEffectsIssue":69,"./AiVBConfig":56,"./MediaPipeSegmenterRuntime":58}],60:[function(require,module,exports){
+},{"../../MediaEffectsIssue":56,"./AiVBConfig":47,"./MediaPipeSegmenterRuntime":50}],50:[function(require,module,exports){
 "use strict";
 
 /**
- * MediaEffectsComposer public entry point.
+ * MediaPipeSegmenterRuntime —— 封装 MediaPipe ImageSegmenter（VIDEO 模式），
+ * 为 AIVirtualBackground 提供人像分割能力。
+ *
+ * 职责：
+ *   - 通过 AiVBAssetLoader 懒加载 MediaPipe Tasks Vision 运行时
+ *   - 使用 selfie-segmenter 模型初始化 ImageSegmenter
+ *   - 执行逐帧分割并返回基于 canvas 的 alpha 遮罩
+ *   - 最多排队一个待处理帧，避免背压积累
+ *   - 销毁时干净关闭分割器并拒绝所有未完成的 Promise
+ *
+ * @module MediaPipeSegmenterRuntime
  */
-module.exports = require('./MediaEffectsComposer');
-},{"./MediaEffectsComposer":50}],61:[function(require,module,exports){
-"use strict";
 
-/**
- * BaseRenderer — 渲染器基类
- *
- * 定义所有渲染后端的统一接口。
- * 渲染器只负责把 Composer 算好的布局 payload 绘制到 canvas，
- * 不关心源管理、布局计算、音频混音等业务逻辑。
- *
- * 子类必须实现：
- *   - init(canvas)    — 初始化渲染上下文
- *   - render(payload) — 绘制一帧
- * 可选覆盖：
- *   - resize(w, h)    — 调整输出尺寸
- *   - removeSource(id) — 释放指定源的 GPU 资源
- *   - destroy()       — 销毁所有资源
- *
- * @module BaseRenderer
- */
-module.exports = class BaseRenderer {
+var Logger = require('../../Logger');
+var AiVBAssetLoader = require('./AiVBAssetLoader');
+var SegmentationCommon = require('./AiVBSegmentationCommon');
+var logger = new Logger('AiVBMediaPipeRuntime');
+var segmentationHelpers = SegmentationCommon.createSegmentationHelpers();
+
+/** 默认推理后端 —— 'GPU' 以获得最佳性能 */
+var DEFAULT_DELEGATE = 'GPU';
+var DEFAULT_MASK_EDGE_BLUR_PX = 2;
+var DEFAULT_MASK_ALPHA_BIAS = 0.08;
+function normalizeDelegate() {
+  return DEFAULT_DELEGATE;
+}
+module.exports = class MediaPipeSegmenterRuntime {
   /**
-   * @param {Object} config - 混流配置（来自 ComposerConfig）
-   * @param {string} [config.renderMode] - 请求的渲染模式
-   * @param {number} [config.fps] - 目标帧率
-   * @param {number} [config.width] - 输出宽度
-   * @param {number} [config.height] - 输出高度
-   * @param {Object} [info] - 渲染器元信息（子类传入，覆盖基类默认值）
-   * @param {string} [info.requestedMode] - 请求的渲染模式
-   * @param {string} [info.actualMode] - 实际使用的渲染模式
-   * @param {boolean} [info.isWorker] - 是否在 Worker 中运行
-   * @param {boolean} [info.isWebGL2] - 是否使用 WebGL2
-   * @param {boolean} [info.isFallback] - 是否为降级路径
-   * @param {string} [info.reason] - 降级/失败原因描述
+   * @param {Object} [config={}]
+   * @param {Object} [config.assetConfig] — MediaPipe 运行时包和模型文件的 CDN / 路径覆盖
    */
-  constructor(config, info) {
-    this._config = config || {};
-    this._info = Object.assign({
-      requestedMode: this._config.renderMode || 'main-2d',
-      actualMode: 'unknown',
-      isWorker: false,
-      isWebGL2: false,
-      isFallback: false,
-      reason: '',
-      droppedFrames: 0,
-      renderedFrames: 0,
-      fps: this._config.fps || null,
-      width: this._config.width || null,
-      height: this._config.height || null
-    }, info || {});
+  constructor(config = {}) {
+    this._onIssue = typeof config.onIssue === 'function' ? config.onIssue : null;
 
-    /** @type {Function|null} 帧真正输出到主画布后的回调 */
-    this._onFramePresented = null;
+    /** @type {AiVBAssetLoader} 负责 MediaPipe 的动态脚本加载 */
+    this.assetLoader = new AiVBAssetLoader(config.assetConfig);
+
+    /** @type {Object|null} 解析后的资源 URL —— { moduleUrl, wasmBaseUrl, modelUrl } */
+    this.assetUrls = null;
+
+    /** @type {Object|null} MediaPipe ImageSegmenter 实例 */
+    this.segmenter = null;
+
+    /** @type {boolean} 分割器是否已成功初始化 */
+    this.initialized = false;
+
+    /** @type {Promise|null} 正在进行的初始化 Promise（用于去重，防止并发初始化） */
+    this.initializingPromise = null;
+
+    /** @type {Object|null} 当前正在执行的分割请求 —— { resolve, reject, promise } */
+    this.pendingRequest = null;
+
+    /** @type {Object|null} 排队中的分割请求，当前一个请求完成后立即处理 ——
+     *   { videoElement, resolve, reject, promise } */
+    this.queuedRequest = null;
+
+    /** @type {boolean} 是否已调用 destroy() */
+    this.destroyed = false;
+
+    /** @type {string[]} 分割模型返回的标签列表 */
+    this.labels = [];
+
+    /** @type {number} 'person' 标签在 labels 中的索引 */
+    this.personMaskIndex = 0;
+
+    /** @type {HTMLCanvasElement|null} 复用的离屏 canvas，用于生成 alpha 遮罩 */
+    this.maskCanvas = null;
+
+    /** @type {CanvasRenderingContext2D|null} maskCanvas 的 2D 上下文 */
+    this.maskContext = null;
+
+    /** @type {ImageData|null} 复用的 ImageData 缓冲区，用于遮罩输出 */
+    this.maskImageData = null;
+
+    /** @type {HTMLCanvasElement|null} 对遮罩边缘做轻量羽化的离屏 canvas */
+    this.featherCanvas = null;
+
+    /** @type {CanvasRenderingContext2D|null} featherCanvas 的 2D 上下文 */
+    this.featherContext = null;
+  }
+  _reportIssue(issue) {
+    if (!this._onIssue) return;
+    try {
+      this._onIssue(Object.assign({
+        component: 'MediaPipeSegmenterRuntime'
+      }, issue));
+    } catch (e) {
+      if (logger) logger.warn(`MediaPipeSegmenterRuntime issue callback failed: ${e.message || String(e)}`);
+    }
   }
 
+  // ---------------------------------------------------------------------------
+  // 生命周期
+  // ---------------------------------------------------------------------------
+
   /**
-   * 初始化渲染上下文。
-   * 子类在此获取 canvas context、编译 shader 等。
+   * 初始化 MediaPipe ImageSegmenter。
    *
-   * @param {HTMLCanvasElement} canvas - 输出 canvas
-   * @returns {boolean} true=初始化成功
+   * 加载 Tasks Vision 运行时（动态 <script> 注入）、解析 WASM 和模型 URL、
+   * 创建分割器并记录标签列表，以便后续定位人物遮罩。
+   *
+   * 可安全地多次调用 —— 已初始化时立即返回，正在初始化时共享同一个 Promise。
+   *
+   * @param {Object} [options={}]
+   * @param {string} [options.modelPath] — 可选的模型 URL 覆盖
+   * @param {'GPU'} [options.delegate='GPU'] — 推理后端固定为 GPU
+   * @returns {Promise<void>}
+   * @throws {Error} 如果分割器已被销毁
    */
-  init() {
+  async initialize(options = {}) {
+    if (this.destroyed) {
+      throw new Error('MediaPipe segmenter destroyed');
+    }
+    if (this.initialized) {
+      return;
+    }
+    if (this.initializingPromise) {
+      return this.initializingPromise;
+    }
+    this.initializingPromise = (async () => {
+      var tasks = null;
+      try {
+        tasks = await this.assetLoader.ensureTasksLoaded();
+      } catch (error) {
+        this._reportIssue({
+          stage: 'aivb-runtime-load',
+          severity: 'warn',
+          fallbackApplied: true,
+          degraded: true,
+          message: error && error.message ? error.message : String(error),
+          details: {
+            assetConfig: this.assetLoader && this.assetLoader.assetConfig ? Object.assign({}, this.assetLoader.assetConfig) : {}
+          }
+        });
+        if (error && typeof error === 'object') {
+          error.__mediaEffectsIssueReported = true;
+        }
+        throw error;
+      }
+      var {
+        FilesetResolver,
+        ImageSegmenter
+      } = tasks;
+      if (this.destroyed) {
+        throw new Error('MediaPipe segmenter destroyed');
+      }
+      this.assetUrls = this.assetLoader.getRuntimeOptions(options.modelPath);
+      var vision = await FilesetResolver.forVisionTasks(this.assetUrls.wasmBaseUrl);
+      var requestedDelegate = normalizeDelegate(options.delegate);
+      var segmenter = await this.createGpuSegmenter(ImageSegmenter, vision, requestedDelegate);
+      try {
+        if (this.destroyed) {
+          throw new Error('MediaPipe segmenter destroyed');
+        }
+        this.segmenter = segmenter;
+        this.labels = typeof segmenter.getLabels === 'function' ? segmenter.getLabels() : [];
+        this.initialized = true;
+        logger.debug(`initialize() complete: ${JSON.stringify(this.assetUrls)}`);
+      } catch (error) {
+        // 尽力关闭刚创建的分割器
+        if (typeof segmenter.close === 'function') {
+          try {
+            await segmenter.close();
+          } catch (closeError) {
+            logger.warn(`Failed to close MediaPipe segmenter after initialize error: ${closeError.message}`);
+          }
+        }
+        this.segmenter = null;
+        this.assetUrls = null;
+        this.initialized = false;
+        this.labels = [];
+        this.personMaskIndex = 0;
+        this.maskCanvas = null;
+        this.maskContext = null;
+        this.maskImageData = null;
+        this.featherCanvas = null;
+        this.featherContext = null;
+
+        // 拒绝正在等待初始化的请求
+        if (this.pendingRequest) {
+          var pending = this.pendingRequest;
+          this.pendingRequest = null;
+          pending.reject(error);
+        }
+        throw error;
+      }
+    })();
+    try {
+      await this.initializingPromise;
+    } finally {
+      this.initializingPromise = null;
+    }
+  }
+  async createGpuSegmenter(ImageSegmenter, vision, requestedDelegate) {
+    try {
+      return await ImageSegmenter.createFromOptions(vision, segmentationHelpers.createSegmenterOptions(this.assetUrls.modelUrl, requestedDelegate));
+    } catch (error) {
+      logger.warn(`ImageSegmenter GPU init failed; CPU fallback is disabled: ${error && error.message ? error.message : error}`);
+      throw error;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // 分割
+  // ---------------------------------------------------------------------------
+
+  /**
+   * 为给定视频帧排期一次分割。
+   *
+   * 如果已有分割正在进行，最新的帧会被排队（仅保留一帧排队 —— 更早的排队帧会被替换）。
+   * 这样可以在不积压请求的前提下保持管线响应。
+   *
+   * @param {HTMLVideoElement} videoElement — 源视频元素
+   * @returns {Promise<{ segmentationMask: HTMLCanvasElement }>}
+   * @throws {Error} 如果分割器未初始化
+   */
+  async segmentForVideo(videoElement) {
+    if (!this.initialized || !this.segmenter) {
+      throw new Error('MediaPipe segmenter not initialized');
+    }
+    if (this.pendingRequest) {
+      if (!this.queuedRequest) {
+        var resolveQueued;
+        var rejectQueued;
+        var queuedPromise = new Promise((resolve, reject) => {
+          resolveQueued = resolve;
+          rejectQueued = reject;
+        });
+        this.queuedRequest = {
+          videoElement,
+          resolve: resolveQueued,
+          reject: rejectQueued,
+          promise: queuedPromise
+        };
+      } else {
+        // 替换之前的排队帧 —— 只有最新的帧才重要
+        this.queuedRequest.videoElement = videoElement;
+      }
+      logger.debug('segmentForVideo() queued latest frame while previous segmentation is pending');
+      return this.queuedRequest.promise;
+    }
+    return this.runSegmentation(videoElement);
+  }
+  updateQueuedFrame(videoElement) {
+    if (!this.queuedRequest) {
+      return false;
+    }
+    this.queuedRequest.videoElement = videoElement;
     return true;
   }
 
   /**
-   * 绘制一帧到 canvas。
+   * 执行一次分割。
    *
-   * @param {Object} payload - 布局数据（由 LayoutEngine.createRenderPayload 生成）
-   * @param {number} payload.width - 画布宽度
-   * @param {number} payload.height - 画布高度
-   * @param {string} payload.backgroundColor - 背景色
-   * @param {Array<Object>} payload.items - 每路视频的绘制信息
-   */
-  render() {}
-
-  /**
-   * 调整输出画布尺寸。
+   * 调用 MediaPipe 分割器的 VIDEO 模式 API，将置信度遮罩输出转换为基于 canvas 的 alpha 遮罩。
    *
-   * @param {number} width - 新宽度
-   * @param {number} height - 新高度
+   * @private
+   * @param {HTMLVideoElement} videoElement
+   * @returns {Promise<{ segmentationMask: HTMLCanvasElement }>}
    */
-  resize(width, height) {
-    this._info.width = width;
-    this._info.height = height;
+  async runSegmentation(videoElement) {
+    var resolvePending;
+    var rejectPending;
+    var promise = new Promise((resolve, reject) => {
+      resolvePending = resolve;
+      rejectPending = reject;
+    });
+    this.pendingRequest = {
+      resolve: resolvePending,
+      reject: rejectPending,
+      promise
+    };
+    var timestampMs = typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now();
+    try {
+      // MediaPipe VIDEO 模式的分割是基于回调的
+      this.segmenter.segmentForVideo(videoElement, timestampMs, result => {
+        // 防止 destroy() 已将 pendingRequest 置空后的过时回调
+        if (!this.pendingRequest || this.pendingRequest.promise !== promise) {
+          return;
+        }
+        var pending = this.pendingRequest;
+        this.pendingRequest = null;
+        try {
+          pending.resolve({
+            segmentationMask: this.createSegmentationMask(result)
+          });
+        } catch (error) {
+          pending.reject(error);
+        } finally {
+          this.closeSegmentationResult(result);
+          this.processQueuedRequest();
+        }
+      });
+    } catch (error) {
+      var pending = this.pendingRequest;
+      this.pendingRequest = null;
+      pending.reject(error);
+      this.processQueuedRequest();
+    }
+    return promise;
   }
 
   /**
-   * 移除一路源的 GPU 资源（如 WebGL 纹理）。
-   * Worker 渲染器会将此操作转发到 Worker 线程。
+   * 如果有排队请求且没有其他请求正在执行，将其出队并执行。
    *
-   * @param {string} id - 源 ID
+   * @private
    */
-  removeSource() {}
-
-  /**
-   * 销毁渲染器，释放所有 GPU 资源和上下文引用。
-   */
-  destroy() {}
-
-  /**
-   * 获取渲染器运行时信息快照。
-   * 返回副本，外部修改不影响内部状态。
-   *
-   * @returns {Object} 渲染状态信息
-   */
-  getInfo() {
-    return Object.assign({}, this._info);
-  }
-
-  /**
-   * 更新运行时信息（仅内部使用，子类调用）。
-   *
-   * @param {Object} info - 要更新的字段
-   */
-  _updateInfo(info) {
-    Object.assign(this._info, info || {});
-  }
-
-  /**
-   * 设置帧输出回调。
-   *
-   * @param {Function|null} callback - 回调函数
-   */
-  setFramePresentedCallback(callback) {
-    this._onFramePresented = typeof callback === 'function' ? callback : null;
-  }
-
-  /**
-   * 触发“帧已输出到主画布”事件。
-   *
-   * @param {Object} meta - 帧信息
-   */
-  _emitFramePresented(meta) {
-    if (!this._onFramePresented) {
+  processQueuedRequest() {
+    if (!this.queuedRequest || this.pendingRequest || this.destroyed) {
       return;
     }
-    this._onFramePresented(meta || {});
+    var queued = this.queuedRequest;
+    this.queuedRequest = null;
+    this.runSegmentation(queued.videoElement).then(queued.resolve).catch(queued.reject);
+  }
+
+  // ---------------------------------------------------------------------------
+  // 遮罩构建
+  // ---------------------------------------------------------------------------
+
+  /**
+   * 确定哪个置信度遮罩对应"人物"。
+   *
+   * 启发式策略：
+   *   1. 在标签中搜索匹配 /person/i 的项
+   *   2. 若无标签匹配且有多个遮罩，选最后一个（selfie-segmenter 模型的最后一个输出通常是人像）
+   *   3. 兜底使用索引 0
+   *
+   * @param {number} maskCount — 返回的置信度遮罩总数
+   * @returns {number} 从 0 开始的索引
+   */
+  resolvePersonMaskIndex(maskCount) {
+    return segmentationHelpers.resolvePersonMaskIndex(this.labels, maskCount);
+  }
+
+  /**
+   * 从原始分割结果构建基于 canvas 的 alpha 遮罩。
+   *
+   * 遮罩为灰度 canvas，其中：
+   *   - R=G=B=0（黑色）
+   *   - A = round(置信度 × 255)
+   *
+   * 此 canvas 可作为 destination-in 合成的源来使用。
+   *
+   * @private
+   * @param {Object} result — 原始 MediaPipe ImageSegmenterResult
+   * @returns {HTMLCanvasElement} 已绘制 alpha 遮罩的 canvas
+   * @throws {Error} 如果未找到支持的遮罩输出
+   */
+  createSegmentationMask(result) {
+    var mask = this.resolveOutputMask(result);
+    var width = mask.width;
+    var height = mask.height;
+    if (!width || !height) {
+      throw new Error('ImageSegmenter returned invalid categoryMask size');
+    }
+
+    // 懒创建 / 调整复用的遮罩 canvas
+    if (!this.maskCanvas) {
+      this.maskCanvas = document.createElement('canvas');
+      this.maskContext = this.maskCanvas.getContext('2d');
+    }
+    if (!this.maskContext) {
+      throw new Error('Unable to create segmentation mask canvas');
+    }
+    if (this.maskCanvas.width !== width || this.maskCanvas.height !== height || !this.maskImageData) {
+      this.maskCanvas.width = width;
+      this.maskCanvas.height = height;
+      this.maskImageData = this.maskContext.createImageData(width, height);
+    }
+    var confidenceValues = this.readMaskValues(mask);
+    var imageData = this.maskImageData.data;
+    segmentationHelpers.fillAlphaMaskImageData(confidenceValues, imageData, DEFAULT_MASK_ALPHA_BIAS);
+    this.maskContext.putImageData(this.maskImageData, 0, 0);
+    return this.applyMaskEdgeBlur(width, height);
+  }
+  applyMaskEdgeBlur(width, height) {
+    if (!this.maskCanvas || !this.maskContext || DEFAULT_MASK_EDGE_BLUR_PX <= 0) {
+      return this.maskCanvas;
+    }
+    if (!this.featherCanvas) {
+      this.featherCanvas = document.createElement('canvas');
+      this.featherContext = this.featherCanvas.getContext('2d');
+    }
+    if (!this.featherContext) {
+      return this.maskCanvas;
+    }
+    if (this.featherCanvas.width !== width) {
+      this.featherCanvas.width = width;
+    }
+    if (this.featherCanvas.height !== height) {
+      this.featherCanvas.height = height;
+    }
+    this.featherContext.clearRect(0, 0, width, height);
+    this.featherContext.save();
+    this.featherContext.filter = `blur(${DEFAULT_MASK_EDGE_BLUR_PX}px)`;
+    this.featherContext.drawImage(this.maskCanvas, 0, 0, width, height);
+    this.featherContext.restore();
+    return this.featherCanvas;
+  }
+
+  /**
+   * 从分割结果中解析出要使用的遮罩。
+   *
+   * 优先使用 confidenceMasks[personMaskIndex]（如果可用）；
+   * 回退到 categoryMask（兼容旧模型）。
+   *
+   * @private
+   * @param {Object} result
+   * @returns {Object} 单个遮罩对象（含 width、height 及数据访问方法）
+   * @throws {Error} 如果既没有 confidenceMasks 也没有 categoryMask
+   */
+  resolveOutputMask(result) {
+    var outputMask = segmentationHelpers.resolveOutputMask(result, this.labels);
+    this.personMaskIndex = outputMask.personMaskIndex;
+    return outputMask.mask;
+  }
+
+  /**
+   * 从 MediaPipe 遮罩中读取原始置信度值。
+   *
+   * 支持 Float32Array 输出（置信度遮罩）和 Uint8Array 输出（类别遮罩），
+   * 全部归一化为 [0, 1] 范围内的 Float32。
+   *
+   * @private
+   * @param {Object} mask — MediaPipe 遮罩对象
+   * @returns {Float32Array} [0, 1] 范围内的置信度值
+   * @throws {Error} 如果遮罩格式不受支持
+   */
+  readMaskValues(mask) {
+    return segmentationHelpers.readMaskValues(mask);
+  }
+
+  /**
+   * 释放分割结果关联的 MediaPipe 资源。
+   *
+   * MediaPipe 结果可能持有 WASM 底层资源，需要显式清理。
+   * 此方法同时关闭结果本身及其子遮罩对象。
+   *
+   * @private
+   * @param {Object} result — MediaPipe ImageSegmenterResult
+   */
+  closeSegmentationResult(result) {
+    segmentationHelpers.closeSegmentationResult(result);
+  }
+
+  // ---------------------------------------------------------------------------
+  // 销毁
+  // ---------------------------------------------------------------------------
+
+  /**
+   * 销毁分割器：关闭 MediaPipe 实例、拒绝未完成的 Promise、释放所有资源。
+   *
+   * 可安全地多次调用。
+   *
+   * @returns {Promise<void>}
+   */
+  async destroy() {
+    this.destroyed = true;
+
+    // 拒绝正在执行的分割
+    if (this.pendingRequest) {
+      var pending = this.pendingRequest;
+      this.pendingRequest = null;
+      pending.reject(new Error('MediaPipe segmenter destroyed'));
+    }
+
+    // 拒绝排队中的帧
+    if (this.queuedRequest) {
+      var queued = this.queuedRequest;
+      this.queuedRequest = null;
+      queued.reject(new Error('MediaPipe segmenter destroyed'));
+    }
+
+    // 等待初始化完成，以便安全关闭它可能已创建的分割器
+    if (this.initializingPromise) {
+      try {
+        await this.initializingPromise;
+      } catch (error) {
+        logger.debug(`destroy() ignored initialize error: ${error.message}`);
+      }
+    }
+    if (this.segmenter && typeof this.segmenter.close === 'function') {
+      await this.segmenter.close();
+    }
+    this.segmenter = null;
+    this.assetUrls = null;
+    this.initialized = false;
+    this.initializingPromise = null;
+    this.labels = [];
+    this.personMaskIndex = 0;
+    this.maskCanvas = null;
+    this.maskContext = null;
+    this.maskImageData = null;
+    this.featherCanvas = null;
+    this.featherContext = null;
   }
 };
-},{}],62:[function(require,module,exports){
+},{"../../Logger":37,"./AiVBAssetLoader":46,"./AiVBSegmentationCommon":48}],51:[function(require,module,exports){
 "use strict";
 
 /**
@@ -25794,18 +25440,18 @@ module.exports = class BaseRenderer {
  *
  * @module MainCanvas2DRenderer
  */
-var BaseRenderer = require('./BaseRenderer');
-module.exports = class MainCanvas2DRenderer extends BaseRenderer {
+var createRendererBase = require('./rendererBase');
+module.exports = class MainCanvas2DRenderer {
   /**
    * @param {Object} config - 混流配置
    * @param {Object} info - 渲染器元信息
    */
   constructor(config, info) {
-    super(config, Object.assign({
+    Object.assign(this, createRendererBase(config, Object.assign({
       actualMode: 'main-2d',
       isWorker: false,
       isWebGL2: false
-    }, info || {}));
+    }, info || {})));
 
     /** @type {HTMLCanvasElement|null} 输出 canvas */
     this._canvas = null;
@@ -25842,7 +25488,8 @@ module.exports = class MainCanvas2DRenderer extends BaseRenderer {
    * @param {number} height - 新高度
    */
   resize(width, height) {
-    super.resize(width, height);
+    this._info.width = width;
+    this._info.height = height;
     if (!this._canvas) {
       return;
     }
@@ -26075,7 +25722,7 @@ module.exports = class MainCanvas2DRenderer extends BaseRenderer {
     this._canvas = null;
   }
 };
-},{"./BaseRenderer":61}],63:[function(require,module,exports){
+},{"./rendererBase":54}],52:[function(require,module,exports){
 "use strict";
 
 /**
@@ -26090,9 +25737,7 @@ module.exports = class MainCanvas2DRenderer extends BaseRenderer {
  *
  * @module MainWebGL2Renderer
  */
-var BaseRenderer = require('./BaseRenderer');
-var glHelpers = require('./gl');
-var colorHelper = require('./color');
+var createRendererBase = require('./rendererBase');
 var VERTEX_SHADER = `#version 300 es
 in vec2 a_position;
 in vec2 a_texCoord;
@@ -26113,17 +25758,85 @@ void main()
   vec4 color = texture(u_texture, v_texCoord);
   outColor = vec4(color.rgb, color.a * u_opacity);
 }`;
-module.exports = class MainWebGL2Renderer extends BaseRenderer {
+
+// === 内联自 gl.js ===
+function compileShader(gl, shaderType, shaderSource) {
+  var shader = gl.createShader(shaderType);
+  gl.shaderSource(shader, shaderSource);
+  gl.compileShader(shader);
+  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    var message = gl.getShaderInfoLog(shader);
+    gl.deleteShader(shader);
+    throw new Error(`Could not compile shader: ${message}`);
+  }
+  return shader;
+}
+function createProgram(gl, vertexShader, fragmentShader) {
+  var program = gl.createProgram();
+  gl.attachShader(program, vertexShader);
+  gl.attachShader(program, fragmentShader);
+  gl.linkProgram(program);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    var message = gl.getProgramInfoLog(program);
+    gl.deleteProgram(program);
+    throw new Error(`Could not link WebGL program: ${message}`);
+  }
+  return program;
+}
+function createVideoTexture(gl) {
+  var texture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.bindTexture(gl.TEXTURE_2D, null);
+  return texture;
+}
+
+// === 内联自 color.js ===
+function parseColor(color) {
+  if (!color || typeof color !== 'string') return [0, 0, 0, 1];
+  var value = color.trim();
+  if (value[0] === '#') return parseHexColor(value);
+  if (value.indexOf('rgb') === 0) return parseRgbColor(value);
+  return [0, 0, 0, 1];
+}
+function parseHexColor(value) {
+  var hex = value.slice(1);
+  if (hex.length === 3) hex = hex.split('').map(function (item) {
+    return item + item;
+  }).join('');
+  if (hex.length !== 6) return [0, 0, 0, 1];
+  var n = parseInt(hex, 16);
+  if (!Number.isFinite(n)) return [0, 0, 0, 1];
+  return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255, 1];
+}
+function parseRgbColor(value) {
+  var m = value.match(/rgba?\(([^)]+)\)/i);
+  if (!m) return [0, 0, 0, 1];
+  var parts = m[1].split(',').map(function (x) {
+    return Number(x.trim());
+  });
+  if (parts.length < 3 || parts.some(function (x) {
+    return !Number.isFinite(x);
+  })) return [0, 0, 0, 1];
+  return [clamp(parts[0] / 255, 0, 1), clamp(parts[1] / 255, 0, 1), clamp(parts[2] / 255, 0, 1), clamp(parts.length > 3 ? parts[3] : 1, 0, 1)];
+}
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+module.exports = class MainWebGL2Renderer {
   /**
    * @param {Object} config - 混流配置
    * @param {Object} info - 渲染器元信息
    */
   constructor(config, info) {
-    super(config, Object.assign({
+    Object.assign(this, createRendererBase(config, Object.assign({
       actualMode: 'main-webgl2',
       isWorker: false,
       isWebGL2: true
-    }, info || {}));
+    }, info || {})));
 
     /** @type {HTMLCanvasElement|null} 输出 canvas */
     this._canvas = null;
@@ -26186,9 +25899,9 @@ module.exports = class MainWebGL2Renderer extends BaseRenderer {
    */
   _setupProgram() {
     var gl = this._gl;
-    var vertexShader = glHelpers.compileShader(gl, gl.VERTEX_SHADER, VERTEX_SHADER);
-    var fragmentShader = glHelpers.compileShader(gl, gl.FRAGMENT_SHADER, FRAGMENT_SHADER);
-    this._program = glHelpers.createProgram(gl, vertexShader, fragmentShader);
+    var vertexShader = compileShader(gl, gl.VERTEX_SHADER, VERTEX_SHADER);
+    var fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, FRAGMENT_SHADER);
+    this._program = createProgram(gl, vertexShader, fragmentShader);
     gl.deleteShader(vertexShader);
     gl.deleteShader(fragmentShader);
 
@@ -26231,7 +25944,8 @@ module.exports = class MainWebGL2Renderer extends BaseRenderer {
    * @param {number} height - 新高度
    */
   resize(width, height) {
-    super.resize(width, height);
+    this._info.width = width;
+    this._info.height = height;
     if (!this._canvas) {
       return;
     }
@@ -26261,7 +25975,7 @@ module.exports = class MainWebGL2Renderer extends BaseRenderer {
       return;
     }
     var gl = this._gl;
-    var clearColor = colorHelper.parseColor(payload.backgroundColor);
+    var clearColor = parseColor(payload.backgroundColor);
     this.resize(payload.width, payload.height);
     gl.useProgram(this._program);
     gl.clearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
@@ -26303,7 +26017,7 @@ module.exports = class MainWebGL2Renderer extends BaseRenderer {
    */
   _getTexture(id) {
     if (!this._textures[id]) {
-      this._textures[id] = glHelpers.createVideoTexture(this._gl);
+      this._textures[id] = createVideoTexture(this._gl);
     }
     return this._textures[id];
   }
@@ -26545,7 +26259,7 @@ module.exports = class MainWebGL2Renderer extends BaseRenderer {
    */
   _getWatermarkTexture(key) {
     if (!this._watermarkTextures[key]) {
-      this._watermarkTextures[key] = glHelpers.createVideoTexture(this._gl);
+      this._watermarkTextures[key] = createVideoTexture(this._gl);
     }
     return this._watermarkTextures[key];
   }
@@ -26623,181 +26337,7 @@ module.exports = class MainWebGL2Renderer extends BaseRenderer {
     this._aiVirtualBackgroundManager = null;
   }
 };
-},{"./BaseRenderer":61,"./color":66,"./gl":67}],64:[function(require,module,exports){
-"use strict";
-
-/**
- * RendererFactory — 渲染器工厂
- *
- * 根据 renderMode 配置选择合适的渲染后端：
- *   - auto: 自动探测最优路径（Worker WebGL2 → 主线程 WebGL2 → Worker Canvas2D → 主线程 Canvas2D）
- *   - worker-webgl2 / worker-2d: Worker 线程渲染
- *   - main-webgl2 / main-2d: 主线程渲染
- *
- * 注意：这是 Composer 中第一个初始化输出 canvas context 的位置，
- * 不同渲染器需依次尝试，避免 context 抢占（canvas 只能有一个上下文）。
- *
- * @module RendererFactory
- */
-var MainCanvas2DRenderer = require('./MainCanvas2DRenderer');
-var MainWebGL2Renderer = require('./MainWebGL2Renderer');
-var WorkerRenderer = require('./WorkerRenderer');
-
-/**
- * 创建渲染器实例。
- *
- * 自动模式（auto）的尝试顺序：
- *   1. 如果检测到 Safari/WKWebView，优先尝试 main-webgl2（Worker 在这些平台不稳定）
- *   2. 尝试 worker-webgl2（Worker 内 WebGL2）
- *   3. Worker WebGL2 失败 → 尝试 main-webgl2（主线程 WebGL2）
- *   4. Main WebGL2 不可用 → 尝试 worker-2d（Worker Canvas2D）
- *   5. Worker Canvas2D 不可用 → 回退 main-2d（主线程 Canvas2D）
- *
- * @param {HTMLCanvasElement} canvas - 输出 canvas
- * @param {Object} config - 混流配置（含 renderMode）
- * @returns {BaseRenderer} 渲染器实例
- */
-exports.createRenderer = function (canvas, config, hooks) {
-  var mode = config.renderMode || 'auto';
-  var forceMainThread = config.forceMainThreadRenderer === true;
-  var forceMain2D = config.forceMain2DRenderer === true;
-  var errors = [];
-  hooks = hooks || {};
-  if (forceMain2D) {
-    return createMain2D(canvas, config, true, 'Active source AI virtual background requires main-thread Canvas2D');
-  }
-  if (mode === 'main-2d') {
-    return createMain2D(canvas, config, false, '');
-  }
-  if (forceMainThread && (mode === 'worker-webgl2' || mode === 'worker-2d')) {
-    return createMainFallback(canvas, config, mode, 'Active source/output effects require a main-thread renderer');
-  }
-
-  // Safari/WKWebView: Worker WebGL2 支持有限，直接走主线程 WebGL2
-  if (mode === 'auto' && shouldPreferMainWebGL2()) {
-    try {
-      var renderer = new MainWebGL2Renderer(config, {
-        requestedMode: mode,
-        isFallback: true,
-        reason: 'Safari/WKWebView prefers main-thread WebGL2 because Worker WebGL2 support is limited'
-      });
-      renderer.init(canvas);
-      return renderer;
-    } catch (error) {
-      errors.push(error.message || String(error));
-    }
-  }
-
-  // 尝试 Worker 渲染路径。auto 初始化阶段只尝试 worker-webgl2；
-  // 如果异步失败，RenderLoop 会继续按 main-webgl2 -> worker-2d -> main-2d 降级。
-  if (!forceMainThread && (mode === 'worker-webgl2' || mode === 'worker-2d' || mode === 'auto')) {
-    try {
-      var workerMode = mode === 'auto' ? 'worker-webgl2' : mode;
-      var workerConfig = Object.assign({}, config, {
-        renderMode: workerMode
-      });
-      var _renderer = new WorkerRenderer(workerConfig, {
-        requestedMode: mode,
-        isFallback: false,
-        reason: '',
-        onFatalError: hooks.onWorkerFatalError
-      });
-      _renderer.init(canvas);
-      return _renderer;
-    } catch (error) {
-      errors.push(error.message || String(error));
-
-      // 用户明确要求 Worker 但失败了 → 直接降级到主线程
-      if (mode === 'worker-webgl2' || mode === 'worker-2d') {
-        return createMainFallback(canvas, config, mode, errors.join('; '));
-      }
-    }
-  }
-
-  // 尝试主线程 WebGL2
-  if (mode === 'main-webgl2' || mode === 'auto') {
-    try {
-      var _renderer2 = new MainWebGL2Renderer(config, {
-        requestedMode: mode,
-        isFallback: errors.length > 0,
-        reason: errors.join('; ')
-      });
-      _renderer2.init(canvas);
-      return _renderer2;
-    } catch (error) {
-      errors.push(error.message || String(error));
-    }
-  }
-
-  // 最终兜底：主线程 Canvas2D
-  return createMain2D(canvas, config, errors.length > 0, errors.join('; '));
-};
-
-/**
- * Worker 失败后的主线程降级路径。
- * 先尝试 main-webgl2，再回退到 main-2d。
- *
- * @param {HTMLCanvasElement} canvas
- * @param {Object} config
- * @param {string} requestedMode - 用户请求的模式
- * @param {string} reason - 降级原因
- * @returns {BaseRenderer}
- */
-function createMainFallback(canvas, config, requestedMode, reason) {
-  if (config.forceMain2DRenderer === true) {
-    return createMain2D(canvas, config, true, reason);
-  }
-  if (requestedMode !== 'worker-2d') {
-    try {
-      var renderer = new MainWebGL2Renderer(config, {
-        requestedMode: requestedMode,
-        isFallback: true,
-        reason: reason
-      });
-      renderer.init(canvas);
-      return renderer;
-    } catch (error) {}
-  }
-  return createMain2D(canvas, config, true, reason);
-}
-
-/**
- * 创建主线程 Canvas2D 渲染器（最终兜底）。
- *
- * @param {HTMLCanvasElement} canvas
- * @param {Object} config
- * @param {boolean} isFallback - 是否为降级路径
- * @param {string} reason - 降级原因
- * @returns {MainCanvas2DRenderer}
- */
-function createMain2D(canvas, config, isFallback, reason) {
-  var renderer = new MainCanvas2DRenderer(config, {
-    requestedMode: config.renderMode || 'auto',
-    isFallback: Boolean(isFallback),
-    reason: reason || ''
-  });
-  renderer.init(canvas);
-  return renderer;
-}
-
-/**
- * 检测是否应优先使用主线程 WebGL2。
- *
- * Safari 和 WKWebView 的 Worker + WebGL2 支持不稳定，
- * 在这些浏览器上直接走 main-webgl2 避免 Worker 初始化的开销和风险。
- *
- * @returns {boolean} true=应优先使用主线程 WebGL2
- */
-function shouldPreferMainWebGL2() {
-  if (typeof navigator === 'undefined') {
-    return false;
-  }
-  var ua = navigator.userAgent || '';
-  var isSafari = /Safari/i.test(ua) && !/Chrome|Chromium|CriOS|Edg|OPR|Firefox|FxiOS/i.test(ua);
-  var isIOSWebView = /iPhone|iPad|iPod/i.test(ua) && !/Safari/i.test(ua);
-  return isSafari || isIOSWebView;
-}
-},{"./MainCanvas2DRenderer":62,"./MainWebGL2Renderer":63,"./WorkerRenderer":65}],65:[function(require,module,exports){
+},{"./rendererBase":54}],53:[function(require,module,exports){
 "use strict";
 
 /**
@@ -26818,9 +26358,9 @@ function shouldPreferMainWebGL2() {
  *
  * @module WorkerRenderer
  */
-var BaseRenderer = require('./BaseRenderer');
+var createRendererBase = require('./rendererBase');
 var workerScript = require('./workerScript');
-module.exports = class WorkerRenderer extends BaseRenderer {
+module.exports = class WorkerRenderer {
   /**
    * @param {Object} config - 混流配置
    * @param {string} [config.workerUrl] - 外部 Worker 脚本地址（不传则使用 Blob Worker）
@@ -26832,11 +26372,11 @@ module.exports = class WorkerRenderer extends BaseRenderer {
     var rendererInfo = Object.assign({}, info || {});
     var onFatalError = typeof rendererInfo.onFatalError === 'function' ? rendererInfo.onFatalError : null;
     delete rendererInfo.onFatalError;
-    super(config, Object.assign({
+    Object.assign(this, createRendererBase(config, Object.assign({
       actualMode: 'worker-init',
       isWorker: true,
       isWebGL2: false
-    }, rendererInfo));
+    }, rendererInfo)));
     this._onFatalError = onFatalError;
 
     /** @type {HTMLCanvasElement|null} 主线程统一输出 canvas（供 captureStream / Insertable 复用） */
@@ -27113,7 +26653,8 @@ module.exports = class WorkerRenderer extends BaseRenderer {
    * @param {number} height - 新高度
    */
   resize(width, height) {
-    super.resize(width, height);
+    this._info.width = width;
+    this._info.height = height;
   }
 
   /**
@@ -27447,175 +26988,52 @@ module.exports = class WorkerRenderer extends BaseRenderer {
     }
   }
 };
-},{"./BaseRenderer":61,"./workerScript":68}],66:[function(require,module,exports){
+},{"./rendererBase":54,"./workerScript":55}],54:[function(require,module,exports){
 "use strict";
 
 /**
- * color — CSS 颜色解析工具
+ * 渲染器共享基础方法工厂（纯函数，不是类）。
  *
- * 将常见 CSS 颜色字符串解析为 WebGL clearColor 可用的 RGBA 数组。
- * 只做渲染兜底需要的轻量解析，不处理复杂 CSS 颜色值（如 hsl、named colors）。
- *
- * 支持格式：
- *   - #rgb（如 #fff → [1, 1, 1, 1]）
- *   - #rrggbb（如 #ff0000 → [1, 0, 0, 1]）
- *   - rgb(r, g, b)（如 rgb(255, 0, 0) → [1, 0, 0, 1]）
- *   - rgba(r, g, b, a)（如 rgba(0, 0, 0, 0.5) → [0, 0, 0, 0.5]）
- *
- * 不支持的格式回退到纯黑 [0, 0, 0, 1]。
- * Canvas2D 路径无需此工具（原生支持 CSS 颜色），仅 WebGL 路径使用。
- *
- * @module colorHelper
+ * 只提供辅助方法（getInfo / _updateInfo / setFramePresentedCallback / _emitFramePresented）
+ * 和状态初始化。不提供 init / render / resize / removeSource / destroy，
+ * 这些由各渲染器类自行实现，避免 Object.assign 遮蔽原型方法。
  */
 
-/**
- * 将 CSS 颜色字符串解析为归一化的 RGBA 数组。
- *
- * @param {string} color - CSS 颜色字符串
- * @returns {Array<number>} [r, g, b, a]，每个通道范围 0-1
- */
-exports.parseColor = function (color) {
-  if (!color || typeof color !== 'string') {
-    return [0, 0, 0, 1];
-  }
-  var value = color.trim();
-  if (value[0] === '#') {
-    return parseHexColor(value);
-  }
-  if (value.indexOf('rgb') === 0) {
-    return parseRgbColor(value);
-  }
-  return [0, 0, 0, 1];
-};
-
-/**
- * 解析十六进制颜色。
- *
- * @param {string} value - #rgb 或 #rrggbb 格式
- * @returns {Array<number>} [r, g, b, a]
- */
-function parseHexColor(value) {
-  var hex = value.slice(1);
-
-  // 展开简写 #RGB → #RRGGBB
-  if (hex.length === 3) {
-    hex = hex.split('').map(item => item + item).join('');
-  }
-  if (hex.length !== 6) {
-    return [0, 0, 0, 1];
-  }
-  var numberValue = parseInt(hex, 16);
-  if (!Number.isFinite(numberValue)) {
-    return [0, 0, 0, 1];
-  }
-  return [(numberValue >> 16 & 255) / 255, (numberValue >> 8 & 255) / 255, (numberValue & 255) / 255, 1];
+function createRendererBase(config, info) {
+  config = config || {};
+  info = Object.assign({
+    requestedMode: config.renderMode || 'main-2d',
+    actualMode: 'unknown',
+    isWorker: false,
+    isWebGL2: false,
+    isFallback: false,
+    reason: '',
+    droppedFrames: 0,
+    renderedFrames: 0,
+    fps: config.fps || null,
+    width: config.width || null,
+    height: config.height || null
+  }, info || {});
+  return {
+    _config: config,
+    _info: info,
+    _onFramePresented: null,
+    getInfo() {
+      return Object.assign({}, this._info);
+    },
+    _updateInfo(updates) {
+      Object.assign(this._info, updates || {});
+    },
+    setFramePresentedCallback(callback) {
+      this._onFramePresented = typeof callback === 'function' ? callback : null;
+    },
+    _emitFramePresented(meta) {
+      if (this._onFramePresented) this._onFramePresented(meta || {});
+    }
+  };
 }
-
-/**
- * 解析 rgb/rgba 颜色。
- *
- * @param {string} value - rgb(r,g,b) 或 rgba(r,g,b,a) 格式
- * @returns {Array<number>} [r, g, b, a]
- */
-function parseRgbColor(value) {
-  var matches = value.match(/rgba?\(([^)]+)\)/i);
-  if (!matches) {
-    return [0, 0, 0, 1];
-  }
-  var parts = matches[1].split(',').map(item => Number(item.trim()));
-  if (parts.length < 3 || parts.some(item => !Number.isFinite(item))) {
-    return [0, 0, 0, 1];
-  }
-  return [clamp(parts[0] / 255, 0, 1), clamp(parts[1] / 255, 0, 1), clamp(parts[2] / 255, 0, 1), clamp(parts.length > 3 ? parts[3] : 1, 0, 1)];
-}
-
-/**
- * 将数值限制在指定范围内。
- *
- * @param {number} value - 待限制的值
- * @param {number} min - 最小值
- * @param {number} max - 最大值
- * @returns {number} 限制后的值
- */
-function clamp(value, min, max) {
-  return Math.min(max, Math.max(min, value));
-}
-},{}],67:[function(require,module,exports){
-"use strict";
-
-/**
- * gl — WebGL 工具函数
- *
- * 提供 WebGL shader 编译、program 链接、纹理创建等公共操作。
- * 被 MainWebGL2Renderer 和 Worker 内联脚本共同使用。
- *
- * @module glHelpers
- */
-
-/**
- * 编译 WebGL shader。
- *
- * @param {WebGL2RenderingContext} gl - WebGL2 上下文
- * @param {number} shaderType - gl.VERTEX_SHADER 或 gl.FRAGMENT_SHADER
- * @param {string} shaderSource - GLSL 源码
- * @returns {WebGLShader} 编译后的 shader
- * @throws {Error} 编译失败时抛出，包含 shader 编译日志
- */
-exports.compileShader = function (gl, shaderType, shaderSource) {
-  var shader = gl.createShader(shaderType);
-  gl.shaderSource(shader, shaderSource);
-  gl.compileShader(shader);
-  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    var message = gl.getShaderInfoLog(shader);
-    gl.deleteShader(shader);
-    throw new Error(`Could not compile shader: ${message}`);
-  }
-  return shader;
-};
-
-/**
- * 链接 WebGL program。
- *
- * @param {WebGL2RenderingContext} gl - WebGL2 上下文
- * @param {WebGLShader} vertexShader - 顶点 shader
- * @param {WebGLShader} fragmentShader - 片元 shader
- * @returns {WebGLProgram} 链接后的 program
- * @throws {Error} 链接失败时抛出，包含链接日志
- */
-exports.createProgram = function (gl, vertexShader, fragmentShader) {
-  var program = gl.createProgram();
-  gl.attachShader(program, vertexShader);
-  gl.attachShader(program, fragmentShader);
-  gl.linkProgram(program);
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    var message = gl.getProgramInfoLog(program);
-    gl.deleteProgram(program);
-    throw new Error(`Could not link WebGL program: ${message}`);
-  }
-  return program;
-};
-
-/**
- * 创建用于上传视频帧的 2D 纹理。
- *
- * 纹理参数：
- *   - WRAP: CLAMP_TO_EDGE（避免边缘采样溢出）
- *   - FILTER: LINEAR（双线性插值，保证缩放质量）
- *
- * @param {WebGL2RenderingContext} gl - WebGL2 上下文
- * @returns {WebGLTexture} 初始化后的纹理对象
- */
-exports.createVideoTexture = function (gl) {
-  var texture = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, texture);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.bindTexture(gl.TEXTURE_2D, null);
-  return texture;
-};
-},{}],68:[function(require,module,exports){
+module.exports = createRendererBase;
+},{}],55:[function(require,module,exports){
 "use strict";
 
 var SegmentationCommon = require('../aiVirtualBackground/AiVBSegmentationCommon');
@@ -28615,7 +28033,7 @@ exports.createWorkerScript = function () {
   source = source.replace('/* __AIVB_SEGMENTATION_HELPERS__ */', 'var segmentationCommon = (' + SegmentationCommon.getWorkerSegmentationHelpersFactorySource() + ')();');
   return source.slice(source.indexOf('{') + 1, source.lastIndexOf('}'));
 };
-},{"../aiVirtualBackground/AiVBSegmentationCommon":57}],69:[function(require,module,exports){
+},{"../aiVirtualBackground/AiVBSegmentationCommon":48}],56:[function(require,module,exports){
 "use strict";
 
 function getErrorMessage(error) {
@@ -28671,7 +28089,7 @@ module.exports = {
   logIssue,
   normalizeIssue
 };
-},{}],70:[function(require,module,exports){
+},{}],57:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -28884,7 +28302,7 @@ module.exports = class Message extends EventEmitter {
     });
   }
 };
-},{"./Constants":38,"./Exceptions":42,"./Logger":45,"./RequestSender":82,"./SIPMessage":83,"./URI":90,"./Utils":91,"events":95}],71:[function(require,module,exports){
+},{"./Constants":30,"./Exceptions":34,"./Logger":37,"./RequestSender":69,"./SIPMessage":70,"./URI":77,"./Utils":78,"events":82}],58:[function(require,module,exports){
 "use strict";
 
 var URI = require('./URI');
@@ -28973,7 +28391,7 @@ module.exports = class NameAddrHeader {
     return body;
   }
 };
-},{"./Grammar":43,"./URI":90}],72:[function(require,module,exports){
+},{"./Grammar":35,"./URI":77}],59:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -29179,7 +28597,7 @@ module.exports = class Options extends EventEmitter {
     });
   }
 };
-},{"./Constants":38,"./Exceptions":42,"./Logger":45,"./RequestSender":82,"./SIPMessage":83,"./Utils":91,"events":95}],73:[function(require,module,exports){
+},{"./Constants":30,"./Exceptions":34,"./Logger":37,"./RequestSender":69,"./SIPMessage":70,"./Utils":78,"events":82}],60:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -29433,7 +28851,7 @@ function parseHeader(message, data, headerStart, headerEnd) {
     return true;
   }
 }
-},{"./Grammar":43,"./Logger":45,"./SIPMessage":83}],74:[function(require,module,exports){
+},{"./Grammar":35,"./Logger":37,"./SIPMessage":70}],61:[function(require,module,exports){
 "use strict";
 
 var a = 'BQDw\nofp2G4MCvHKAlA0+IVe8m8gfPntmbvpud7uKwBLfzKarAWND0T1babPwmgyAjKzG\nBw1bOs7IwmoQzKIBdg3GrcIcXdwP54o19kTbzrU9gipcF7SMBIA+OiTQvYW3PpMR\npvkBln/JQCMBGKnWgz+Ie4Tu8sCFde8RPQrJuUp7jBAQCgBIAQCAFQBwGkqgNjBI';
@@ -29446,7 +28864,7 @@ for (var i = 0; i < a.length; i++) {
   }
 }
 module.exports = s.split('').reverse().join('');
-},{}],75:[function(require,module,exports){
+},{}],62:[function(require,module,exports){
 (function (Buffer){(function (){
 "use strict";
 
@@ -29505,7 +28923,7 @@ var HEADER_P_PREFERRED_SERVICE_MMTEL = 'P-Preferred-Service: urn:urn-7:3gpp-serv
 var SDP_DATA_CHANNEL_MEDIA = 'UDP/DTLS/SCTP webrtc-datachannel';
 var SDP_BFCP_MEDIA = 'UDP/DTLS/SCTP/BFCP *';
 function push5GServiceHeaders(extraHeaders, ua) {
-  if (ua.sk[7] >= 3) {
+  if (Utils.is5GService(ua)) {
     extraHeaders.push(HEADER_ACCEPT_CONTACT_MMTEL_VIDEO);
     extraHeaders.push(HEADER_P_PREFERRED_SERVICE_MMTEL);
   }
@@ -29867,7 +29285,7 @@ module.exports = class RTCSession extends EventEmitter {
       }
       return this.getMediaEffectsComposer() ? this.getMediaEffectsComposer().getState() : null;
     }
-    var patch = this._mediaPipeline.resolveMediaEffectsComposerRuntimePatch(resolvedOptions);
+    var patch = this._mediaPipeline.resolveMediaEffectsComposerPatch(resolvedOptions);
     try {
       await composer.setConfig(patch);
       if (resolvedOptions.sources instanceof Array && resolvedOptions.sources.length > 0) {
@@ -30101,14 +29519,14 @@ module.exports = class RTCSession extends EventEmitter {
         this._localMediaStreamLocallyGenerated = true;
 
         // 判断授权是否包含视频
-        if (Number(this._ua.sk[7]) < 1) {
+        if (!Utils.supportsVideo(this._ua)) {
           delete this._inviteMediaConstraints.video;
         }
         hasAudio = Boolean(this._inviteMediaConstraints.audio);
         var currMediaConstraints;
 
         // 兼容安卓微信Bug，开始不获取麦克风媒体
-        if (navigator.userAgent.indexOf('WeChat') != -1) {
+        if (Utils.isWeChat()) {
           currMediaConstraints = {
             audio: false,
             video: this._inviteMediaConstraints.video || false
@@ -30156,7 +29574,7 @@ module.exports = class RTCSession extends EventEmitter {
       var mics = await Utils.getMicrophones();
 
       // 兼容安卓微信Bug及iOS蓝牙问题
-      if (navigator.userAgent.indexOf('WeChat') != -1 && hasAudio || navigator.userAgent.indexOf('iPhone') != -1 && mics.length > 1 && hasAudio) {
+      if (Utils.isWeChat() && hasAudio || navigator.userAgent.indexOf('iPhone') != -1 && mics.length > 1 && hasAudio) {
         logger.debug(`${this.id} mics: ${mics.length} hasAudio: ${hasAudio}`);
         sendStream.addTrack(this._generateAnEmptyAudioTrack());
         mStream.getVideoTracks().length > 0 && sendStream.addTrack(mStream.getVideoTracks()[0]);
@@ -30164,15 +29582,7 @@ module.exports = class RTCSession extends EventEmitter {
       } else {
         sendStream = mStream;
       }
-
-      // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
-      var ua;
-      navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
-      if (ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2'))) {
-        return Utils.getStreamThroughCanvas(sendStream);
-      } else {
-        return sendStream;
-      }
+      return Utils.bypassIOS151_152CanvasBug(sendStream);
     }).then(stream => {
       // Create a new RTCPeerConnection instance.
       this._createRTCConnection(pcConfig, rtcConstraints);
@@ -30485,7 +29895,7 @@ module.exports = class RTCSession extends EventEmitter {
         this._localMediaStreamLocallyGenerated = true;
 
         // 判断授权是否包含视频
-        if (Number(this._ua.sk[7]) < 1) {
+        if (!Utils.supportsVideo(this._ua)) {
           delete mediaConstraints.video;
         }
 
@@ -30512,14 +29922,8 @@ module.exports = class RTCSession extends EventEmitter {
           logger.debug(`${this._id} environment id: `, this._environment);
         }
 
-        // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
-        var ua;
-        navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
-        if (ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2'))) {
-          return Utils.getStreamThroughCanvas(mStream);
-        } else {
-          return mStream;
-        }
+        // 绕过 iOS 15.1/15.2 WebKit canvas crash bug
+        return Utils.bypassIOS151_152CanvasBug(mStream);
       } else {
         this._customMediaStream = true;
         return mediaStream;
@@ -30646,7 +30050,7 @@ module.exports = class RTCSession extends EventEmitter {
    */
   upgradeToVideo(options, done) {
     logger.debug(`${this._id} upgradeToVideo()`, options, done);
-    if (this._ua.sk[7] < 2) {
+    if (!Utils.supportsUpgradeToVideo(this._ua)) {
       return;
     }
     if (!options) {
@@ -30754,13 +30158,7 @@ module.exports = class RTCSession extends EventEmitter {
             }
           }
         }
-
-        // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
-        var ua;
-        navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
-        if (ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2'))) {
-          stream = Utils.getStreamThroughCanvas(stream);
-        }
+        stream = Utils.bypassIOS151_152CanvasBug(stream);
         var videoTracks = stream.getVideoTracks();
         this._localMediaStream.addTrack(videoTracks[0]);
 
@@ -31068,13 +30466,7 @@ module.exports = class RTCSession extends EventEmitter {
           } catch (error) {
             logger.error(`${this._id} stream error: `, error.message);
           }
-
-          // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
-          var ua;
-          navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
-          if (ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2'))) {
-            stream = Utils.getStreamThroughCanvas(stream);
-          }
+          stream = Utils.bypassIOS151_152CanvasBug(stream);
           return stream;
         };
 
@@ -32696,7 +32088,7 @@ module.exports = class RTCSession extends EventEmitter {
            * 处理5G外呼sdp过大问题,
            * SDK只对H264过滤保留两个,以兼容其他通用端,SBC对外呼手机的呼叫做媒体过滤
            */
-          if (this._ua.sk[7] >= 3) {
+          if (Utils.is5GService(this._ua)) {
             // 删除 extmap 仅保留 urn:3gpp:video-orientation
             if (media.ext) {
               media.ext = media.ext.filter(ext => {
@@ -32888,7 +32280,7 @@ module.exports = class RTCSession extends EventEmitter {
           /**
            * 处理5G和非5G的SDP
            */
-          if (this._ua.sk[7] >= 3) {
+          if (Utils.is5GService(this._ua)) {
             _bandAS += CRTC_C.SDP_LEVELID_AS[this._sdpResolution].AS;
             _bandRR += 6000;
             _bandRS += 8000;
@@ -32920,7 +32312,7 @@ module.exports = class RTCSession extends EventEmitter {
           /**
            * 处理5G和非5G的SDP
            */
-          if (this._ua.sk[7] >= 3) {
+          if (Utils.is5GService(this._ua)) {
             _bandAS += 90;
             _bandRR += 600;
             _bandRS += 2000;
@@ -32941,7 +32333,7 @@ module.exports = class RTCSession extends EventEmitter {
       /**
        * 处理5G和非5G的SDP
        */
-      if (this._ua.sk[7] >= 3) {
+      if (Utils.is5GService(this._ua)) {
         sdp_desc.bandwidth = [{
           type: 'AS',
           limit: _bandAS
@@ -33095,7 +32487,7 @@ module.exports = class RTCSession extends EventEmitter {
          *
          * 有特殊场景update不带tcap，暂时改为全部响应带xfb
          */
-        if (this._ua.sk[7] >= 3 && desc) {
+        if (Utils.is5GService(this._ua) && desc) {
           desc = desc.replace(/(m=video.*)\r\n/, '$1\r\na=cc-xfb\r\n');
           desc = desc.replace(/a=pcfg:1 t=1\r\n/, '');
           desc = desc.replace(/a=tcap.*AVPF\r\n/, '');
@@ -33280,7 +32672,7 @@ module.exports = class RTCSession extends EventEmitter {
          *
          * 有特殊场景update不带tcap，暂时改为全部响应带xfb
          */
-        if (this._ua.sk[7] >= 3 && desc) {
+        if (Utils.is5GService(this._ua) && desc) {
           desc = desc.replace(/(m=video.*)\r\n/, '$1\r\na=cc-xfb\r\n');
           desc = desc.replace(/a=pcfg:1 t=1\r\n/, '');
           desc = desc.replace(/a=tcap.*AVPF\r\n/, '');
@@ -33461,13 +32853,7 @@ module.exports = class RTCSession extends EventEmitter {
     }).then(stream => {
       if (stream) {
         logger.debug(`${this._id} has stream.`);
-
-        // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
-        var ua;
-        navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
-        if (ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2'))) {
-          stream = Utils.getStreamThroughCanvas(stream);
-        }
+        stream = Utils.bypassIOS151_152CanvasBug(stream);
         stream.getVideoTracks().forEach(track => {
           try {
             this._localMediaStream.addTrack(track);
@@ -33970,7 +33356,7 @@ module.exports = class RTCSession extends EventEmitter {
             }
 
             // 兼容安卓微信Bug
-            if (this._replaceAudioTrack && navigator.userAgent.indexOf('WeChat') != -1) {
+            if (this._replaceAudioTrack && Utils.isWeChat()) {
               navigator.mediaDevices.getUserMedia(this._mediaPipeline.getGumConstraintsWithProcessorFlags({
                 audio: this._inviteMediaConstraints.audio || true,
                 video: false
@@ -34058,7 +33444,7 @@ module.exports = class RTCSession extends EventEmitter {
 
               // 兼容安卓微信Bug及iOS蓝牙问题
               var mics = await Utils.getMicrophones();
-              if (this._replaceAudioTrack && navigator.userAgent.indexOf('WeChat') != -1) {
+              if (this._replaceAudioTrack && Utils.isWeChat()) {
                 navigator.mediaDevices.getUserMedia(this._mediaPipeline.getGumConstraintsWithProcessorFlags({
                   audio: this._inviteMediaConstraints.audio || true,
                   video: false
@@ -35028,7 +34414,7 @@ module.exports = class RTCSession extends EventEmitter {
    *
    *   最底层组件（_reportIssue）
    *     → 中层组件（_reportIssue/_handleIssue）
-   *       → ComposerRuntime._recordIssue（统一汇聚，缓存到 _issues）
+   *       → MediaEffectsComposer._recordIssue（统一汇聚，缓存到 _issues）
    *         → MediaPipeline.emitMediaEffectsIssue（桥接）
    *           → RTCSession._emitMediaEffectsIssue（本方法）
    *             → this.emit('mediaEffectsIssue', payload)
@@ -35775,7 +35161,7 @@ module.exports = class RTCSession extends EventEmitter {
 };
 }).call(this)}).call(this,require("buffer").Buffer)
 
-},{"./BFCP/index":7,"./Constants":38,"./Dialog":39,"./Exceptions":42,"./Logger":45,"./MediaEffectsIssue":69,"./RTCSession/DTMF":76,"./RTCSession/Info":77,"./RTCSession/MediaPipeline":78,"./RTCSession/ReferNotifier":79,"./RTCSession/ReferSubscriber":80,"./RequestSender":82,"./SIPMessage":83,"./Timers":86,"./Transactions":87,"./URI":90,"./Utils":91,"buffer":96,"events":95,"sdp-transform":104}],76:[function(require,module,exports){
+},{"./BFCP/index":5,"./Constants":30,"./Dialog":31,"./Exceptions":34,"./Logger":37,"./MediaEffectsIssue":56,"./RTCSession/DTMF":63,"./RTCSession/Info":64,"./RTCSession/MediaPipeline":65,"./RTCSession/ReferNotifier":66,"./RTCSession/ReferSubscriber":67,"./RequestSender":69,"./SIPMessage":70,"./Timers":73,"./Transactions":74,"./URI":77,"./Utils":78,"buffer":83,"events":82,"sdp-transform":91}],63:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -35914,7 +35300,7 @@ module.exports = class DTMF extends EventEmitter {
  * Expose C object.
  */
 module.exports.C = C;
-},{"../Constants":38,"../Exceptions":42,"../Logger":45,"../Utils":91,"events":95}],77:[function(require,module,exports){
+},{"../Constants":30,"../Exceptions":34,"../Logger":37,"../Utils":78,"events":82}],64:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -35995,7 +35381,7 @@ module.exports = class Info extends EventEmitter {
     });
   }
 };
-},{"../Constants":38,"../Exceptions":42,"../Utils":91,"events":95}],78:[function(require,module,exports){
+},{"../Constants":30,"../Exceptions":34,"../Utils":78,"events":82}],65:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
@@ -36012,10 +35398,10 @@ var getErrorMessage = issueUtils.getErrorMessage;
  * 就接管不到了，最终会出现“单测单跑通过、整套 gulp 失败”的问题。
  */
 function getMediaEffectsComposerCtor() {
-  return require('../MediaEffectsComposer');
+  return require('../MediaEffectsComposer/MediaEffectsComposer');
 }
 function getAiNSEngineCtor() {
-  return require('../AINoiseSuppression');
+  return require('../AINoiseSuppression/AiNoiseSuppression');
 }
 function clonePlainObject(input) {
   return input && typeof input === 'object' ? Object.assign({}, input) : {};
@@ -36117,12 +35503,12 @@ module.exports = class MediaPipeline {
    * ## 角色
    *
    * MediaPipeline 不是媒体效果模块的成员，而是 RTCSession 的内部模块。
-   * 它通过此方法将 ComposerRuntime._onIssue 回调与 RTCSession._emitMediaEffectsIssue
+   * 它通过此方法将 MediaEffectsComposer._onIssue 回调与 RTCSession._emitMediaEffectsIssue
    * 桥接起来，完成跨模块的异常上报。
    *
    * ## 调用链
    *
-   *   ComposerRuntime._onIssue（或 AiNSEngine._onIssue）
+   *   MediaEffectsComposer._onIssue（或 AiNSEngine._onIssue）
    *     → MediaPipeline.emitMediaEffectsIssue（本方法，clone后再转发）
    *       → RTCSession._emitMediaEffectsIssue
    *         → session.emit('mediaEffectsIssue', { module, message })
@@ -36257,7 +35643,7 @@ module.exports = class MediaPipeline {
    * @param {Object|null} options
    * @returns {Object}
    */
-  resolveMediaEffectsComposerRuntimePatch(options) {
+  resolveMediaEffectsComposerPatch(options) {
     var patch = cloneComposerSessionOptions(options) || {};
     var immutableFields = this.getImmutableMediaEffectsComposerFields(patch);
     if (immutableFields.length > 0) {
@@ -36763,7 +36149,7 @@ module.exports = class MediaPipeline {
     return await this.applyMediaEffectsComposerOnSdkGumStream(aiNoiseSuppressedStream, composerOptions);
   }
 };
-},{"../AINoiseSuppression":6,"../Logger":45,"../MediaEffectsComposer":60,"../MediaEffectsIssue":69,"../Utils":91}],79:[function(require,module,exports){
+},{"../AINoiseSuppression/AiNoiseSuppression":4,"../Logger":37,"../MediaEffectsComposer/MediaEffectsComposer":41,"../MediaEffectsIssue":56,"../Utils":78}],66:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
@@ -36810,7 +36196,7 @@ module.exports = class ReferNotifier {
     });
   }
 };
-},{"../Constants":38,"../Logger":45}],80:[function(require,module,exports){
+},{"../Constants":30,"../Logger":37}],67:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -36934,7 +36320,7 @@ module.exports = class ReferSubscriber extends EventEmitter {
     });
   }
 };
-},{"../Constants":38,"../Grammar":43,"../Logger":45,"../Utils":91,"events":95}],81:[function(require,module,exports){
+},{"../Constants":30,"../Grammar":35,"../Logger":37,"../Utils":78,"events":82}],68:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -37232,7 +36618,7 @@ ${this._contact}${this._extraContactParams}`);
     });
   }
 };
-},{"./Constants":38,"./Logger":45,"./RequestSender":82,"./SIPMessage":83,"./Utils":91}],82:[function(require,module,exports){
+},{"./Constants":30,"./Logger":37,"./RequestSender":69,"./SIPMessage":70,"./Utils":78}],69:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -37371,7 +36757,7 @@ module.exports = class RequestSender {
     }
   }
 };
-},{"./Constants":38,"./DigestAuthentication":41,"./Logger":45,"./Transactions":87}],83:[function(require,module,exports){
+},{"./Constants":30,"./DigestAuthentication":33,"./Logger":37,"./Transactions":74}],70:[function(require,module,exports){
 "use strict";
 
 var sdp_transform = require('sdp-transform');
@@ -37943,7 +37329,7 @@ module.exports = {
   IncomingRequest,
   IncomingResponse
 };
-},{"./Constants":38,"./Grammar":43,"./Logger":45,"./NameAddrHeader":71,"./Utils":91,"sdp-transform":104}],84:[function(require,module,exports){
+},{"./Constants":30,"./Grammar":35,"./Logger":37,"./NameAddrHeader":58,"./Utils":78,"sdp-transform":91}],71:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -38011,7 +37397,7 @@ exports.isSocket = socket => {
   }
   return true;
 };
-},{"./Grammar":43,"./Logger":45,"./Utils":91}],85:[function(require,module,exports){
+},{"./Grammar":35,"./Logger":37,"./Utils":78}],72:[function(require,module,exports){
 "use strict";
 
 /* eslint-disable max-len */
@@ -38417,7 +37803,7 @@ module.exports = class getStats extends EventEmitter {
     this.emit('network-quality', this._networkQuality);
   }
 };
-},{"./Constants":38,"./Logger":45,"./Utils":91,"events":95}],86:[function(require,module,exports){
+},{"./Constants":30,"./Logger":37,"./Utils":78,"events":82}],73:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
@@ -38438,7 +37824,7 @@ module.exports = {
   TIMER_M: 64 * T1,
   PROVISIONAL_RESPONSE_INTERVAL: 60000 // See RFC 3261 Section 13.3.1.1
 };
-},{}],87:[function(require,module,exports){
+},{}],74:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -39028,7 +38414,7 @@ module.exports = {
   InviteServerTransaction,
   checkTransaction
 };
-},{"./Constants":38,"./Logger":45,"./SIPMessage":83,"./Timers":86,"events":95}],88:[function(require,module,exports){
+},{"./Constants":30,"./Logger":37,"./SIPMessage":70,"./Timers":73,"events":82}],75:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -39403,7 +38789,7 @@ module.exports = class Transport {
     });
   }
 };
-},{"./Constants":38,"./Logger":45,"./Socket":84,"./Utils":91}],89:[function(require,module,exports){
+},{"./Constants":30,"./Logger":37,"./Socket":71,"./Utils":78}],76:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -40463,7 +39849,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":37,"./Constants":38,"./Exceptions":42,"./Logger":45,"./Message":70,"./Options":72,"./Parser":73,"./Pk":74,"./RTCSession":75,"./Registrator":81,"./SIPMessage":83,"./Transactions":87,"./Transport":88,"./URI":90,"./Utils":91,"./sanityCheck":93,"events":95,"jsencrypt":100}],90:[function(require,module,exports){
+},{"./Config":29,"./Constants":30,"./Exceptions":34,"./Logger":37,"./Message":57,"./Options":59,"./Parser":60,"./Pk":61,"./RTCSession":62,"./Registrator":68,"./SIPMessage":70,"./Transactions":74,"./Transport":75,"./URI":77,"./Utils":78,"./sanityCheck":80,"events":82,"jsencrypt":87}],77:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('./Constants');
@@ -40635,7 +40021,7 @@ module.exports = class URI {
     return aor;
   }
 };
-},{"./Constants":38,"./Grammar":43,"./Utils":91}],91:[function(require,module,exports){
+},{"./Constants":30,"./Grammar":35,"./Utils":78}],78:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('./Constants');
@@ -41927,6 +41313,81 @@ exports.isFirefox = () => {
 };
 
 /**
+ * 判断当前环境是否为微信内置浏览器。
+ *
+ * @returns {boolean} 微信浏览器时返回 true。
+ */
+exports.isWeChat = () => {
+  return typeof navigator !== 'undefined' && navigator.userAgent.indexOf('WeChat') !== -1;
+};
+
+/**
+ * 判断当前是否为 iOS 15.1 或 15.2。
+ *
+ * 这两个版本存在 WebKit canvas crash bug：
+ * https://bugs.webkit.org/show_bug.cgi?id=232006
+ *
+ * @returns {boolean} 命中 iOS 15.1/15.2 时返回 true。
+ */
+exports.isIOS151_152 = () => {
+  if (typeof navigator === 'undefined' || !navigator.userAgent) {
+    return false;
+  }
+  var ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/);
+  return ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2'));
+};
+
+/**
+ * 绕过 iOS 15.1/15.2 的 WebKit canvas crash bug。
+ *
+ * 如果是受影响的 iOS 版本，则通过 canvas captureStream 方式重新获取流，
+ * 避免直接使用原始视频轨道导致的崩溃。
+ *
+ * @param {MediaStream} stream - 原始媒体流。
+ * @returns {MediaStream} 绕过处理后的媒体流（非受影响版本则原样返回）。
+ */
+exports.bypassIOS151_152CanvasBug = stream => {
+  return exports.isIOS151_152() ? exports.getStreamThroughCanvas(stream) : stream;
+};
+
+/**
+ * 判断 UA 是否启用了 5G VoLTE 服务。
+ *
+ * 授权码中 sk[7] >= 3 表示 5G 模式，需要在 SDP 中携带
+ * MMTEL 服务头并进行相应的 SDP 差异化处理。
+ *
+ * @param {Object} ua - UA 实例。
+ * @returns {boolean} 5G 模式时返回 true。
+ */
+exports.is5GService = ua => {
+  return ua && ua.sk && ua.sk[7] >= 3;
+};
+
+/**
+ * 判断 UA 授权是否支持视频通话。
+ *
+ * 授权码中 sk[7] >= 1 表示允许视频。
+ *
+ * @param {Object} ua - UA 实例。
+ * @returns {boolean} 支持视频时返回 true。
+ */
+exports.supportsVideo = ua => {
+  return ua && ua.sk && Number(ua.sk[7]) >= 1;
+};
+
+/**
+ * 判断 UA 授权是否支持音频升级到视频。
+ *
+ * 授权码中 sk[7] >= 2 表示允许 upgradeToVideo。
+ *
+ * @param {Object} ua - UA 实例。
+ * @returns {boolean} 支持升级时返回 true。
+ */
+exports.supportsUpgradeToVideo = ua => {
+  return ua && ua.sk && Number(ua.sk[7]) >= 2;
+};
+
+/**
  * 判断是否需要启用视频帧率纠偏逻辑。
  *
  * 部分 UA 环境下视频帧率可能出现异常，需要通过 UA 检测来决定是否启用纠偏。
@@ -42600,7 +42061,7 @@ exports.disableVideoInSdp = sdp => {
   });
   return newSdp;
 };
-},{"./Constants":38,"./Grammar":43,"./URI":90}],92:[function(require,module,exports){
+},{"./Constants":30,"./Grammar":35,"./URI":77}],79:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -42719,7 +42180,7 @@ module.exports = class WebSocketInterface {
     logger.warn(`WebSocket ${this._url} error: `, e);
   }
 };
-},{"./Grammar":43,"./Logger":45}],93:[function(require,module,exports){
+},{"./Grammar":35,"./Logger":37}],80:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -42912,7 +42373,7 @@ function reply(status_code) {
   response += '\r\n';
   transport.send(response);
 }
-},{"./Constants":38,"./Logger":45,"./SIPMessage":83,"./Utils":91}],94:[function(require,module,exports){
+},{"./Constants":30,"./Logger":37,"./SIPMessage":70,"./Utils":78}],81:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -43064,7 +42525,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],95:[function(require,module,exports){
+},{}],82:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -43589,7 +43050,7 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],96:[function(require,module,exports){
+},{}],83:[function(require,module,exports){
 (function (Buffer){(function (){
 /*!
  * The buffer module from node.js, for the browser.
@@ -45371,7 +44832,7 @@ function numberIsNaN (obj) {
 
 }).call(this)}).call(this,require("buffer").Buffer)
 
-},{"base64-js":94,"buffer":96,"ieee754":99}],97:[function(require,module,exports){
+},{"base64-js":81,"buffer":83,"ieee754":86}],84:[function(require,module,exports){
 (function (process){(function (){
 /* eslint-env browser */
 
@@ -45648,7 +45109,7 @@ formatters.j = function (v) {
 
 }).call(this)}).call(this,require('_process'))
 
-},{"./common":98,"_process":102}],98:[function(require,module,exports){
+},{"./common":85,"_process":89}],85:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -45942,7 +45403,7 @@ function setup(env) {
 
 module.exports = setup;
 
-},{"ms":101}],99:[function(require,module,exports){
+},{"ms":88}],86:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
@@ -46029,7 +45490,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],100:[function(require,module,exports){
+},{}],87:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -51420,7 +50881,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{}],101:[function(require,module,exports){
+},{}],88:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -51584,7 +51045,7 @@ function plural(ms, msAbs, n, name) {
   return Math.round(ms / n) + ' ' + name + (isPlural ? 's' : '');
 }
 
-},{}],102:[function(require,module,exports){
+},{}],89:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -51770,7 +51231,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],103:[function(require,module,exports){
+},{}],90:[function(require,module,exports){
 var grammar = module.exports = {
   v: [{
     name: 'version',
@@ -52266,7 +51727,7 @@ Object.keys(grammar).forEach(function (key) {
   });
 });
 
-},{}],104:[function(require,module,exports){
+},{}],91:[function(require,module,exports){
 var parser = require('./parser');
 var writer = require('./writer');
 var grammar = require('./grammar');
@@ -52281,7 +51742,7 @@ exports.parseRemoteCandidates = parser.parseRemoteCandidates;
 exports.parseImageAttributes = parser.parseImageAttributes;
 exports.parseSimulcastStreamList = parser.parseSimulcastStreamList;
 
-},{"./grammar":103,"./parser":105,"./writer":106}],105:[function(require,module,exports){
+},{"./grammar":90,"./parser":92,"./writer":93}],92:[function(require,module,exports){
 var toIntIfInt = function (v) {
   return String(Number(v)) === v ? Number(v) : v;
 };
@@ -52407,7 +51868,7 @@ exports.parseSimulcastStreamList = function (str) {
   });
 };
 
-},{"./grammar":103}],106:[function(require,module,exports){
+},{"./grammar":90}],93:[function(require,module,exports){
 var grammar = require('./grammar');
 
 // customized util.format - discards excess arguments and can void middle ones
@@ -52523,7 +51984,7 @@ module.exports = function (session, opts) {
   return sdp.join('\r\n') + '\r\n';
 };
 
-},{"./grammar":103}]},{},[44])(44)
+},{"./grammar":90}]},{},[36])(36)
 });
 
 //# sourceMappingURL=maps/CRTC.js.map

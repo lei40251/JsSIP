@@ -430,7 +430,7 @@
           </tr>
           <tr>
             <td>Runtime Core</td>
-            <td><code>ComposerRuntime.js</code></td>
+            <td><code>MediaEffectsComposer.js</code></td>
             <td>主控制器，组装所有子模块，暴露公共 API</td>
             <td>把真正状态集中在一个地方，方便调试和复用</td>
           </tr>
@@ -442,7 +442,7 @@
           </tr>
           <tr>
             <td>Source Registry</td>
-            <td><code>SourceStore.js</code></td>
+            <td><code>Sources.js</code></td>
             <td>管理输入源、slot、隐藏 video、source 快照</td>
             <td>把“源对象”的生命周期从主类里拿出来</td>
           </tr>
@@ -460,7 +460,7 @@
           </tr>
           <tr>
             <td>Output</td>
-            <td><code>OutputStreamManager.js</code></td>
+            <td><code>OutputStream.js</code></td>
             <td>管理 <code>captureStream()</code> / Insertable 输出</td>
             <td>输出链和渲染链解耦，可以单独切换策略</td>
           </tr>
@@ -472,7 +472,7 @@
           </tr>
           <tr>
             <td>Effects</td>
-            <td><code>WatermarkManager.js</code>、<code>aiVirtualBackground/*</code></td>
+            <td><code>Watermark.js</code>、<code>aiVirtualBackground/*</code></td>
             <td>水印、AiVB 的配置与运行时状态</td>
             <td>效果本身会继续扩展，适合独立模块化</td>
           </tr>
@@ -493,7 +493,7 @@
 
       <h3>4.1 <code>lib/MediaEffectsComposer/MediaEffectsComposer.js</code></h3>
       <p>
-        这是一个很薄的兼容层。它继承 <code>ComposerRuntime</code>，只把旧名称映射到新名称：
+        这是一个很薄的兼容层。它继承 <code>MediaEffectsComposer</code>，只把旧名称映射到新名称：
       </p>
       <table>
         <thead>
@@ -583,7 +583,7 @@
         <li><code>MAX_SOURCES</code> 不散落在主逻辑里，避免多个地方出现不同上限。</li>
       </ul>
 
-      <h3>4.3 <code>lib/MediaEffectsComposer/SourceStore.js</code></h3>
+      <h3>4.3 <code>lib/MediaEffectsComposer/Sources.js</code></h3>
       <p>
         这是 composer 的 source 注册表。你可以把每个输入流想象成一个内部 source 对象，
         里面不只是流本身，还带着 slot、gain、mirror、AiVB、隐藏 video、音频连接句柄等运行时状态。
@@ -759,7 +759,7 @@
         <li><strong>track signature：</strong> 不是看到 stream 引用变了就重建，而是比较“音频轨身份是否真的变了”，避免无意义重连。</li>
       </ol>
 
-      <h3>4.6 <code>lib/MediaEffectsComposer/OutputStreamManager.js</code></h3>
+      <h3>4.6 <code>lib/MediaEffectsComposer/OutputStream.js</code></h3>
       <p>
         这是“把 canvas 变成输出流”的模块。它现在有两条输出路径：
       </p>
@@ -869,20 +869,20 @@
         <li>“空 payload 是否需要真的起渲染器”这种性能策略放在 loop 层最合适。</li>
       </ul>
 
-      <h3>4.8 <code>lib/MediaEffectsComposer/ComposerRuntime.js</code></h3>
+      <h3>4.8 <code>lib/MediaEffectsComposer/MediaEffectsComposer.js</code></h3>
       <p>
         这是整个 composer 的主控制器，也是最值得读透的文件。
       </p>
 
       <h4>状态聚合与 <code>getState()</code></h4>
       <p>
-        状态分散在多个子模块中（SourceStore、RenderLoop、AudioMixer、OutputStreamManager 等）。
-        <code>ComposerRuntime.getState()</code> 直接向各子模块收集数据并返回统一的只读快照，
+        状态分散在多个子模块中（Sources、RenderLoop、AudioMixer、OutputStream 等）。
+        <code>MediaEffectsComposer.getState()</code> 直接向各子模块收集数据并返回统一的只读快照，
         内部通过 <code>_collectRenderInfo</code>、<code>_collectAudioInfo</code>、<code>_getConfigStateSnapshot</code>
         等私有方法完成聚合，带有日志签名去重机制。
       </p>
 
-      <h4>ComposerRuntime 构造函数的职责拆解</h4>
+      <h4>MediaEffectsComposer 构造函数的职责拆解</h4>
       <table>
         <thead>
           <tr>
@@ -895,8 +895,8 @@
           <tr><td><code>190-200</code></td><td>处理 <code>videos</code> 入参，把单个源统一包装成数组。</td><td>后面所有 source 逻辑都按数组处理，避免分支膨胀。</td></tr>
           <tr><td><code>210-246</code></td><td>调用 <code>ComposerConfig.create()</code> 得到标准 config。</td><td>从构造开始就只让后续模块看到稳定 shape。</td></tr>
           <tr><td><code>247-260</code></td><td>初始化 AiVB 控制器、水印管理器，创建离屏 canvas。</td><td>这些都是跨帧、跨 source 的共享资源。</td></tr>
-          <tr><td><code>267-328</code></td><td>创建输出 canvas 和 OutputStreamManager。</td><td>输出画布是所有渲染路径共用的中心资产。</td></tr>
-          <tr><td><code>290-310</code></td><td>创建 SourceStore，并挂上 before/after remove 回调。</td><td>让 source 删除时，音频、AiVB、render 缓存都能自动联动清理。</td></tr>
+          <tr><td><code>267-328</code></td><td>创建输出 canvas 和 OutputStream。</td><td>输出画布是所有渲染路径共用的中心资产。</td></tr>
+          <tr><td><code>290-310</code></td><td>创建 Sources，并挂上 before/after remove 回调。</td><td>让 source 删除时，音频、AiVB、render 缓存都能自动联动清理。</td></tr>
           <tr><td><code>344-353</code></td><td>创建 RenderLoop。</td><td>把 rAF、renderer、输出帧通知集中管理。</td></tr>
           <tr><td><code>369-374</code></td><td>创建 AudioMixer。</td><td>音频轨出现时能及时注入 mixed stream。</td></tr>
           <tr><td><code>390-399</code></td><td>创建 LayoutEngine。</td><td>布局与渲染后端解耦。</td></tr>
@@ -979,7 +979,7 @@
         <li>如果早期拿到 mixed stream 时还没有音频，后续音频源加入时会由 <code>ensureMixedStreamAudioTrack()</code> 补轨。</li>
       </ul>
 
-      <h3>4.9 AiVB 相关：<code>lib/MediaEffectsComposer/aiVirtualBackground/SourceAiVBController.js</code></h3>
+      <h3>4.9 AiVB 相关：<code>lib/MediaEffectsComposer/aiVirtualBackground/AiVBState.js</code></h3>
       <p>
         这个类的职责是“按 source 管理 AiVB 运行时状态”，尤其值得注意的是：
         <span class="em">内部状态现在放在 <code>WeakMap</code> 里，不再写到 <code>source.__aiVirtualBackgroundState</code> 上</span>。
@@ -1057,16 +1057,16 @@
           </tr>
         </thead>
         <tbody>
-          <tr><td><code>RendererFactory.js</code></td><td>按配置选择 renderer</td><td>把 <code>auto</code> 解析成 worker-webgl2 / main-webgl2 / worker-2d / main-2d。</td></tr>
+          <tr><td><code>RenderLoop.js</code></td><td>按配置选择 renderer</td><td>把 <code>auto</code> 解析成 worker-webgl2 / main-webgl2 / worker-2d / main-2d。</td></tr>
           <tr><td><code>MainCanvas2DRenderer.js</code></td><td>主线程 2D 渲染</td><td>最兼容的最终兜底。</td></tr>
           <tr><td><code>MainWebGL2Renderer.js</code></td><td>主线程 WebGL2 渲染</td><td>GPU 路径，更高性能，支持纹理和 AiVB 合成。</td></tr>
           <tr><td><code>WorkerRenderer.js</code></td><td>Worker 代理层</td><td>负责把帧和水印打包给 workerScript。</td></tr>
           <tr><td><code>workerScript.js</code></td><td>Worker 内真正绘制逻辑</td><td>包含 Canvas2D / WebGL2 绘制与 Worker 侧 AiVB 流程。</td></tr>
-          <tr><td><code>BaseRenderer.js</code></td><td>共享 info/state</td><td>给各 renderer 暴露统一 <code>getInfo()</code> 结构。</td></tr>
+          <tr><td><code>rendererBase.js</code></td><td>共享 info/state</td><td>给各 renderer 暴露统一 <code>getInfo()</code> 结构。</td></tr>
         </tbody>
       </table>
 
-      <h3>4.11 水印：<code>lib/MediaEffectsComposer/WatermarkManager.js</code></h3>
+      <h3>4.11 水印：<code>lib/MediaEffectsComposer/Watermark.js</code></h3>
       <p>
         这个文件负责把“文字/图片水印配置”变成“每帧可绘制项”。它的核心思路是：
       </p>
@@ -1085,11 +1085,11 @@
 
       <h2 id="ains-overview">5. AINoiseSuppression 总览</h2>
       <p>
-        AINoiseSuppression 的对外入口只有一个：<code>AiNoiseSuppressionEngine</code>。
+        AINoiseSuppression 的对外入口只有一个：<code>AiNoiseSuppression</code>。
         但它内部是三层：
       </p>
-      <pre>AiNoiseSuppressionEngine
-  -> AiNSMediaStreamProcessor
+      <pre>AiNoiseSuppression
+  -> AiNoiseSuppression
      -> AiNSWorkletRuntime
         -> AiNSWorkletSource (内联 worklet 代码, 里面跑 wasm + model)</pre>
 
@@ -1106,7 +1106,7 @@
 
       <h3>6.1 <code>lib/AINoiseSuppression/index.js</code></h3>
       <p>
-        只有一行：<code>module.exports = require('./AiNoiseSuppressionEngine')</code>。
+        只有一行：<code>module.exports = require('./AiNoiseSuppression')</code>。
         这说明业务层不需要知道 Processor / WorkletRuntime 的存在，统一从一个入口拿到能力。
       </p>
 
@@ -1135,7 +1135,7 @@
         </tbody>
       </table>
 
-      <h3>6.3 <code>lib/AINoiseSuppression/AiNoiseSuppressionEngine.js</code></h3>
+      <h3>6.3 <code>lib/AINoiseSuppression/AiNoiseSuppression.js</code></h3>
       <p>
         这是 AiNS 对外门面。它的工作不是“处理音频样本”，而是把内部 Processor 包成更适合业务用的接口。
       </p>
@@ -1175,7 +1175,7 @@
         <li>当前是否启用，当前 suppression level 是多少。</li>
       </ul>
 
-      <h3>6.4 <code>lib/AINoiseSuppression/AiNSMediaStreamProcessor.js</code></h3>
+      <h3>6.4 <code>lib/AINoiseSuppression/AiNoiseSuppression.js</code></h3>
       <p>
         这是 AiNS 真正的“媒体图编排层”。它的本质是：
       </p>
@@ -1374,7 +1374,7 @@
       <h3>7.5 运行时不允许热更新的 composer 字段</h3>
       <p>
         <code>MEDIA_EFFECTS_COMPOSER_IMMUTABLE_FIELDS</code>（28-42）和
-        <code>resolveMediaEffectsComposerRuntimePatch()</code>（311-332）规定，下面这些字段不能通过
+        <code>resolveMediaEffectsComposerPatch()</code>（311-332）规定，下面这些字段不能通过
         <code>rtcSession.updateMediaEffectsComposer()</code> 热更新：
       </p>
       <pre>width
@@ -1742,7 +1742,7 @@ composer.addSource(screenStream, { slot: 2 });</pre>
           <tr>
             <td>把 AiVB 内部状态挂回 source 做调试</td>
             <td>旧版本是这么做的</td>
-            <td>现在状态属于 <code>SourceAiVBController._states</code> 这个 WeakMap。</td>
+            <td>现在状态属于 <code>AiVBState._states</code> 这个 WeakMap。</td>
           </tr>
         </tbody>
       </table>
@@ -1753,10 +1753,10 @@ composer.addSource(screenStream, { slot: 2 });</pre>
       <ol>
         <li><code>lib/RTCSession/MediaPipeline.js</code></li>
         <li><code>lib/RTCSession.js</code> 的 <code>updateMediaEffectsComposer()</code>、<code>connect()</code>、<code>answer()</code>、<code>switchDevice()</code></li>
-        <li><code>lib/MediaEffectsComposer/ComposerRuntime.js</code></li>
+        <li><code>lib/MediaEffectsComposer/MediaEffectsComposer.js</code></li>
         <li><code>lib/MediaEffectsComposer/AudioMixer.js</code></li>
-        <li><code>lib/MediaEffectsComposer/OutputStreamManager.js</code></li>
-        <li><code>lib/AINoiseSuppression/AiNSMediaStreamProcessor.js</code></li>
+        <li><code>lib/MediaEffectsComposer/OutputStream.js</code></li>
+        <li><code>lib/AINoiseSuppression/AiNoiseSuppression.js</code></li>
         <li><code>lib/AINoiseSuppression/AiNSWorkletRuntime.js</code></li>
       </ol>
 
@@ -1765,8 +1765,8 @@ composer.addSource(screenStream, { slot: 2 });</pre>
         <li>先读 <code>MediaPipeline.getUserMediaWithSessionPipeline()</code>，理解总顺序。</li>
         <li>再读 <code>applyMediaEffectsComposerOnSdkGumStream()</code> 和 <code>applyAiNoiseSuppressionOnSdkGumStream()</code>。</li>
         <li>再读 <code>RTCSession.updateMediaEffectsComposer()</code>，理解“通话中 patch”语义。</li>
-        <li>然后读 <code>ComposerRuntime</code> 构造函数和 <code>setConfig()</code>。</li>
-        <li>最后再看 AudioMixer、OutputStreamManager、AiVB、Renderer 这些内部实现。</li>
+        <li>然后读 <code>MediaEffectsComposer</code> 构造函数和 <code>setConfig()</code>。</li>
+        <li>最后再看 AudioMixer、OutputStream、AiVB、Renderer 这些内部实现。</li>
       </ol>
 
       <h3>11.3 一句话记忆版</h3>

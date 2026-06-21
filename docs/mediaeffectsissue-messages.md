@@ -36,14 +36,14 @@
 | `Assets not loaded` | `AiNSWorkletRuntime` | 进入 worklet 初始化或处理前，资源尚未完成加载。可能是初始化顺序不对，也可能前一步加载失败。 | 不要继续启用 AiNS；可在资源确认就绪后重试。 | 看 logger 里更早的 asset 失败日志，确认是否先发生了拉取失败或超时。 |
 | `AudioWorklet internal initialization failed` | `AiNSWorkletRuntime` | AudioWorklet 内部初始化失败，但 worklet 没有给出更细的错误文本时，会落到这个兜底文案。 | 关闭 AiNS，继续原始音频。 | 结合 logger 看 worklet 端初始化消息；常见原因是浏览器兼容性、脚本加载异常、底层 wasm 初始化失败。 |
 | `Processor not initialized. Call initialize() first.` | `AiNSWorkletRuntime` | 在 runtime 尚未 `initialize()` 完成前就开始处理。属于调用时序错误或前置初始化失败后仍继续使用。 | 上层不要重试当前实例，重新初始化 AiNS 或直接关闭功能。 | 检查调用链是否在初始化 Promise 完成前就触发处理。 |
-| `AiNSMediaStreamProcessor.init: failed to create processed MediaStream` | `AiNSMediaStreamProcessor` | 降噪处理图构建完成后，没有成功产出新的处理后音频流。 | 回退原始音频，提示降噪不可用。 | 看 logger 中更早的 graph 创建、destination、track 生成日志。 |
-| `AiNSMediaStreamProcessor.replaceAudioTrack: failed to create processed MediaStream` | `AiNSMediaStreamProcessor` | 替换输入音轨时，新的处理后音频流未生成成功。 | 保留旧音轨或回退原始音频，不要继续强切换。 | 检查设备切换时输入流是否合法，是否在切换过程中拿到了空轨。 |
-| `AiNSMediaStreamProcessor: input stream has no audio track` | `AiNSMediaStreamProcessor` | 传入流里没有音频轨。常见于纯视频流、采集失败或业务误传。 | 不要启用 AiNS；可静默跳过或提示“当前没有可降噪音频”。 | 检查 `getUserMedia`/屏幕流输入是否包含音频。 |
-| `AiNSMediaStreamProcessor: input track must be audio` | `AiNSMediaStreamProcessor` | 传入的单轨不是音频轨。属于业务调用错误。 | 直接关闭 AiNS；无需重试同一入参。 | 检查调用方是否误把视频轨或其他轨道传入。 |
-| `AiNSMediaStreamProcessor: replacement input has no audio track` | `AiNSMediaStreamProcessor` | 替换音轨时的新流没有音频轨。 | 保持旧音频或退回原始音频。 | 排查切麦/切设备时的新流生成逻辑。 |
-| `AiNSMediaStreamProcessor: missing source audio track` | `AiNSMediaStreamProcessor` | 处理图里预期的源音轨不存在，说明输入流状态已异常或轨道已结束。 | 关闭 AiNS，必要时提示用户重新选择麦克风。 | 检查源轨是否已 `ended`、是否被提前 `stop()`。 |
-| `AiNSMediaStreamProcessor: missing destination node` | `AiNSMediaStreamProcessor` | 音频处理图没有创建出目标节点，无法导出处理后的流。 | 回退原始音频。 | 排查 `AudioContext`、节点创建、浏览器音频上下文状态。 |
-| `AiNSMediaStreamProcessor: worklet destination did not produce an audio track` | `AiNSMediaStreamProcessor` | worklet 输出端没有产出任何可用音频轨。 | 回退原始音频。 | 重点看 worklet 初始化和 graph 连接日志。 |
+| `AiNoiseSuppression.init: failed to create processed MediaStream` | `AiNoiseSuppression` | 降噪处理图构建完成后，没有成功产出新的处理后音频流。 | 回退原始音频，提示降噪不可用。 | 看 logger 中更早的 graph 创建、destination、track 生成日志。 |
+| `AiNoiseSuppression.replaceAudioTrack: failed to create processed MediaStream` | `AiNoiseSuppression` | 替换输入音轨时，新的处理后音频流未生成成功。 | 保留旧音轨或回退原始音频，不要继续强切换。 | 检查设备切换时输入流是否合法，是否在切换过程中拿到了空轨。 |
+| `AiNoiseSuppression: input stream has no audio track` | `AiNoiseSuppression` | 传入流里没有音频轨。常见于纯视频流、采集失败或业务误传。 | 不要启用 AiNS；可静默跳过或提示“当前没有可降噪音频”。 | 检查 `getUserMedia`/屏幕流输入是否包含音频。 |
+| `AiNoiseSuppression: input track must be audio` | `AiNoiseSuppression` | 传入的单轨不是音频轨。属于业务调用错误。 | 直接关闭 AiNS；无需重试同一入参。 | 检查调用方是否误把视频轨或其他轨道传入。 |
+| `AiNoiseSuppression: replacement input has no audio track` | `AiNoiseSuppression` | 替换音轨时的新流没有音频轨。 | 保持旧音频或退回原始音频。 | 排查切麦/切设备时的新流生成逻辑。 |
+| `AiNoiseSuppression: missing source audio track` | `AiNoiseSuppression` | 处理图里预期的源音轨不存在，说明输入流状态已异常或轨道已结束。 | 关闭 AiNS，必要时提示用户重新选择麦克风。 | 检查源轨是否已 `ended`、是否被提前 `stop()`。 |
+| `AiNoiseSuppression: missing destination node` | `AiNoiseSuppression` | 音频处理图没有创建出目标节点，无法导出处理后的流。 | 回退原始音频。 | 排查 `AudioContext`、节点创建、浏览器音频上下文状态。 |
+| `AiNoiseSuppression: worklet destination did not produce an audio track` | `AiNoiseSuppression` | worklet 输出端没有产出任何可用音频轨。 | 回退原始音频。 | 重点看 worklet 初始化和 graph 连接日志。 |
 
 ### 透传 message
 
@@ -69,16 +69,16 @@
 | `composer output has no video track` | `MediaPipeline` | composer 已创建，但最终输出流里没有视频轨，说明合成输出失败。 | 关闭混流/虚拟背景，回退原始摄像头流。 | 检查 renderer、输出流生成、输入源是否有视频轨。 |
 | `AudioContext is not available` | `AudioMixer` | 当前环境没有可用 `AudioContext`，或被浏览器/运行环境限制。 | 关闭 composer 音频混合能力，必要时只保留视频处理。 | 常见于老环境、受限 WebView、浏览器能力缺失。 |
 | `No valid audio sources, skip audio stream creation` | `AudioMixer` | 当前没有任何可参与混音的有效音频源，因此跳过生成混音音频轨。 | 通常不必中断视频处理；可静默降级，或提示“当前无可混音音频”。 | 检查各 source 是否真有 live 音频轨。 |
-| `Insertable frame writing disabled due to repeated failures` | `OutputStreamManager` | Insertable Streams 连续写帧失败，SDK 主动停用该路径避免持续报错。 | 允许通话继续，提示高级视频处理能力已降级。 | 结合 logger 看此前的逐次写帧失败原因，常见于浏览器兼容性或生成器状态异常。 |
-| `TrackGenerator constructor is unavailable` | `OutputStreamManager` | 当前环境不支持 `MediaStreamTrackGenerator`。 | 关闭依赖 Insertable Streams 的输出路径，必要时切回 canvas capture。 | 常见于浏览器版本不支持。 |
-| `generator track is unavailable` | `OutputStreamManager` | 已尝试创建 generator，但没有可用输出轨。 | 回退到其他输出模式。 | 检查 generator 初始化状态与浏览器支持。 |
-| `generator writable is unavailable` | `OutputStreamManager` | generator 没有可写入端，无法继续喂帧。 | 回退到其他输出模式。 | 常见于浏览器实现不完整或 generator 已异常关闭。 |
-| `VideoFrame constructor is unavailable` | `OutputStreamManager` | 当前环境不支持 `VideoFrame`。 | 关闭依赖 `VideoFrame` 的路径，尝试其他渲染/输出模式。 | 需要浏览器能力兜底。 |
-| `MediaEffectsComposer has been stopped. Create a new composer before calling ${methodName}.` | `ComposerRuntime` | composer 已 stop，但业务仍继续调用更新、取输出或 source 相关方法。 | 不要重试当前实例；重新创建 composer。 | 调用时序问题，检查关闭后是否仍保留旧实例引用。 |
-| `Image constructor is unavailable` | `WatermarkManager` | 当前环境没有 `Image` 构造器，无法加载图片水印。 | 关闭图片水印；文字水印可视情况保留。 | 常见于非浏览器环境或受限运行环境。 |
-| `Failed to load image: ${url}` | `WatermarkManager` | 图片水印资源加载失败。 | 去掉该图片水印继续通话。 | 检查图片 URL、跨域、文件是否存在。 |
-| `Missing image` | `WatermarkManager` | 水印配置要求图片，但没有提供图片对象或地址。 | 直接忽略该水印配置，并提示配置错误。 | 检查 `watermarks[].image` 是否为空。 |
-| `Failed to load background image` | `SourceAiVBController` 或 worker | 虚拟背景背景图加载失败。 | 关闭该背景图模式，可回退为 blur 或关闭 AiVB。 | 检查背景图 URL、跨域、文件存在性。 |
+| `Insertable frame writing disabled due to repeated failures` | `OutputStream` | Insertable Streams 连续写帧失败，SDK 主动停用该路径避免持续报错。 | 允许通话继续，提示高级视频处理能力已降级。 | 结合 logger 看此前的逐次写帧失败原因，常见于浏览器兼容性或生成器状态异常。 |
+| `TrackGenerator constructor is unavailable` | `OutputStream` | 当前环境不支持 `MediaStreamTrackGenerator`。 | 关闭依赖 Insertable Streams 的输出路径，必要时切回 canvas capture。 | 常见于浏览器版本不支持。 |
+| `generator track is unavailable` | `OutputStream` | 已尝试创建 generator，但没有可用输出轨。 | 回退到其他输出模式。 | 检查 generator 初始化状态与浏览器支持。 |
+| `generator writable is unavailable` | `OutputStream` | generator 没有可写入端，无法继续喂帧。 | 回退到其他输出模式。 | 常见于浏览器实现不完整或 generator 已异常关闭。 |
+| `VideoFrame constructor is unavailable` | `OutputStream` | 当前环境不支持 `VideoFrame`。 | 关闭依赖 `VideoFrame` 的路径，尝试其他渲染/输出模式。 | 需要浏览器能力兜底。 |
+| `MediaEffectsComposer has been stopped. Create a new composer before calling ${methodName}.` | `MediaEffectsComposer` | composer 已 stop，但业务仍继续调用更新、取输出或 source 相关方法。 | 不要重试当前实例；重新创建 composer。 | 调用时序问题，检查关闭后是否仍保留旧实例引用。 |
+| `Image constructor is unavailable` | `Watermark` | 当前环境没有 `Image` 构造器，无法加载图片水印。 | 关闭图片水印；文字水印可视情况保留。 | 常见于非浏览器环境或受限运行环境。 |
+| `Failed to load image: ${url}` | `Watermark` | 图片水印资源加载失败。 | 去掉该图片水印继续通话。 | 检查图片 URL、跨域、文件是否存在。 |
+| `Missing image` | `Watermark` | 水印配置要求图片，但没有提供图片对象或地址。 | 直接忽略该水印配置，并提示配置错误。 | 检查 `watermarks[].image` 是否为空。 |
+| `Failed to load background image` | `AiVBState` 或 worker | 虚拟背景背景图加载失败。 | 关闭该背景图模式，可回退为 blur 或关闭 AiVB。 | 检查背景图 URL、跨域、文件存在性。 |
 | `AIVirtualBackground requires browser environment` | `AiVBAssetLoader` | 在非浏览器环境初始化 AiVB。 | 直接关闭 AiVB，不应重试。 | 属于运行环境不支持。 |
 | `Failed to load MediaPipe Tasks runtime: ${moduleUrl}` | `AiVBAssetLoader` | MediaPipe runtime 脚本加载失败。通常是 URL 错、网络失败或脚本不可访问。 | 关闭 AiVB，允许普通视频继续。 | 核对 `cdnUrl/moduleUrl`、网络、部署内容。 |
 | `Timed out waiting for MediaPipe Tasks runtime: ${moduleUrl}` | `AiVBAssetLoader` | 等待 MediaPipe runtime 挂载全局对象超时。 | 关闭 AiVB。 | 看脚本是否被拦截、执行过慢、版本不匹配。 |
@@ -120,7 +120,7 @@
 收到 `mediaEffectsIssue` 后，如果需要进一步定位，优先从 SDK logger 看这些信息：
 
 - `module`：`AiNS` 或 `MediaEffectsComposer`
-- `component`：具体出错组件，例如 `AiNSWorkletRuntime`、`AudioMixer`、`RenderLoop`、`SourceAiVBController`
+- `component`：具体出错组件，例如 `AiNSWorkletRuntime`、`AudioMixer`、`RenderLoop`、`AiVBState`
 - `stage`：失败发生阶段，例如资源拉取、runtime 初始化、renderer fallback、输出写帧
 - `severity`：`debug`、`warn`、`error`
 - `fallbackApplied`：是否已经自动降级

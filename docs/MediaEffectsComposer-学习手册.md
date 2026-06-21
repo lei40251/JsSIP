@@ -43,12 +43,12 @@ graph LR
 
     subgraph S_MEC["MediaEffectsComposer"]
         direction TB
-        SS["SourceStore<br/>源注册表"]
+        SS["Sources<br/>源注册表"]
         LE["LayoutEngine<br/>网格布局"]
         RL["RenderLoop<br/>rAF 帧循环"]
         RT["Renderer<br/>WebGL2/Canvas2D"]
         AM["AudioMixer<br/>WebAudio 混音"]
-        OM["OutputStreamMng<br/>输出流封装"]
+        OM["OutputStream<br/>输出流封装"]
     end
 
     subgraph S_OUT["输出"]
@@ -63,7 +63,7 @@ graph LR
     SS --> AM --> OM
 ```
 
-**一句话总结**:多路 in → SourceStore 管理 → LayoutEngine 算坐标 → RenderLoop 用 Renderer 画到一张离屏 canvas → OutputStreamManager 把 canvas 导出成 MediaStream;音频侧 AudioMixer 用 WebAudio 把各路音频混成一路。
+**一句话总结**:多路 in → Sources 管理 → LayoutEngine 算坐标 → RenderLoop 用 Renderer 画到一张离屏 canvas → OutputStream 把 canvas 导出成 MediaStream;音频侧 AudioMixer 用 WebAudio 把各路音频混成一路。
 
 ---
 
@@ -71,47 +71,39 @@ graph LR
 
 ### 2.1 分层视图
 
-整个模块严格遵循**分层 + 单一职责**,自上而下分为四层:
+整个模块严格遵循**分层 + 单一职责**,自上而下分为三层:
 
 ```mermaid
 ---
-title: 图2.1  四层分层架构
+title: 图2.1  三层分层架构
 config:
   themeVariables:
     fontSize: 12px
 ---
 graph TB
-    subgraph L1["① 对外门面层"]
-        MEC["MediaEffectsComposer<br/>门面/别名"]
-        IDX["index.js"]
-    end
-
-    subgraph L2["② 运行时编排层"]
-        CRT["ComposerRuntime<br/>核心大脑"]
+    subgraph L1["① 运行时编排层"]
+        CRT["MediaEffectsComposer<br/>核心大脑"]
         CFG["ComposerConfig<br/>配置归一化"]
     end
 
-    subgraph L3["③ 功能子模块层"]
-        SS["SourceStore<br/>源注册表"]
+    subgraph L2["② 功能子模块层"]
+        SS["Sources<br/>源注册表"]
         LE["LayoutEngine<br/>布局计算"]
         RL["RenderLoop<br/>帧循环/降级"]
         AM["AudioMixer<br/>WebAudio 混音"]
-        OM["OutputStreamMng<br/>输出流封装"]
-        WM["WatermarkManager<br/>水印管理"]
-        AVB["SourceAiVBCtrl<br/>AI 虚拟背景"]
+        OM["OutputStream<br/>输出流封装"]
+        WM["Watermark<br/>水印管理"]
+        AVB["AiVBState<br/>AI 虚拟背景"]
     end
 
-    subgraph L4["④ 渲染后端层"]
-        RF["RendererFactory<br/>工厂"]
-        BR["BaseRenderer<br/>抽象基类"]
+    subgraph L3["③ 渲染后端层"]
+        BR["rendererBase<br/>共享基础方法"]
         M2D["MainCanvas2DRenderer"]
         MWG["MainWebGL2Renderer"]
         WR["WorkerRenderer"]
         WS["workerScript<br/>Worker 内执行"]
     end
 
-    IDX --> MEC
-    MEC -->|"继承"| CRT
     CRT --> CFG
     CRT --> SS
     CRT --> LE
@@ -120,9 +112,8 @@ graph TB
     CRT --> OM
     CRT --> WM
     CRT --> AVB
-    RL --> RF
-    RF --> BR
-    BR -.->|"被继承"| M2D
+    RL --> BR
+    BR -.->|"被组合"| M2D
     BR -.-> MWG
     BR -.-> WR
     WR -.->|"transfer"| WS
@@ -135,7 +126,7 @@ graph TB
 | **一张固定的离屏 canvas**(默认 1280×720) | 不随源数量变化;坐标计算稳定;captureStream/Insertable 都认这一张 canvas |
 | **布局计算与绘制完全解耦** | LayoutEngine 只产 `{items:[{draw:{x,y,w,h}}]}`,四种渲染器(Canvas2D/WebGL2×主/Worker)共用同一份布局结果 |
 | **渲染后端"可插拔 + 自动降级"** | 浏览器能力差异巨大(OffscreenCanvas、WebGL2、Worker),需要运行时探测+故障降级链 |
-| **ComposerRuntime 是"薄编排者"** | 它只做组装和委派,真正干活的是子模块 |
+| **MediaEffectsComposer 是"薄编排者"** | 它只做组装和委派,真正干活的是子模块 |
 | **纯函数配置归一化(ComposerConfig)** | 所有 `normalize*` 都是纯函数,易于测试、防御性编程 |
 | **统一 Issue 上报通道** | 所有子模块通过注入的 `onIssue` 回调上报问题,汇聚到一处再冒泡到 RTCSession 事件 |
 
@@ -147,27 +138,22 @@ graph TB
 
 ```
 MediaEffectsComposer/
-├── index.js                      4 行   公共入口,require 转发
-├── MediaEffectsComposer.js      21 行   门面类(仅别名)
-├── ComposerRuntime.js         1870 行   ★ 核心:初始化、编排、公开 API
+├── MediaEffectsComposer.js         1870 行   ★ 核心:初始化、编排、公开 API
 ├── ComposerConfig.js           232 行   纯函数配置归一化
-├── SourceStore.js              464 行   源注册表(增删查改、slot 分配)
+├── Sources.js              464 行   源注册表(增删查改、slot 分配)
 ├── LayoutEngine.js             447 行   网格布局 + draw rect 计算
-├── RenderLoop.js               807 行   rAF 帧循环 + 渲染降级调度
-├── OutputStreamManager.js      991 行   canvas→MediaStream 输出封装
+├── RenderLoop.js               807 行   rAF 帧循环 + 渲染降级调度（含原 RendererFactory 逻辑）
+├── OutputStream.js      991 行   canvas→MediaStream 输出封装
 ├── AudioMixer.js              1976 行   WebAudio 混音(最大模块)
-├── WatermarkManager.js         688 行   水印配置/加载/布局
+├── Watermark.js         688 行   水印配置/加载/布局
 ├── Renderers/
-│   ├── BaseRenderer.js         151 行   渲染器抽象基类
-│   ├── RendererFactory.js      220 行   渲染器工厂(含降级链)
+│   ├── rendererBase.js          49 行   渲染器共享基础方法(工厂函数)
 │   ├── MainCanvas2DRenderer.js 420 行   主线程 Canvas2D(最终兜底)
-│   ├── MainWebGL2Renderer.js   742 行   主线程 WebGL2
+│   ├── MainWebGL2Renderer.js   959 行   主线程 WebGL2(含原 gl.js+color.js)
 │   ├── WorkerRenderer.js       850 行   Worker 渲染代理
-│   ├── workerScript.js        1360 行   Worker 内实际渲染脚本
-│   ├── color.js                127 行   颜色解析工具
-│   └── gl.js                    87 行   WebGL 工具
+│   └── workerScript.js        1360 行   Worker 内实际渲染脚本
 └── AIVirtualBackground/
-    ├── SourceAiVBController.js 1281 行  源级 AiVB 生命周期控制
+    ├── AiVBState.js 1281 行  源级 AiVB 生命周期控制
     ├── MediaPipeSegmenterRuntime.js 655 行  MediaPipe 分割器封装
     ├── AiVBAssetLoader.js      275 行   MediaPipe 运行时懒加载
     ├── AiVBConfig.js           305 行   AiVB 配置归一化
@@ -179,16 +165,16 @@ MediaEffectsComposer/
 | 模块 | 职责 |
 |---|---|
 | **MediaEffectsComposer** | 门面,把 `appendStream/removeStream/clearStreams` 别名到 Runtime 的方法(向后兼容旧 API) |
-| **ComposerRuntime** | 核心大脑。构造所有子模块、编排公开 API、提供"委派 get 属性"让旧代码访问子模块状态 |
+| **MediaEffectsComposer** | 核心大脑。构造所有子模块、编排公开 API、提供"委派 get 属性"让旧代码访问子模块状态 |
 | **ComposerConfig** | 纯函数集:`create/normalize*`,把外部杂乱配置统一成内部规范对象 |
-| **SourceStore** | 输入源的"真相之源"。维护源列表、分配 slot、生成 ID、提供 `onBeforeRemove/onAfterRemove` 回调钩子 |
+| **Sources** | 输入源的"真相之源"。维护源列表、分配 slot、生成 ID、提供 `onBeforeRemove/onAfterRemove` 回调钩子 |
 | **LayoutEngine** | 按 slot + 画布比例算出网格(cols×rows),为每路视频算等比缩放的 draw rect;纯几何,不碰渲染 |
 | **RenderLoop** | `requestAnimationFrame` 驱动;fps 节流;按需 `ensureRenderer()`;检测渲染器故障并触发降级链 |
 | **Renderer 系列** | 把 LayoutEngine 产出的 payload 真正画到 canvas。4 个实现 + 1 个工厂 + 1 个基类 |
 | **AudioMixer** | WebAudio API:每路源独立 GainNode,汇总到 `MediaStreamAudioDestinationNode`;支持子混音(submix) |
-| **OutputStreamManager** | canvas 像素 → MediaStream。优先 Insertable Streams(`VideoTrackGenerator`),回退 `captureStream(0)+requestFrame` |
-| **WatermarkManager** | 水印配置归一化、图片异步加载、按 output/source 两种目标算绘制矩形 |
-| **SourceAiVBController** | 每路源的 AI 虚拟背景(人像分割 + 背景替换/模糊/纯色)生命周期管理;用 WeakMap 存状态 |
+| **OutputStream** | canvas 像素 → MediaStream。优先 Insertable Streams(`VideoTrackGenerator`),回退 `captureStream(0)+requestFrame` |
+| **Watermark** | 水印配置归一化、图片异步加载、按 output/source 两种目标算绘制矩形 |
+| **AiVBState** | 每路源的 AI 虚拟背景(人像分割 + 背景替换/模糊/纯色)生命周期管理;用 WeakMap 存状态 |
 | **MediaPipeSegmenterRuntime** | 封装 MediaPipe `ImageSegmenter`,逐帧分割产 alpha 遮罩 |
 | **AiVBAssetLoader** | 通过注入 `<script type=module>` 懒加载 MediaPipe Tasks 运行时,全局去重 |
 
@@ -211,23 +197,23 @@ graph TD
 
     %% 门面
     MEC["MediaEffectsComposer"]
-    CRT["ComposerRuntime"]
+    CRT["MediaEffectsComposer"]
     CFG["ComposerConfig"]
     ISS["MediaEffectsIssue<br/>问题上报工具"]
     LOG["Logger"]
 
     %% 子模块
-    SS["SourceStore"]
+    SS["Sources"]
     LE["LayoutEngine"]
     RL["RenderLoop"]
     AM["AudioMixer"]
-    OM["OutputStreamManager"]
-    WM["WatermarkManager"]
-    AVB["SourceAiVBController"]
+    OM["OutputStream"]
+    WM["Watermark"]
+    AVB["AiVBState"]
 
     %% 渲染
-    RF["RendererFactory"]
-    BR["BaseRenderer"]
+    RF["RendererFactory（已内联）"]
+    BR["rendererBase"]
     M2D["MainCanvas2DRenderer"]
     MWG["MainWebGL2Renderer"]
     WR["WorkerRenderer"]
@@ -286,10 +272,10 @@ graph TD
 ### 4.2 依赖关系要点
 
 1. **依赖单向向下**:门面 → Runtime → 子模块 → 渲染器。没有反向依赖、没有循环依赖。
-2. **ComposerRuntime 是唯一"全知"节点**:它构造所有子模块,子模块之间**不互相 new**,而是通过 Runtime 注入的回调(`getSources`、`createRenderPayload` 等)协作。
+2. **MediaEffectsComposer 是唯一"全知"节点**:它构造所有子模块,子模块之间**不互相 new**,而是通过 Runtime 注入的回调(`getSources`、`createRenderPayload` 等)协作。
 3. **MediaEffectsIssue 是横切关注点**:几乎所有子模块都依赖它做问题上报,但它本身是个无状态工具模块(纯函数),不构成耦合负担。
-4. **SourceStore 是数据的单一来源**:AudioMixer 直接持有 `sourceRegistry` 引用查询源信息,而不是 Runtime 传给它。
-5. **AiVB 子树自闭环**:`SourceAiVBController → MediaPipeSegmenterRuntime → AiVBAssetLoader`,对外只暴露 Controller 一个入口。
+4. **Sources 是数据的单一来源**:AudioMixer 直接持有 `sourceRegistry` 引用查询源信息,而不是 Runtime 传给它。
+5. **AiVB 子树自闭环**:`AiVBState → MediaPipeSegmenterRuntime → AiVBAssetLoader`,对外只暴露 Controller 一个入口。
 
 ---
 
@@ -312,14 +298,14 @@ graph LR
 
     subgraph S_RAF["每帧 rAF"]
         direction TB
-        A["① SourceStore.sources<br/>当前所有源"]
+        A["① Sources.sources<br/>当前所有源"]
         B["② LayoutEngine.createRenderPayload<br/>算 draw rect + 水印"]
         C["③ payload.items[]<br/>{video,draw,mirrorX}"]
         D["④ Renderer.render(payload)<br/>画到离屏 canvas"]
     end
 
     subgraph S_OUT["输出"]
-        E["⑤ OutputStreamMng<br/>canvas→MediaStream"]
+        E["⑤ OutputStream<br/>canvas→MediaStream"]
         F["mixedStream.videoTrack"]
     end
 
@@ -375,12 +361,12 @@ config:
     fontSize: 12px
 ---
 graph TD
-    WM["WatermarkManager"]
-    AVB["SourceAiVBController"]
+    WM["Watermark"]
+    AVB["AiVBState"]
     RL["RenderLoop"]
-    OM["OutputStreamManager"]
+    OM["OutputStream"]
     AM["AudioMixer"]
-    CRT["ComposerRuntime._recordIssue<br/>FIFO 缓存≤50"]
+    CRT["MediaEffectsComposer._recordIssue<br/>FIFO 缓存≤50"]
 
     WM -->|"onIssue"| CRT
     AVB -->|"onIssue"| CRT
@@ -410,25 +396,25 @@ sequenceDiagram
     autonumber
     participant App as 应用/MediaPipeline
     participant MEC as MediaEffectsComposer
-    participant CRT as ComposerRuntime
-    participant SS as SourceStore
+    participant CRT as MediaEffectsComposer
+    participant SS as Sources
     participant AM as AudioMixer
-    participant OM as OutputStreamManager
+    participant OM as OutputStream
     participant RL as RenderLoop
     participant LE as LayoutEngine
-    participant WM as WatermarkManager
-    participant AVB as SourceAiVBController
+    participant WM as Watermark
+    participant AVB as AiVBState
 
     App->>MEC: new MediaEffectsComposer(streams, options)
     MEC->>CRT: extends(构造)
     Note over CRT: ① 参数安全守卫<br/>videos 统一为数组
     CRT->>CRT: ComposerConfig.create(options)<br/>② 配置归一化
-    CRT->>AVB: new SourceAiVBController
-    CRT->>WM: new WatermarkManager
+    CRT->>AVB: new AiVBState
+    CRT->>WM: new Watermark
     CRT->>CRT: document.createElement('canvas')<br/>③ 创建离屏 canvas
-    CRT->>SS: new SourceStore(注入回调链)
+    CRT->>SS: new Sources(注入回调链)
     Note right of SS: onBeforeRemove=断音频<br/>onAfterRemove=清渲染+清画布
-    CRT->>OM: new OutputStreamManager(canvas, config)
+    CRT->>OM: new OutputStream(canvas, config)
     CRT->>RL: new RenderLoop(注入 createRenderPayload)
     CRT->>AM: new AudioMixer(sourceRegistry)
     CRT->>LE: new LayoutEngine(sourceRegistry, canvas, config)
@@ -444,7 +430,7 @@ sequenceDiagram
 ### 6.2 构造阶段的几个关键决策
 
 1. **配置归一化前置**:任何非法值在 `ComposerConfig.create` 阶段就被拍成默认值,后续代码可以信任 config 的类型(`ComposerConfig.js:46`)。
-2. **SourceStore 的回调链设计**:`onBeforeRemove`(断音频)→ `onAfterRemove`(清渲染/清画布)。这个顺序很关键:先断音频避免残留噪声,再清视频资源(`ComposerRuntime.js:360`)。
+2. **Sources 的回调链设计**:`onBeforeRemove`(断音频)→ `onAfterRemove`(清渲染/清画布)。这个顺序很关键:先断音频避免残留噪声,再清视频资源(`MediaEffectsComposer.js:360`)。
 3. **Renderer 延迟创建**:构造时不创建 Renderer,第一次真正 `renderFrame` 时才 `ensureRenderer()`。好处是空源时不浪费 GPU 资源(`RenderLoop.js:182`)。
 4. **水印异步加载不阻塞构造**:`setWatermarks` 返回 Promise,构造函数里只 `then` 后画一帧,失败也只上报不中断。
 5. **AudioContext 延迟到首次 `getAudioStream`**:浏览器要求用户交互后才能创建/启动 AudioContext,所以构造时绝不碰它(`AudioMixer.js:57`)。
@@ -459,9 +445,9 @@ sequenceDiagram
 sequenceDiagram
     autonumber
     participant App as 应用
-    participant CRT as ComposerRuntime
+    participant CRT as MediaEffectsComposer
     participant RL as RenderLoop
-    participant OM as OutputStreamManager
+    participant OM as OutputStream
     participant AM as AudioMixer
 
     App->>CRT: getMixedStream()
@@ -487,7 +473,7 @@ sequenceDiagram
 
 **两个值得注意的设计**:
 - **`getStableAudioStream`** 保证了即使首次取流时还没有音频源,也会先创建一条"稳定的静音 destination track",后续新增源只更新 WebAudio graph,**不再向已返回的流追加第二条音轨**(避免下游混乱,`AudioMixer.js:219`)。
-- **`ensureMixedStreamAudioTrack`** 处理"先取流、后加源"的延迟场景(`OutputStreamManager.js:818`)。
+- **`ensureMixedStreamAudioTrack`** 处理"先取流、后加源"的延迟场景(`OutputStream.js:818`)。
 
 ### 7.2 流程②:渲染一帧(每 fps 一次)
 
@@ -496,11 +482,11 @@ sequenceDiagram
     autonumber
     participant RAF as requestAnimationFrame
     participant RL as RenderLoop
-    participant CRT as ComposerRuntime
+    participant CRT as MediaEffectsComposer
     participant AM as AudioMixer
     participant LE as LayoutEngine
     participant R as Renderer
-    participant OM as OutputStreamManager
+    participant OM as OutputStream
 
     RAF->>RL: renderFrame(timestamp)
     RL->>RL: 检查 _stopped / fps 节流
@@ -531,8 +517,8 @@ sequenceDiagram
 sequenceDiagram
     autonumber
     participant App as 应用
-    participant CRT as ComposerRuntime
-    participant SS as SourceStore
+    participant CRT as MediaEffectsComposer
+    participant SS as Sources
     participant AM as AudioMixer
 
     Note over App,CRT: ➕ 添加源
@@ -598,7 +584,7 @@ graph LR
 ```
 
 **两个层次的降级**:
-1. **创建期(同步)**:`RendererFactory.createRenderer` 按顺序 try-catch,任何一个抛错就尝试下一个(`RendererFactory.js:32`)。
+1. **创建期(同步)**:`createRenderer` 按顺序 try-catch,任何一个抛错就尝试下一个(`RenderLoop.js:32`)。
 2. **运行期(异步)**:`RenderLoop.fallbackRenderer` 在 Worker 运行中报告 fatal 时触发,链是 `worker-webgl2 → main-webgl2 → worker-2d → main-2d`(`RenderLoop.js:357`)。
 
 ### 7.5 流程⑤:输出路径选择(Insertable vs captureStream)
@@ -632,7 +618,7 @@ graph TD
 
 **为什么有两条路径**:
 - **Insertable Streams**(`VideoTrackGenerator`):直接以 `VideoFrame` 对象喂给 track,延迟更低、与 WebRTC 编码管线衔接更顺,但浏览器支持有限。
-- **`captureStream(0)+requestFrame`**:精确控制"每画完一帧才推一帧",避免浏览器自己按 fps 抽帧造成重复/丢帧。配合一个隐藏的"保活 video"规避 Chromium 在无人消费时降质的 bug(`OutputStreamManager.js:385`)。
+- **`captureStream(0)+requestFrame`**:精确控制"每画完一帧才推一帧",避免浏览器自己按 fps 抽帧造成重复/丢帧。配合一个隐藏的"保活 video"规避 Chromium 在无人消费时降质的 bug(`OutputStream.js:385`)。
 
 ---
 
@@ -654,15 +640,15 @@ classDiagram
         +clearStreams()
     }
 
-    class ComposerRuntime {
+    class MediaEffectsComposer {
         -_config : Object
-        -_sourceRegistry : SourceStore
+        -_sourceRegistry : Sources
         -_renderLoop : RenderLoop
         -_audioComposer : AudioMixer
-        -_outMgr : OutputStreamManager
+        -_outMgr : OutputStream
         -_layoutEngine : LayoutEngine
-        -_watermarkManager : WatermarkManager
-        -_sourceAiVBManager : SourceAiVBController
+        -_watermarkManager : Watermark
+        -_sourceAiVBManager : AiVBState
         -_issues : Array
         -_destroyed : boolean
         -_lastRenderInfoLogSignature : string
@@ -691,8 +677,8 @@ classDiagram
         +getMaxSources() 9
     }
 
-    MediaEffectsComposer --|> ComposerRuntime : extends
-    ComposerRuntime ..> ComposerConfig : 使用纯函数
+    MediaEffectsComposer --|> MediaEffectsComposer : extends
+    MediaEffectsComposer ..> ComposerConfig : 使用纯函数
 ```
 
 ### 8.2 渲染器类层级(策略模式)
@@ -705,7 +691,7 @@ config:
     fontSize: 12px
 ---
 classDiagram
-    class BaseRenderer {
+    class rendererBase {
         <<abstract>>
         #_config : Object
         #_info : Object
@@ -744,25 +730,25 @@ classDiagram
         -_handleWorkerMessage(e)
     }
 
-    class RendererFactory {
+    RendererFactory（已内联到 RenderLoop） {
         <<module>>
-        +createRenderer(canvas, config, hooks) BaseRenderer
+        +createRenderer(canvas, config, hooks) rendererBase
         -shouldPreferMainWebGL2() bool
     }
 
-    BaseRenderer <|-- MainCanvas2DRenderer
-    BaseRenderer <|-- MainWebGL2Renderer
-    BaseRenderer <|-- WorkerRenderer
-    RendererFactory ..> MainCanvas2DRenderer : creates
-    RendererFactory ..> MainWebGL2Renderer : creates
-    RendererFactory ..> WorkerRenderer : creates
+    rendererBase <|-- MainCanvas2DRenderer
+    rendererBase <|-- MainWebGL2Renderer
+    rendererBase <|-- WorkerRenderer
+    RendererFactory（已内联） ..> MainCanvas2DRenderer : creates
+    RendererFactory（已内联） ..> MainWebGL2Renderer : creates
+    RendererFactory（已内联） ..> WorkerRenderer : creates
 ```
 
-### 8.3 SourceStore / Source 数据模型
+### 8.3 Sources / Source 数据模型
 
 ```mermaid
 classDiagram
-    class SourceStore {
+    class Sources {
         +sources : Array~Source~
         +videos : Array~HTMLVideoElement~
         -_sourceSeq : number
@@ -794,7 +780,7 @@ classDiagram
         +ownedVideo : boolean
     }
 
-    SourceStore "1" o-- "*" Source : 管理
+    Sources "1" o-- "*" Source : 管理
 ```
 
 ---
@@ -810,7 +796,7 @@ sequenceDiagram
     participant MEC as MediaEffectsComposer
     participant RL as RenderLoop
     participant R as Renderer
-    participant OM as OutputStreamManager
+    participant OM as OutputStream
     participant AM as AudioMixer
 
     Note over App,MEC: 🟢 阶段1:构造
@@ -851,7 +837,7 @@ sequenceDiagram
     participant RL as RenderLoop
     participant WR as WorkerRenderer
     participant W as Worker 线程
-    participant RF as RendererFactory
+    participant RF as RendererFactory（已内联）
     participant M2D as MainCanvas2DRenderer
 
     Note over RL,W: 正常运行中
@@ -893,19 +879,19 @@ graph TB
     subgraph 结构型
         FAC["Facade 门面<br/>MediaEffectsComposer"]
         STR["Strategy 策略<br/>Renderer 四实现"]
-        FACT["Factory 工厂<br/>RendererFactory"]
+        FACT["Factory 工厂<br/>RendererFactory（已内联）"]
         BR["Bridge 桥接<br/>渲染抽象↔实现"]
     end
 
     subgraph 行为型
         OBS["Observer 观察者<br/>onIssue / 帧回调"]
         CHN["Chain of Resp. 职责链<br/>渲染降级链"]
-        TMP["Template Method<br/>BaseRenderer.init/render"]
+        TMP["Template Method<br/>rendererBase.init/render"]
     end
 
     subgraph 创建型
         SGL["单例式全局去重<br/>AiVBAssetLoader"]
-        BUI["回调注入组装<br/>ComposerRuntime 构造"]
+        BUI["回调注入组装<br/>MediaEffectsComposer 构造"]
     end
 ```
 
@@ -916,10 +902,10 @@ graph TB
 
 #### ② 策略 + 工厂 + 模板方法 — 渲染器三件套
 这是整个模块最精彩的设计:
-- **`BaseRenderer`** 定义抽象接口(`init/render/resize/removeSource/destroy`)——**模板方法**。
+- **`rendererBase`** 定义抽象接口(`init/render/resize/removeSource/destroy`)——**模板方法**。
 - **4 个具体策略**(`MainCanvas2DRenderer`/`MainWebGL2DRenderer`/`WorkerRenderer`)——**策略**。
-- **`RendererFactory.createRenderer`** 根据配置+能力探测选择策略——**工厂**。
-- 上层(`RenderLoop`)只面向 `BaseRenderer` 编程,完全不关心具体是哪种后端——**桥接**。
+- **`createRenderer`** 根据配置+能力探测选择策略——**工厂**。
+- 上层(`RenderLoop`)只面向 `rendererBase` 编程,完全不关心具体是哪种后端——**桥接**。
 
 > 这套设计让"在 Worker 里画 WebGL2"和"在主线程画 Canvas2D"对上层完全透明,布局结果(payload)可以原样复用。
 
@@ -933,15 +919,15 @@ worker-webgl2 → main-webgl2 → worker-2d → main-2d
 #### ④ 观察者(Observer)— Issue 上报 + 帧回调
 两个方向的事件流都用观察者:
 - **Issue 上报**:子模块 → Runtime → MediaPipeline → RTCSession 事件。所有子模块构造时注入 `onIssue` 回调,形成发布-订阅。
-- **帧输出回调**:`Renderer._emitFramePresented` → `RenderLoop` → `OutputStreamManager.onFramePresented`。渲染器画完一帧就通知输出层"可以取帧了"。
+- **帧输出回调**:`Renderer._emitFramePresented` → `RenderLoop` → `OutputStream.onFramePresented`。渲染器画完一帧就通知输出层"可以取帧了"。
 
 #### ⑤ 观察者(Observer)— Issue 上报 + 帧回调
 两个方向的事件流都用观察者:
-- **Issue 上报**:子模块 → Runtime → MediaPipeline → RTCSession 事件。所有子模块构造时注入 `onIssue` 回调,形成发布-订阅。各子模块的 `_reportIssue` 直接透传 issue 到 `ComposerRuntime._recordIssue` 中央处理,避免多层归一化。
-- **帧输出回调**:`Renderer._emitFramePresented` → `RenderLoop` → `OutputStreamManager.onFramePresented`。渲染器画完一帧就通知输出层"可以取帧了"。
+- **Issue 上报**:子模块 → Runtime → MediaPipeline → RTCSession 事件。所有子模块构造时注入 `onIssue` 回调,形成发布-订阅。各子模块的 `_reportIssue` 直接透传 issue 到 `MediaEffectsComposer._recordIssue` 中央处理,避免多层归一化。
+- **帧输出回调**:`Renderer._emitFramePresented` → `RenderLoop` → `OutputStream.onFramePresented`。渲染器画完一帧就通知输出层"可以取帧了"。
 
 #### ⑥ 状态聚合 — `getState()`
-状态分散在多个子模块里(SourceStore 有源列表、RenderLoop 有渲染信息、AudioMixer 有音频状态)。`ComposerRuntime.getState()` 直接向各子模块收集数据并返回统一只读快照(不再通过独立的 `ComposerState` 类中转)。
+状态分散在多个子模块里(Sources 有源列表、RenderLoop 有渲染信息、AudioMixer 有音频状态)。`MediaEffectsComposer.getState()` 直接向各子模块收集数据并返回统一只读快照(不再通过独立的 `ComposerState` 类中转)。
 
 #### ⑦ 全局去重(单例式)— `AiVBAssetLoader`
 MediaPipe 运行时通过 `<script type=module>` 注入,挂在 `window.CRTCAiVBVisionTasks`。多个 AiVB 实例并发时,`AiVBAssetLoader` 用一个模块级 Map(`moduleUrl → Promise`)去重,**保证全局只加载一次**。这是"单例"思想在资源加载上的变体。
@@ -952,7 +938,7 @@ MediaPipe 运行时通过 `<script type=module>` 注入,挂在 `window.CRTCAiVBV
 
 > 以下是基于源码的客观观察,不是代码风格问题。每条都给出**现象 → 影响 → 建议**。
 
-### 11.1 ⚠️ `ComposerRuntime` 承担过多职责(God Class 倾向)
+### 11.1 ⚠️ `MediaEffectsComposer` 承担过多职责(God Class 倾向)
 
 **现象**:单个文件 1870 行,既管初始化、又管公开 API、又管镜像策略、又管 AiVB 策略、又管源移除回调链。还有一长串"委派 get 属性"(`_sources`/`_renderer`/`_audioSources`/`_videoStream` 等)纯粹是为了让旧代码访问子模块。
 
@@ -982,7 +968,7 @@ MediaPipe 运行时通过 `<script type=module>` 注入,挂在 `window.CRTCAiVBV
 
 ### 11.4 ⚠️ 异步竞态点多,缺少统一的取消机制
 
-**现象**:多处异步操作通过 `generation` 计数器(`SourceAiVBController` 的 `state.generation += 1`)或 `_destroyed` 标志位来让"旧回调失效"。例如水印异步加载、AiVB 运行时初始化、音频刷新。
+**现象**:多处异步操作通过 `generation` 计数器(`AiVBState` 的 `state.generation += 1`)或 `_destroyed` 标志位来让"旧回调失效"。例如水印异步加载、AiVB 运行时初始化、音频刷新。
 
 **影响**:
 - 每个异步点都要手动维护"代数/标志",容易遗漏。一旦遗漏,会出现"stop 后旧 Promise 仍执行"的幽灵操作。
@@ -1012,7 +998,7 @@ MediaPipe 运行时通过 `<script type=module>` 注入,挂在 `window.CRTCAiVBV
 
 ### 11.7 ⚠️ 输出 canvas 的"保活 video"是脆弱的兼容手段
 
-**现象**:`OutputStreamManager._ensureActiveCaptureSink` 会创建一个隐藏的 `<video>` 元素持续播放 captureStream 的输出,纯粹为了规避"Chromium 在无人消费时对 captureStream 降质/丢帧"(参考 `_createSinkVideoElement` 方法)。
+**现象**:`OutputStream._ensureActiveCaptureSink` 会创建一个隐藏的 `<video>` 元素持续播放 captureStream 的输出,纯粹为了规避"Chromium 在无人消费时对 captureStream 降质/丢帧"(参考 `_createSinkVideoElement` 方法)。
 
 **影响**:
 - 多消耗一份解码资源(虽然隐藏,但仍在解码)。
@@ -1020,13 +1006,13 @@ MediaPipe 运行时通过 `<script type=module>` 注入,挂在 `window.CRTCAiVBV
 
 **建议**:把所有"浏览器兼容补丁"集中到一个 `BrowserCompat` 模块并打上版本/UA 标注,定期清理。对这个具体补丁,加一个特性探测(检测是否真的会降质)而非无脑启用。
 
-### 11.8 ⚠️ `ComposerRuntime` 与子模块双向回调耦合
+### 11.8 ⚠️ `MediaEffectsComposer` 与子模块双向回调耦合
 
 **现象**:Runtime 向子模块注入大量回调(`getSources`、`createRenderPayload`、`syncExternalSourceAudio`、`prepareCanvas`、`resizeRenderer`、`createWatermarkItems`、`resolveMirrorX`……),子模块也向 Runtime 注入回调(`onBeforeRemove`、`onAfterRemove`、`onFramePresented`、`onIssue`……)。
 
 **影响**:
 - 双向依赖虽然没形成循环(都是 Runtime 主动注入),但回调接口多,改动一个子模块签名要在 Runtime 同步改。
-- 时序耦合:SourceStore 的 `onAfterRemove` 注释明确提到"不直接访问 `this._sourceRegistry`,以减少时序耦合",说明作者已经意识到这个问题。
+- 时序耦合:Sources 的 `onAfterRemove` 注释明确提到"不直接访问 `this._sourceRegistry`,以减少时序耦合",说明作者已经意识到这个问题。
 
 **建议**:定义清晰的"事件接口"(如 `ComposerEvents`),用单一事件总线替代零散回调;子模块只发事件不直接调 Runtime 方法。
 
@@ -1040,12 +1026,12 @@ MediaPipe 运行时通过 `<script type=module>` 注入,挂在 `window.CRTCAiVBV
 |---|---|---|---|
 | 1 | `MediaEffectsComposer.js` + `index.js` | 知道入口长啥样(25 行) | 2 分钟 |
 | 2 | `ComposerConfig.js` | 理解配置归一化的防御式编程风格 | 10 分钟 |
-| 3 | `SourceStore.js` | 理解"源"的数据模型和生命周期 | 20 分钟 |
+| 3 | `Sources.js` | 理解"源"的数据模型和生命周期 | 20 分钟 |
 | 4 | `LayoutEngine.js` | 理解布局如何与渲染解耦 | 15 分钟 |
-| 5 | `BaseRenderer.js` + `RendererFactory.js` | 理解策略+工厂+降级链 | 15 分钟 |
+| 5 | `rendererBase.js` + `RenderLoop.js` | 理解策略+工厂+降级链 | 15 分钟 |
 | 6 | `RenderLoop.js` | 理解 rAF 循环和健康检查 | 25 分钟 |
-| 7 | `ComposerRuntime.js` | 串起所有子模块(核心,最难) | 60 分钟 |
-| 8 | `OutputStreamManager.js` | 理解 Insertable vs captureStream | 30 分钟 |
+| 7 | `MediaEffectsComposer.js` | 串起所有子模块(核心,最难) | 60 分钟 |
+| 8 | `OutputStream.js` | 理解 Insertable vs captureStream | 30 分钟 |
 | 9 | `AudioMixer.js` | 理解 WebAudio 混音(按需) | 40 分钟 |
 | 10 | `AIVirtualBackground/*` | 理解 AI 虚拟背景(按需) | 40 分钟 |
 

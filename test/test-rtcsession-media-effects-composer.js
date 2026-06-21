@@ -356,8 +356,8 @@ function installGlobals()
 
 function loadRTCSessionWithMockMixer()
 {
-  const mixerPath = require.resolve('../lib/MediaEffectsComposer');
-  const aiNSPath = require.resolve('../lib/AINoiseSuppression');
+  const mixerPath = require.resolve('../lib/MediaEffectsComposer/MediaEffectsComposer');
+  const aiNSPath = require.resolve('../lib/AINoiseSuppression/AiNoiseSuppression');
   const rtcSessionPath = require.resolve('../lib/RTCSession');
   const mixerCache = require.cache[mixerPath];
   const aiNSCache = require.cache[aiNSPath];

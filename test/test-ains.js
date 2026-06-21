@@ -227,9 +227,7 @@ function installBrowserMocks(options = {})
 function loadEngine()
 {
   [
-    '../lib/AINoiseSuppression',
-    '../lib/AINoiseSuppression/AiNoiseSuppressionEngine',
-    '../lib/AINoiseSuppression/AiNSMediaStreamProcessor',
+    '../lib/AINoiseSuppression/AiNoiseSuppression',
     '../lib/AINoiseSuppression/AiNSWorkletRuntime',
     '../lib/AINoiseSuppression/AiNSWorkletSource',
     '../lib/AINoiseSuppression/AiNSConfig'
@@ -238,7 +236,7 @@ function loadEngine()
     delete require.cache[require.resolve(id)];
   });
 
-  return require('../lib/AINoiseSuppression');
+  return require('../lib/AINoiseSuppression/AiNoiseSuppression');
 }
 
 function createInputStream()

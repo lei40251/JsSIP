@@ -256,7 +256,7 @@ export interface MediaEffectsComposerConfigPatch {
  * - Immutable constructor fields such as `width/height/fps/renderMode/...` cannot be
  *   hot-updated on an existing composer instance and will be rejected at runtime.
  */
-export interface MediaEffectsComposerRuntimePatch extends MediaEffectsComposerConfigPatch {
+export interface MediaEffectsComposerPatch extends MediaEffectsComposerConfigPatch {
   sources?: MediaEffectsComposerSourceOptions[] | null;
 }
 
@@ -628,7 +628,7 @@ export class RTCSession extends EventEmitter {
 
   getAiVirtualBackground(): any | null;
 
-  updateMediaEffectsComposer(options: MediaEffectsComposerSessionOptions | MediaEffectsComposerRuntimePatch | null): Promise<MediaEffectsComposerState | null>;
+  updateMediaEffectsComposer(options: MediaEffectsComposerSessionOptions | MediaEffectsComposerPatch | null): Promise<MediaEffectsComposerState | null>;
 
   isInProgress(): boolean;
 

@@ -169,6 +169,76 @@ function stripExternalSourceMapComment()
   });
 }
 
+// 将 browserify UMD 产物转为 ESM 格式。
+// browserify --standalone 输出格式为:
+//   [BANNER]
+//   (function(f){UMD_WRAPPER})(function(){var define,module,exports;return ...})
+//   //# sourceMappingURL=...
+// 转为:
+//   [BANNER]
+//   const CRTC = (function(){var define,module,exports;return ...})();
+//   export default CRTC;
+function transformUMDToESM()
+{
+  return new Transform({
+    objectMode : true,
+    transform(file, enc, callback)
+    {
+      if (!file || file.isNull() || path.extname(file.path) !== '.js')
+      {
+        callback(null, file);
+
+        return;
+      }
+
+      const content = file.contents.toString();
+
+      // 定位 browserify 内部函数起始标记。
+      const marker = 'function(){var define,module,exports;return ';
+      const markerIdx = content.indexOf(marker);
+
+      if (markerIdx === -1)
+      {
+        callback(new Error('esm: cannot locate browserify inner function marker'));
+
+        return;
+      }
+
+      // 在 marker 之前找到 UMD 包裹器起始的 `(function(f){`。
+      const umdStart = content.lastIndexOf('(function(f){', markerIdx);
+
+      if (umdStart === -1)
+      {
+        callback(new Error('esm: cannot locate UMD wrapper start'));
+
+        return;
+      }
+
+      // 提取 banner（UMD 之前的注释头）。
+      const banner = content.substring(0, umdStart);
+
+      // 提取 body：从 function(){... 到文件末尾。
+      // 结尾形如 "\n});\n//# sourceMappingURL=..."
+      let body = content.substring(markerIdx);
+
+      // 移除 sourceMappingURL 注释行。
+      body = body.replace(/\r?\n\/\/# sourceMappingURL=.*?(?=\r?\n?$)/, '');
+
+      // 将结尾的 "\n});" 改为 "\n})();"。
+      // 注意 body 尾部可能有空白字符（换行等），用 \s* 吞掉。
+      body = body.replace(/\n\}\);\s*$/, '\n})();');
+
+      // 组装 ESM 格式。
+      const esmContent = banner +
+        'const CRTC = (' + body + '\n' +
+        'export default CRTC;\n';
+
+      file.contents = Buffer.from(esmContent);
+      callback(null, file);
+    }
+  });
+}
+
 function getLocalTimestamp()
 {
   const d = new Date();
@@ -286,6 +356,21 @@ createUglifyTask('uglify-standard', TERSER_OPTIONS, `${PKG.title }.standard.min.
 createUglifyTask('uglify-private-props', TERSER_PRIVATE_OPTIONS, `${PKG.title }.min.js`);
 // 兼容旧任务名；现在 `uglify` 指向激进版最小产物。
 gulp.task('uglify', gulp.series('uglify-private-props'));
+
+// ESM 产物：将 browserify UMD 输出转为 ESM 并压缩。
+// 产物为 dist/CRTC.esm.min.js，支持打包工具和浏览器原生 ESM。
+gulp.task('esm', function()
+{
+  const src = `dist/${PKG.title}.js`;
+
+  return gulp.src(src)
+    .pipe(expect(EXPECT_OPTIONS, src))
+    .pipe(transformUMDToESM())
+    .pipe(terser(TERSER_OPTIONS))
+    .pipe(header(BANNER, BANNER_OPTIONS))
+    .pipe(rename(`${PKG.title}.esm.min.js`))
+    .pipe(gulp.dest('dist/'));
+});
 
 gulp.task('test-files', function()
 {
@@ -500,12 +585,12 @@ gulp.task('dist-del', function(done)
 gulp.task('devel', gulp.series('grammar'));
 
 // 默认构建链路：
-// lint -> babel -> test -> browserify -> 先出标准版，再出激进版 -> 清理临时目录
-gulp.task('dist', gulp.series('lint', 'babel', 'test', 'browserify', 'uglify-standard', 'uglify-private-props', 'tmp-del', 'lib-es5-del'));
-// 仅输出激进版最小产物。
-gulp.task('dist-private-props', gulp.series('lint', 'babel', 'test', 'browserify', 'uglify-private-props', 'tmp-del', 'lib-es5-del'));
-// 仅输出标准保守版最小产物。
-gulp.task('dist-standard', gulp.series('lint', 'babel', 'test', 'browserify', 'uglify-standard', 'tmp-del', 'lib-es5-del'));
+// lint -> babel -> test -> browserify -> 先出标准版，再出激进版 -> ESM -> 清理临时目录
+gulp.task('dist', gulp.series('lint', 'babel', 'test', 'browserify', 'uglify-standard', 'uglify-private-props', 'esm', 'tmp-del', 'lib-es5-del'));
+// 仅输出激进版最小产物 + ESM。
+gulp.task('dist-private-props', gulp.series('lint', 'babel', 'test', 'browserify', 'uglify-private-props', 'esm', 'tmp-del', 'lib-es5-del'));
+// 仅输出标准保守版最小产物 + ESM。
+gulp.task('dist-standard', gulp.series('lint', 'babel', 'test', 'browserify', 'uglify-standard', 'esm', 'tmp-del', 'lib-es5-del'));
 
 gulp.task('zip', gulp.series('zip-del-zip', 'zip-demo', 'zip-dist', 'zip-changelog', 'zip-doc', 'zip-zip', 'zip-del'));
 

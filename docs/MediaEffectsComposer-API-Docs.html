@@ -683,11 +683,11 @@ await composer.setWatermarks({
           <h3>3. 为什么有这么多渲染模式？</h3>
           <p>这一步解决“什么时候走 worker、什么时候退到主线程、为什么又变成 2D 了”这类问题。</p>
           <ul>
-            <li>先看 RendererFactory 的选择逻辑。</li>
+            <li>先看 createRenderer 的选择逻辑。</li>
             <li>再看 RenderLoop 里的故障降级。</li>
           </ul>
           <div class="roadmap-files">
-            <span>Renderers/RendererFactory.js</span>
+            <span>Renderers/RenderLoop.js</span>
             <span>Core/RenderLoop.js</span>
             <span>Renderers/WorkerRenderer.js</span>
           </div>
@@ -698,12 +698,12 @@ await composer.setWatermarks({
           <p>这一步专门看效果链，不要和主渲染链混着读。源码里这几类能力是分开的。</p>
           <ul>
             <li>镜像主要看 config 和 slot override。</li>
-            <li>水印看 WatermarkManager。</li>
+            <li>水印看 Watermark。</li>
             <li>虚拟背景看 SourceAiVBManager 和 AIVirtualBackground 目录。</li>
           </ul>
           <div class="roadmap-files">
             <span>Core/ComposerConfig.js</span>
-            <span>Core/WatermarkManager.js</span>
+            <span>Core/Watermark.js</span>
             <span>Core/SourceAiVBManager.js</span>
             <span>AIVirtualBackground/*</span>
           </div>
@@ -765,7 +765,7 @@ mixedStream.addTrack(mixedVideoTrack);
             <li><code>Core/LayoutEngine.js</code> + <code>Core/RenderLoop.js</code>
               <div class="path">知道帧是怎么组织、怎么驱动绘制的</div>
             </li>
-            <li><code>Renderers/RendererFactory.js</code> 和各 renderer
+            <li><code>Renderers/RenderLoop.js</code> 和各 renderer
               <div class="path">看 auto 模式的真实降级策略</div>
             </li>
             <li><code>Core/SourceAiVBManager.js</code> + <code>AIVirtualBackground/*</code>
@@ -784,13 +784,13 @@ mixedStream.addTrack(mixedVideoTrack);
 │   ├── SourceRegistry.js
 │   ├── LayoutEngine.js
 │   ├── RenderLoop.js
-│   ├── OutputStreamManager.js
+│   ├── OutputStream.js
 │   ├── AudioComposer.js
-│   ├── WatermarkManager.js
+│   ├── Watermark.js
 │   ├── SourceAiVBManager.js
 ├── Renderers/
-│   ├── RendererFactory.js
-│   ├── BaseRenderer.js
+│   ├── RenderLoop.js
+│   ├── rendererBase.js
 │   ├── MainCanvas2DRenderer.js
 │   ├── MainWebGL2Renderer.js
 │   ├── WorkerRenderer.js
@@ -817,13 +817,13 @@ mixedStream.addTrack(mixedVideoTrack);
           <ul class="mini-list">
             <li><code>LayoutEngine.js</code>：计算每路源的展示区域。</li>
             <li><code>RenderLoop.js</code>：rAF 驱动、重绘、降级。</li>
-            <li><code>OutputStreamManager.js</code>：把 canvas 导出成真实流。</li>
+            <li><code>OutputStream.js</code>：把 canvas 导出成真实流。</li>
           </ul>
         </div>
         <div class="card span-4">
           <h4>效果层</h4>
           <ul class="mini-list">
-            <li><code>WatermarkManager.js</code>：水印规范化、资源预加载。</li>
+            <li><code>Watermark.js</code>：水印规范化、资源预加载。</li>
             <li><code>SourceAiVBManager.js</code>：源级虚拟背景和 runtime 状态。</li>
             <li><code>AudioComposer.js</code>：音频混流和子混音。</li>
           </ul>
@@ -870,8 +870,8 @@ mixedStream.addTrack(mixedVideoTrack);
 
     <section id="render-path">
       <h2>渲染路径</h2>
-      <p class="section-lead">读这一节时，建议你同时打开 <code>RendererFactory.js</code> 和 <code>RenderLoop.js</code>。前者决定“先选谁”，后者决定“出问题了怎么退”。</p>
-      <p>渲染器选择逻辑主要在 <code>Renderers/RendererFactory.js</code>，而运行时故障后的降级逻辑主要在 <code>Core/RenderLoop.js</code>。</p>
+      <p class="section-lead">读这一节时，建议你同时打开 <code>RenderLoop.js</code> 和 <code>RenderLoop.js</code>。前者决定“先选谁”，后者决定“出问题了怎么退”。</p>
+      <p>渲染器选择逻辑主要在 <code>Renderers/RenderLoop.js</code>，而运行时故障后的降级逻辑主要在 <code>Core/RenderLoop.js</code>。</p>
 
       <div class="card">
         <h3><code>renderMode: 'auto'</code> 的真实策略</h3>
@@ -1084,7 +1084,7 @@ console.log(info.actualMode);
           <tr>
             <td>加水印</td>
             <td><code>watermarks</code></td>
-            <td>由 WatermarkManager 做规范化和资源准备。</td>
+            <td>由 Watermark 做规范化和资源准备。</td>
           </tr>
           <tr>
             <td>给某一路开虚拟背景</td>

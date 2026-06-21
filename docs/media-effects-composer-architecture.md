@@ -26,10 +26,10 @@
 1. 入口在 [lib/MediaEffectsComposer/Core/MediaEffectsComposer.js](../lib/MediaEffectsComposer/Core/MediaEffectsComposer.js)。
 2. 输入源由 `SourceRegistry` 管理。
 3. 源级虚拟背景由 `SourceAiVBManager` 调度，并复用 `AIVirtualBackground/` 下的配置、资源加载和 MediaPipe runtime。
-4. 视频渲染由 `LayoutEngine -> RenderLoop -> RendererFactory` 处理。
+4. 视频渲染由 `LayoutEngine -> RenderLoop -> createRenderer` 处理。
 5. 音频输出由 `AudioMixer` 处理。
-6. 输出流由 `OutputStreamManager` 统一产出。
-7. 水印由 `WatermarkManager` 管理。
+6. 输出流由 `OutputStream` 统一产出。
+7. 水印由 `Watermark` 管理。
 
 ### 模块职责总览
 
@@ -39,10 +39,10 @@ MediaEffectsComposer 是总调度：
   SourceAiVBManager 管源级虚拟背景
   LayoutEngine 计算布局和镜像后的绘制信息
   RenderLoop 负责何时渲染
-  RendererFactory/Renderer 负责怎么画
-  WatermarkManager 负责水印状态和异步资源
+  createRenderer/Renderer 负责怎么画
+  Watermark 负责水印状态和异步资源
   AudioMixer 负责音频混音和子混音
-  OutputStreamManager 负责 canvas/audio 到最终 MediaStream 的导出
+  OutputStream 负责 canvas/audio 到最终 MediaStream 的导出
 ```
 
 ### 当前推荐的调试入口
@@ -89,13 +89,13 @@ lib/
     │   ├── LayoutEngine.js
     │   ├── MixerDomAdapter.js
     │   ├── AudioMixer.js
-    │   ├── OutputStreamManager.js
+    │   ├── OutputStream.js
     │   ├── RenderLoop.js
-    │   └── WatermarkManager.js
+    │   └── Watermark.js
     │
     └── Renderers/
-        ├── RendererFactory.js
-        ├── BaseRenderer.js
+        ├── RenderLoop.js
+        ├── rendererBase.js
         ├── MainCanvas2DRenderer.js
         ├── MainWebGL2Renderer.js
         ├── WorkerRenderer.js
@@ -120,9 +120,9 @@ constructor(videos, options)
   │
   ├─ MixerConfig.create(options) → 归一化配置
   ├─ new MixerDomAdapter(...)
-  ├─ new WatermarkManager(...)
+  ├─ new Watermark(...)
   ├─ new SourceRegistry(...)
-  ├─ new OutputStreamManager(...)
+  ├─ new OutputStream(...)
   ├─ new RenderLoop(...)
   ├─ new AudioMixer(...)
   ├─ new LayoutEngine(...)
@@ -139,11 +139,11 @@ constructor(videos, options)
 | `addSource(videos, optionsOrSlot)` | 添加输入源 | `SourceRegistry.add() -> AudioMixer.scheduleRefresh() -> RenderLoop.start()` |
 | `removeSource(target)` | 移除一路源 | `_removeSourcesInternal(target) -> SourceRegistry.remove()` |
 | `clearSources()` | 移除全部源 | `_removeSourcesInternal(undefined)` |
-| `setConfig(patch)` | 动态修改镜像/水印等配置 | 更新 `_config` / `_slotMirrorXOverrides` / `WatermarkManager` / 强制重绘 |
+| `setConfig(patch)` | 动态修改镜像/水印等配置 | 更新 `_config` / `_slotMirrorXOverrides` / `Watermark` / 强制重绘 |
 | `getState()` | 读取统一状态快照 | `SourceRegistry + _getConfigStateSnapshot() + RenderLoop + AudioMixer` |
 | `getOutput(options)` | 获取 `mixed` / `video` / `audio` 输出 | `_getVideoOutputSync()` / `_getMixedOutput()` / `AudioMixer` |
 | `releaseOutput(options)` | 释放音频子混音 | `AudioMixer.releaseSubmixAudioStream()` |
-| `stop()` | 销毁实例 | `RenderLoop.stop() -> clearSources() -> AudioMixer.stop() -> RenderLoop.destroy() -> OutputStreamManager.stop()` |
+| `stop()` | 销毁实例 | `RenderLoop.stop() -> clearSources() -> AudioMixer.stop() -> RenderLoop.destroy() -> OutputStream.stop()` |
 
 ### 兼容旧方法实现方式
 
@@ -272,7 +272,7 @@ clearStreams()
 setConfig(patch)
   ├─ 更新 _config.outputMirrorX / mirrorX
   ├─ 更新 _slotMirrorXOverrides
-  ├─ WatermarkManager.setWatermarks() / clearWatermarks()
+  ├─ Watermark.setWatermarks() / clearWatermarks()
   ├─ _refreshRendererPolicyForMirror()
   └─ _drawVideosToCanvas(undefined, true)
 ```
@@ -337,8 +337,8 @@ await composer.getOutput({ type: 'video' })
 getOutput({ type: 'video' })
   └─ _getVideoOutputSync()
        ├─ RenderLoop.resume()
-       ├─ OutputStreamManager.hasLiveVideoStream()
-       └─ OutputStreamManager.getVideoStream(drawFirstFrame)
+       ├─ OutputStream.hasLiveVideoStream()
+       └─ OutputStream.getVideoStream(drawFirstFrame)
 ```
 
 #### 2. `type: 'mixed'`
@@ -353,7 +353,7 @@ await composer.getOutput({ type: 'mixed' })
 getOutput({ type: 'mixed' })
   └─ _getMixedOutput()
        ├─ _getVideoOutputSync()
-       ├─ OutputStreamManager.setMixedStream(videoStream)
+       ├─ OutputStream.setMixedStream(videoStream)
        ├─ AudioMixer.getAudioStream()
        └─ _addAudioTracksToStream(videoStream, audioStream)
 ```
@@ -438,7 +438,7 @@ addSource() / removeSource() / clearSources()
 - 组装 renderer 消费的 payload
 - 追加 source/output 水印绘制项
 
-### [lib/MediaEffectsComposer/Core/WatermarkManager.js](../lib/MediaEffectsComposer/Core/WatermarkManager.js)
+### [lib/MediaEffectsComposer/Core/Watermark.js](../lib/MediaEffectsComposer/Core/Watermark.js)
 
 新版本里水印管理被明确独立出来，职责包括：
 
@@ -459,7 +459,7 @@ addSource() / removeSource() / clearSources()
 
 这也是 `getOutput({ type: 'audio' })` / `releaseOutput()` 的实际执行者。
 
-### [lib/MediaEffectsComposer/Core/OutputStreamManager.js](../lib/MediaEffectsComposer/Core/OutputStreamManager.js)
+### [lib/MediaEffectsComposer/Core/OutputStream.js](../lib/MediaEffectsComposer/Core/OutputStream.js)
 
 输出流管理模块，负责：
 
@@ -500,8 +500,8 @@ setConfig()
   └─ 强制重绘
 
 getOutput()
-  ├─ video -> OutputStreamManager
-  ├─ mixed -> OutputStreamManager + AudioMixer
+  ├─ video -> OutputStream
+  ├─ mixed -> OutputStream + AudioMixer
   └─ audio -> AudioMixer
 
 getState()
@@ -514,9 +514,9 @@ getState()
 RenderLoop.renderFrame()
   ├─ AudioMixer.syncExternalSourceAudio()
   ├─ LayoutEngine.createRenderPayload()
-  ├─ RendererFactory.ensureRenderer()
+  ├─ createRenderer.ensureRenderer()
   ├─ renderer.render(payload)
-  └─ OutputStreamManager.onFramePresented()
+  └─ OutputStream.onFramePresented()
 ```
 
 ### `getOutput({ type: 'mixed' })` 完整流程
@@ -524,10 +524,10 @@ RenderLoop.renderFrame()
 ```
 getOutput({ type: 'mixed' })
   ├─ _getVideoOutputSync()
-  │   ├─ OutputStreamManager.getVideoStream(drawFirstFrame)
+  │   ├─ OutputStream.getVideoStream(drawFirstFrame)
   │   └─ canvas.captureStream(fps)
   │
-  ├─ OutputStreamManager.setMixedStream(videoStream)
+  ├─ OutputStream.setMixedStream(videoStream)
   │
   ├─ AudioMixer.getAudioStream()
   │   ├─ _ensureAudioSystem()
@@ -543,7 +543,7 @@ getOutput({ type: 'mixed' })
 setConfig(patch)
   ├─ 解析 outputMirror / sourceMirror / overrides
   ├─ 解析 clearSourceMirrorOverrides
-  ├─ WatermarkManager.setWatermarks() / clearWatermarks()
+  ├─ Watermark.setWatermarks() / clearWatermarks()
   ├─ _refreshRendererPolicyForMirror()
   └─ _drawVideosToCanvas(undefined, true)
 ```
@@ -552,7 +552,7 @@ setConfig(patch)
 
 ## 渲染后端选型
 
-`RendererFactory` 仍沿用原来的多后端策略：
+`createRenderer` 仍沿用原来的多后端策略：
 
 - `worker-webgl2`
 - `main-webgl2`
@@ -580,15 +580,15 @@ worker-webgl2 -> main-webgl2 -> worker-2d -> main-2d
 MediaEffectsComposer.js
   ├── MixerConfig
   ├── MixerDomAdapter
-  ├── WatermarkManager
+  ├── Watermark
   ├── SourceRegistry
   ├── LayoutEngine
   ├── AudioMixer
   ├── RenderLoop
-  └── OutputStreamManager
+  └── OutputStream
 
 RenderLoop
-  └── RendererFactory
+  └── createRenderer
       ├── MainCanvas2DRenderer
       ├── MainWebGL2Renderer
       └── WorkerRenderer

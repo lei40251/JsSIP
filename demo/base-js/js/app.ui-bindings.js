@@ -131,18 +131,55 @@ document.addEventListener('visibilitychange', function()
   }
 });
 
-// 会话外的摄像头切换仅记录选择，实际切换在新呼叫发起时生效
+/**
+ * 摄像头切换（页面级统一绑定）
+ *
+ * 1. 记录用户选择的设备，下次呼叫时生效
+ * 2. 如果当前有活跃会话，则立即切换（触发 cameraChanged 事件）
+ * 3. 兼容 MCU 等候室：切换前停止旧的克隆视频轨道
+ */
 document.querySelector('#cameras').addEventListener('change', function()
 {
-  selectCamera = this.options[this.selectedIndex].value;
-  setStatus(`select camera ${this.options[this.selectedIndex].innerText}`);
+  const deviceId = this.options[this.selectedIndex].value;
+
+  selectCamera = deviceId;
+
+  // 会话内热切换
+  if (rtcSession)
+  {
+    // 清理旧的克隆视频轨道（MCU 等候室兼容）
+    if (typeof cloneStream !== 'undefined' && cloneStream)
+    {
+      cloneStream.getVideoTracks().forEach((v) =>
+      {
+        v.stop();
+      });
+    }
+    rtcSession.switchDevice('camera', deviceId);
+  }
+
+  setStatus(`${rtcSession ? 'switchDevice' : 'select camera'} ${this.options[this.selectedIndex].innerText}`);
 });
 
-// 会话外的麦克风切换仅记录选择，实际切换在新呼叫发起时生效
+/**
+ * 麦克风切换（页面级统一绑定）
+ *
+ * 1. 记录用户选择的设备，下次呼叫时生效
+ * 2. 如果当前有活跃会话，则立即切换
+ */
 document.querySelector('#mics').addEventListener('change', function()
 {
-  selectMic = this.options[this.selectedIndex].value;
-  setStatus(`select mic ${this.options[this.selectedIndex].innerText}`);
+  const deviceId = this.options[this.selectedIndex].value;
+
+  selectMic = deviceId;
+
+  // 会话内热切换
+  if (rtcSession)
+  {
+    rtcSession.switchDevice('audio', deviceId);
+  }
+
+  setStatus(`${rtcSession ? 'switchDevice' : 'select mic'} ${this.options[this.selectedIndex].innerText}`);
 });
 
 // 测试按钮：枚举设备信息

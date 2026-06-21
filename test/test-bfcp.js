@@ -27,15 +27,8 @@ const Attribute = require('../lib/BFCP/lib/attributes/attribute.js');
 const Type = require('../lib/BFCP/lib/attributes/type.js');
 const Format = require('../lib/BFCP/lib/attributes/format.js');
 const Length = require('../lib/BFCP/lib/attributes/length.js');
-const Name = require('../lib/BFCP/lib/attributes/name.js');
-const FloorId = require('../lib/BFCP/lib/attributes/floorId.js');
-const FloorRequestId = require('../lib/BFCP/lib/attributes/floorRequestId.js');
-const BeneficiaryId = require('../lib/BFCP/lib/attributes/beneficiaryId.js');
-const RequestStatus = require('../lib/BFCP/lib/attributes/requestStatus.js');
-const FloorRequestStatusAtr = require('../lib/BFCP/lib/attributes/floorRequestStatus.js');
-const FloorRequestInformation = require('../lib/BFCP/lib/attributes/floorRequestInformation.js');
-const SupportedAttributes = require('../lib/BFCP/lib/attributes/supportedAttributes.js');
-const SupportedPrimitives = require('../lib/BFCP/lib/attributes/supportedPrimitives.js');
+const Name = require('../lib/BFCP/lib/attributeName.js');
+const { FloorId, FloorRequestId, BeneficiaryId, RequestStatus, FloorRequestStatus: FloorRequestStatusAtr, FloorRequestInformation, SupportedAttributes, SupportedPrimitives } = require('../lib/BFCP/lib/attributeClasses.js');
 
 const Complements = require('../lib/BFCP/lib/parser/complements.js');
 const Parser = require('../lib/BFCP/lib/parser/parser.js');

@@ -1550,36 +1550,8 @@ ua.on('newRTCSession', function(e)
     e.session.upgradeToVideo({ useUpdate: useUpdate, videoStream: tmpStream }, () => { setStatus('切换视频模式完成') + curMode; });
   };
 
-  /**
-   * cameras — 会话内切换摄像头
-   *
-   * 选择新的摄像头设备进行切换。切换成功触发 cameraChanged 事件。
-   * 兼容 MCU 等候室：先停止旧的克隆视频轨道再切换。
-   */
-  document.querySelector('#cameras').addEventListener('change', function()
-  {
-    // 清理旧的克隆视频轨道（MCU 等候室兼容）
-    if (cloneStream)
-    {
-      cloneStream.getVideoTracks().forEach((v) =>
-      {
-        v.stop();
-      });
-    }
-    e.session.switchDevice('camera', this.options[this.selectedIndex].value);
-    setStatus(`switchDevice ${this.options[this.selectedIndex].innerText}`);
-  });
-
-  /**
-   * mics — 会话内切换麦克风
-   *
-   * 选择新的麦克风设备进行切换。不做额外协商。
-   */
-  document.querySelector('#mics').addEventListener('change', function()
-  {
-    e.session.switchDevice('audio', this.options[this.selectedIndex].value);
-    setStatus(`switchDevice ${this.options[this.selectedIndex].innerText}`);
-  });
+	  // 摄像头和麦克风的切换已统一在 app.ui-bindings.js 中处理，
+	  // 避免同一个元素被多次 addEventListener 导致重复绑定。
 
   /**
    * switchDevice — 移动端前后摄像头切换
