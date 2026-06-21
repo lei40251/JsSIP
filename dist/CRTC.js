@@ -1,9 +1,5 @@
 /*
-<<<<<<< HEAD
- * CRTC v2.0.3.20266181153
-=======
- * CRTC v1.13.4-beta.20266182030
->>>>>>> CRTC-new
+ * CRTC v2.0.3.20266211357
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -195,16 +191,6 @@ var issueUtils = require('../MediaEffectsIssue');
 var AiNSConfig = require('./AiNSConfig');
 var AiNSWorkletRuntime = require('./AiNSWorkletRuntime');
 var logger = new Logger('AiNSMediaStreamProcessor');
-var ISSUE_DEFAULTS = {
-  module: 'AiNS',
-  component: 'AiNSMediaStreamProcessor',
-  stage: 'unknown',
-  severity: 'error',
-  message: 'Unknown AiNS processor issue',
-  fallbackApplied: false,
-  degraded: false,
-  details: {}
-};
 var getErrorMessage = issueUtils.getErrorMessage;
 function isAiNSSupported() {
   return typeof AudioContext !== 'undefined' && typeof AudioWorkletNode !== 'undefined' && typeof WebAssembly !== 'undefined';
@@ -278,9 +264,15 @@ module.exports = class AiNSMediaStreamProcessor {
    * @param {Object} [issue] - 问题描述对象
    */
   _reportIssue(issue) {
-    var normalizedIssue = issueUtils.normalizeIssue(ISSUE_DEFAULTS, issue);
-    issueUtils.logIssue(logger, 'AiNS processor issue', normalizedIssue, false);
-    issueUtils.forwardIssue(this._onIssue, normalizedIssue, logger, 'AiNS issue forwarding failed');
+    if (!this._onIssue) return;
+    try {
+      this._onIssue(Object.assign({
+        component: 'AiNSMediaStreamProcessor',
+        severity: 'error'
+      }, issue));
+    } catch (e) {
+      logger.warn('AiNSMediaStreamProcessor issue callback failed: ' + (e.message || String(e)));
+    }
   }
 
   /**
@@ -581,7 +573,7 @@ module.exports = class AiNSMediaStreamProcessor {
     }
   }
 };
-},{"../Logger":45,"../MediaEffectsIssue":70,"./AiNSConfig":1,"./AiNSWorkletRuntime":3}],3:[function(require,module,exports){
+},{"../Logger":45,"../MediaEffectsIssue":69,"./AiNSConfig":1,"./AiNSWorkletRuntime":3}],3:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
@@ -597,16 +589,6 @@ var WORKLET_MESSAGE_TYPES = {
 };
 var WORKLET_EVENT_TYPES = {
   INIT_FAILED: 'AINS_WORKLET_INIT_FAILED'
-};
-var ISSUE_DEFAULTS = {
-  module: 'AiNS',
-  component: 'AiNSWorkletRuntime',
-  stage: 'unknown',
-  severity: 'error',
-  message: 'Unknown AiNS worklet runtime issue',
-  fallbackApplied: false,
-  degraded: false,
-  details: {}
 };
 var getErrorMessage = issueUtils.getErrorMessage;
 
@@ -747,9 +729,15 @@ module.exports = class AiNSWorkletRuntime {
    * @param {Object} [issue] - 问题描述对象
    */
   _reportIssue(issue) {
-    var normalizedIssue = issueUtils.normalizeIssue(ISSUE_DEFAULTS, issue);
-    issueUtils.logIssue(logger, 'AiNS runtime issue', normalizedIssue, false);
-    issueUtils.forwardIssue(this._onIssue, normalizedIssue, logger, 'AiNS runtime issue callback failed');
+    if (!this._onIssue) return;
+    try {
+      this._onIssue(Object.assign({
+        component: 'AiNSWorkletRuntime',
+        severity: 'error'
+      }, issue));
+    } catch (e) {
+      logger.warn('AiNSWorkletRuntime issue callback failed: ' + (e.message || String(e)));
+    }
   }
 
   /**
@@ -944,7 +932,7 @@ module.exports = class AiNSWorkletRuntime {
     }
   }
 };
-},{"../Logger":45,"../MediaEffectsIssue":70,"./AiNSConfig":1,"./AiNSWorkletSource":4}],4:[function(require,module,exports){
+},{"../Logger":45,"../MediaEffectsIssue":69,"./AiNSConfig":1,"./AiNSWorkletSource":4}],4:[function(require,module,exports){
 (function (global){(function (){
 "use strict";
 
@@ -1608,7 +1596,7 @@ class AiNoiseSuppressionEngine {
   }
 }
 module.exports = AiNoiseSuppressionEngine;
-},{"../Logger":45,"../MediaEffectsIssue":70,"./AiNSMediaStreamProcessor":2}],6:[function(require,module,exports){
+},{"../Logger":45,"../MediaEffectsIssue":69,"./AiNSMediaStreamProcessor":2}],6:[function(require,module,exports){
 "use strict";
 
 /**
@@ -4146,7 +4134,7 @@ User.FloorRequestId = 0;
 module.exports = User;
 }).call(this)}).call(this,require("buffer").Buffer)
 
-},{"../attributes/name.js":15,"../messages/floorRelease.js":22,"../messages/floorRequest.js":23,"../messages/floorRequestStatus.js":24,"../messages/floorRequestStatusAck.js":25,"../messages/floorStatus.js":26,"../messages/floorStatusAck.js":27,"../messages/hello.js":28,"../messages/helloAck.js":29,"../messages/primitive.js":32,"../messages/requestStatusValue.js":33,"../parser/parser.js":35,"buffer":97}],37:[function(require,module,exports){
+},{"../attributes/name.js":15,"../messages/floorRelease.js":22,"../messages/floorRequest.js":23,"../messages/floorRequestStatus.js":24,"../messages/floorRequestStatusAck.js":25,"../messages/floorStatus.js":26,"../messages/floorStatusAck.js":27,"../messages/hello.js":28,"../messages/helloAck.js":29,"../messages/primitive.js":32,"../messages/requestStatusValue.js":33,"../parser/parser.js":35,"buffer":96}],37:[function(require,module,exports){
 "use strict";
 
 var Utils = require('./Utils');
@@ -4395,15 +4383,11 @@ exports.load = (dst, src) => {
     }
   }
 };
-},{"./Constants":38,"./Exceptions":42,"./Grammar":43,"./Socket":85,"./URI":91,"./Utils":92}],38:[function(require,module,exports){
+},{"./Constants":38,"./Exceptions":42,"./Grammar":43,"./Socket":84,"./URI":90,"./Utils":91}],38:[function(require,module,exports){
 "use strict";
 
 module.exports = {
-<<<<<<< HEAD
-  USER_AGENT: 'UA/2.0.3.405212362306 (Web)',
-=======
-  USER_AGENT: 'UA/1.13.4-beta.405212364060 (Web)',
->>>>>>> CRTC-new
+  USER_AGENT: 'UA/2.0.3.405212422714 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -4870,7 +4854,7 @@ module.exports = class Dialog {
     return true;
   }
 };
-},{"./Constants":38,"./Dialog/RequestSender":40,"./Logger":45,"./SIPMessage":84,"./Transactions":88,"./Utils":92}],40:[function(require,module,exports){
+},{"./Constants":38,"./Dialog/RequestSender":40,"./Logger":45,"./SIPMessage":83,"./Transactions":87,"./Utils":91}],40:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('../Constants');
@@ -4965,7 +4949,7 @@ module.exports = class DialogRequestSender {
     }
   }
 };
-},{"../Constants":38,"../RequestSender":83,"../Transactions":88}],41:[function(require,module,exports){
+},{"../Constants":38,"../RequestSender":82,"../Transactions":87}],41:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -5144,7 +5128,7 @@ module.exports = class DigestAuthentication {
     return `Digest ${auth_params.join(', ')}`;
   }
 };
-},{"./Logger":45,"./Utils":92}],42:[function(require,module,exports){
+},{"./Logger":45,"./Utils":91}],42:[function(require,module,exports){
 "use strict";
 
 class ConfigurationError extends Error {
@@ -17596,7 +17580,7 @@ module.exports = function () {
   result.SyntaxError.prototype = Error.prototype;
   return result;
 }();
-},{"./NameAddrHeader":72,"./URI":91}],44:[function(require,module,exports){
+},{"./NameAddrHeader":71,"./URI":90}],44:[function(require,module,exports){
 "use strict";
 
 var C = require('./Constants');
@@ -17609,15 +17593,8 @@ var Grammar = require('./Grammar');
 var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
-<<<<<<< HEAD
 var MediaEffectsComposer = require('./MediaEffectsComposer');
-debug('version %s', '2.0.3.405212362306');
-=======
-var BFCPLib = require('./BFCP');
-var Mixer = require('./Mixer');
-var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.4-beta.405212364060');
->>>>>>> CRTC-new
+debug('version %s', '2.0.3.405212422714');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17655,14 +17632,10 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-<<<<<<< HEAD
-    return '2.0.3.405212362306';
-=======
-    return '1.13.4-beta.405212364060';
->>>>>>> CRTC-new
+    return '2.0.3.405212422714';
   }
 };
-},{"./Constants":38,"./Exceptions":42,"./Grammar":43,"./MediaEffectsComposer":61,"./NameAddrHeader":72,"./Stats":86,"./UA":90,"./URI":91,"./Utils":92,"./WebSocketInterface":93,"debug":98}],45:[function(require,module,exports){
+},{"./Constants":38,"./Exceptions":42,"./Grammar":43,"./MediaEffectsComposer":60,"./NameAddrHeader":71,"./Stats":85,"./UA":89,"./URI":90,"./Utils":91,"./WebSocketInterface":92,"debug":97}],45:[function(require,module,exports){
 "use strict";
 
 var debugFactory = require('debug');
@@ -17764,7 +17737,7 @@ module.exports = class Logger {
 // log.debug('登录成功');  // [ts] CRTC:D:Auth 登录成功 +5ms
 // log.warn('风险提示');   // [ts] CRTC:W:Auth 风险提示 +3ms
 // log.error('异常信息');  // [ts] CRTC:E:Auth 异常信息 +1ms
-},{"debug":98}],46:[function(require,module,exports){
+},{"debug":97}],46:[function(require,module,exports){
 "use strict";
 
 /**
@@ -17779,16 +17752,6 @@ module.exports = class Logger {
  * @module AudioMixer
  */
 var issueUtils = require('../MediaEffectsIssue');
-var ISSUE_DEFAULTS = {
-  module: 'MediaEffectsComposer',
-  component: 'AudioMixer',
-  stage: 'audio-mixer',
-  severity: 'warn',
-  message: 'Audio mixer issue',
-  fallbackApplied: true,
-  degraded: true,
-  details: {}
-};
 var getErrorMessage = issueUtils.getErrorMessage;
 class AudioMixer {
   /**
@@ -17887,7 +17850,15 @@ class AudioMixer {
    * @param {Object} [issue] - 问题描述对象
    */
   _reportIssue(issue) {
-    issueUtils.emitIssue(this._onIssue, ISSUE_DEFAULTS, issue, this._logger, 'AudioMixer issue callback failed');
+    if (!this._onIssue) return;
+    try {
+      this._onIssue(Object.assign({
+        component: 'AudioMixer',
+        severity: 'warn'
+      }, issue));
+    } catch (e) {
+      if (this._logger) this._logger.warn('AudioMixer issue callback failed: ' + (e.message || String(e)));
+    }
   }
 
   /**
@@ -19183,7 +19154,7 @@ class AudioMixer {
   }
 }
 module.exports = AudioMixer;
-},{"../MediaEffectsIssue":70}],47:[function(require,module,exports){
+},{"../MediaEffectsIssue":69}],47:[function(require,module,exports){
 "use strict";
 
 /**
@@ -19383,148 +19354,6 @@ exports.normalizeSourceOptions = function (optionsOrSlot, index, defaultGain) {
 },{"../Logger":45}],48:[function(require,module,exports){
 "use strict";
 
-/**
- * ComposerDomAdapter — 合成器 DOM 元素创建适配器
- *
- * 负责创建和管理混流器内部使用的 DOM 元素：
- *   - 离屏 canvas：用于合成视频帧
- *   - 隐藏 video 元素：用于播放每个 MediaStream
- *
- * 将这些 DOM 操作集中在此，方便测试时 mock 和后续迁移到 WebWorker 环境。
- *
- * @module ComposerDomAdapter
- */
-class ComposerDomAdapter {
-  /**
-   * @param {Object} options
-   * @param {Object} options.config - 混流配置对象（含 width/height 等）
-   * @param {Object} options.logger - 日志记录器
-   */
-  constructor(options) {
-    options = options || {};
-    this._config = options.config;
-    this._logger = options.logger;
-    if (this._logger) {
-      this._logger.debug('ComposerDomAdapter constructed');
-    }
-  }
-
-  /**
-   * 创建一个隐藏的离屏 canvas 元素。
-   * 所有视频帧最终绘制到这个 canvas 上，再由输出层按需走 Insertable 或 captureStream。
-   *
-   * @returns {HTMLCanvasElement} 隐藏的 canvas 元素
-   */
-  createCanvas() {
-    var canvas = document.createElement('canvas');
-    canvas.setAttribute('style', 'display:none');
-    if (this._logger) {
-      this._logger.debug('Hidden composer canvas created');
-    }
-    return canvas;
-  }
-
-  /**
-   * 将 canvas 尺寸设置为配置值（grid 模式）。
-   * 设置 canvas.width/height 会清空画布内容，因此只在尺寸变化时才修改。
-   *
-   * @param {HTMLCanvasElement} canvas - 目标 canvas 元素
-   */
-  prepareCanvas(canvas) {
-    var width = this._config.width || 1280;
-    var height = this._config.height || 720;
-    var resized = false;
-
-    // canvas width/height 设置时会清空画布，只在尺寸变化时才写
-    if (canvas.width !== width) {
-      canvas.width = width;
-      resized = true;
-    }
-    if (canvas.height !== height) {
-      canvas.height = height;
-      resized = true;
-    }
-    if (resized && this._logger) {
-      this._logger.debug(`Canvas prepared: ${width}x${height}`);
-    }
-  }
-
-  /**
-   * 将 MediaStream 包裹为隐藏的 HTMLVideoElement。
-   * video 元素属性：display:none、muted、autoplay、playsinline。
-   *
-   * @param {MediaStream|Object} mediaStream - MediaStream 或 { mediaStream } 包装对象
-   * @returns {HTMLVideoElement} 可播放该流的隐藏 video 元素
-   */
-  createVideoElement(mediaStream) {
-    var video = document.createElement('video');
-    video.setAttribute('style', 'display:none');
-    video.muted = true;
-    video.autoplay = true;
-    video.setAttribute('playsinline', '');
-    video.srcObject = mediaStream && (mediaStream.mediaStream || mediaStream);
-    if (this._logger) {
-      var stream = video.srcObject;
-      var streamId = stream && stream.id ? stream.id : 'unknown';
-      this._logger.debug(`Video element created for stream ${streamId}`);
-    }
-    var capturedStreamId = video.srcObject && video.srcObject.id || 'unknown';
-    video.play().catch(error => {
-      // 确认 video 是否仍关联着该 stream。如果 stream 已被清理（pause + srcObject = null），
-      // 说明该 video 在被 play() resolve 之前已被上层逻辑主动移除，此为良性竞态，不必报 error。
-      var isOrphaned = !video.srcObject;
-      if (isOrphaned) {
-        return;
-      }
-      this._logger.error(`video play error for stream ${capturedStreamId}: ${error.message || String(error)}`);
-    });
-    return video;
-  }
-
-  /**
-   * 为 captureStream 输出创建隐藏的消费 video。
-   * 用于规避部分 Chromium 在未被本地 UI 消费时对 captureStream 降质/丢帧。
-   *
-   * @param {MediaStream} mediaStream - 要持续播放的 captureStream 输出
-   * @returns {HTMLVideoElement} 隐藏的消费 video 元素
-   */
-  createOutputSinkVideoElement(mediaStream) {
-    var video = this.createVideoElement(mediaStream);
-    if (this._logger) {
-      var streamId = mediaStream && mediaStream.id ? mediaStream.id : 'unknown';
-      this._logger.debug(`Output sink video created for captureStream ${streamId}`);
-    }
-    return video;
-  }
-
-  /**
-   * 清理隐藏的 video 元素。
-   *
-   * @param {HTMLVideoElement|null} video - 要清理的隐藏 video
-   */
-  disposeVideoElement(video) {
-    if (!video) {
-      return;
-    }
-    try {
-      if (typeof video.pause === 'function') {
-        video.pause();
-      }
-    } catch (error) {}
-    try {
-      video.srcObject = null;
-    } catch (error) {}
-    try {
-      if (typeof video.remove === 'function') {
-        video.remove();
-      }
-    } catch (error) {}
-  }
-}
-module.exports = ComposerDomAdapter;
-},{}],49:[function(require,module,exports){
-"use strict";
-
 var Logger = require('../Logger');
 var SourceStore = require('./SourceStore');
 var LayoutEngine = require('./LayoutEngine');
@@ -19532,7 +19361,6 @@ var AudioMixer = require('./AudioMixer');
 var OutputStreamManager = require('./OutputStreamManager');
 var RenderLoop = require('./RenderLoop');
 var MediaEffectsComposerConfig = require('./ComposerConfig');
-var ComposerDomAdapter = require('./ComposerDomAdapter');
 var SourceAiVBController = require('./aiVirtualBackground/SourceAiVBController');
 var WatermarkManager = require('./WatermarkManager');
 var issueUtils = require('../MediaEffectsIssue');
@@ -19545,93 +19373,6 @@ var ISSUE_DEFAULTS = {
 var getErrorMessage = issueUtils.getErrorMessage;
 function cloneIssue(issue) {
   return issue && typeof issue === 'object' ? JSON.parse(JSON.stringify(issue)) : null;
-}
-
-/**
- * ComposerState —— 混流器状态聚合器
- *
- * 将分散在 ComposerRuntime 各子模块（渲染循环、音频混音器、SourceStore、
- * 配置）中的状态统一收集，生成对外一致的只读快照。
- *
- * 通过回调注入避免 ComposerState 直接持有子模块引用，降低耦合度。
- */
-class ComposerState {
-  /**
-   * @param {Object} options
-   * @param {Object} [options.logger] - 日志记录器
-   * @param {Function} options.getRenderInfo - 获取渲染状态的回调
-   * @param {Function} options.getOutputRouteInfo - 获取输出路由信息的回调
-   * @param {Function} options.getAudioInfo - 获取音频状态的回调
-   * @param {Function} options.getSourceSnapshot - 获取源快照的回调
-   * @param {Function} options.getConfigData - 获取配置数据的回调
-   */
-  constructor(options = {}) {
-    this._logger = options.logger || null;
-    this._getRenderInfo = options.getRenderInfo || (() => ({}));
-    this._getOutputRouteInfo = options.getOutputRouteInfo || (() => ({}));
-    this._getAudioInfo = options.getAudioInfo || (() => ({}));
-    this._getSourceSnapshot = options.getSourceSnapshot || (() => []);
-    this._getIssues = options.getIssues || (() => []);
-    this._getConfigData = options.getConfigData || (() => ({
-      config: {},
-      slotMirrorXOverrides: {},
-      watermarks: []
-    }));
-    this._lastRenderInfoLogSignature = '';
-  }
-
-  /**
-   * 收集渲染状态信息。
-   * 通过签名去重避免重复刷日志。
-   *
-   * @param {boolean} [logResult=true] - 是否在状态变化时记录调试日志
-   * @returns {Object} 合并了渲染信息和输出路由信息的状态快照
-   */
-  collectRenderInfo(logResult = true) {
-    var info = this._getRenderInfo();
-    var outputRouteInfo = this._getOutputRouteInfo();
-    var mergedInfo = Object.assign({}, info, outputRouteInfo);
-    if (!logResult) {
-      return mergedInfo;
-    }
-    var signature = [mergedInfo.requestedMode, mergedInfo.actualMode, mergedInfo.isWorker ? 1 : 0, mergedInfo.isWebGL2 ? 1 : 0, mergedInfo.isFallback ? 1 : 0, mergedInfo.reason || '', mergedInfo.outputMode || '', mergedInfo.insertableActive ? 1 : 0, mergedInfo.captureFrameControlMode || '', mergedInfo.fps || 0, mergedInfo.width || 0, mergedInfo.height || 0].join('|');
-    if (signature !== this._lastRenderInfoLogSignature && this._logger) {
-      this._lastRenderInfoLogSignature = signature;
-      this._logger.debug(`getRenderInfo(): requested=${mergedInfo.requestedMode} actual=${mergedInfo.actualMode} ` + `worker=${mergedInfo.isWorker} webgl2=${mergedInfo.isWebGL2} fallback=${mergedInfo.isFallback} ` + `reason=${mergedInfo.reason || ''} rendered=${mergedInfo.renderedFrames || 0} dropped=${mergedInfo.droppedFrames || 0} ` + `outputMode=${mergedInfo.outputMode || '-'} insertableActive=${Boolean(mergedInfo.insertableActive)} ` + `insertableSupported=${Boolean(mergedInfo.insertableSupported)} generator=${mergedInfo.insertableGeneratorType || '-'} ` + `insertableReason=${mergedInfo.insertableSupportReason || '-'} ` + `captureFrameControl=${mergedInfo.captureFrameControlMode || '-'} ` + `fps=${mergedInfo.fps || 0} size=${mergedInfo.width || 0}x${mergedInfo.height || 0}`);
-    }
-    return mergedInfo;
-  }
-  collectAudioInfo(logResult = true) {
-    var info = this._getAudioInfo();
-    if (logResult && this._logger) {
-      this._logger.debug(`getAudioInfo(): status=${info.status} requested=${info.requested} ` + `sources=${info.sourceCount}/${info.liveSourceCount} outputTracks=${info.outputTracks}`);
-    }
-    return info;
-  }
-  getConfigSnapshot() {
-    var data = this._getConfigData();
-    var config = data.config || {};
-    var slotMirrorXOverrides = data.slotMirrorXOverrides || {};
-    return {
-      outputMirror: Boolean(config.outputMirrorX),
-      sourceMirror: Boolean(config.mirrorX),
-      sourceMirrorOverrides: Object.keys(slotMirrorXOverrides).reduce((snapshot, key) => {
-        snapshot[key] = slotMirrorXOverrides[key];
-        return snapshot;
-      }, {}),
-      mirrorWatermarksWithOutput: config.mirrorWatermarksWithOutput !== false,
-      watermarks: (data.watermarks || []).slice()
-    };
-  }
-  getStateSnapshot() {
-    return {
-      sources: this._getSourceSnapshot(),
-      config: this.getConfigSnapshot(),
-      render: this.collectRenderInfo(false),
-      audio: this.collectAudioInfo(false),
-      issues: this._getIssues()
-    };
-  }
 }
 
 /**
@@ -19762,7 +19503,6 @@ class ComposerRuntime {
 
     this._audioComposer = null;
     this._outMgr = null;
-    this._domAdapter = null;
     this._sourceAiVBManager = null;
     this._watermarkManager = null;
 
@@ -19789,10 +19529,6 @@ class ComposerRuntime {
     this._config.forceMainThreadRenderer = false;
     this._config.forceMain2DRenderer = false;
     this._slotMirrorOv = Object.create(null);
-    this._domAdapter = new ComposerDomAdapter({
-      config: this._config,
-      logger: logger
-    });
     this._watermarkManager = new WatermarkManager({
       logger: logger,
       onIssue: this._recordIssue.bind(this)
@@ -19803,7 +19539,9 @@ class ComposerRuntime {
     // -----------------------------------------------------------------------
 
     /** @type {HTMLCanvasElement} 离屏 canvas，所有视频帧合成到这里 */
-    this._canvas = this._domAdapter.createCanvas();
+    this._canvas = document.createElement('canvas');
+    this._canvas.setAttribute('style', 'display:none');
+    logger.debug('Hidden composer canvas created');
 
     /** @type {number|null} 上次渲染器 resize 的宽高缓存，仅尺寸变化时打日志 */
     this._lastRenderWidth = null;
@@ -19856,7 +19594,8 @@ class ComposerRuntime {
     this._outMgr = new OutputStreamManager({
       canvas: this._canvas,
       config: this._config,
-      domAdapter: this._domAdapter,
+      createSinkVideo: stream => this._createSinkVideoElement(stream),
+      disposeSinkVideo: video => this._disposeSinkVideoElement(video),
       logger: logger,
       onIssue: this._recordIssue.bind(this)
     });
@@ -19944,24 +19683,7 @@ class ComposerRuntime {
         message: getErrorMessage(error)
       });
     });
-    this._state = new ComposerState({
-      logger: logger,
-      getRenderInfo: () => this._renderLoop.getRenderInfo(),
-      getOutputRouteInfo: () => {
-        if (this._outMgr && this._outMgr.getOutputRouteInfo) {
-          return this._outMgr.getOutputRouteInfo();
-        }
-        return {};
-      },
-      getAudioInfo: () => this._audioComposer.getInfo(),
-      getSourceSnapshot: () => this._sourceRegistry.getSnapshot(),
-      getIssues: () => this.getIssues(),
-      getConfigData: () => ({
-        config: this._config,
-        slotMirrorXOverrides: this._slotMirrorOv,
-        watermarks: this._watermarkManager.getWatermarks()
-      })
-    });
+    this._lastRenderInfoLogSignature = '';
 
     // -- 将初始传入的源加入混流 --
     this.addSource(videos, this._normalizeInitialSourceOptionsList(options, videos.length));
@@ -20151,7 +19873,20 @@ class ComposerRuntime {
    * 设置输出画布尺寸。
    */
   _prepareCanvas() {
-    this._domAdapter.prepareCanvas(this._canvas);
+    var width = this._config.width || 1280;
+    var height = this._config.height || 720;
+    var resized = false;
+    if (this._canvas.width !== width) {
+      this._canvas.width = width;
+      resized = true;
+    }
+    if (this._canvas.height !== height) {
+      this._canvas.height = height;
+      resized = true;
+    }
+    if (resized) {
+      logger.debug(`Canvas prepared: ${width}x${height}`);
+    }
   }
 
   /**
@@ -20319,7 +20054,45 @@ class ComposerRuntime {
    */
   _mediaStreamToVideoElement(mediaStream) {
     logger.debug('Creating internal video element from media stream');
-    return this._domAdapter.createVideoElement(mediaStream);
+    var video = document.createElement('video');
+    video.setAttribute('style', 'display:none');
+    video.muted = true;
+    video.autoplay = true;
+    video.setAttribute('playsinline', '');
+    video.srcObject = mediaStream && (mediaStream.mediaStream || mediaStream);
+    var capturedStreamId = video.srcObject && video.srcObject.id || 'unknown';
+    video.play().catch(error => {
+      if (!video.srcObject) {
+        return;
+      }
+      logger.error(`video play error for stream ${capturedStreamId}: ${error.message || String(error)}`);
+    });
+    return video;
+  }
+
+  /**
+   * 为 captureStream 输出创建隐藏的消费 video（用于规避部分 Chromium 降质丢帧）。
+   */
+  _createSinkVideoElement(mediaStream) {
+    var video = this._mediaStreamToVideoElement(mediaStream);
+    logger.debug(`Output sink video created for captureStream ${mediaStream && mediaStream.id ? mediaStream.id : 'unknown'}`);
+    return video;
+  }
+
+  /**
+   * 清理隐藏的 video 元素。
+   */
+  _disposeSinkVideoElement(video) {
+    if (!video) return;
+    try {
+      if (typeof video.pause === 'function') video.pause();
+    } catch (e) {}
+    try {
+      video.srcObject = null;
+    } catch (e) {}
+    try {
+      if (typeof video.remove === 'function') video.remove();
+    } catch (e) {}
   }
 
   // =========================================================================
@@ -20450,13 +20223,37 @@ class ComposerRuntime {
     };
   }
   _collectRenderInfo(logResult = true) {
-    return this._state.collectRenderInfo(logResult);
+    var info = this._renderLoop.getRenderInfo();
+    var outputRouteInfo = this._outMgr && this._outMgr.getOutputRouteInfo ? this._outMgr.getOutputRouteInfo() : {};
+    var mergedInfo = Object.assign({}, info, outputRouteInfo);
+    if (logResult) {
+      var signature = [mergedInfo.requestedMode, mergedInfo.actualMode, mergedInfo.isWorker ? 1 : 0, mergedInfo.isWebGL2 ? 1 : 0, mergedInfo.isFallback ? 1 : 0, mergedInfo.reason || '', mergedInfo.outputMode || '', mergedInfo.insertableActive ? 1 : 0, mergedInfo.captureFrameControlMode || '', mergedInfo.fps || 0, mergedInfo.width || 0, mergedInfo.height || 0].join('|');
+      if (signature !== this._lastRenderInfoLogSignature) {
+        this._lastRenderInfoLogSignature = signature;
+        logger.debug(`getRenderInfo(): requested=${mergedInfo.requestedMode} actual=${mergedInfo.actualMode} ` + `worker=${mergedInfo.isWorker} webgl2=${mergedInfo.isWebGL2} fallback=${mergedInfo.isFallback} ` + `reason=${mergedInfo.reason || ''} rendered=${mergedInfo.renderedFrames || 0} dropped=${mergedInfo.droppedFrames || 0} ` + `outputMode=${mergedInfo.outputMode || '-'} insertableActive=${Boolean(mergedInfo.insertableActive)} ` + `insertableSupported=${Boolean(mergedInfo.insertableSupported)} generator=${mergedInfo.insertableGeneratorType || '-'} ` + `insertableReason=${mergedInfo.insertableSupportReason || '-'} ` + `captureFrameControl=${mergedInfo.captureFrameControlMode || '-'} ` + `fps=${mergedInfo.fps || 0} size=${mergedInfo.width || 0}x${mergedInfo.height || 0}`);
+      }
+    }
+    return mergedInfo;
   }
   _collectAudioInfo(logResult = true) {
-    return this._state.collectAudioInfo(logResult);
+    var info = this._audioComposer.getInfo();
+    if (logResult) {
+      logger.debug(`getAudioInfo(): status=${info.status} requested=${info.requested} ` + `sources=${info.sourceCount}/${info.liveSourceCount} outputTracks=${info.outputTracks}`);
+    }
+    return info;
   }
   _getConfigStateSnapshot() {
-    return this._state.getConfigSnapshot();
+    var slotMirrorXOverrides = this._slotMirrorOv || {};
+    return {
+      outputMirror: Boolean(this._config.outputMirrorX),
+      sourceMirror: Boolean(this._config.mirrorX),
+      sourceMirrorOverrides: Object.keys(slotMirrorXOverrides).reduce((snapshot, key) => {
+        snapshot[key] = slotMirrorXOverrides[key];
+        return snapshot;
+      }, {}),
+      mirrorWatermarksWithOutput: this._config.mirrorWatermarksWithOutput !== false,
+      watermarks: (this._watermarkManager.getWatermarks() || []).slice()
+    };
   }
 
   /**
@@ -20696,7 +20493,13 @@ class ComposerRuntime {
   }
   getState() {
     this._assertNotDestroyed('getState()');
-    return this._state.getStateSnapshot();
+    return {
+      sources: this._sourceRegistry.getSnapshot(),
+      config: this._getConfigStateSnapshot(),
+      render: this._collectRenderInfo(false),
+      audio: this._collectAudioInfo(false),
+      issues: this.getIssues()
+    };
   }
   async getOutput(options) {
     var request = this._normalizeOutputRequest(options);
@@ -21076,7 +20879,7 @@ class ComposerRuntime {
   }
 }
 module.exports = ComposerRuntime;
-},{"../Logger":45,"../MediaEffectsIssue":70,"./AudioMixer":46,"./ComposerConfig":47,"./ComposerDomAdapter":48,"./LayoutEngine":50,"./OutputStreamManager":52,"./RenderLoop":53,"./SourceStore":54,"./WatermarkManager":55,"./aiVirtualBackground/SourceAiVBController":60}],50:[function(require,module,exports){
+},{"../Logger":45,"../MediaEffectsIssue":69,"./AudioMixer":46,"./ComposerConfig":47,"./LayoutEngine":49,"./OutputStreamManager":51,"./RenderLoop":52,"./SourceStore":53,"./WatermarkManager":54,"./aiVirtualBackground/SourceAiVBController":59}],49:[function(require,module,exports){
 "use strict";
 
 /**
@@ -21434,7 +21237,7 @@ class LayoutEngine {
   }
 }
 module.exports = LayoutEngine;
-},{}],51:[function(require,module,exports){
+},{}],50:[function(require,module,exports){
 "use strict";
 
 var ComposerRuntime = require('./ComposerRuntime');
@@ -21450,7 +21253,7 @@ class MediaEffectsComposer extends ComposerRuntime {
   }
 }
 module.exports = MediaEffectsComposer;
-},{"./ComposerRuntime":49}],52:[function(require,module,exports){
+},{"./ComposerRuntime":48}],51:[function(require,module,exports){
 (function (global){(function (){
 "use strict";
 
@@ -21466,16 +21269,6 @@ module.exports = MediaEffectsComposer;
  * @module OutputStreamManager
  */
 var issueUtils = require('../MediaEffectsIssue');
-var ISSUE_DEFAULTS = {
-  module: 'MediaEffectsComposer',
-  component: 'OutputStreamManager',
-  stage: 'output-stream',
-  severity: 'warn',
-  message: 'Output stream issue',
-  fallbackApplied: true,
-  degraded: true,
-  details: {}
-};
 var getErrorMessage = issueUtils.getErrorMessage;
 class OutputStreamManager {
   /**
@@ -21489,7 +21282,8 @@ class OutputStreamManager {
     options = options || {};
     this._canvas = options.canvas;
     this._config = options.config;
-    this._domAdapter = options.domAdapter;
+    this._createSinkVideo = options.createSinkVideo;
+    this._disposeSinkVideo = options.disposeSinkVideo;
     this._logger = options.logger;
     this._onIssue = typeof options.onIssue === 'function' ? options.onIssue : null;
 
@@ -21566,7 +21360,15 @@ class OutputStreamManager {
    * @param {Object} [issue] - 问题描述对象
    */
   _reportIssue(issue) {
-    issueUtils.emitIssue(this._onIssue, ISSUE_DEFAULTS, issue, this._logger, 'OutputStreamManager issue callback failed');
+    if (!this._onIssue) return;
+    try {
+      this._onIssue(Object.assign({
+        component: 'OutputStreamManager',
+        severity: 'warn'
+      }, issue));
+    } catch (e) {
+      if (this._logger) this._logger.warn('OutputStreamManager issue callback failed: ' + (e.message || String(e)));
+    }
   }
   static _getGlobalObject() {
     if (typeof window !== 'undefined') {
@@ -21744,10 +21546,10 @@ class OutputStreamManager {
   }
   _ensureActiveCaptureSink(capturedStream) {
     this._teardownCaptureSink();
-    if (!capturedStream || !this._domAdapter || !this._domAdapter.createOutputSinkVideoElement) {
+    if (!capturedStream || !this._createSinkVideo) {
       return;
     }
-    this._captureSinkVideo = this._domAdapter.createOutputSinkVideoElement(capturedStream);
+    this._captureSinkVideo = this._createSinkVideo(capturedStream);
     if (this._logger) {
       var streamId = capturedStream.id || 'unknown';
       this._logger.debug(`Active capture sink attached: stream=${streamId}`);
@@ -21757,8 +21559,8 @@ class OutputStreamManager {
     if (!this._captureSinkVideo) {
       return;
     }
-    if (this._domAdapter && this._domAdapter.disposeVideoElement) {
-      this._domAdapter.disposeVideoElement(this._captureSinkVideo);
+    if (this._disposeSinkVideo) {
+      this._disposeSinkVideo(this._captureSinkVideo);
     }
     this._captureSinkVideo = null;
   }
@@ -22164,7 +21966,7 @@ class OutputStreamManager {
 module.exports = OutputStreamManager;
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"../MediaEffectsIssue":70}],53:[function(require,module,exports){
+},{"../MediaEffectsIssue":69}],52:[function(require,module,exports){
 "use strict";
 
 /**
@@ -22184,16 +21986,6 @@ var MainCanvas2DRenderer = require('./renderers/MainCanvas2DRenderer');
 var MainWebGL2Renderer = require('./renderers/MainWebGL2Renderer');
 var WorkerRenderer = require('./renderers/WorkerRenderer');
 var issueUtils = require('../MediaEffectsIssue');
-var ISSUE_DEFAULTS = {
-  module: 'MediaEffectsComposer',
-  component: 'RenderLoop',
-  stage: 'render-loop',
-  severity: 'warn',
-  message: 'Render loop issue',
-  fallbackApplied: true,
-  degraded: true,
-  details: {}
-};
 var getErrorMessage = issueUtils.getErrorMessage;
 class RenderLoop {
   /**
@@ -22269,7 +22061,15 @@ class RenderLoop {
    * @param {Object} [issue] - 问题描述对象
    */
   _reportIssue(issue) {
-    issueUtils.emitIssue(this._onIssue, ISSUE_DEFAULTS, issue, this._logger, 'RenderLoop issue callback failed');
+    if (!this._onIssue) return;
+    try {
+      this._onIssue(Object.assign({
+        component: 'RenderLoop',
+        severity: 'warn'
+      }, issue));
+    } catch (e) {
+      if (this._logger) this._logger.warn('RenderLoop issue callback failed: ' + (e.message || String(e)));
+    }
   }
 
   /**
@@ -22770,7 +22570,7 @@ class RenderLoop {
   }
 }
 module.exports = RenderLoop;
-},{"../MediaEffectsIssue":70,"./renderers/MainCanvas2DRenderer":63,"./renderers/MainWebGL2Renderer":64,"./renderers/RendererFactory":65,"./renderers/WorkerRenderer":66}],54:[function(require,module,exports){
+},{"../MediaEffectsIssue":69,"./renderers/MainCanvas2DRenderer":62,"./renderers/MainWebGL2Renderer":63,"./renderers/RendererFactory":64,"./renderers/WorkerRenderer":65}],53:[function(require,module,exports){
 "use strict";
 
 /**
@@ -23140,7 +22940,7 @@ class SourceStore {
   }
 }
 module.exports = SourceStore;
-},{}],55:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 "use strict";
 
 /**
@@ -23151,23 +22951,13 @@ module.exports = SourceStore;
  *
  * @module WatermarkManager
  */
-var issueUtils = require('../MediaEffectsIssue');
+
 var DEFAULT_TEXT_COLOR = '#fff';
 var DEFAULT_TEXT_BACKGROUND = 'rgba(0,0,0,0.45)';
 var DEFAULT_FONT_SIZE = 28;
 var DEFAULT_PADDING = 3;
 var DEFAULT_BACKGROUND_RADIUS = 3;
 var DEFAULT_MARGIN = 16;
-var ISSUE_DEFAULTS = {
-  module: 'MediaEffectsComposer',
-  component: 'WatermarkManager',
-  stage: 'watermark',
-  severity: 'warn',
-  message: 'Watermark issue',
-  fallbackApplied: true,
-  degraded: true,
-  details: {}
-};
 class WatermarkManager {
   /**
    * @param {Object} options
@@ -23199,7 +22989,14 @@ class WatermarkManager {
    * @param {Object} [issue] - 问题描述对象
    */
   _reportIssue(issue) {
-    issueUtils.emitIssue(this._onIssue, ISSUE_DEFAULTS, issue, this._logger, 'WatermarkManager issue callback failed');
+    if (!this._onIssue) return;
+    try {
+      this._onIssue(Object.assign({
+        component: 'WatermarkManager'
+      }, issue));
+    } catch (e) {
+      if (this._logger) this._logger.warn('WatermarkManager issue callback failed: ' + (e.message || String(e)));
+    }
   }
 
   /**
@@ -23648,7 +23445,7 @@ function fillRoundedRect(context, x, y, width, height, radius) {
   context.fill();
 }
 module.exports = WatermarkManager;
-},{"../MediaEffectsIssue":70}],56:[function(require,module,exports){
+},{}],55:[function(require,module,exports){
 "use strict";
 
 /**
@@ -23870,7 +23667,7 @@ module.exports = class AiVBAssetLoader {
     });
   }
 };
-},{"../../Logger":45,"./AiVBConfig":57,"./AiVBSegmentationCommon":58}],57:[function(require,module,exports){
+},{"../../Logger":45,"./AiVBConfig":56,"./AiVBSegmentationCommon":57}],56:[function(require,module,exports){
 "use strict";
 
 /**
@@ -24119,7 +23916,7 @@ function assertKnownKeys(sectionName, value, allowedKeys) {
     throw new Error(`Unsupported AIVirtualBackground ${sectionName} option(s): ${unknownKeys.join(', ')}`);
   }
 }
-},{"../../Logger":45}],58:[function(require,module,exports){
+},{"../../Logger":45}],57:[function(require,module,exports){
 "use strict";
 
 /**
@@ -24247,7 +24044,7 @@ exports.createSegmentationHelpers = createSegmentationHelpers;
 exports.getWorkerSegmentationHelpersFactorySource = function () {
   return createSegmentationHelpers.toString();
 };
-},{}],59:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 "use strict";
 
 /**
@@ -24267,7 +24064,6 @@ exports.getWorkerSegmentationHelpersFactorySource = function () {
 var Logger = require('../../Logger');
 var AiVBAssetLoader = require('./AiVBAssetLoader');
 var SegmentationCommon = require('./AiVBSegmentationCommon');
-var issueUtils = require('../../MediaEffectsIssue');
 var logger = new Logger('AiVBMediaPipeRuntime');
 var segmentationHelpers = SegmentationCommon.createSegmentationHelpers();
 
@@ -24275,16 +24071,6 @@ var segmentationHelpers = SegmentationCommon.createSegmentationHelpers();
 var DEFAULT_DELEGATE = 'GPU';
 var DEFAULT_MASK_EDGE_BLUR_PX = 2;
 var DEFAULT_MASK_ALPHA_BIAS = 0.08;
-var ISSUE_DEFAULTS = {
-  module: 'MediaEffectsComposer',
-  component: 'MediaPipeSegmenterRuntime',
-  stage: 'aivb-runtime-load',
-  severity: 'warn',
-  message: 'AiVB runtime issue',
-  fallbackApplied: true,
-  degraded: true,
-  details: {}
-};
 function normalizeDelegate() {
   return DEFAULT_DELEGATE;
 }
@@ -24343,7 +24129,14 @@ module.exports = class MediaPipeSegmenterRuntime {
     this.featherContext = null;
   }
   _reportIssue(issue) {
-    issueUtils.emitIssue(this._onIssue, ISSUE_DEFAULTS, issue, logger, 'MediaPipeSegmenterRuntime issue callback failed');
+    if (!this._onIssue) return;
+    try {
+      this._onIssue(Object.assign({
+        component: 'MediaPipeSegmenterRuntime'
+      }, issue));
+    } catch (e) {
+      if (logger) logger.warn('MediaPipeSegmenterRuntime issue callback failed: ' + (e.message || String(e)));
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -24753,7 +24546,7 @@ module.exports = class MediaPipeSegmenterRuntime {
     this.featherContext = null;
   }
 };
-},{"../../Logger":45,"../../MediaEffectsIssue":70,"./AiVBAssetLoader":56,"./AiVBSegmentationCommon":58}],60:[function(require,module,exports){
+},{"../../Logger":45,"./AiVBAssetLoader":55,"./AiVBSegmentationCommon":57}],59:[function(require,module,exports){
 "use strict";
 
 /**
@@ -24785,16 +24578,6 @@ var DEFAULT_RUNTIME_STARTUP_DELAY_MS = 1500;
 
 /** 分割器运行时默认最大帧率，平衡效果与性能 */
 var DEFAULT_MAX_RUNTIME_FPS = 15;
-var ISSUE_DEFAULTS = {
-  module: 'MediaEffectsComposer',
-  component: 'SourceAiVBController',
-  stage: 'aivb',
-  severity: 'warn',
-  message: 'AiVB issue',
-  fallbackApplied: true,
-  degraded: true,
-  details: {}
-};
 var getErrorMessage = issueUtils.getErrorMessage;
 
 // =============================================================================
@@ -25047,7 +24830,14 @@ module.exports = class SourceAiVBController {
    * @param {Object} [issue] - 问题描述对象
    */
   _reportIssue(issue) {
-    issueUtils.emitIssue(this._onIssue, ISSUE_DEFAULTS, issue, this._logger, 'SourceAiVBController issue callback failed');
+    if (!this._onIssue) return;
+    try {
+      this._onIssue(Object.assign({
+        component: 'SourceAiVBController'
+      }, issue));
+    } catch (e) {
+      if (this._logger) this._logger.warn('SourceAiVBController issue callback failed: ' + (e.message || String(e)));
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -25840,14 +25630,14 @@ module.exports = class SourceAiVBController {
     return typeof performance !== 'undefined' && performance && typeof performance.now === 'function' ? performance.now() : Date.now();
   }
 };
-},{"../../MediaEffectsIssue":70,"./AiVBConfig":57,"./MediaPipeSegmenterRuntime":59}],61:[function(require,module,exports){
+},{"../../MediaEffectsIssue":69,"./AiVBConfig":56,"./MediaPipeSegmenterRuntime":58}],60:[function(require,module,exports){
 "use strict";
 
 /**
  * MediaEffectsComposer public entry point.
  */
 module.exports = require('./MediaEffectsComposer');
-},{"./MediaEffectsComposer":51}],62:[function(require,module,exports){
+},{"./MediaEffectsComposer":50}],61:[function(require,module,exports){
 "use strict";
 
 /**
@@ -25988,7 +25778,7 @@ module.exports = class BaseRenderer {
     this._onFramePresented(meta || {});
   }
 };
-},{}],63:[function(require,module,exports){
+},{}],62:[function(require,module,exports){
 "use strict";
 
 /**
@@ -26285,7 +26075,7 @@ module.exports = class MainCanvas2DRenderer extends BaseRenderer {
     this._canvas = null;
   }
 };
-},{"./BaseRenderer":62}],64:[function(require,module,exports){
+},{"./BaseRenderer":61}],63:[function(require,module,exports){
 "use strict";
 
 /**
@@ -26833,7 +26623,7 @@ module.exports = class MainWebGL2Renderer extends BaseRenderer {
     this._aiVirtualBackgroundManager = null;
   }
 };
-},{"./BaseRenderer":62,"./color":67,"./gl":68}],65:[function(require,module,exports){
+},{"./BaseRenderer":61,"./color":66,"./gl":67}],64:[function(require,module,exports){
 "use strict";
 
 /**
@@ -27007,7 +26797,7 @@ function shouldPreferMainWebGL2() {
   var isIOSWebView = /iPhone|iPad|iPod/i.test(ua) && !/Safari/i.test(ua);
   return isSafari || isIOSWebView;
 }
-},{"./MainCanvas2DRenderer":63,"./MainWebGL2Renderer":64,"./WorkerRenderer":66}],66:[function(require,module,exports){
+},{"./MainCanvas2DRenderer":62,"./MainWebGL2Renderer":63,"./WorkerRenderer":65}],65:[function(require,module,exports){
 "use strict";
 
 /**
@@ -27657,7 +27447,7 @@ module.exports = class WorkerRenderer extends BaseRenderer {
     }
   }
 };
-},{"./BaseRenderer":62,"./workerScript":69}],67:[function(require,module,exports){
+},{"./BaseRenderer":61,"./workerScript":68}],66:[function(require,module,exports){
 "use strict";
 
 /**
@@ -27750,7 +27540,7 @@ function parseRgbColor(value) {
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
-},{}],68:[function(require,module,exports){
+},{}],67:[function(require,module,exports){
 "use strict";
 
 /**
@@ -27825,7 +27615,7 @@ exports.createVideoTexture = function (gl) {
   gl.bindTexture(gl.TEXTURE_2D, null);
   return texture;
 };
-},{}],69:[function(require,module,exports){
+},{}],68:[function(require,module,exports){
 "use strict";
 
 var SegmentationCommon = require('../aiVirtualBackground/AiVBSegmentationCommon');
@@ -28825,7 +28615,7 @@ exports.createWorkerScript = function () {
   source = source.replace('/* __AIVB_SEGMENTATION_HELPERS__ */', 'var segmentationCommon = (' + SegmentationCommon.getWorkerSegmentationHelpersFactorySource() + ')();');
   return source.slice(source.indexOf('{') + 1, source.lastIndexOf('}'));
 };
-},{"../aiVirtualBackground/AiVBSegmentationCommon":58}],70:[function(require,module,exports){
+},{"../aiVirtualBackground/AiVBSegmentationCommon":57}],69:[function(require,module,exports){
 "use strict";
 
 function getErrorMessage(error) {
@@ -28881,7 +28671,7 @@ module.exports = {
   logIssue,
   normalizeIssue
 };
-},{}],71:[function(require,module,exports){
+},{}],70:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -28954,7 +28744,6 @@ module.exports = class Message extends EventEmitter {
     if (body) {
       this._request.body = body;
     }
-<<<<<<< HEAD
     var request_sender = new RequestSender(this._ua, this._request, {
       onRequestTimeout: () => {
         this._onRequestTimeout();
@@ -28964,49 +28753,6 @@ module.exports = class Message extends EventEmitter {
       },
       onReceiveResponse: response => {
         this._receiveResponse(response);
-=======
-  }, {
-    key: "_succeeded",
-    value: function _succeeded(originator, response) {
-      logger.debug('MESSAGE succeeded');
-      this._close();
-      logger.debug('emit "succeeded"');
-      this.emit('succeeded', {
-        originator: originator,
-        response: response
-      });
-    }
-  }]);
-}(EventEmitter);
-},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":52,"./SIPMessage":53,"./URI":60,"./Utils":61,"events":74}],41:[function(require,module,exports){
-"use strict";
-
-function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
-function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
-function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
-function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
-function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
-function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
-function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
-function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
-function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
-var Logger = require('./Logger');
-var logger = new Logger('MediaStreamMixer');
-module.exports = /*#__PURE__*/function () {
-  function MediaStreamMixer(videos) {
-    var _this = this;
-    _classCallCheck(this, MediaStreamMixer);
-    logger.debug("constructor: ".concat(videos.length));
-
-    // 根据传参是 video 元素还是 mediastream 分别处理后存储到 _videos
-    var tmpVideos = [];
-    videos.forEach(function (video) {
-      if (video instanceof HTMLMediaElement) {
-        tmpVideos.push(video);
-      } else {
-        tmpVideos.push(_this._mediaStreamToVideoElement(video));
->>>>>>> CRTC-new
       }
     });
     this._newMessage('local', this._request);
@@ -29080,61 +28826,10 @@ module.exports = /*#__PURE__*/function () {
           break;
         }
     }
-<<<<<<< HEAD
   }
   _onRequestTimeout() {
     if (this._closed) {
       return;
-=======
-
-    // 获取音视频混合的媒体流
-  }, {
-    key: "getMixedStream",
-    value: function () {
-      var _getMixedStream = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
-        var mixedVideoStream, mixedAudioStream;
-        return _regenerator().w(function (_context) {
-          while (1) switch (_context.n) {
-            case 0:
-              logger.debug('getMixedStream()');
-              this._isStopDrawingFrames = false;
-              mixedVideoStream = this.getVideoStream();
-              _context.n = 1;
-              return this.getAudioStream();
-            case 1:
-              mixedAudioStream = _context.v;
-              if (mixedAudioStream) {
-                mixedAudioStream.getAudioTracks().forEach(function (track) {
-                  mixedVideoStream.addTrack(track);
-                });
-              }
-              return _context.a(2, mixedVideoStream);
-          }
-        }, _callee, this);
-      }));
-      function getMixedStream() {
-        return _getMixedStream.apply(this, arguments);
-      }
-      return getMixedStream;
-    }() // 获取混合后的视频流
-  }, {
-    key: "getVideoStream",
-    value: function getVideoStream() {
-      logger.debug('getVideoStream()');
-
-      // 开始帧动画开始混流
-      this._drawVideosToCanvas();
-      var videoStream = new MediaStream();
-      var capturedStream = this._canvas.captureStream();
-      capturedStream.getVideoTracks().forEach(function (track) {
-        logger.debug('track: ', track.id, track.enabled, track.readyState);
-        videoStream.addTrack(track);
-      });
-
-      // 用于停止混合时
-      this._canvas.stream = capturedStream;
-      return videoStream;
->>>>>>> CRTC-new
     }
     this._failed('system', null, CRTC_C.causes.REQUEST_TIMEOUT);
   }
@@ -29149,7 +28844,6 @@ module.exports = /*#__PURE__*/function () {
     this._ua.destroyMessage(this);
   }
 
-<<<<<<< HEAD
   /**
    * Internal Callbacks
    */
@@ -29190,71 +28884,7 @@ module.exports = /*#__PURE__*/function () {
     });
   }
 };
-},{"./Constants":38,"./Exceptions":42,"./Logger":45,"./RequestSender":83,"./SIPMessage":84,"./URI":91,"./Utils":92,"events":96}],72:[function(require,module,exports){
-=======
-    // 获取混合后的音频流
-  }, {
-    key: "getAudioStream",
-    value: function () {
-      var _getAudioStream = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
-        var _this4 = this;
-        var seenStreams;
-        return _regenerator().w(function (_context2) {
-          while (1) switch (_context2.n) {
-            case 0:
-              logger.debug('getAudioStream()');
-
-              // TODO:可以分别混合音频
-              // if (this._useGainNode === true)
-              // {
-              //   this._gainNode = this._audioContext.createGain();
-              //   this._gainNode.connect(this._audioContext.destination);
-              //   this._gainNode.gain.value = 0; // don't hear this
-              // }
-
-              if (!this._audioContext) {
-                this._audioContext = new AudioContext();
-              }
-              if (!(this._audioContext.state === 'suspended')) {
-                _context2.n = 1;
-                break;
-              }
-              _context2.n = 1;
-              return this._audioContext.resume();
-            case 1:
-              this._audioSources = [];
-              this._audioDestination = this._audioContext.createMediaStreamDestination();
-              seenStreams = new WeakSet();
-              this._videos.forEach(function (video) {
-                var stream = video.srcObject;
-                if (stream && !seenStreams.has(stream) && stream.getAudioTracks().length > 0 && stream.getAudioTracks()[0].readyState === 'live') {
-                  var source = _this4._audioContext.createMediaStreamSource(stream);
-                  source.connect(_this4._audioDestination);
-                  _this4._audioSources.push(source);
-                  seenStreams.add(stream);
-                  logger.debug('audio tracks: ', stream.getAudioTracks().length);
-                }
-              });
-              if (!(this._audioSources.length === 0)) {
-                _context2.n = 2;
-                break;
-              }
-              logger.warn('No valid audio sources, skip audio stream creation');
-              return _context2.a(2, null);
-            case 2:
-              return _context2.a(2, this._audioDestination.stream);
-          }
-        }, _callee2, this);
-      }));
-      function getAudioStream() {
-        return _getAudioStream.apply(this, arguments);
-      }
-      return getAudioStream;
-    }()
-  }]);
-}();
-},{"./Logger":39}],42:[function(require,module,exports){
->>>>>>> CRTC-new
+},{"./Constants":38,"./Exceptions":42,"./Logger":45,"./RequestSender":82,"./SIPMessage":83,"./URI":90,"./Utils":91,"events":95}],71:[function(require,module,exports){
 "use strict";
 
 var URI = require('./URI');
@@ -29343,7 +28973,7 @@ module.exports = class NameAddrHeader {
     return body;
   }
 };
-},{"./Grammar":43,"./URI":91}],73:[function(require,module,exports){
+},{"./Grammar":43,"./URI":90}],72:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -29549,7 +29179,7 @@ module.exports = class Options extends EventEmitter {
     });
   }
 };
-},{"./Constants":38,"./Exceptions":42,"./Logger":45,"./RequestSender":83,"./SIPMessage":84,"./Utils":92,"events":96}],74:[function(require,module,exports){
+},{"./Constants":38,"./Exceptions":42,"./Logger":45,"./RequestSender":82,"./SIPMessage":83,"./Utils":91,"events":95}],73:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -29803,7 +29433,7 @@ function parseHeader(message, data, headerStart, headerEnd) {
     return true;
   }
 }
-},{"./Grammar":43,"./Logger":45,"./SIPMessage":84}],75:[function(require,module,exports){
+},{"./Grammar":43,"./Logger":45,"./SIPMessage":83}],74:[function(require,module,exports){
 "use strict";
 
 var a = 'BQDw\nofp2G4MCvHKAlA0+IVe8m8gfPntmbvpud7uKwBLfzKarAWND0T1babPwmgyAjKzG\nBw1bOs7IwmoQzKIBdg3GrcIcXdwP54o19kTbzrU9gipcF7SMBIA+OiTQvYW3PpMR\npvkBln/JQCMBGKnWgz+Ie4Tu8sCFde8RPQrJuUp7jBAQCgBIAQCAFQBwGkqgNjBI';
@@ -29816,34 +29446,10 @@ for (var i = 0; i < a.length; i++) {
   }
 }
 module.exports = s.split('').reverse().join('');
-},{}],76:[function(require,module,exports){
+},{}],75:[function(require,module,exports){
 (function (Buffer){(function (){
 "use strict";
 
-<<<<<<< HEAD
-=======
-function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function _regeneratorValues(e) { if (null != e) { var t = e["function" == typeof Symbol && Symbol.iterator || "@@iterator"], r = 0; if (t) return t.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) return { next: function next() { return e && r >= e.length && (e = void 0), { value: e && e[r++], done: !e }; } }; } throw new TypeError(_typeof(e) + " is not iterable"); }
-function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
-function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
-function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
-function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
-function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
-function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
-function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
-function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
-function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
-function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
-function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
-function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
-function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
-function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
-function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
-function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
-function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
-function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
-function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
->>>>>>> CRTC-new
 /* globals RTCPeerConnection: false, RTCSessionDescription: false */
 
 var EventEmitter = require('events').EventEmitter;
@@ -30004,17 +29610,11 @@ module.exports = class RTCSession extends EventEmitter {
     this._sdpResolution = 'BP480P';
 
     // 适配 DTMF payload 值
-<<<<<<< HEAD
     this._dtmf_payload = null;
     this._inviteVideoTrackStatsTimer = null;
     this._answerVideoTrackStatsTimer = null;
-=======
-    _this._dtmf_payload = null;
-    _this._inviteVideoTrackStatsTimer = null;
-    _this._answerVideoTrackStatsTimer = null;
-    _this._videoFrameRateMonitorTimer = null;
-    _this._isApplyingVideoFrameRateConstraints = false;
->>>>>>> CRTC-new
+    this._videoFrameRateMonitorTimer = null;
+    this._isApplyingVideoFrameRateConstraints = false;
 
     // The RTCPeerConnection instance (public attribute).
     this._connection = null;
@@ -30058,7 +29658,7 @@ module.exports = class RTCSession extends EventEmitter {
     this._customizedMode = null;
 
     // 远端是否支持视频模式
-    _this._remoteSupportsVideo = false;
+    this._remoteSupportsVideo = false;
 
     // 本地分享媒体：图片、视频、屏幕等.
     this._localShareRTPSender = null;
@@ -30227,147 +29827,11 @@ module.exports = class RTCSession extends EventEmitter {
       if (!rebuildFromComposerInputStream && !currentLocalVideoTrack) {
         return null;
       }
-<<<<<<< HEAD
       this._sessionMediaEffectsComposerOptions = nextSessionOptions;
       var mixedStream = await this._mediaPipeline.applyMediaEffectsComposerOnSdkGumStream(rebuildFromComposerInputStream ? composerInputStream : (() => {
         var currentLocalSourceStream = new MediaStream();
         currentLocalAudioTracks.forEach(track => {
           currentLocalSourceStream.addTrack(track, currentLocalSourceStream);
-=======
-    }
-  }, {
-    key: "isEstablished",
-    value: function isEstablished() {
-      switch (this._status) {
-        case C.STATUS_ANSWERED:
-        case C.STATUS_WAITING_FOR_ACK:
-        case C.STATUS_CONFIRMED:
-          return true;
-        default:
-          return false;
-      }
-    }
-  }, {
-    key: "isEnded",
-    value: function isEnded() {
-      switch (this._status) {
-        case C.STATUS_CANCELED:
-        case C.STATUS_TERMINATED:
-          return true;
-        default:
-          return false;
-      }
-    }
-  }, {
-    key: "isMuted",
-    value: function isMuted() {
-      return {
-        audio: this._audioMuted,
-        video: this._videoMuted
-      };
-    }
-
-    /**
-     * 预处理媒体流（虚拟背景等）
-     */
-  }, {
-    key: "_processMediaStream",
-    value: (function () {
-      var _processMediaStream2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(_stream) {
-        var result, _t;
-        return _regenerator().w(function (_context) {
-          while (1) switch (_context.p = _context.n) {
-            case 0:
-              logger.debug('_processMediaStream()');
-              if (this._mediaStreamProcessor) {
-                _context.n = 1;
-                break;
-              }
-              return _context.a(2, _stream);
-            case 1:
-              _context.p = 1;
-              _context.n = 2;
-              return this._mediaStreamProcessor(_stream);
-            case 2:
-              result = _context.v;
-              return _context.a(2, result instanceof MediaStream ? result : _stream);
-            case 3:
-              _context.p = 3;
-              _t = _context.v;
-              logger.warn("".concat(this._id, " mediaStreamProcessor error:"), _t);
-              return _context.a(2, _stream);
-          }
-        }, _callee, this, [[1, 3]]);
-      }));
-      function _processMediaStream(_x) {
-        return _processMediaStream2.apply(this, arguments);
-      }
-      return _processMediaStream;
-    }())
-  }, {
-    key: "isOnHold",
-    value: function isOnHold() {
-      return {
-        local: this._localHold,
-        remote: this._remoteHold
-      };
-    }
-  }, {
-    key: "connect",
-    value: function connect(target) {
-      var _this2 = this;
-      var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-      var initCallback = arguments.length > 2 ? arguments[2] : undefined;
-      logger.debug("".concat(this._id, " connect()"));
-      var originalTarget = target;
-      var eventHandlers = Utils.cloneObject(options.eventHandlers);
-      var mediaStream = options.mediaStream || null;
-      var pcConfig = Utils.cloneObject(options.pcConfig, {
-        iceServers: []
-      });
-      var rtcConstraints = options.rtcConstraints || null;
-      var rtcOfferConstraints = options.rtcOfferConstraints || null;
-      var extraHeaders = Utils.cloneArray(options.extraHeaders);
-      var extraFeatures = options.extraFeatures || null;
-
-      // 预处理媒体流，如虚拟背景等
-      this._mediaStreamProcessor = options.mediaStreamProcessor || null;
-      this._inviteMediaConstraints = Utils.cloneObject(options.mediaConstraints, {
-        audio: false,
-        video: false
-      });
-      this._rtcOfferConstraints = rtcOfferConstraints;
-      this._rtcAnswerConstraints = options.rtcAnswerConstraints || null;
-      this._data = options.data || this._data;
-
-      // Check target.
-      if (target === undefined) {
-        throw new TypeError('Not enough arguments');
-      }
-
-      // Check Session Status.
-      if (this._status !== C.STATUS_NULL) {
-        throw new Exceptions.InvalidStateError(this._status);
-      }
-
-      // Check WebRTC support.
-      if (!window.RTCPeerConnection) {
-        throw new Exceptions.NotSupportedError('WebRTC not supported');
-      }
-
-      // Check target validity.
-      target = this._ua.normalizeTarget(target);
-      if (!target) {
-        throw new TypeError("Invalid target: ".concat(originalTarget));
-      }
-
-      // 判断授权的 sip domain
-      if (this._ua.sk && this._ua.sk[8].split(';').indexOf(target.host) == -1) {
-        this._ua.emit('failed', {
-          originator: 'local',
-          message: CRTC_C.causes.AUTHORIZATION_ERROR,
-          cause: CRTC_C.AUTHORIZATION_ERROR_CAUSES.AUTH_SIPDOMAIN_ERROR
->>>>>>> CRTC-new
         });
         currentLocalSourceStream.addTrack(currentLocalVideoTrack, currentLocalSourceStream);
         return currentLocalSourceStream;
@@ -30401,7 +29865,6 @@ module.exports = class RTCSession extends EventEmitter {
       if (audioSender && mixedAudioTrack && typeof audioSender.replaceTrack === 'function') {
         await audioSender.replaceTrack(mixedAudioTrack);
       }
-<<<<<<< HEAD
       return this.getMediaEffectsComposer() ? this.getMediaEffectsComposer().getState() : null;
     }
     var patch = this._mediaPipeline.resolveMediaEffectsComposerRuntimePatch(resolvedOptions);
@@ -30412,143 +29875,6 @@ module.exports = class RTCSession extends EventEmitter {
           var sourceOptions = resolvedOptions.sources[index];
           if (!sourceOptions || typeof sourceOptions !== 'object') {
             continue;
-=======
-      this._request = new SIPMessage.InitialOutgoingInviteRequest(target, this._ua, requestParams, extraHeaders);
-      this._id = this._request.call_id + this._from_tag;
-      this._replaceAudioTrack = false;
-
-      // 适配浏览器M79以后Chrome默认使用mDNS主机名隐藏WebRTC暴露的本地IP
-      return Promise.resolve()
-      // Get a stream if required.
-      .then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
-        var hasAudio, mStream, currMediaConstraints, tStream, sendStream, mics, ua;
-        return _regenerator().w(function (_context3) {
-          while (1) switch (_context3.n) {
-            case 0:
-              mStream = new MediaStream(); // 非自定义媒体流模式
-              _this2._customMediaStream = false;
-
-              // A stream is given, let the app set events such as 'peerconnection' and 'connecting'.
-              if (mediaStream) {
-                // 自定义媒体流模式
-                _this2._customMediaStream = true;
-                mediaStream.getTracks().forEach(function (track) {
-                  logger.warn("".concat(_this2._id, " There are two ").concat(_this2._inviteMediaConstraints.audio ? 'audio' : 'video', " tracks in the input, please check the parameters"));
-                  _this2._inviteMediaConstraints[track.kind] = false;
-                  mStream.addTrack(track, mStream);
-                });
-              }
-
-              // Request for user media access.
-              if (!(_this2._inviteMediaConstraints.audio || _this2._inviteMediaConstraints.video)) {
-                _context3.n = 4;
-                break;
-              }
-              _this2._localMediaStreamLocallyGenerated = true;
-
-              // 判断授权是否包含视频
-              if (Number(_this2._ua.sk[7]) < 1) {
-                delete _this2._inviteMediaConstraints.video;
-              }
-              hasAudio = Boolean(_this2._inviteMediaConstraints.audio);
-              // 兼容安卓微信Bug，开始不获取麦克风媒体
-              if (navigator.userAgent.indexOf('WeChat') != -1) {
-                currMediaConstraints = {
-                  audio: false,
-                  video: _this2._inviteMediaConstraints.video || false
-                };
-              } else {
-                currMediaConstraints = _this2._inviteMediaConstraints;
-              }
-              logger.debug("".concat(_this2._id, " currMediaConstraints: "), JSON.stringify(currMediaConstraints));
-              if (!(currMediaConstraints.audio || currMediaConstraints.video)) {
-                _context3.n = 4;
-                break;
-              }
-              _context3.n = 1;
-              return navigator.mediaDevices.getUserMedia(currMediaConstraints).then(/*#__PURE__*/function () {
-                var _ref2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(stream) {
-                  return _regenerator().w(function (_context2) {
-                    while (1) switch (_context2.n) {
-                      case 0:
-                        _context2.n = 1;
-                        return _this2._processMediaStream(stream);
-                      case 1:
-                        return _context2.a(2, _context2.v);
-                    }
-                  }, _callee2);
-                }));
-                return function (_x2) {
-                  return _ref2.apply(this, arguments);
-                };
-              }())["catch"](function (error) {
-                if (_this2._status === C.STATUS_TERMINATED) {
-                  throw new Error('terminated');
-                }
-                _this2._failed('local', null, CRTC_C.causes.USER_DENIED_MEDIA_ACCESS);
-                logger.warn("".concat(_this2._id, " emit \"getusermediafailed\" [error:%o]"), error);
-                logger.warn("".concat(_this2._id, " emit \"getusermediafailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
-                _this2.emit('getusermediafailed', error);
-                var e = new Error("getusermediafailed, ".concat(error.message), {
-                  cause: error.message
-                });
-                e.name = error.name;
-                throw e;
-              });
-            case 1:
-              tStream = _context3.v;
-              if (!(currMediaConstraints.video && tStream)) {
-                _context3.n = 3;
-                break;
-              }
-              // 如果包含视频轨道，判断是否为分辨率正常的视频轨道
-              if (navigator.userAgent.indexOf('iPhone') != -1 && tStream.getVideoTracks().length > 0) {
-                logger.debug("".concat(_this2._id, " mediastream settings: "), JSON.stringify(tStream.getVideoTracks()[0].getSettings()));
-                if (!Utils.isVideoTrackHealthy(tStream)) {
-                  _this2.emit('mediaerror', {
-                    type: 'video',
-                    mediastream: tStream
-                  });
-                }
-              }
-              _context3.n = 2;
-              return Utils.getEnvironmentId();
-            case 2:
-              _this2._environment = _context3.v;
-              logger.debug("".concat(_this2._id, " environment id: "), _this2._environment);
-            case 3:
-              tStream.getTracks().forEach(function (track) {
-                mStream.addTrack(track, mStream);
-              });
-            case 4:
-              sendStream = new MediaStream();
-              _context3.n = 5;
-              return Utils.getMicrophones();
-            case 5:
-              mics = _context3.v;
-              // 兼容安卓微信Bug及iOS蓝牙问题
-              if (navigator.userAgent.indexOf('WeChat') != -1 && hasAudio || navigator.userAgent.indexOf('iPhone') != -1 && mics.length > 1 && hasAudio) {
-                logger.debug("".concat(_this2.id, " mics: ").concat(mics.length, " hasAudio: ").concat(hasAudio));
-                sendStream.addTrack(_this2._generateAnEmptyAudioTrack());
-                mStream.getVideoTracks().length > 0 && sendStream.addTrack(mStream.getVideoTracks()[0]);
-                _this2._replaceAudioTrack = true;
-              } else {
-                sendStream = mStream;
-              }
-
-              // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
-
-              navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
-              if (!(ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2')))) {
-                _context3.n = 6;
-                break;
-              }
-              return _context3.a(2, Utils.getStreamThroughCanvas(sendStream));
-            case 6:
-              return _context3.a(2, sendStream);
-            case 7:
-              return _context3.a(2);
->>>>>>> CRTC-new
           }
           if (typeof sourceOptions.sourceMirror === 'boolean') {
             await composer.setSourceMirror(index, sourceOptions.sourceMirror);
@@ -30818,7 +30144,7 @@ module.exports = class RTCSession extends EventEmitter {
                 });
               }
             }
-            this._environment = await Utils.getHuaweiAndroidEnvironment();
+            this._environment = await Utils.getEnvironmentId();
             logger.debug(`${this._id} environment id: `, this._environment);
           }
           tStream.getTracks().forEach(track => {
@@ -30870,84 +30196,10 @@ module.exports = class RTCSession extends EventEmitter {
     var expires;
     var contentType = request.hasHeader('Content-Type') ? request.getHeader('Content-Type').toLowerCase() : undefined;
 
-<<<<<<< HEAD
     // Check body and content type.
     if (request.body && contentType !== 'application/sdp') {
       request.reply(415);
       return;
-=======
-      /**
-       * 音视频切换相关
-       * 根据远端offer的sdp判断呼入的通话模式
-       * @author: lei
-       */
-      if (request.body) {
-        var sdp = sdp_transform.parse(request.body);
-        request['mode'] = 'audio';
-        this._mode = 'audio';
-        this._remoteToAudio = true;
-        this._remoteToVideo = false;
-        var _iterator = _createForOfIteratorHelper(sdp.media),
-          _step;
-        try {
-          for (_iterator.s(); !(_step = _iterator.n()).done;) {
-            var m = _step.value;
-            if (m.type == 'audio') {
-              continue;
-            }
-            if (m.port !== 0) {
-              request['mode'] = 'video';
-              this._mode = 'video';
-              this._remoteToAudio = false;
-              this._remoteToVideo = true;
-            }
-          }
-        } catch (err) {
-          _iterator.e(err);
-        } finally {
-          _iterator.f();
-        }
-      }
-
-      // 更新BFCP的floorctrl
-      var lines = request.body.split(/\r?\n/);
-      var line = lines.find(function (l) {
-        return l.trim().startsWith('a=floorctrl:') && l.includes(':');
-      });
-      if (line) {
-        switch (line.split(':')[1].trim()) {
-          case 'c-s':
-          case 'c-only':
-            this._floorctrl = 's-only';
-            break;
-          case 's-only':
-            this._floorctrl = 'c-only';
-            break;
-          default:
-            break;
-        }
-      }
-
-      // Fire 'newRTCSession' event.
-      this._newRTCSession('remote', request);
-
-      // The user may have rejected the call in the 'newRTCSession' event.
-      if (this._status === C.STATUS_TERMINATED) {
-        return;
-      }
-
-      // 远端支持视频模式，触发回调
-      if (/(^|[;>])\s*\+?video\s*([;=]|$)/i.test(request.getHeader('contact'))) {
-        this._remoteSupportsVideo = true;
-      }
-
-      // Reply 180.
-      request.reply(180, null, ["Contact: ".concat(this._contact)]);
-
-      // Fire 'progress' event.
-      // TODO: Document that 'response' field in 'progress' event is null for incoming calls.
-      this._progress('local', null);
->>>>>>> CRTC-new
     }
 
     // Session parameter initialization.
@@ -30967,3070 +30219,12 @@ module.exports = class RTCSession extends EventEmitter {
      */
     request.to_tag = Utils.newTag();
 
-<<<<<<< HEAD
     // An error on dialog creation will fire 'failed' event.
     if (!this._createDialog(request, 'UAS', true)) {
       request.reply(500, 'Missing Contact header field');
       return;
     }
     if (request.body) {
-=======
-      // 初始化统计信息参数
-      window.CRTCStats = 'start';
-      var request = this._request;
-      var extraHeaders = Utils.cloneArray(options.extraHeaders);
-      var mediaConstraints = Utils.cloneObject(options.mediaConstraints);
-      var mediaStream = options.mediaStream || null;
-      var pcConfig = Utils.cloneObject(options.pcConfig, {
-        iceServers: []
-      });
-      var rtcConstraints = options.rtcConstraints || null;
-      var rtcAnswerConstraints = options.rtcAnswerConstraints || null;
-      var rtcOfferConstraints = Utils.cloneObject(options.rtcOfferConstraints);
-      var extraFeatures = options.extraFeatures || null;
-
-      // 预处理媒体流，如虚拟背景等
-      this._mediaStreamProcessor = options.mediaStreamProcessor || null;
-
-      // 是否启用BFCP
-      this._enableBFCP = false;
-      if (extraFeatures && extraFeatures.indexOf(CRTC_C.BFCP) !== -1) {
-        this._enableBFCP = true;
-        this._bfcpUser = new BFCPUser(this.local_identity.uri.user, this.remote_identity.uri.user);
-      }
-
-      // SDP协商的分辨率速率
-      if (extraFeatures) {
-        if (extraFeatures.indexOf('BP480P') !== -1) {
-          this._sdpResolution = 'BP480P';
-          this._ua.transport.sdpResolution = 'BP480P';
-        }
-        if (extraFeatures.indexOf('BP720P') !== -1) {
-          this._sdpResolution = 'BP720P';
-          this._ua.transport.sdpResolution = 'BP720P';
-        }
-      }
-      var tracks;
-      var peerHasAudioLine = false;
-      var peerHasVideoLine = false;
-      var peerOffersFullAudio = false;
-      var peerOffersFullVideo = false;
-      this._answerMediaConstraints = mediaConstraints;
-      this._rtcAnswerConstraints = rtcAnswerConstraints;
-      this._rtcOfferConstraints = options.rtcOfferConstraints || null;
-      this._data = options.data || this._data;
-
-      // 5G Headers
-      if (this._ua.sk[7] >= 3) {
-        extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
-        extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
-      }
-
-      // Check Session Direction and Status.
-      if (this._direction !== 'incoming') {
-        throw new Exceptions.NotSupportedError('"answer" not supported for outgoing RTCSession');
-      }
-
-      // Check Session status.
-      if (this._status !== C.STATUS_WAITING_FOR_ANSWER) {
-        throw new Exceptions.InvalidStateError(this._status);
-      }
-
-      // Session Timers.
-      if (this._sessionTimers.enabled) {
-        if (Utils.isDecimal(options.sessionTimersExpires)) {
-          if (options.sessionTimersExpires >= CRTC_C.MIN_SESSION_EXPIRES) {
-            this._sessionTimers.defaultExpires = options.sessionTimersExpires;
-          } else {
-            this._sessionTimers.defaultExpires = CRTC_C.SESSION_EXPIRES;
-          }
-        }
-      }
-      this._status = C.STATUS_ANSWERED;
-
-      // An error on dialog creation will fire 'failed' event.
-      if (!this._createDialog(request, 'UAS')) {
-        request.reply(500, 'Error creating dialog');
-        return;
-      }
-      clearTimeout(this._timers.userNoAnswerTimer);
-      extraHeaders.unshift("Contact: ".concat(this._contact));
-
-      // Determine incoming media from incoming SDP offer (if any).
-      var sdp = request.parseSDP();
-
-      // Make sure sdp.media is an array, not the case if there is only one media.
-      if (!Array.isArray(sdp.media)) {
-        sdp.media = [sdp.media];
-      }
-
-      // Go through all medias in SDP to find offered capabilities to answer with.
-      var _iterator2 = _createForOfIteratorHelper(sdp.media),
-        _step2;
-      try {
-        for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
-          var m = _step2.value;
-          if (m.type === 'audio') {
-            peerHasAudioLine = true;
-            if (!m.direction || m.direction === 'sendrecv') {
-              peerOffersFullAudio = true;
-            }
-          }
-          if (m.type === 'video') {
-            peerHasVideoLine = true;
-            if (!m.direction || m.direction === 'sendrecv') {
-              peerOffersFullVideo = true;
-            }
-          }
-        }
-
-        // Remove audio from mediaStream if suggested by mediaConstraints.
-      } catch (err) {
-        _iterator2.e(err);
-      } finally {
-        _iterator2.f();
-      }
-      if (mediaStream && mediaConstraints.audio === false) {
-        tracks = mediaStream.getAudioTracks();
-        var _iterator3 = _createForOfIteratorHelper(tracks),
-          _step3;
-        try {
-          for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
-            var track = _step3.value;
-            mediaStream.removeTrack(track);
-          }
-        } catch (err) {
-          _iterator3.e(err);
-        } finally {
-          _iterator3.f();
-        }
-      }
-
-      // Remove video from mediaStream if suggested by mediaConstraints.
-      if (mediaStream && mediaConstraints.video === false) {
-        tracks = mediaStream.getVideoTracks();
-        var _iterator4 = _createForOfIteratorHelper(tracks),
-          _step4;
-        try {
-          for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
-            var _track = _step4.value;
-            mediaStream.removeTrack(_track);
-          }
-        } catch (err) {
-          _iterator4.e(err);
-        } finally {
-          _iterator4.f();
-        }
-      }
-
-      // Set audio constraints based on incoming stream if not supplied.
-      if (!mediaStream && mediaConstraints.audio === undefined) {
-        mediaConstraints.audio = peerOffersFullAudio;
-      }
-
-      // Set video constraints based on incoming stream if not supplied.
-      if (!mediaStream && mediaConstraints.video === undefined) {
-        mediaConstraints.video = peerOffersFullVideo;
-      }
-
-      // Don't ask for audio if the incoming offer has no audio section.
-      if (!mediaStream && !peerHasAudioLine && !rtcOfferConstraints.offerToReceiveAudio) {
-        mediaConstraints.audio = false;
-      }
-
-      // Don't ask for video if the incoming offer has no video section.
-      if (!mediaStream && !peerHasVideoLine && !rtcOfferConstraints.offerToReceiveVideo) {
-        mediaConstraints.video = false;
-      }
-
-      // Create a new RTCPeerConnection instance.
-      // TODO: This may throw an error, should react.
-      this._createRTCConnection(pcConfig, rtcConstraints);
-
-      // 根据自定义流确定是否需要获取对应设备的流
-      mediaStream && mediaStream.getTracks().forEach(function (track) {
-        mediaConstraints[track.kind] = false;
-      });
-      Promise.resolve()
-      // Handle local MediaStream.
-      .then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
-        var mStream, ua;
-        return _regenerator().w(function (_context5) {
-          while (1) switch (_context5.n) {
-            case 0:
-              if (!(mediaConstraints.audio || mediaConstraints.video)) {
-                _context5.n = 6;
-                break;
-              }
-              _this4._localMediaStreamLocallyGenerated = true;
-
-              // 判断授权是否包含视频
-              if (Number(_this4._ua.sk[7]) < 1) {
-                delete mediaConstraints.video;
-              }
-
-              /**
-               * 音视频切换相关
-               * 判断是视频接听还是音频接听
-               * @author: lei
-               */
-              if (!mediaConstraints.video && mediaStream && mediaStream.getVideoTracks().length === 0) {
-                _this4._localToAudio = true;
-              }
-              _context5.n = 1;
-              return navigator.mediaDevices.getUserMedia(mediaConstraints).then(/*#__PURE__*/function () {
-                var _ref4 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(stream) {
-                  return _regenerator().w(function (_context4) {
-                    while (1) switch (_context4.n) {
-                      case 0:
-                        _context4.n = 1;
-                        return _this4._processMediaStream(stream);
-                      case 1:
-                        return _context4.a(2, _context4.v);
-                    }
-                  }, _callee4);
-                }));
-                return function (_x3) {
-                  return _ref4.apply(this, arguments);
-                };
-              }())["catch"](function (error) {
-                if (_this4._status === C.STATUS_TERMINATED) {
-                  throw new Error('terminated');
-                }
-                request.reply(480);
-                _this4._failed('local', null, CRTC_C.causes.USER_DENIED_MEDIA_ACCESS);
-                logger.warn("".concat(_this4._id, " emit \"getusermediafailed\" [error:%o]"), error);
-                logger.warn("".concat(_this4._id, " emit \"getusermediafailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
-                _this4.emit('getusermediafailed', error);
-                throw new Error('getUserMedia() failed');
-              });
-            case 1:
-              mStream = _context5.v;
-              if (!(mediaConstraints.video && mStream)) {
-                _context5.n = 3;
-                break;
-              }
-              _context5.n = 2;
-              return Utils.getEnvironmentId();
-            case 2:
-              _this4._environment = _context5.v;
-              logger.debug("".concat(_this4._id, " environment id: "), _this4._environment);
-            case 3:
-              navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
-              if (!(ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2')))) {
-                _context5.n = 4;
-                break;
-              }
-              return _context5.a(2, Utils.getStreamThroughCanvas(mStream));
-            case 4:
-              return _context5.a(2, mStream);
-            case 5:
-              _context5.n = 7;
-              break;
-            case 6:
-              _this4._customMediaStream = true;
-              return _context5.a(2, mediaStream);
-            case 7:
-              return _context5.a(2);
-          }
-        }, _callee5);
-      })))
-      // Attach MediaStream to RTCPeerconnection.
-      .then(function (stream) {
-        if (_this4._status === C.STATUS_TERMINATED) {
-          throw new Error('terminated');
-        }
-
-        // 如果有自定义流，使用自定义流对应音视频轨道
-        if (mediaStream) {
-          mediaStream.getTracks().forEach(function (track) {
-            stream.addTrack(track, stream);
-          });
-        }
-        _this4._localMediaStream = stream;
-        if (stream) {
-          var videoTrackStates = new Map();
-          stream.getTracks().forEach(function (track) {
-            var trackObj = "id:".concat(track.id, " enabled:").concat(track.enabled, " readyState:").concat(track.readyState, " muted:").concat(track.muted, " label:").concat(track.label);
-            logger.debug("".concat(_this4._id, " local ").concat(track.kind, " track state: ").concat(JSON.stringify(trackObj), " ***** settings: ").concat(JSON.stringify(track.getSettings()), " ***** constraints: ").concat(JSON.stringify(track.getConstraints()), " ***** capabilities: ").concat(JSON.stringify(track.getCapabilities())));
-            _this4._answerVideoTrackStatsTimer = setInterval(function () {
-              if (track.kind === 'video') {
-                if (videoTrackStates.has(track.id)) {
-                  var trackStat = videoTrackStates.get(track.id);
-                  if (track.enabled != trackStat.enabled) {
-                    trackStat.enabled = track.enabled;
-                    _this4.emit('videoTrackState', {
-                      track: track,
-                      properties: 'enabled',
-                      value: track.enabled
-                    });
-                    logger.debug("".concat(_this4._id, " ").concat(track.id, " videoTrackState enabled: ").concat(track.enabled));
-                  }
-                  if (track.readyState != trackStat.readyState) {
-                    trackStat.readyState = track.readyState;
-                    _this4.emit('videoTrackState', {
-                      track: track,
-                      properties: 'readyState',
-                      value: track.readyState
-                    });
-                    logger.debug("".concat(_this4._id, " ").concat(track.id, " videoTrackState readyState: ").concat(track.readyState));
-                  }
-                  if (track.muted != trackStat.muted || track.mute == true) {
-                    trackStat.muted = track.muted;
-                    _this4.emit('videoTrackState', {
-                      track: track,
-                      properties: 'muted',
-                      value: track.muted
-                    });
-                    logger.debug("".concat(_this4._id, " ").concat(track.id, " videoTrackState muted: ").concat(track.muted));
-                  }
-                  if (track.label != trackStat.label) {
-                    trackStat.label = track.label;
-                    _this4.emit('videoTrackState', {
-                      track: track,
-                      properties: 'label',
-                      value: track.label
-                    });
-                    logger.debug("".concat(_this4._id, " ").concat(track.id, " videoTrackState label: ").concat(track.label));
-                  }
-                } else {
-                  logger.debug("".concat(_this4._id, " ").concat(track.id, " enabled: ").concat(track.enabled, ", readyState: ").concat(track.readyState, ", muted: ").concat(track.muted, ", label: ").concat(track.label));
-                  videoTrackStates.set(track.id, {
-                    enabled: track.enabled,
-                    readyState: track.readyState,
-                    muted: track.muted,
-                    label: track.label
-                  });
-                }
-              }
-            }, 1000);
-          });
-
-          // 兼容低版本浏览器不支持addTrack的情况
-          if (RTCPeerConnection.prototype.addTrack) {
-            stream.getTracks().forEach(function (track) {
-              _this4._connection.addTrack(track, stream);
-            });
-          } else {
-            _this4._connection.addStream(stream);
-          }
-
-          /**
-           * 是否启用 DataChannel
-           **/
-          if (_this4._enableBFCP) {
-            var _Utils$generateAnEmpt = Utils.generateAnEmptyVideoTrack(),
-              videoTrack = _Utils$generateAnEmpt.videoTrack;
-            _this4._bfcpVideoTrack = videoTrack;
-            _this4._connection.addTrack(_this4._bfcpVideoTrack, _this4._localMediaStream);
-            _this4._connection.ondatachannel = function (event) {
-              _this4._initDataChannel(event);
-            };
-          }
-        }
-      })
-      // Set remote description.
-      .then(function () {
-        if (_this4._late_sdp) {
-          return;
-        }
-        var newSdp = _this4._sdpAddMid(request.body);
-        var e = {
-          originator: 'remote',
-          type: 'offer',
-          sdp: Utils.updateSdpByConstraints(newSdp, options.mediaConstraints)
-        };
-        logger.debug("".concat(_this4._id, " emit \"sdp\""));
-        _this4.emit('sdp', e);
-        var offer = new RTCSessionDescription({
-          type: 'offer',
-          sdp: e.sdp
-        });
-        _this4._connectionPromiseQueue = _this4._connectionPromiseQueue.then(function () {
-          return _this4._connection.setRemoteDescription(offer);
-        })["catch"](function (error) {
-          request.reply(488);
-          _this4._failed('system', null, CRTC_C.causes.WEBRTC_ERROR);
-          logger.warn("".concat(_this4._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]"), error);
-          logger.warn("".concat(_this4._id, " emit \"peerconnection:setremotedescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
-          _this4.emit('peerconnection:setremotedescriptionfailed', error);
-          throw new Error('peerconnection.setRemoteDescription() failed');
-        });
-        return _this4._connectionPromiseQueue;
-      })
-      // Create local description.
-      .then(function () {
-        if (_this4._status === C.STATUS_TERMINATED) {
-          throw new Error('terminated');
-        }
-
-        // TODO: Is this event already useful?
-        _this4._connecting(request);
-        if (!_this4._late_sdp) {
-          return _this4._createLocalDescription('answer', rtcAnswerConstraints)["catch"](function (error) {
-            request.reply(500);
-            throw new Error("_createLocalDescription() failed ".concat(error.message));
-          });
-        } else {
-          return _this4._createLocalDescription('offer', _this4._rtcOfferConstraints)["catch"](function (error) {
-            request.reply(500);
-            throw new Error("_createLocalDescription() failed ".concat(error.message));
-          });
-        }
-      })
-      // Send reply.
-      .then(function (desc) {
-        if (_this4._status === C.STATUS_TERMINATED) {
-          throw new Error('terminated');
-        }
-        if (!mediaConstraints.video && desc) {
-          // desc = desc.replace(/(m=video) \d+ (.*\r?\n([\s\S]*?\r?\n)*?a=)recvonly/, '$1 0 $2inactive');
-          desc = desc.replace(/(m=video) \d+ ([\s\S]*?a=)recvonly/g, '$1 0 $2inactive');
-          desc = Utils.updateSdpByConstraints(desc, options.mediaConstraints);
-        }
-        if (_this4._enableBFCP && _this4._floorctrl == 's-only') {
-          _this4._floorId = 2;
-          desc = desc.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this4._floorctrl, "\r\na=floorid:").concat(_this4._floorId, " mstrm:12\r\na=confid:123\r\na=userid:456\r\n"));
-        }
-        _this4._handleSessionTimersInIncomingRequest(request, extraHeaders);
-        request.reply(200, null, extraHeaders, desc, function () {
-          _this4._status = C.STATUS_WAITING_FOR_ACK;
-          _this4._setInvite2xxTimer(request, desc);
-          _this4._setACKTimer();
-          _this4._accepted('local');
-        }, function () {
-          _this4._failed('system', null, CRTC_C.causes.CONNECTION_ERROR);
-        });
-      })["catch"](function (error) {
-        if (_this4._status === C.STATUS_TERMINATED) {
-          return;
-        }
-        logger.warn(error);
-      });
-    }
-
-    /**
-     * 切换到视频模式
-     */
-  }, {
-    key: "upgradeToVideo",
-    value: function upgradeToVideo(options, done) {
-      var _this5 = this;
-      logger.debug("".concat(this._id, " upgradeToVideo()"), options, done);
-      if (this._ua.sk[7] < 2) {
-        return;
-      }
-      if (!options) {
-        options = {};
-      }
-      logger.debug("".concat(this._id, " options: "), JSON.stringify(options));
-      if (!done) {
-        done = function done() {};
-      }
-
-      // 优化处理切换到视频模式的视频约束条件
-      var videoConstraints = {
-        video: true
-      };
-
-      // 处理options.videoConstraints
-      if (options.videoConstraints) {
-        // 确保必要的对象存在
-        this._inviteMediaConstraints = this._inviteMediaConstraints || {};
-        this._inviteMediaConstraints.video = this._inviteMediaConstraints.video || {};
-
-        // 合并属性
-        Object.assign(this._inviteMediaConstraints.video, options.videoConstraints);
-        videoConstraints = this._inviteMediaConstraints.video;
-      }
-      // 如果options.videoConstraints不存在，但this._inviteMediaConstraints.video存在
-      else if (this._inviteMediaConstraints && this._inviteMediaConstraints.video) {
-        videoConstraints = this._inviteMediaConstraints.video;
-      }
-      var videoStream = options.videoStream || null;
-
-      // Check Session Status.
-      if (this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED) {
-        throw new Exceptions.InvalidStateError(this._status);
-      }
-      this._localToAudio = false;
-      this._localToVideo = true;
-      return Promise.resolve().then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7() {
-        var stream, oldVideoTrack, newVideoTrack, haveVideoTrackToSend, senders, i, ua, videoTracks, transceiver;
-        return _regenerator().w(function (_context7) {
-          while (1) switch (_context7.n) {
-            case 0:
-              if (!(_this5._localMediaStream.getVideoTracks().length > 0)) {
-                _context7.n = 1;
-                break;
-              }
-              _this5._connection.getTransceivers().forEach(function (t) {
-                // 双向视频
-                t.direction = 'sendrecv';
-
-                // 单向视频，仅发送
-                if (t.sender && t.sender.track && t.sender.track.kind === 'video' && options.sendOnly) {
-                  t.direction = 'sendonly';
-                }
-
-                // 单向视频，仅接收
-                if (t.receiver && t.receiver.track && t.receiver.track.kind === 'video' && options.recvOnly) {
-                  t.direction = 'recvonly';
-                }
-              });
-              if (!options.recvOnly) {
-                _context7.n = 1;
-                break;
-              }
-              return _context7.a(2);
-            case 1:
-              if (!options.recvOnly) {
-                _context7.n = 2;
-                break;
-              }
-              return _context7.a(2);
-            case 2:
-              if (!videoStream) {
-                _context7.n = 3;
-                break;
-              }
-              stream = videoStream;
-              _this5._customMediaStream = true;
-              _context7.n = 6;
-              break;
-            case 3:
-              _context7.n = 4;
-              return navigator.mediaDevices.getUserMedia({
-                video: videoConstraints
-              }).then(/*#__PURE__*/function () {
-                var _ref6 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6(mediastream) {
-                  return _regenerator().w(function (_context6) {
-                    while (1) switch (_context6.n) {
-                      case 0:
-                        _context6.n = 1;
-                        return _this5._processMediaStream(mediastream);
-                      case 1:
-                        return _context6.a(2, _context6.v);
-                    }
-                  }, _callee6);
-                }));
-                return function (_x4) {
-                  return _ref6.apply(this, arguments);
-                };
-              }())["catch"](function (error) {
-                throw error;
-              });
-            case 4:
-              stream = _context7.v;
-              if (!stream) {
-                _context7.n = 6;
-                break;
-              }
-              _context7.n = 5;
-              return Utils.getEnvironmentId();
-            case 5:
-              _this5._environment = _context7.v;
-              logger.debug("".concat(_this5._id, " environment id: "), _this5._environment);
-            case 6:
-              if (!stream) {
-                _context7.n = 12;
-                break;
-              }
-              if (!_this5._customMediaStream) {
-                _context7.n = 10;
-                break;
-              }
-              oldVideoTrack = _this5._localMediaStream.getVideoTracks()[0];
-              newVideoTrack = stream.getVideoTracks()[0];
-              if (!oldVideoTrack) {
-                _context7.n = 10;
-                break;
-              }
-              _this5._localMediaStream.removeTrack(oldVideoTrack);
-              _this5._localMediaStream.addTrack(newVideoTrack);
-              haveVideoTrackToSend = false;
-              senders = _this5._connection.getSenders();
-              i = 0;
-            case 7:
-              if (!(i < senders.length)) {
-                _context7.n = 9;
-                break;
-              }
-              if (!(senders[i].track.kind === 'video')) {
-                _context7.n = 8;
-                break;
-              }
-              senders[i].replaceTrack(newVideoTrack);
-              haveVideoTrackToSend = true;
-              return _context7.a(3, 9);
-            case 8:
-              i++;
-              _context7.n = 7;
-              break;
-            case 9:
-              if (!haveVideoTrackToSend) {
-                _context7.n = 10;
-                break;
-              }
-              return _context7.a(2, true);
-            case 10:
-              navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
-              if (ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2'))) {
-                stream = Utils.getStreamThroughCanvas(stream);
-              }
-              videoTracks = stream.getVideoTracks();
-              _this5._localMediaStream.addTrack(videoTracks[0]);
-
-              // 根据是否单向添加Transceiver
-              transceiver = _this5._connection.addTransceiver('video', {
-                direction: options.sendOnly ? 'sendonly' : 'sendrecv'
-              }); // 把 track 绑定到 sender
-              _context7.n = 11;
-              return transceiver.sender.replaceTrack(videoTracks[0]);
-            case 11:
-              return _context7.a(2, true);
-            case 12:
-              return _context7.a(2);
-          }
-        }, _callee7);
-      }))).then(function () {
-        _this5._iceReady = false;
-        var opts = {
-          rtcOfferConstraints: {
-            iceRestart: true
-          }
-        };
-
-        // 单向视频，仅接收
-        if (options.recvOnly) {
-          _this5._connection.addTransceiver('video', {
-            direction: 'recvonly'
-          });
-        }
-
-        // 使用update还是reinvite
-        if (options.useUpdate) {
-          opts['useUpdate'] = true;
-        }
-        _this5.renegotiate(opts, function () {
-          done();
-          if (options.sendOnly) {
-            // 单向视频，每分钟发送一次关键帧
-            Utils.sendKeyFrames(_this5._connection, 1);
-          }
-        });
-      });
-    }
-
-    /**
-     * 切换到音频模式
-     */
-  }, {
-    key: "downgradeToAudio",
-    value: function downgradeToAudio() {
-      var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-      var done = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {};
-      logger.debug("".concat(this._id, " downgradeToAudio()"));
-      this.demoteToAudio(options, done);
-    }
-  }, {
-    key: "demoteToAudio",
-    value: function demoteToAudio() {
-      var _this6 = this;
-      var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-      var done = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {};
-      logger.debug("".concat(this._id, " demoteToAudio()"));
-
-      // Check Session Status.
-      if (this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED) {
-        throw new Exceptions.InvalidStateError(this._status);
-      }
-      if (this._localToAudio === true) {
-        return false;
-      }
-      if (!this._isReadyToReOffer()) {
-        return false;
-      }
-      this._localToAudio = true;
-      this._localToVideo = false;
-      var eventHandlers = {
-        succeeded: function succeeded() {
-          if (done) {
-            done();
-          }
-        },
-        failed: function failed(resp) {
-          try {
-            logger.warn("".concat(_this6._id, " resp: "), JSON.stringify(resp));
-          } catch (error) {
-            logger.error("".concat(_this6._id, " resp: "), error.toString());
-          }
-          _this6.terminate({
-            cause: CRTC_C.causes.WEBRTC_ERROR,
-            status_code: 500,
-            reason_phrase: 'DowngradeToAudio Failed'
-          });
-        }
-      };
-      if (options.useUpdate) {
-        this._sendUpdate({
-          sdpOffer: true,
-          eventHandlers: eventHandlers,
-          extraHeaders: options.extraHeaders
-        });
-      } else {
-        this._sendReinvite({
-          eventHandlers: eventHandlers,
-          extraHeaders: options.extraHeaders
-        });
-      }
-      return true;
-    }
-
-    /**
-     * 切换设备，一般用于切换摄像头
-     */
-  }, {
-    key: "switchDevice",
-    value: (function () {
-      var _switchDevice = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee0(type, deviceId) {
-        var _this7 = this;
-        var cameras, constraints, _constraints;
-        return _regenerator().w(function (_context0) {
-          while (1) switch (_context0.n) {
-            case 0:
-              logger.debug("".concat(this._id, " switchDevice(), type:").concat(type, ", deviceId:").concat(deviceId));
-
-              // Check Session Status.
-              if (!(this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED)) {
-                _context0.n = 1;
-                break;
-              }
-              throw new Exceptions.InvalidStateError(this._status);
-            case 1:
-              if (!(type === 'camera')) {
-                _context0.n = 4;
-                break;
-              }
-              if (!(this._localCameras.length === 0)) {
-                _context0.n = 3;
-                break;
-              }
-              _context0.n = 2;
-              return Utils.getCameras();
-            case 2:
-              cameras = _context0.v;
-              cameras.forEach(function (cam) {
-                _this7._localCameras.push(cam.deviceId);
-              });
-            case 3:
-              if (!this._selectedLocalCameras) {
-                this._selectedLocalCameras = 'user';
-              }
-              constraints = {
-                audio: false,
-                video: true
-              };
-              return _context0.a(2, Promise.resolve().then(function () {
-                var videoConstraints;
-
-                // 如果传参包含deviceId则使用deviceId
-                if (deviceId) {
-                  if (deviceId !== 'user' && deviceId !== 'environment') {
-                    videoConstraints = {
-                      deviceId: {
-                        exact: deviceId
-                      }
-                    };
-
-                    // 修复切换摄像头deviceId和faceingMode混用的问题
-                    try {
-                      delete _this7._inviteMediaConstraints.video.facingMode;
-                    } catch (e) {
-                      logger.error(_this7._id + e.message);
-                    }
-                  }
-                  // 使用facingMode参数
-                  else if (navigator.mediaDevices.getSupportedConstraints()['facingMode']) {
-                    // 两个摄像头使用facingMode参数切换
-                    videoConstraints = {
-                      facingMode: deviceId
-                    };
-
-                    // 兼容华为安卓切换后摄
-                    if (_this7._environment && deviceId === 'environment') {
-                      videoConstraints = {
-                        deviceId: {
-                          exact: _this7._environment
-                        }
-                      };
-                      logger.debug("".concat(_this7._id, " switchDevice use: environment, "), _this7._environment);
-                    }
-
-                    // 修复切换摄像头deviceId和faceingMode混用的问题
-                    try {
-                      delete _this7._inviteMediaConstraints.video.deviceId;
-                    } catch (e) {
-                      logger.error(_this7._id + e.message);
-                    }
-                  }
-                } else if (_this7._localCameras.length > 2) {
-                  // 多于两个摄像头，则轮询摄像头列表
-                  var did;
-                  if (_this7._selectedLocalCameras === 'user') {
-                    did = _this7._localCameras[1];
-                    _this7._selectedLocalCameras = _this7._localCameras[1];
-                  } else if (_this7._localCameras.indexOf(_this7._selectedLocalCameras) == _this7._localCameras.length - 1) {
-                    did = _this7._localCameras[0];
-                    _this7._selectedLocalCameras = _this7._localCameras[0];
-                  } else {
-                    did = _this7._localCameras[_this7._localCameras.indexOf(_this7._selectedLocalCameras) + 1];
-                    _this7._selectedLocalCameras = _this7._localCameras[_this7._localCameras.indexOf(_this7._selectedLocalCameras) + 1];
-                  }
-                  videoConstraints = {
-                    deviceId: did
-                  };
-                } else {
-                  // 如果没有deviceId且少于两个摄像头则不处理切换摄像头操作
-                  logger.warn("".concat(_this7._id, " not enough cameras."));
-                  return;
-                }
-                var next = false;
-                _this7._connection.getSenders().find(function (s) {
-                  logger.debug("".concat(_this7._id, " kind: ").concat(s.track && s.track.kind));
-                  if (s.track && s.track.kind == 'video') {
-                    if (_this7._enableBFCP) {
-                      // 启用了BFCP，区分一下BFCP控制的视频轨道
-                      // eslint-disable-next-line max-len
-                      s.track != _this7._bfcpVideoTrack && s.track != (_this7._localShareStream && _this7._localShareStream.getVideoTracks()[0]) && s.track.stop();
-                    } else {
-                      next = true;
-                      s.track.stop();
-                    }
-                  }
-                });
-                if (!next) {
-                  return Promise.reject('switchDevice Failed. There is no video track for the current session.');
-                }
-                _this7._localMediaStreamLocallyGenerated = true;
-
-                // 确保必要的对象存在
-                _this7._inviteMediaConstraints = _this7._inviteMediaConstraints || {};
-                _this7._inviteMediaConstraints.video = _this7._inviteMediaConstraints.video || {};
-                constraints.video = videoConstraints;
-                constraints.video = Object.assign(_this7._inviteMediaConstraints.video, constraints.video);
-                return constraints;
-              }).then(/*#__PURE__*/function () {
-                var _ref7 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee9(videoConstraints) {
-                  var sender, stream, track, ua, videoTrack;
-                  return _regenerator().w(function (_context9) {
-                    while (1) switch (_context9.n) {
-                      case 0:
-                        logger.debug("".concat(_this7._id, " videoConstraints"), JSON.stringify(videoConstraints));
-                        sender = _this7._connection.getSenders().find(function (s) {
-                          if (_this7._enableBFCP) {
-                            // 启用了BFCP，区分一下BFCP控制的视频轨道
-                            return s.track.kind == 'video' && s.track != _this7._bfcpVideoTrack && s.track != (_this7._localShareStream && _this7._localShareStream.getVideoTracks()[0]);
-                          } else {
-                            return s.track.kind == 'video';
-                          }
-                        }); // 先释放原来的设备再获取新的
-                        sender && sender.track && sender.track.stop();
-
-                        // iOS手机延迟重新获取
-                        navigator.userAgent.indexOf('iPhone') != -1 && Utils.sleep(500);
-                        _context9.n = 1;
-                        return navigator.mediaDevices.getUserMedia(videoConstraints).then(/*#__PURE__*/function () {
-                          var _ref8 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee8(mediastream) {
-                            return _regenerator().w(function (_context8) {
-                              while (1) switch (_context8.n) {
-                                case 0:
-                                  _context8.n = 1;
-                                  return _this7._processMediaStream(mediastream);
-                                case 1:
-                                  return _context8.a(2, _context8.v);
-                              }
-                            }, _callee8);
-                          }));
-                          return function (_x8) {
-                            return _ref8.apply(this, arguments);
-                          };
-                        }())["catch"](function (error) {
-                          logger.error("".concat(_this7._id, " emit \"getusermediafailed\" [error:%o]"), error);
-                          logger.error("".concat(_this7._id, " emit \"getusermediafailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
-                          _this7.emit('getusermediafailed', error);
-                          throw new Error('getUserMedia() failed');
-                        });
-                      case 1:
-                        stream = _context9.v;
-                        try {
-                          track = stream.getVideoTracks()[0];
-                          logger.debug("".concat(_this7._id, " stream: "), track.kind, track.label, track.readyState);
-                        } catch (error) {
-                          logger.error("".concat(_this7._id, " stream error: "), error.message);
-                        }
-
-                        // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
-
-                        navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
-                        if (ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2'))) {
-                          stream = Utils.getStreamThroughCanvas(stream);
-                        }
-                        try {
-                          _this7._localMediaStream.removeTrack(_this7._localMediaStream.getVideoTracks()[0]);
-                        } catch (error) {
-                          logger.error(_this7._id + error.message);
-                        }
-                        videoTrack = stream.getVideoTracks()[0];
-                        _this7._localMediaStream.addTrack(videoTrack);
-                        sender.replaceTrack(videoTrack);
-                        _this7.emit('cameraChanged', {
-                          videoStream: stream
-                        });
-                        return _context9.a(2, stream);
-                    }
-                  }, _callee9);
-                }));
-                return function (_x7) {
-                  return _ref7.apply(this, arguments);
-                };
-              }()));
-            case 4:
-              if (!(type === 'audio' && deviceId)) {
-                _context0.n = 5;
-                break;
-              }
-              _constraints = {
-                audio: true,
-                video: false
-              };
-              return _context0.a(2, Promise.resolve().then(function () {
-                var next = false;
-                var audioConstraints = {
-                  deviceId: {
-                    exact: deviceId
-                  }
-                };
-                _this7._connection.getSenders().find(function (s) {
-                  logger.debug("".concat(_this7._id, " kind: ").concat(s.track.kind));
-                  if (s.track.kind == 'audio') {
-                    next = true;
-                    s.track.stop();
-                  }
-                });
-                if (!next) {
-                  return Promise.reject('switchDevice Failed. There is no audio track for the current session.');
-                }
-                _this7._localMediaStreamLocallyGenerated = true;
-                _constraints.audio = audioConstraints;
-                return navigator.mediaDevices.getUserMedia(_constraints)["catch"](function (error) {
-                  logger.error("".concat(_this7._id, " emit \"getusermediafailed\" [error:%o]"), error);
-                  logger.error("".concat(_this7._id, " emit \"getusermediafailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
-                  _this7.emit('getusermediafailed', error);
-                  throw new Error('getUserMedia() failed');
-                });
-              }).then(function (stream) {
-                try {
-                  _this7._localMediaStream.removeTrack(_this7._localMediaStream.getAudioTracks()[0]);
-                } catch (error) {
-                  logger.error(_this7._id + error.message);
-                }
-                var audioTrack = stream.getAudioTracks()[0];
-                _this7._localMediaStream.addTrack(audioTrack);
-                var sender = _this7._connection.getSenders().find(function (s) {
-                  return s.track.kind == 'audio';
-                });
-                sender.replaceTrack(audioTrack);
-                _this7.emit('audiointputChanged', {
-                  audioStream: stream
-                });
-                return stream;
-              }));
-            case 5:
-              logger.error("".concat(this._id, " Invalid parameters"));
-
-              // 参数错误
-              return _context0.a(2, Promise.reject('Invalid parameters'));
-            case 6:
-              return _context0.a(2);
-          }
-        }, _callee0, this);
-      }));
-      function switchDevice(_x5, _x6) {
-        return _switchDevice.apply(this, arguments);
-      }
-      return switchDevice;
-    }()
-    /**
-     * 分享媒体
-     */
-    )
-  }, {
-    key: "share",
-    value: (function () {
-      var _share = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee1(type, id, assembly, dual, skip) {
-        var _this8 = this;
-        var timer, floorResponse, element, status, renderHtml, canvas, ctx, _canvas, _ctx, _t2;
-        return _regenerator().w(function (_context1) {
-          while (1) switch (_context1.p = _context1.n) {
-            case 0:
-              renderHtml = function _renderHtml(canvas, ctx) {
-                assembly(document.querySelector(id), {
-                  allowTaint: true,
-                  logging: false
-                }).then(function (cvs) {
-                  canvas.width = cvs.width;
-                  canvas.height = cvs.height;
-                  ctx.drawImage(cvs, 0, 0, cvs.width, cvs.height);
-                }).then(function () {
-                  renderHtml(canvas, ctx);
-                });
-              };
-              logger.debug("".concat(this._id, " share()"));
-
-              // 双流必须开启BFCP支持
-              if (!(dual && !this._enableBFCP || !dual && this._enableBFCP)) {
-                _context1.n = 1;
-                break;
-              }
-              return _context1.a(2, Promise.reject(new Exceptions.NotSupportedError("Dual and BFCP settings must be consistent. Dual: ".concat(dual, ", BFCP: ").concat(this._enableBFCP))));
-            case 1:
-              if (!(this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED)) {
-                _context1.n = 2;
-                break;
-              }
-              return _context1.a(2, Promise.reject(new Exceptions.InvalidStateError(this._status)));
-            case 2:
-              element = document.querySelector(id); // 根据BFCP协议响应判断如何执行双流
-              _context1.p = 3;
-              if (!(this._enableBFCP && !skip)) {
-                _context1.n = 6;
-                break;
-              }
-              _context1.n = 4;
-              return this._sendFloorRequest();
-            case 4:
-              floorResponse = _context1.v;
-              this._handleFloorRequestStatusMessage(floorResponse);
-              // Log the response for debugging purposes
-              logger.debug("".concat(this._id, " Floor request response:"), floorResponse);
-              status = floorResponse.getAttribute(AttributeName.FloorRequestInformation).content[1].content[1].content[0];
-              if (!(status != RequestStatusValue.Granted)) {
-                _context1.n = 5;
-                break;
-              }
-              return _context1.a(2, Promise.reject("Floor request not accepted. Status: ".concat(status)));
-            case 5:
-              // 保存一下状态
-              this._bfcpRequestStatus = status;
-
-              // 主动踢掉远端的共享
-              this._remoteShared = false;
-              this.emit('remoteUnShared');
-              this._floorRequestId = floorResponse.getAttribute(AttributeName.FloorRequestInformation).content[0];
-            case 6:
-              _context1.n = 8;
-              break;
-            case 7:
-              _context1.p = 7;
-              _t2 = _context1.v;
-              logger.error("".concat(this._id, " Error while processing floor request:"), _t2.message || _t2);
-              return _context1.a(2, Promise.reject("Floor request failed: ".concat(_t2.message || 'Unknown error')));
-            case 8:
-              if (!(type === 'video')) {
-                _context1.n = 9;
-                break;
-              }
-              logger.debug("".concat(this._id, " share video"));
-              this._localShareStream = element.captureStream(0);
-              this._localShareStreamLocallyGenerated = true;
-              this._streamInactiveHandle(dual);
-              this._localShareStream.getVideoTracks().forEach(function (track) {
-                if (dual) {
-                  var sender = _this8._connection.getSenders().find(function (s) {
-                    return s.track == _this8._bfcpVideoTrack;
-                  });
-                  sender.replaceTrack(track);
-                } else {
-                  var _sender = _this8._connection.getSenders().find(function (s) {
-                    return s.track.kind == 'video' && s.track.readyState !== 'ended';
-                  });
-                  _sender.replaceTrack(track);
-                }
-              });
-              _context1.n = 13;
-              break;
-            case 9:
-              if (!(type === 'pic')) {
-                _context1.n = 10;
-                break;
-              }
-              logger.debug("".concat(this._id, " share pic"));
-              if (timer) {
-                clearInterval(timer);
-              }
-              canvas = document.createElement('canvas');
-              canvas.width = element.naturalWidth ? element.naturalWidth : element.width;
-              canvas.height = element.naturalHeight ? element.naturalHeight : element.height;
-              ctx = canvas.getContext('2d');
-              timer = setInterval(function () {
-                // eslint-disable-next-line max-len
-                ctx.drawImage(element, 0, 0, element.naturalWidth ? element.naturalWidth : element.width, element.naturalHeight ? element.naturalHeight : element.height);
-              }, 100);
-              this._localShareStream = canvas.captureStream(15);
-              this._localShareStreamLocallyGenerated = true;
-              this._streamInactiveHandle(dual);
-              this._localShareStream.getVideoTracks().forEach(function (track) {
-                if (dual) {
-                  var sender = _this8._connection.getSenders().find(function (s) {
-                    return s.track == _this8._bfcpVideoTrack;
-                  });
-                  sender.replaceTrack(track);
-                } else {
-                  var _sender2 = _this8._connection.getSenders().find(function (s) {
-                    return s.track.kind == 'video' && s.track.readyState !== 'ended';
-                  });
-                  _sender2.replaceTrack(track);
-                }
-              });
-              _context1.n = 13;
-              break;
-            case 10:
-              if (!(type === 'html')) {
-                _context1.n = 12;
-                break;
-              }
-              logger.debug("".concat(this._id, " share html"));
-              if (assembly) {
-                _context1.n = 11;
-                break;
-              }
-              return _context1.a(2);
-            case 11:
-              _canvas = document.createElement('canvas');
-              _canvas.width = 1;
-              _canvas.height = 1;
-              _ctx = _canvas.getContext('2d');
-              renderHtml(_canvas, _ctx);
-              this._localShareStream = _canvas.captureStream(15);
-              this._localShareStreamLocallyGenerated = true;
-              this._streamInactiveHandle(dual);
-              this._localShareStream.getVideoTracks().forEach(function (track) {
-                if (dual) {
-                  var sender = _this8._connection.getSenders().find(function (s) {
-                    return s.track == _this8._bfcpVideoTrack;
-                  });
-                  sender.replaceTrack(track);
-                  // this._bfct = track;
-                } else {
-                  var _sender3 = _this8._connection.getSenders().find(function (s) {
-                    return s.track.kind == 'video' && s.track.readyState !== 'ended';
-                  });
-                  _sender3.replaceTrack(track);
-                }
-              });
-              _context1.n = 13;
-              break;
-            case 12:
-              if (!(type === 'screen')) {
-                _context1.n = 13;
-                break;
-              }
-              logger.debug("".concat(this._id, " share screen"));
-
-              // 判断浏览器是否兼容获取屏幕分享
-              if (!(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices)) {
-                logger.warn("".concat(this._id, " getDisplayMedia is not supported"));
-                this.emit('getdisplaymediafailed');
-              }
-
-              // 分享屏幕 默认帧率 15
-              return _context1.a(2, navigator.mediaDevices.getDisplayMedia({
-                video: {
-                  width: {
-                    max: 1920
-                  },
-                  height: {
-                    max: 1080
-                  },
-                  frameRate: 15
-                },
-                audio: true
-              }).then(function (stream) {
-                _this8._localShareRTPSender = null;
-                _this8._localShareStream = stream;
-                _this8._streamInactiveHandle(dual);
-                if (dual) {
-                  if (_this8._bfcpRequestStatus === RequestStatusValue.Granted) {
-                    // BFCP 双流方式分享屏幕
-                    stream.getTracks().forEach(function (track) {
-                      if (track.kind === 'audio') {
-                        _this8._addShareAudioToBfcpAudioTrack(stream);
-                      } else {
-                        var sender = _this8._connection.getSenders().find(function (s) {
-                          return s.track == _this8._bfcpVideoTrack;
-                        });
-                        sender.replaceTrack(track);
-                      }
-                    });
-                    _this8._localShareStreamLocallyGenerated = true;
-                    return stream;
-                  } else {
-                    // 如果共享权限已经被撤销则自动取消共享
-                    _this8.unShare();
-                    return Promise.reject(new Error('Yours sharing permission has been revoked.'));
-                  }
-                } else {
-                  // 替换流方式分享屏幕
-                  stream.getTracks().forEach(function (track) {
-                    var sender = _this8._connection.getSenders().find(function (s) {
-                      return s.track.kind == 'video' && s.track.readyState !== 'ended';
-                    });
-                    sender.replaceTrack(track);
-                  });
-                  _this8._localShareStreamLocallyGenerated = true;
-                  return stream;
-                }
-              })["catch"](function (error) {
-                if (error.message || error.message.indexOf('user gesture handler') !== -1) {
-                  setTimeout(function () {
-                    // BFCP 释放资源
-                    _this8._localShareStreamLocallyGenerated || _this8._enableBFCP && _this8._sendFloorRelease();
-                  }, 10000);
-                } else {
-                  // BFCP 释放资源
-                  _this8._enableBFCP && _this8._sendFloorRelease();
-                }
-                logger.warn("".concat(_this8._id, " emit \"getdisplaymediafailed\" [error:%o]"), error);
-                logger.warn("".concat(_this8._id, " emit \"getdisplaymediafailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
-                _this8.emit('getdisplaymediafailed', error);
-                throw error;
-              }));
-            case 13:
-              return _context1.a(2);
-          }
-        }, _callee1, this, [[3, 7]]);
-      }));
-      function share(_x9, _x0, _x1, _x10, _x11) {
-        return _share.apply(this, arguments);
-      }
-      return share;
-    }()
-    /**
-     * 停止分享媒体
-     */
-    )
-  }, {
-    key: "unShare",
-    value: function unShare() {
-      logger.debug("".concat(this._id, " unShare()"));
-
-      // Check Session Status.
-      if (this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED) {
-        throw new Exceptions.InvalidStateError(this._status);
-      }
-      Utils.closeMediaStream(this._localShareStream);
-    }
-
-    /**
-     * Terminate the call.
-     */
-  }, {
-    key: "terminate",
-    value: function terminate() {
-      var _this9 = this;
-      var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-      logger.debug("".concat(this._id, " terminate()"));
-      var cause = options.cause || CRTC_C.causes.BYE;
-      var extraHeaders = Utils.cloneArray(options.extraHeaders);
-      var body = options.body;
-      var cancel_reason;
-      var status_code = options.status_code;
-      var reason_phrase = options.reason_phrase;
-
-      // Check Session Status.
-      if (this._status === C.STATUS_TERMINATED) {
-        throw new Exceptions.InvalidStateError(this._status);
-      }
-      switch (this._status) {
-        // - UAC -
-        case C.STATUS_NULL:
-        case C.STATUS_INVITE_SENT:
-        case C.STATUS_1XX_RECEIVED:
-          logger.debug("".concat(this._id, " canceling session"));
-          if (status_code && (status_code < 200 || status_code >= 700)) {
-            throw new TypeError("Invalid status_code: ".concat(status_code));
-          } else if (status_code) {
-            reason_phrase = reason_phrase || CRTC_C.REASON_PHRASE[status_code] || '';
-            cancel_reason = "SIP ;cause=".concat(status_code, " ;text=\"").concat(reason_phrase, "\"");
-          }
-
-          // Check Session Status.
-          if (this._status === C.STATUS_NULL || this._status === C.STATUS_INVITE_SENT) {
-            this._is_canceled = true;
-            this._cancel_reason = cancel_reason;
-          } else if (this._status === C.STATUS_1XX_RECEIVED) {
-            this._request.cancel(cancel_reason);
-          }
-          this._status = C.STATUS_CANCELED;
-          this._failed('local', null, CRTC_C.causes.CANCELED);
-          break;
-
-        // - UAS -
-        case C.STATUS_WAITING_FOR_ANSWER:
-        case C.STATUS_ANSWERED:
-          logger.debug("".concat(this._id, " rejecting session"));
-          status_code = status_code || 480;
-          if (status_code < 300 || status_code >= 700) {
-            throw new TypeError("Invalid status_code: ".concat(status_code));
-          }
-          this._request.reply(status_code, reason_phrase, extraHeaders, body);
-          this._failed('local', null, CRTC_C.causes.REJECTED);
-          break;
-        case C.STATUS_WAITING_FOR_ACK:
-        case C.STATUS_CONFIRMED:
-          logger.debug("".concat(this._id, " terminating session"));
-          reason_phrase = options.reason_phrase || CRTC_C.REASON_PHRASE[status_code] || '';
-          if (status_code && (status_code < 200 || status_code >= 700)) {
-            throw new TypeError("Invalid status_code: ".concat(status_code));
-          } else if (status_code) {
-            extraHeaders.push("Reason: SIP ;cause=".concat(status_code, "; text=\"").concat(reason_phrase, "\""));
-          }
-
-          /* RFC 3261 section 15 (Terminating a session):
-            *
-            * "...the callee's UA MUST NOT send a BYE on a confirmed dialog
-            * until it has received an ACK for its 2xx response or until the server
-            * transaction times out."
-            */
-          if (this._status === C.STATUS_WAITING_FOR_ACK && this._direction === 'incoming' && this._request.server_transaction.state !== Transactions.C.STATUS_TERMINATED) {
-            // Save the dialog for later restoration.
-            var dialog = this._dialog;
-
-            // Send the BYE as soon as the ACK is received...
-            this.receiveRequest = function (_ref9) {
-              var method = _ref9.method;
-              if (method === CRTC_C.ACK) {
-                _this9.sendRequest(CRTC_C.BYE, {
-                  extraHeaders: extraHeaders,
-                  body: body
-                });
-                dialog.terminate();
-              }
-            };
-
-            // .., or when the INVITE transaction times out
-            this._request.server_transaction.on('stateChanged', function () {
-              if (_this9._request.server_transaction.state === Transactions.C.STATUS_TERMINATED) {
-                _this9.sendRequest(CRTC_C.BYE, {
-                  extraHeaders: extraHeaders,
-                  body: body
-                });
-                dialog.terminate();
-              }
-            });
-            this._ended('local', null, cause);
-
-            // Restore the dialog into 'this' in order to be able to send the in-dialog BYE :-).
-            this._dialog = dialog;
-
-            // Restore the dialog into 'ua' so the ACK can reach 'this' session.
-            this._ua.newDialog(dialog);
-          } else {
-            this.sendRequest(CRTC_C.BYE, {
-              extraHeaders: extraHeaders,
-              body: body
-            });
-            this._ended('local', null, cause);
-          }
-      }
-    }
-  }, {
-    key: "sendDTMF",
-    value: function sendDTMF(tones) {
-      var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-      logger.debug("".concat(this._id, " sendDTMF() | tones: %s"), tones);
-      var position = 0;
-      var duration = options.duration || null;
-      var interToneGap = options.interToneGap || null;
-      var transportType = options.transportType || CRTC_C.DTMF_TRANSPORT.INFO;
-      if (tones === undefined) {
-        throw new TypeError('Not enough arguments');
-      }
-
-      // Check Session Status.
-      if (this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED) {
-        throw new Exceptions.InvalidStateError(this._status);
-      }
-
-      // Check Transport type.
-      if (transportType !== CRTC_C.DTMF_TRANSPORT.INFO && transportType !== CRTC_C.DTMF_TRANSPORT.RFC2833) {
-        throw new TypeError("invalid transportType: ".concat(transportType));
-      }
-
-      // Convert to string.
-      if (typeof tones === 'number') {
-        tones = tones.toString();
-      }
-
-      // Check tones.
-      if (!tones || typeof tones !== 'string' || !tones.match(/^[0-9A-DR#*,]+$/i)) {
-        throw new TypeError("Invalid tones: ".concat(tones));
-      }
-
-      // Check duration.
-      if (duration && !Utils.isDecimal(duration)) {
-        throw new TypeError("Invalid tone duration: ".concat(duration));
-      } else if (!duration) {
-        duration = RTCSession_DTMF.C.DEFAULT_DURATION;
-      } else if (duration < RTCSession_DTMF.C.MIN_DURATION) {
-        logger.debug("".concat(this._id, " \"duration\" value is lower than the minimum allowed, setting it to ").concat(RTCSession_DTMF.C.MIN_DURATION, " milliseconds"));
-        duration = RTCSession_DTMF.C.MIN_DURATION;
-      } else if (duration > RTCSession_DTMF.C.MAX_DURATION) {
-        logger.debug("".concat(this._id, " \"duration\" value is greater than the maximum allowed, setting it to ").concat(RTCSession_DTMF.C.MAX_DURATION, " milliseconds"));
-        duration = RTCSession_DTMF.C.MAX_DURATION;
-      } else {
-        duration = Math.abs(duration);
-      }
-      options.duration = duration;
-
-      // Check interToneGap.
-      if (interToneGap && !Utils.isDecimal(interToneGap)) {
-        throw new TypeError("Invalid interToneGap: ".concat(interToneGap));
-      } else if (!interToneGap) {
-        interToneGap = RTCSession_DTMF.C.DEFAULT_INTER_TONE_GAP;
-      } else if (interToneGap < RTCSession_DTMF.C.MIN_INTER_TONE_GAP) {
-        logger.debug("".concat(this._id, " \"interToneGap\" value is lower than the minimum allowed, setting it to ").concat(RTCSession_DTMF.C.MIN_INTER_TONE_GAP, " milliseconds"));
-        interToneGap = RTCSession_DTMF.C.MIN_INTER_TONE_GAP;
-      } else {
-        interToneGap = Math.abs(interToneGap);
-      }
-
-      // RFC2833. Let RTCDTMFSender enqueue the DTMFs.
-      if (transportType === CRTC_C.DTMF_TRANSPORT.RFC2833) {
-        // Send DTMF in current audio RTP stream.
-        var sender = this._getDTMFRTPSender();
-        if (sender) {
-          // Add remaining buffered tones.
-          tones = sender.toneBuffer + tones;
-          // Insert tones.
-          sender.insertDTMF(tones, duration, interToneGap);
-        }
-        return;
-      }
-      if (this._tones) {
-        // Tones are already queued, just add to the queue.
-        this._tones += tones;
-        return;
-      }
-      this._tones = tones;
-
-      // Send the first tone.
-      _sendDTMF.call(this);
-      function _sendDTMF() {
-        var _this0 = this;
-        var timeout;
-        if (this._status === C.STATUS_TERMINATED || !this._tones || position >= this._tones.length) {
-          // Stop sending DTMF.
-          this._tones = null;
-          return;
-        }
-        var tone = this._tones[position];
-        position += 1;
-        if (tone === ',') {
-          timeout = 2000;
-        } else {
-          // Send DTMF via SIP INFO messages.
-          var dtmf = new RTCSession_DTMF(this);
-          options.eventHandlers = {
-            onFailed: function onFailed() {
-              _this0._tones = null;
-            }
-          };
-          dtmf.send(tone, options);
-          timeout = duration + interToneGap;
-        }
-
-        // Set timeout for the next tone.
-        setTimeout(_sendDTMF.bind(this), timeout);
-      }
-    }
-  }, {
-    key: "sendInfo",
-    value: function sendInfo(contentType, body) {
-      var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
-      logger.debug("".concat(this._id, " sendInfo()"));
-
-      // Check Session Status.
-      if (this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED) {
-        throw new Exceptions.InvalidStateError(this._status);
-      }
-      var info = new RTCSession_Info(this);
-      info.send(contentType, body, options);
-    }
-
-    /**
-     * Mute
-     */
-  }, {
-    key: "mute",
-    value: function mute() {
-      var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {
-        audio: true,
-        video: false,
-        video_only: false
-      };
-      logger.debug("".concat(this._id, " mute()"));
-      var audioMuted = false,
-        videoMuted = false;
-      if (options.audio) {
-        audioMuted = true;
-        this._audioMuted = true;
-        this._toggleMuteAudio(true);
-      }
-      if (options.video) {
-        // 如果是单视频通话关闭视频
-        options.video_only ? this._videoOnlyMute = true : this._videoOnlyMute = false;
-        videoMuted = true;
-        this._videoMuted = true;
-        this._toggleMuteVideo(true);
-      }
-      if (audioMuted === true || videoMuted === true) {
-        this._onmute({
-          audio: audioMuted,
-          video: videoMuted
-        });
-      }
-    }
-
-    /**
-     * Unmute
-     */
-  }, {
-    key: "unmute",
-    value: function unmute() {
-      var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {
-        audio: true,
-        video: true
-      };
-      logger.debug("".concat(this._id, " unmute()"));
-      var audioUnMuted = false,
-        videoUnMuted = false;
-      if (options.audio) {
-        audioUnMuted = true;
-        this._audioMuted = false;
-        if (this._localHold === false) {
-          this._toggleMuteAudio(false);
-        }
-      }
-      if (options.video) {
-        videoUnMuted = true;
-        this._videoMuted = false;
-        if (this._localHold === false) {
-          this._toggleMuteVideo(false);
-        }
-      }
-      if (audioUnMuted === true || videoUnMuted === true) {
-        this._onunmute({
-          audio: audioUnMuted,
-          video: videoUnMuted
-        });
-      }
-    }
-
-    /**
-     * 设置视频内容类型
-     *
-     * hint:
-     *  - motion  -> 动态视频优先（保帧率）
-     *  - detail  -> 细节优先（保分辨率）
-     *  - text    -> 文本共享优化
-     *  - ''      -> 恢复默认策略
-     *
-     * shared:
-     *  - true  屏幕共享
-     *  - false 摄像头
-     */
-  }, {
-    key: "setVideoContentHint",
-    value: (function () {
-      var _setVideoContentHint = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee10() {
-        var _this1 = this;
-        var hint,
-          shared,
-          validHints,
-          stream,
-          tracks,
-          _loop,
-          _iterator5,
-          _step5,
-          track,
-          _args11 = arguments,
-          _t3;
-        return _regenerator().w(function (_context11) {
-          while (1) switch (_context11.p = _context11.n) {
-            case 0:
-              hint = _args11.length > 0 && _args11[0] !== undefined ? _args11[0] : '';
-              shared = _args11.length > 1 && _args11[1] !== undefined ? _args11[1] : false;
-              logger.debug("".concat(this._id, " setVideoContentHint()"), hint, shared);
-              validHints = ['detail', 'text', 'motion', ''];
-              if (validHints.includes(hint)) {
-                _context11.n = 1;
-                break;
-              }
-              logger.warn("invalid contentHint: ".concat(hint));
-              return _context11.a(2, false);
-            case 1:
-              if (!(this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED)) {
-                _context11.n = 2;
-                break;
-              }
-              logger.warn('invalid session status');
-              return _context11.a(2, false);
-            case 2:
-              if (this._isReadyToReOffer()) {
-                _context11.n = 3;
-                break;
-              }
-              logger.warn('peerconnection not ready');
-              return _context11.a(2, false);
-            case 3:
-              stream = shared ? this._localShareStream : this._localMediaStream;
-              if (stream) {
-                _context11.n = 4;
-                break;
-              }
-              logger.warn('stream not found');
-              return _context11.a(2, false);
-            case 4:
-              tracks = stream.getVideoTracks();
-              if (tracks.length) {
-                _context11.n = 5;
-                break;
-              }
-              logger.warn('video track not found');
-              return _context11.a(2, false);
-            case 5:
-              _loop = /*#__PURE__*/_regenerator().m(function _loop(track) {
-                var sender;
-                return _regenerator().w(function (_context10) {
-                  while (1) switch (_context10.n) {
-                    case 0:
-                      // 设置 contentHint
-                      if ('contentHint' in track) {
-                        try {
-                          track.contentHint = hint;
-                          logger.debug("track.contentHint = ".concat(hint));
-                        } catch (err) {
-                          logger.warn("set contentHint failed: ".concat(err.message));
-                        }
-                      }
-
-                      // 找到对应 sender
-                      sender = _this1.connection.getSenders().find(function (s) {
-                        return s.track === track;
-                      });
-                      if (sender) {
-                        _context10.n = 1;
-                        break;
-                      }
-                      logger.warn('RTCRtpSender not found');
-                      return _context10.a(2, 1);
-                    case 1:
-                      _context10.n = 2;
-                      return _this1._setSenderDegradationPreference(sender, hint, shared);
-                    case 2:
-                      return _context10.a(2);
-                  }
-                }, _loop);
-              });
-              _iterator5 = _createForOfIteratorHelper(tracks);
-              _context11.p = 6;
-              _iterator5.s();
-            case 7:
-              if ((_step5 = _iterator5.n()).done) {
-                _context11.n = 10;
-                break;
-              }
-              track = _step5.value;
-              return _context11.d(_regeneratorValues(_loop(track)), 8);
-            case 8:
-              if (!_context11.v) {
-                _context11.n = 9;
-                break;
-              }
-              return _context11.a(3, 9);
-            case 9:
-              _context11.n = 7;
-              break;
-            case 10:
-              _context11.n = 12;
-              break;
-            case 11:
-              _context11.p = 11;
-              _t3 = _context11.v;
-              _iterator5.e(_t3);
-            case 12:
-              _context11.p = 12;
-              _iterator5.f();
-              return _context11.f(12);
-            case 13:
-              return _context11.a(2, true);
-          }
-        }, _callee10, this, [[6, 11, 12, 13]]);
-      }));
-      function setVideoContentHint() {
-        return _setVideoContentHint.apply(this, arguments);
-      }
-      return setVideoContentHint;
-    }()
-    /**
-     * 设置编码降级策略
-     *
-     * motion:
-     *   maintain-framerate
-     *
-     * detail/text:
-     *   maintain-resolution
-     *
-     * fallback:
-     *   balanced
-     */
-    )
-  }, {
-    key: "_setSenderDegradationPreference",
-    value: (function () {
-      var _setSenderDegradationPreference2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee11(sender, hint) {
-        var degradationPreference, parameters, _t4, _t5;
-        return _regenerator().w(function (_context12) {
-          while (1) switch (_context12.p = _context12.n) {
-            case 0:
-              if (this._isDegradationPreferenceSupported()) {
-                _context12.n = 1;
-                break;
-              }
-              logger.debug('degradationPreference unsupported');
-              return _context12.a(2);
-            case 1:
-              degradationPreference = 'balanced';
-              _t4 = hint;
-              _context12.n = _t4 === 'motion' ? 2 : _t4 === 'detail' ? 3 : _t4 === 'text' ? 3 : _t4 === '' ? 4 : 4;
-              break;
-            case 2:
-              // 保帧率
-              degradationPreference = 'maintain-framerate';
-              return _context12.a(3, 5);
-            case 3:
-              // 保清晰度
-              degradationPreference = 'maintain-resolution';
-              return _context12.a(3, 5);
-            case 4:
-              degradationPreference = 'balanced';
-              return _context12.a(3, 5);
-            case 5:
-              _context12.p = 5;
-              parameters = sender.getParameters();
-              if (parameters) {
-                _context12.n = 6;
-                break;
-              }
-              logger.warn('sender.getParameters() empty');
-              return _context12.a(2);
-            case 6:
-              if (!(parameters.degradationPreference === degradationPreference)) {
-                _context12.n = 7;
-                break;
-              }
-              logger.debug("degradationPreference already ".concat(degradationPreference));
-              return _context12.a(2);
-            case 7:
-              parameters.degradationPreference = degradationPreference;
-              _context12.n = 8;
-              return sender.setParameters(parameters);
-            case 8:
-              logger.debug("set degradationPreference success: ".concat(degradationPreference));
-              _context12.n = 10;
-              break;
-            case 9:
-              _context12.p = 9;
-              _t5 = _context12.v;
-              logger.error("set degradationPreference failed: ".concat(_t5.message));
-            case 10:
-              return _context12.a(2);
-          }
-        }, _callee11, this, [[5, 9]]);
-      }));
-      function _setSenderDegradationPreference(_x12, _x13) {
-        return _setSenderDegradationPreference2.apply(this, arguments);
-      }
-      return _setSenderDegradationPreference;
-    }()
-    /**
-    * 浏览器是否支持 degradationPreference
-    */
-    )
-  }, {
-    key: "_isDegradationPreferenceSupported",
-    value: function _isDegradationPreferenceSupported() {
-      try {
-        var ua = navigator.userAgent;
-
-        // Safari
-        var isSafari = /^((?!chrome|android).)*safari/i.test(ua);
-        if (isSafari) {
-          var safariMatch = ua.match(/Version\/(\d+)/);
-          var version = safariMatch && safariMatch[1];
-          if (version && Number(version) < 12) {
-            return false;
-          }
-        }
-
-        // Firefox
-        var firefoxMatch = ua.match(/Firefox\/(\d+)/);
-        if (firefoxMatch) {
-          var firefoxVersion = Number(firefoxMatch[1]);
-          if (firefoxVersion < 138) {
-            return false;
-          }
-        }
-        return true;
-      } catch (err) {
-        return false;
-      }
-    }
-
-    /**
-     * Hold
-     */
-  }, {
-    key: "hold",
-    value: function hold() {
-      var _this10 = this;
-      var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-      var done = arguments.length > 1 ? arguments[1] : undefined;
-      logger.debug("".concat(this._id, " hold()"));
-      if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
-        return false;
-      }
-      if (this._localHold === true) {
-        return false;
-      }
-      if (!this._isReadyToReOffer()) {
-        return false;
-      }
-      this._localHold = true;
-      this._onhold('local');
-      var eventHandlers = {
-        succeeded: function succeeded() {
-          if (done) {
-            done();
-          }
-        },
-        failed: function failed() {
-          _this10.terminate({
-            cause: CRTC_C.causes.WEBRTC_ERROR,
-            status_code: 500,
-            reason_phrase: 'Hold Failed'
-          });
-        }
-      };
-      if (options.useUpdate) {
-        this._sendUpdate({
-          sdpOffer: true,
-          eventHandlers: eventHandlers,
-          extraHeaders: options.extraHeaders
-        });
-      } else {
-        this._sendReinvite({
-          eventHandlers: eventHandlers,
-          extraHeaders: options.extraHeaders
-        });
-      }
-      return true;
-    }
-  }, {
-    key: "unhold",
-    value: function unhold() {
-      var _this11 = this;
-      var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-      var done = arguments.length > 1 ? arguments[1] : undefined;
-      logger.debug("".concat(this._id, " unhold()"));
-      if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
-        return false;
-      }
-      if (this._localHold === false) {
-        return false;
-      }
-      if (!this._isReadyToReOffer()) {
-        return false;
-      }
-      this._localHold = false;
-      this._onunhold('local');
-      var eventHandlers = {
-        succeeded: function succeeded() {
-          if (done) {
-            done();
-          }
-        },
-        failed: function failed() {
-          _this11.terminate({
-            cause: CRTC_C.causes.WEBRTC_ERROR,
-            status_code: 500,
-            reason_phrase: 'Unhold Failed'
-          });
-        }
-      };
-      if (options.useUpdate) {
-        this._sendUpdate({
-          sdpOffer: true,
-          eventHandlers: eventHandlers,
-          extraHeaders: options.extraHeaders
-        });
-      } else {
-        this._sendReinvite({
-          eventHandlers: eventHandlers,
-          extraHeaders: options.extraHeaders
-        });
-      }
-      return true;
-    }
-  }, {
-    key: "renegotiate",
-    value: function renegotiate() {
-      var _this12 = this;
-      var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-      var done = arguments.length > 1 ? arguments[1] : undefined;
-      logger.debug("".concat(this._id, " renegotiate()"));
-      var changeViaHost = {};
-      var rtcOfferConstraints = options.rtcOfferConstraints || null;
-      try {
-        options.changeViaHost && (changeViaHost = {
-          changeViaHost: true
-        });
-      } catch (error) {}
-      if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
-        return false;
-      }
-      if (!this._isReadyToReOffer()) {
-        return false;
-      }
-      var eventHandlers = {
-        succeeded: function succeeded() {
-          if (done) {
-            done();
-          }
-        },
-        failed: function failed() {
-          _this12.terminate({
-            cause: options.failed ? options.failed : CRTC_C.causes.WEBRTC_ERROR,
-            status_code: 500,
-            reason_phrase: 'Media Renegotiation Failed'
-          });
-        }
-      };
-      this._setLocalMediaStatus();
-      if (options.useUpdate) {
-        this._sendUpdate({
-          sdpOffer: true,
-          eventHandlers: eventHandlers,
-          rtcOfferConstraints: rtcOfferConstraints,
-          extraHeaders: options.extraHeaders
-        });
-      } else {
-        this._sendReinvite({
-          eventHandlers: eventHandlers,
-          rtcOfferConstraints: rtcOfferConstraints,
-          changeViaHost: changeViaHost,
-          extraHeaders: options.extraHeaders
-        });
-      }
-      return true;
-    }
-
-    /**
-     * Refer
-     */
-  }, {
-    key: "refer",
-    value: function refer(target, options) {
-      var _this13 = this;
-      logger.debug("".concat(this._id, " refer()"));
-      var originalTarget = target;
-      if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
-        return false;
-      }
-
-      // Check target validity.
-      target = this._ua.normalizeTarget(target);
-      if (!target) {
-        throw new TypeError("Invalid target: ".concat(originalTarget));
-      }
-      var referSubscriber = new RTCSession_ReferSubscriber(this);
-      referSubscriber.sendRefer(target, options);
-
-      // Store in the map.
-      var id = referSubscriber.id;
-      this._referSubscribers[id] = referSubscriber;
-
-      // Listen for ending events so we can remove it from the map.
-      referSubscriber.on('requestFailed', function () {
-        delete _this13._referSubscribers[id];
-      });
-      referSubscriber.on('accepted', function () {
-        delete _this13._referSubscribers[id];
-      });
-      referSubscriber.on('failed', function () {
-        delete _this13._referSubscribers[id];
-      });
-      return referSubscriber;
-    }
-
-    /**
-     * Send a generic in-dialog Request
-     */
-  }, {
-    key: "sendRequest",
-    value: function sendRequest(method, options) {
-      logger.debug("".concat(this._id, " sendRequest()"));
-      return this._dialog.sendRequest(method, options);
-    }
-
-    /**
-     * Send a BFCP FloorRequest
-     */
-  }, {
-    key: "_sendFloorRequest",
-    value: function _sendFloorRequest() {
-      logger.debug("".concat(this._id, " sendFloorRequest()"));
-      var currentTransactionId = this._transactionId;
-      this._transactionId++;
-      var floorRequest = this._bfcpUser.floorRequestMessage(currentTransactionId, this._floorId);
-      return this._dataChannelSend(floorRequest, currentTransactionId);
-    }
-
-    // TODO: 测试用
-  }, {
-    key: "sendFloorStatus",
-    value: function sendFloorStatus(status) {
-      logger.debug("".concat(this._id, " _sendFloorStatus()"));
-      var currentTransactionId = this._transactionId;
-      this._transactionId++;
-      var floorStatus = this._bfcpUser.floorStatusMessage(this._floorId, status, currentTransactionId);
-      return this._dataChannelSend(floorStatus, currentTransactionId);
-    }
-  }, {
-    key: "_sendFloorStatusAck",
-    value: function _sendFloorStatusAck(message) {
-      logger.debug("".concat(this._id, " _sendFloorStatusAck()"));
-      var floorStatus = this._bfcpUser.floorStatusAckMessage(this._floorId, message);
-      return this._sendDataChannelMessage(floorStatus);
-    }
-
-    /**
-     * Send a BFCP Hello
-     */
-  }, {
-    key: "_sendHello",
-    value: function _sendHello() {
-      logger.debug("".concat(this._id, " sendHello()"));
-      var currentTransactionId = this._transactionId;
-      this._transactionId++;
-      var hello = this._bfcpUser.helloMessage(currentTransactionId, this._floorId);
-      return this._dataChannelSend(hello, currentTransactionId);
-    }
-
-    /**
-     * Send a BFCP FloorRelease
-     */
-  }, {
-    key: "_sendFloorRelease",
-    value: function _sendFloorRelease() {
-      logger.debug("".concat(this._id, " sendFloorRelease()"));
-      var currentTransactionId = this._transactionId;
-      this._transactionId++;
-      var floorRelease = this._bfcpUser.floorReleaseMessage(currentTransactionId, this._floorRequestId);
-      return this._dataChannelSend(floorRelease, currentTransactionId);
-    }
-
-    // BFCP用的混音相关方法
-  }, {
-    key: "_createBfcpAudioTrack",
-    value: function _createBfcpAudioTrack(mediaStream) {
-      this._bfcpAudioCtx = new AudioContext();
-      var audioSource = this._bfcpAudioCtx.createMediaStreamSource(mediaStream);
-      this._bfcpAudioSources.push(audioSource);
-      this._bfcpAudioDestination = this._bfcpAudioCtx.createMediaStreamDestination();
-      audioSource.connect(this._bfcpAudioDestination);
-      return this._bfcpAudioDestination.stream.getAudioTracks()[0];
-    }
-  }, {
-    key: "_addShareAudioToBfcpAudioTrack",
-    value: function _addShareAudioToBfcpAudioTrack(mediaStream) {
-      var audioSource = this._bfcpAudioCtx.createMediaStreamSource(mediaStream);
-      this._bfcpAudioSources.push(audioSource);
-      audioSource.connect(this._bfcpAudioDestination);
-    }
-  }, {
-    key: "_distoryBfcpAudioTrack",
-    value: function _distoryBfcpAudioTrack() {
-      if (this._bfcpAudioSources.length > 0) {
-        this._bfcpAudioSources.forEach(function (audioSource) {
-          return audioSource.disconnect();
-        });
-        this._bfcpAudioSources = [];
-        this._bfcpAudioDestination = null;
-      }
-    }
-
-    /**
-     * In dialog Request Reception
-     */
-  }, {
-    key: "receiveRequest",
-    value: function receiveRequest(request) {
-      var _this14 = this;
-      logger.debug("".concat(this._id, " receiveRequest()"));
-      if (request.method === CRTC_C.CANCEL) {
-        /* RFC3261 15 States that a UAS may have accepted an invitation while a CANCEL
-        * was in progress and that the UAC MAY continue with the session established by
-        * any 2xx response, or MAY terminate with BYE. CRTC does continue with the
-        * established session. So the CANCEL is processed only if the session is not yet
-        * established.
-        */
-
-        /*
-        * Terminate the whole session in case the user didn't accept (or yet send the answer)
-        * nor reject the request opening the session.
-        */
-        if (this._status === C.STATUS_WAITING_FOR_ANSWER || this._status === C.STATUS_ANSWERED) {
-          this._status = C.STATUS_CANCELED;
-          this._request.reply(487);
-          this._failed('remote', request, CRTC_C.causes.CANCELED);
-        }
-      } else {
-        // Requests arriving here are in-dialog requests.
-        switch (request.method) {
-          case CRTC_C.ACK:
-            if (this._status !== C.STATUS_WAITING_FOR_ACK) {
-              return;
-            }
-
-            // Update signaling status.
-            this._status = C.STATUS_CONFIRMED;
-            clearTimeout(this._timers.ackTimer);
-            clearTimeout(this._timers.invite2xxTimer);
-            if (this._late_sdp) {
-              if (!request.body) {
-                this.terminate({
-                  cause: CRTC_C.causes.MISSING_SDP,
-                  status_code: 400
-                });
-                break;
-              }
-              var newSdp = this._sdpAddMid(request.body);
-              var e = {
-                originator: 'remote',
-                type: 'answer',
-                sdp: newSdp
-              };
-              logger.debug("".concat(this._id, " emit \"sdp\""));
-              this.emit('sdp', e);
-              var answer = new RTCSessionDescription({
-                type: 'answer',
-                sdp: e.sdp
-              });
-              this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-                return _this14._connection.setRemoteDescription(answer);
-              }).then(function () {
-                if (!_this14._is_confirmed) {
-                  _this14._confirmed('remote', request);
-                }
-              })["catch"](function (error) {
-                _this14.terminate({
-                  cause: CRTC_C.causes.BAD_MEDIA_DESCRIPTION,
-                  status_code: 488
-                });
-                logger.warn("".concat(_this14._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]"), error);
-                logger.warn("".concat(_this14._id, " emit \"peerconnection:setremotedescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
-                _this14.emit('peerconnection:setremotedescriptionfailed', error);
-              });
-            } else if (!this._is_confirmed) {
-              this._confirmed('remote', request);
-            }
-            break;
-          case CRTC_C.BYE:
-            if (this._status === C.STATUS_CONFIRMED || this._status === C.STATUS_WAITING_FOR_ACK) {
-              request.reply(200);
-              this._ended('remote', request, CRTC_C.causes.BYE);
-            } else if (this._status === C.STATUS_INVITE_RECEIVED || this._status === C.STATUS_WAITING_FOR_ANSWER) {
-              request.reply(200);
-              this._request.reply(487, 'BYE Received');
-              this._ended('remote', request, CRTC_C.causes.BYE);
-            } else {
-              request.reply(403, 'Wrong Status');
-            }
-            break;
-          case CRTC_C.INVITE:
-            if (this._status === C.STATUS_CONFIRMED) {
-              if (request.hasHeader('replaces')) {
-                this._receiveReplaces(request);
-              } else {
-                this._receiveReinvite(request);
-              }
-            } else {
-              request.reply(403, 'Wrong Status');
-            }
-            break;
-          case CRTC_C.INFO:
-            if (this._status === C.STATUS_1XX_RECEIVED || this._status === C.STATUS_WAITING_FOR_ANSWER || this._status === C.STATUS_ANSWERED || this._status === C.STATUS_WAITING_FOR_ACK || this._status === C.STATUS_CONFIRMED) {
-              var contentType = request.hasHeader('Content-Type') ? request.getHeader('Content-Type').toLowerCase() : undefined;
-              if (contentType && contentType.match(/^application\/dtmf-relay/i)) {
-                new RTCSession_DTMF(this).init_incoming(request);
-              } else if (contentType !== undefined) {
-                new RTCSession_Info(this).init_incoming(request);
-              } else {
-                request.reply(415);
-              }
-            } else {
-              request.reply(403, 'Wrong Status');
-            }
-            break;
-          case CRTC_C.UPDATE:
-            // 以下修改为兼容 VoLTE 在通话建立前的彩铃及预先申请资源 UPDATE 携带 SDP 的情况
-            // if (this._status === C.STATUS_CONFIRMED)
-            // {
-            this._receiveUpdate(request);
-            // }
-            // else
-            // {
-            //   request.reply(403, 'Wrong Status');
-            // }
-            break;
-          case CRTC_C.REFER:
-            if (this._status === C.STATUS_CONFIRMED) {
-              this._receiveRefer(request);
-            } else {
-              request.reply(403, 'Wrong Status');
-            }
-            break;
-          case CRTC_C.NOTIFY:
-            // if (this._status === C.STATUS_CONFIRMED)
-            // {
-            //   this._receiveNotify(request);
-            // }
-            // for 3pcc
-            if (this._status === C.STATUS_WAITING_FOR_ANSWER || this._status === C.STATUS_ANSWERED || this._status === C.STATUS_CONFIRMED) {
-              this._receiveNotify(request);
-              this.newNotify({
-                request: request
-              });
-            } else {
-              request.reply(403, 'Wrong Status');
-            }
-            break;
-          default:
-            request.reply(501);
-        }
-      }
-    }
-
-    /**
-     * Session Callbacks
-     */
-  }, {
-    key: "onTransportError",
-    value: function onTransportError() {
-      logger.warn("".concat(this._id, " onTransportError()"));
-      if (this._status !== C.STATUS_TERMINATED) {
-        // this.terminate({
-        //   status_code   : 500,
-        //   reason_phrase : CRTC_C.causes.CONNECTION_ERROR,
-        //   cause         : CRTC_C.causes.CONNECTION_ERROR
-        // });
-        // 连接错误不处理，延长重试时间
-      }
-    }
-  }, {
-    key: "onRequestTimeout",
-    value: function onRequestTimeout() {
-      logger.warn("".concat(this._id, " onRequestTimeout()"));
-      if (this._status !== C.STATUS_TERMINATED) {
-        this.terminate({
-          status_code: 408,
-          reason_phrase: CRTC_C.causes.REQUEST_TIMEOUT,
-          cause: CRTC_C.causes.REQUEST_TIMEOUT
-        });
-      }
-    }
-  }, {
-    key: "onDialogError",
-    value: function onDialogError() {
-      logger.warn("".concat(this._id, " onDialogError()"));
-      if (this._status !== C.STATUS_TERMINATED) {
-        this.terminate({
-          status_code: 500,
-          reason_phrase: CRTC_C.causes.DIALOG_ERROR,
-          cause: CRTC_C.causes.DIALOG_ERROR
-        });
-      }
-    }
-
-    // Called from DTMF handler.
-  }, {
-    key: "newDTMF",
-    value: function newDTMF(data) {
-      logger.debug("".concat(this._id, " newDTMF()"));
-      this.emit('newDTMF', data);
-    }
-
-    // Called from Info handler.
-  }, {
-    key: "newInfo",
-    value: function newInfo(data) {
-      logger.debug("".concat(this._id, " newInfo()"));
-      this.emit('newInfo', data);
-    }
-
-    // for 3pcc, Called from Notify handler.
-  }, {
-    key: "newNotify",
-    value: function newNotify(data) {
-      logger.debug("".concat(this._id, " newNotify()"));
-      this.emit('newNotify', data);
-    }
-
-    /**
-     * Check if RTCSession is ready for an outgoing re-INVITE or UPDATE with SDP.
-     */
-  }, {
-    key: "_isReadyToReOffer",
-    value: function _isReadyToReOffer() {
-      if (!this._rtcReady) {
-        logger.debug("".concat(this._id, " _isReadyToReOffer() | internal WebRTC status not ready"));
-        return false;
-      }
-
-      // No established yet.
-      if (!this._dialog) {
-        logger.debug("".concat(this._id, " _isReadyToReOffer() | session not established yet"));
-        return false;
-      }
-
-      // Another INVITE transaction is in progress.
-      if (this._dialog.uac_pending_reply === true || this._dialog.uas_pending_reply === true) {
-        logger.debug("".concat(this._id, " _isReadyToReOffer() | there is another INVITE/UPDATE transaction in progress"));
-        return false;
-      }
-      return true;
-    }
-  }, {
-    key: "_close",
-    value: function _close() {
-      var _this15 = this;
-      logger.debug("".concat(this._id, " close()"));
-      // Close local MediaStream if it was not given by the user.
-      if (this._localMediaStream && this._localMediaStreamLocallyGenerated) {
-        logger.warn("".concat(this._id, " close() | closing local MediaStream"));
-        Utils.closeMediaStream(this._localMediaStream);
-      }
-
-      // 销毁BFCP相关媒体
-      this._distoryBfcpAudioTrack();
-      this._bfcpMediastreams.length > 0 && this._bfcpMediastreams.forEach(function (mediaStream) {
-        logger.debug("".concat(_this15._id, " close() | closing local bfcp MediaStream"));
-        Utils.closeMediaStream(mediaStream);
-      });
-      if (this._localShareStream) {
-        logger.debug("".concat(this._id, " close() | closing local share MediaStream"));
-        Utils.closeMediaStream(this._localShareStream);
-      }
-      if (this._bfcpStream) {
-        logger.debug("".concat(this._id, " close() | closing local bfcp MediaStream"));
-        Utils.closeMediaStream(this._bfcpStream);
-      }
-      if (this._status === C.STATUS_TERMINATED) {
-        return;
-      }
-      this._status = C.STATUS_TERMINATED;
-
-      // Terminate RTC.
-      if (this._connection) {
-        try {
-          this._connection.close();
-        } catch (error) {
-          logger.warn("".concat(this._id, " close() | error closing the RTCPeerConnection: %o"), error);
-          logger.warn("".concat(this._id, " close() | error closing the RTCPeerConnection: ").concat(error.message, " ").concat(JSON.stringify(error)));
-        }
-      }
-
-      // Terminate signaling.
-
-      // Clear SIP timers.
-      for (var timer in this._timers) {
-        if (Object.prototype.hasOwnProperty.call(this._timers, timer)) {
-          clearTimeout(this._timers[timer]);
-        }
-      }
-
-      // Clear Session Timers.
-      clearTimeout(this._sessionTimers.timer);
-
-      // Terminate confirmed dialog.
-      if (this._dialog) {
-        this._dialog.terminate();
-        delete this._dialog;
-      }
-
-      // Terminate early dialogs.
-      for (var dialog in this._earlyDialogs) {
-        if (Object.prototype.hasOwnProperty.call(this._earlyDialogs, dialog)) {
-          this._earlyDialogs[dialog].terminate();
-          delete this._earlyDialogs[dialog];
-        }
-      }
-
-      // Terminate REFER subscribers.
-      for (var subscriber in this._referSubscribers) {
-        if (Object.prototype.hasOwnProperty.call(this._referSubscribers, subscriber)) {
-          delete this._referSubscribers[subscriber];
-        }
-      }
-      this._ua.destroyRTCSession(this);
-    }
-
-    /**
-     * Private API.
-     */
-
-    /**
-     * RFC3261 13.3.1.4
-     * Response retransmissions cannot be accomplished by transaction layer
-     *  since it is destroyed when receiving the first 2xx answer
-     */
-  }, {
-    key: "_setInvite2xxTimer",
-    value: function _setInvite2xxTimer(request, body) {
-      var timeout = Timers.T1;
-      function invite2xxRetransmission() {
-        if (this._status !== C.STATUS_WAITING_FOR_ACK) {
-          return;
-        }
-        request.reply(200, null, ["Contact: ".concat(this._contact)], body);
-        if (timeout < Timers.T2) {
-          timeout = timeout * 2;
-          if (timeout > Timers.T2) {
-            timeout = Timers.T2;
-          }
-        }
-        this._timers.invite2xxTimer = setTimeout(invite2xxRetransmission.bind(this), timeout);
-      }
-      this._timers.invite2xxTimer = setTimeout(invite2xxRetransmission.bind(this), timeout);
-    }
-
-    /**
-     * RFC3261 14.2
-     * If a UAS generates a 2xx response and never receives an ACK,
-     *  it SHOULD generate a BYE to terminate the dialog.
-     */
-  }, {
-    key: "_setACKTimer",
-    value: function _setACKTimer() {
-      var _this16 = this;
-      this._timers.ackTimer = setTimeout(function () {
-        if (_this16._status === C.STATUS_WAITING_FOR_ACK) {
-          logger.debug("".concat(_this16._id, " no ACK received, terminating the session"));
-          clearTimeout(_this16._timers.invite2xxTimer);
-          _this16.sendRequest(CRTC_C.BYE);
-          _this16._ended('remote', null, CRTC_C.causes.NO_ACK);
-        }
-      }, Timers.TIMER_H);
-    }
-  }, {
-    key: "_createRTCConnection",
-    value: function _createRTCConnection(pcConfig, rtcConstraints) {
-      var _this17 = this;
-      var self = this;
-      self._canSend = false;
-
-      // 是否成功连接过
-      var successfullyConnected = false;
-      this._connection = new RTCPeerConnection(pcConfig, rtcConstraints);
-      this._connection.onconnectionstatechange = function () {
-        switch (_this17._connection.connectionState) {
-          case 'connecting':
-            // 如果是第一次连接，并且5秒后依然是connecting状态则重新协商
-            if (!successfullyConnected) {
-              setTimeout(function () {
-                if (self._connection.connectionState === 'connecting') {
-                  logger.warn("".concat(_this17._id, " start iceConnectionState ").concat(self._connection.connectionState));
-                  self.renegotiate({
-                    rtcOfferConstraints: {
-                      iceRestart: true
-                    }
-                  });
-                }
-              }, 5000);
-            }
-            break;
-          case 'connected':
-            // 媒体接通后，如果信令重连媒体会重新协商
-            window.addEventListener('setItemEvent', function (e) {
-              if (e.key === 'needReinvite' && e.newValue === 1 && !self._canSend) {
-                self._canSend = true;
-                self.renegotiate({
-                  failed: CRTC_C.causes.REINVITE_ERROR,
-                  rtcOfferConstraints: {
-                    iceRestart: true
-                  },
-                  changeViaHost: true
-                });
-                setTimeout(function () {
-                  self._canSend = false;
-                }, 1000);
-              }
-            });
-            break;
-          default:
-            break;
-        }
-      };
-      this._connection.addEventListener('iceconnectionstatechange', function () {
-        var state = _this17._connection.iceConnectionState;
-        _this17.emit('peerconnection:iceConnectionState', state);
-        logger.warn("".concat(_this17._id, " emit \"peerconnection:iceConnectionState\" ").concat(state));
-
-        // 成功连接过
-        if (state === 'connected') {
-          logger.debug("".concat(_this17._id, " ").concat(state));
-          successfullyConnected = true;
-        }
-        var reConnect = function reConnect() {
-          logger.warn("".concat(_this17._id, " reConnect(). "));
-          if (!successfullyConnected) {
-            self.terminate({
-              cause: CRTC_C.causes.RTP_TIMEOUT,
-              status_code: 408,
-              reason_phrase: CRTC_C.causes.RTP_TIMEOUT
-            });
-          } else if (!_this17._canSend) {
-            logger.warn("".concat(_this17._id, " iceConnectionState ").concat(state));
-            // RTCPeerConnection failed断开后启动重新协商
-            if (_this17._enableBFCP) {
-              self.renegotiate();
-            } else {
-              self.renegotiate({
-                failed: CRTC_C.causes.REINVITE_ERROR,
-                rtcOfferConstraints: {
-                  iceRestart: true
-                }
-              });
-            }
-          }
-        };
-
-        // 如果没有成功连接过，挂断通话；成功连接过则重新协商
-        // TODO: Do more with different states.
-        if (state === 'failed' || state === 'disconnected') {
-          reConnect();
-          setTimeout(function () {
-            if (state !== 'connected') {
-              reConnect();
-            }
-          }, 5000);
-        }
-      });
-      logger.debug("".concat(this._id, " emit \"peerconnection\""));
-      this.emit('peerconnection', {
-        peerconnection: this._connection
-      });
-    }
-  }, {
-    key: "_createLocalDescription",
-    value: function _createLocalDescription(type, constraints) {
-      var _this18 = this;
-      logger.debug("".concat(this._id, " createLocalDescription() ").concat(type, " ").concat(JSON.stringify(constraints)));
-      if (type !== 'offer' && type !== 'answer') throw new Error("createLocalDescription() | invalid type \"".concat(type, "\""));
-      var connection = this._connection;
-      this._rtcReady = false;
-      return Promise.resolve()
-      // Create Offer or Answer.
-      .then(function () {
-        if (type === 'offer') {
-          return connection.createOffer(constraints)["catch"](function (error) {
-            logger.warn("".concat(_this18._id, " emit \"peerconnection:createofferfailed\" [error:%o]"), error);
-            logger.warn("".concat(_this18._id, " emit \"peerconnection:createofferfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
-            _this18.emit('peerconnection:createofferfailed', error);
-            return Promise.reject(error);
-          });
-        } else {
-          return connection.createAnswer(constraints)["catch"](function (error) {
-            logger.warn("".concat(_this18._id, " emit \"peerconnection:createanswerfailed\" [error:%o]"), error);
-            logger.warn("".concat(_this18._id, " emit \"peerconnection:createanswerfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
-            _this18.emit('peerconnection:createanswerfailed', error);
-            return Promise.reject(error);
-          });
-        }
-      })
-      // Set local description.
-      .then(function (desc) {
-        var sdp = sdp_transform.parse(desc.sdp);
-        if (type === 'offer') {
-          var mids = [];
-          sdp.media.forEach(function (media, index) {
-            if (!Utils.isFirefox()) {
-              // 处理视频呼叫音频接听后再切换视频时 mid 值问题
-              media.mid = index;
-              mids.push(index);
-            }
-            if (media.type === 'video') {
-              var lowH264 = false;
-              var payloads = [media.payloads];
-              var delH264Payload = [];
-              if (typeof media.payloads === 'string') {
-                payloads = media.payloads.split(' ');
-              }
-              media.fmtp.forEach(function (fmtp) {
-                if (fmtp.config.indexOf('profile-level-id=42e0') !== -1 || fmtp.config.indexOf('profile-level-id=42c0') !== -1) {
-                  lowH264 = true;
-                }
-                if (fmtp.config.indexOf('packetization-mode') !== -1 && fmtp.config.indexOf('profile-level-id=42') === -1) {
-                  delH264Payload.push(fmtp.payload);
-                }
-
-                // packetization-mode 规则：
-                // 1) paphone    => 保留 0，删除 1
-                // 2) 否则       => 保留 1，删除 0
-                var keepZero = _this18._customizedMode === 'paphone';
-                var shouldDelete = keepZero ? fmtp.config.includes('packetization-mode=1') : fmtp.config.includes('packetization-mode=0');
-                if (shouldDelete) {
-                  delH264Payload.push(fmtp.payload);
-                }
-              });
-              media.fmtp.forEach(function (fmtp) {
-                if (lowH264 && fmtp.config.indexOf('profile-level-id=4200') !== -1) {
-                  delH264Payload.push(fmtp.payload);
-                }
-              });
-              media.fmtp.forEach(function (fmtp) {
-                if (delH264Payload.indexOf(Number(fmtp.config.replace('apt=', ''))) != -1) {
-                  delH264Payload.push(fmtp.payload);
-                }
-              });
-
-              // paphone H264 payload 为124，去掉其他payload为124的媒体
-              if (media.rtp && _this18._customizedMode === 'paphone') {
-                media.rtp.forEach(function (item) {
-                  item.payload === 124 && String(item.codec).toLowerCase() !== 'h264' && delH264Payload.push(124);
-                });
-              }
-              media.payloads = payloads.filter(function (x) {
-                return !delH264Payload.some(function (i) {
-                  return i == x;
-                });
-              }).join(' ');
-              if (media.fmtp) {
-                media.fmtp = media.fmtp.filter(function (r) {
-                  return delH264Payload.indexOf(r.payload) == -1;
-                });
-              }
-              if (media.rtp) {
-                // 是否存在 payload=124 且 codec 为 h264（忽略大小写）
-                var hasOther124 = media.rtp.some(function (item) {
-                  return item.payload === 124 && String(item.codec).toLowerCase() !== 'h264';
-                });
-
-                // paphone H264 payload 为124，去掉其他payload为124的媒体
-                _this18._customizedMode === 'paphone' && hasOther124 && delH264Payload.push(124);
-                media.rtp = media.rtp.filter(function (r) {
-                  return delH264Payload.indexOf(r.payload) == -1;
-                });
-              }
-              if (media.rtcpFb) {
-                media.rtcpFb = media.rtcpFb.filter(function (r) {
-                  return delH264Payload.indexOf(r.payload) == -1;
-                });
-              }
-            }
-
-            /**
-             * 处理5G外呼sdp过大问题,
-             * SDK只对H264过滤保留两个,以兼容其他通用端,SBC对外呼手机的呼叫做媒体过滤
-             */
-            if (_this18._ua.sk[7] >= 3) {
-              // 删除 extmap 仅保留 urn:3gpp:video-orientation
-              if (media.ext) {
-                media.ext = media.ext.filter(function (ext) {
-                  return ext.uri === 'urn:3gpp:video-orientation';
-                });
-              }
-              if (media.type === 'video') {
-                media.invalid = [{
-                  value: 'tcap:1 RTP/AVPF'
-                }, {
-                  value: 'pcfg:1 t=1'
-                }];
-              }
-            }
-          });
-
-          // 处理视频呼叫音频接听后再切换视频时 mid 值问题
-          Utils.isFirefox() || (sdp.groups[0].mids = mids.join(' '));
-          desc.sdp = sdp_transform.write(sdp);
-        }
-        desc.sdp = sdp_transform.write(sdp);
-
-        // 兼容chrome<71版本  https://github.com/webrtcHacks/adapter/issues/919
-        desc.sdp = desc.sdp.replace(/a=extmap-allow-mixed.*\r\n/g, '');
-        _this18._customizedMode === 'paphone' && (desc.sdp = Utils.compatiblePayload(desc.sdp));
-
-        // 非BFCP修改为根据配置参数设置 profile-level-id
-        _this18._enableBFCP || (desc.sdp = desc.sdp.replace(/profile-level-id=[\w\d]+/g, "profile-level-id=".concat(CRTC_C.SDP_LEVELID_AS[_this18._sdpResolution].LEVELID)));
-
-        // 兼容 Firefox 去掉 bundle
-        if (Utils.isFirefox() && type === 'offer') {
-          desc.sdp = desc.sdp.replace(/a=bundle-only\r\n/g, '');
-          desc.sdp = desc.sdp.replace(/m=video 0 /g, 'm=video 9 ');
-        }
-        return connection.setLocalDescription(desc)["catch"](function (error) {
-          _this18._rtcReady = true;
-          logger.warn("".concat(_this18._id, " emit \"peerconnection:setlocaldescriptionfailed\" [error:%o]"), error);
-          logger.warn("".concat(_this18._id, " emit \"peerconnection:setlocaldescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
-          _this18.emit('peerconnection:setlocaldescriptionfailed', error);
-          return Promise.reject(error);
-        });
-      }).then(function () {
-        // Resolve right away if 'pc.iceGatheringState' is 'complete'.
-        /**
-         * Resolve right away if:
-         * - 'connection.iceGatheringState' is 'complete' and no 'iceRestart' constraint is set.
-         * - 'connection.iceGatheringState' is 'gathering' and 'iceReady' is true.
-         */
-        var iceRestart = constraints && constraints.iceRestart;
-        if (connection.iceGatheringState === 'complete' && !iceRestart || connection.iceGatheringState === 'gathering' && _this18._iceReady) {
-          _this18._rtcReady = true;
-          var e = {
-            originator: 'local',
-            type: type,
-            sdp: connection.localDescription.sdp
-          };
-          _this18._enableBFCP && (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
-
-          // logger.debug(`${this._id} complete emit "sdp"${ e.sdp}`);
-          _this18.emit('sdp', e);
-          return Promise.resolve(e.sdp);
-        }
-
-        // Add 'pc.onicencandidate' event handler to resolve on last candidate.
-        return new Promise(function (resolve) {
-          var finished = false;
-          var iceCandidateListener;
-          var iceGatheringStateListener;
-          _this18._iceReady = false;
-          var ready = function ready() {
-            connection.removeEventListener('icecandidate', iceCandidateListener);
-            connection.removeEventListener('icegatheringstatechange', iceGatheringStateListener);
-            finished = true;
-            _this18._rtcReady = true;
-
-            // connection.iceGatheringState will still indicate 'gathering' and thus be blocking.
-            _this18._iceReady = true;
-            var e = {
-              originator: 'local',
-              type: type,
-              sdp: connection.localDescription.sdp
-            };
-            _this18._enableBFCP && (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
-            logger.debug("".concat(_this18._id, " ready emit \"sdp\""));
-            _this18.emit('sdp', e);
-            resolve(e.sdp);
-          };
-          connection.addEventListener('icecandidate', iceCandidateListener = function iceCandidateListener(event) {
-            var candidate = event.candidate;
-            logger.debug("".concat(_this18._id, " ").concat(new Date().toISOString(), " icecandidate: ").concat(JSON.stringify(candidate)));
-            if (candidate) {
-              // 两秒后如果没有收集结束，则强制结束
-              setTimeout(function () {
-                if (!finished) {
-                  ready();
-                }
-              }, 2000);
-              _this18.emit('icecandidate', {
-                candidate: candidate,
-                ready: ready
-              });
-            } else if (!finished) {
-              ready();
-            }
-          });
-          connection.addEventListener('icegatheringstatechange', iceGatheringStateListener = function iceGatheringStateListener() {
-            logger.debug("".concat(_this18._id, " ").concat(new Date().toISOString(), " icegatheringstatechange: ").concat(connection.iceGatheringState, " ").concat(finished));
-            if (connection.iceGatheringState === 'complete' && !finished) {
-              ready();
-            }
-
-            // 超时自动ready
-            if (connection.iceGatheringState === 'gathering') {
-              setTimeout(function () {
-                !finished && ready();
-              }, 500);
-            }
-          });
-        });
-      }).then(function (sdp) {
-        // 去掉IPV6
-        // sdp = sdp.replace(/a=candidate:.*:.*\r\n/g, '');
-        // logger.debug(`${this._id} sdp: ${sdp}`);
-        var sdp_desc = sdp_transform.parse(sdp);
-        if (type === 'offer') {
-          _this18._localToAudio === '' && (_this18._localToAudio = true);
-          _this18._localToVideo === '' && (_this18._localToVideo = false);
-          var _iterator6 = _createForOfIteratorHelper(sdp_desc.media),
-            _step6;
-          try {
-            for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
-              var m = _step6.value;
-              if (m.type === 'audio') {
-                continue;
-              }
-              if (_this18._localToAudio || m.direction == 'inactive') {
-                m.port = 0;
-                try {
-                  delete m.connection;
-                } catch (error) {}
-                // m.connection = {
-                //   ip      : '0.0.0.0',
-                //   version : 4
-                // };
-              }
-              if (m.port !== 0) {
-                if (_this18._mode === '') {
-                  _this18._mode = 'video';
-                } else {
-                  _this18._ontogglemode('video');
-                }
-                _this18._localToAudio = false;
-                _this18._localToVideo = true;
-              } else {
-                m.direction = 'sendrecv';
-              }
-            }
-          } catch (err) {
-            _iterator6.e(err);
-          } finally {
-            _iterator6.f();
-          }
-          _this18._mode === '' && (_this18._mode = 'audio');
-        } else {
-          /**
-           * 本地音频接听后设置 video 的 port=0
-           * @author: lei
-           */
-          var _iterator7 = _createForOfIteratorHelper(sdp_desc.media),
-            _step7;
-          try {
-            for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
-              var _m = _step7.value;
-              if (_m.type !== 'video') {
-                continue;
-              }
-              var port = _m.port;
-              if (_this18._localToAudio || _m.direction === 'inactive') {
-                _m.port = 0;
-                if (_this18._remoteHold) {
-                  _m.port = port;
-                }
-                _this18._ontogglemode('audio');
-              } else if (!_this18._remoteToAudio) {
-                _this18._ontogglemode('video');
-              }
-              if (_m.port === 0) {
-                delete _m.connection;
-                _m.direction = 'sendrecv';
-              }
-            }
-          } catch (err) {
-            _iterator7.e(err);
-          } finally {
-            _iterator7.f();
-          }
-        }
-        var _bandAS = 0;
-        var _bandRR = 0;
-        var _bandRS = 0;
-
-        /**
-         * 处理5G外呼sdp
-         * 华为MCU对接需要带 b=AS
-         */
-        sdp_desc.media.forEach(function (media) {
-          if (media.type === 'video') {
-            /**
-             * 处理5G和非5G的SDP
-             */
-            if (_this18._ua.sk[7] >= 3) {
-              _bandAS += CRTC_C.SDP_LEVELID_AS[_this18._sdpResolution].AS;
-              _bandRR += 6000;
-              _bandRS += 8000;
-              media.bandwidth = [{
-                type: 'AS',
-                limit: CRTC_C.SDP_LEVELID_AS[_this18._sdpResolution].AS
-              }, {
-                type: 'RR',
-                limit: 6000
-              }, {
-                type: 'RS',
-                limit: 8000
-              }];
-              media.invalid = [{
-                value: 'tcap:1 RTP/AVPF'
-              }, {
-                value: 'pcfg:1 t=1'
-              }];
-            } else {
-              var bwidth = 1024;
-              media.mid === 2 && (bwidth = 2048);
-              _bandAS += bwidth;
-              media.bandwidth || (media.bandwidth = [{
-                type: 'AS',
-                limit: bwidth
-              }]);
-            }
-          } else if (media.type === 'audio') {
-            /**
-             * 处理5G和非5G的SDP
-             */
-            if (_this18._ua.sk[7] >= 3) {
-              _bandAS += 90;
-              _bandRR += 600;
-              _bandRS += 2000;
-              media.bandwidth = [{
-                type: 'AS',
-                limit: 90
-              }, {
-                type: 'RR',
-                limit: 600
-              }, {
-                type: 'RS',
-                limit: 2000
-              }];
-            }
-          }
-        });
-
-        /**
-         * 处理5G和非5G的SDP
-         */
-        if (_this18._ua.sk[7] >= 3) {
-          sdp_desc.bandwidth = [{
-            type: 'AS',
-            limit: _bandAS
-          }, {
-            type: 'RR',
-            limit: _bandRR
-          }, {
-            type: 'RS',
-            limit: _bandRS
-          }];
-        }
-        return sdp_transform.write(sdp_desc);
-      })["catch"](function (e) {
-        logger.warn("".concat(_this18._id, " ").concat(e.message));
-      });
-    }
-
-    /**
-     * Dialog Management
-     */
-  }, {
-    key: "_createDialog",
-    value: function _createDialog(message, type, early) {
-      var local_tag = type === 'UAS' ? message.to_tag : message.from_tag;
-      var remote_tag = type === 'UAS' ? message.from_tag : message.to_tag;
-      var id = message.call_id + local_tag + remote_tag;
-      var early_dialog = this._earlyDialogs[id];
-
-      // Early Dialog.
-      if (early) {
-        if (early_dialog) {
-          return true;
-        } else {
-          early_dialog = new Dialog(this, message, type, Dialog.C.STATUS_EARLY);
-
-          // Dialog has been successfully created.
-          if (early_dialog.error) {
-            logger.debug(early_dialog.error);
-            this._failed('remote', message, CRTC_C.causes.INTERNAL_ERROR);
-            return false;
-          } else {
-            this._earlyDialogs[id] = early_dialog;
-            return true;
-          }
-        }
-      }
-
-      // Confirmed Dialog.
-      else {
-        this._from_tag = message.from_tag;
-        this._to_tag = message.to_tag;
-
-        // In case the dialog is in _early_ state, update it.
-        if (early_dialog) {
-          early_dialog.update(message, type);
-          this._dialog = early_dialog;
-          delete this._earlyDialogs[id];
-          return true;
-        }
-
-        // Otherwise, create a _confirmed_ dialog.
-        var dialog = new Dialog(this, message, type);
-        if (dialog.error) {
-          logger.debug(dialog.error);
-          this._failed('remote', message, CRTC_C.causes.INTERNAL_ERROR);
-          return false;
-        } else {
-          this._dialog = dialog;
-          return true;
-        }
-      }
-    }
-
-    /**
-     * In dialog INVITE Reception
-     */
-  }, {
-    key: "_receiveReinvite",
-    value: function _receiveReinvite(request) {
-      var _this19 = this;
-      logger.debug("".concat(this._id, " receiveReinvite()"));
-      var contentType = request.hasHeader('Content-Type') ? request.getHeader('Content-Type').toLowerCase() : undefined;
-      var data = {
-        request: request,
-        callback: undefined,
-        reject: reject.bind(this)
-      };
-      var applicationIndex;
-      var rejected = false;
-      function reject() {
-        var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-        rejected = true;
-        var status_code = options.status_code || 403;
-        var reason_phrase = options.reason_phrase || '';
-        var extraHeaders = Utils.cloneArray(options.extraHeaders);
-        if (this._status !== C.STATUS_CONFIRMED) {
-          return false;
-        }
-        if (status_code < 300 || status_code >= 700) {
-          throw new TypeError("Invalid status_code: ".concat(status_code));
-        }
-        request.reply(status_code, reason_phrase, extraHeaders);
-      }
-
-      // Emit 'reinvite'.
-      this.emit('reinvite', data);
-      if (rejected) {
-        return;
-      }
->>>>>>> CRTC-new
       this._late_sdp = false;
     } else {
       this._late_sdp = true;
@@ -34052,7 +30246,6 @@ module.exports = class RTCSession extends EventEmitter {
           request.reply(487);
           this._failed('system', null, CRTC_C.causes.EXPIRES);
         }
-<<<<<<< HEAD
       }, expires);
     }
 
@@ -34064,185 +30257,6 @@ module.exports = class RTCSession extends EventEmitter {
     // A init callback was specifically defined.
     if (initCallback) {
       initCallback(this);
-=======
-        this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-          return _this19._createLocalDescription('offer', _this19._rtcOfferConstraints);
-        }).then(function (sdp) {
-          sendAnswer.call(_this19, sdp);
-        })["catch"](function (e) {
-          logger.warn("this._id ".concat(e.message, " ").concat(JSON.stringify(e)));
-          request.reply(500);
-        });
-        return;
-      }
-
-      // Request with SDP.
-      if (contentType !== 'application/sdp') {
-        logger.debug("".concat(this._id, " invalid Content-Type"));
-        request.reply(415);
-        return;
-      }
-      function nextS() {
-        var _this20 = this;
-        // 适配100rel调整 reinvite 的 hold 判断
-        this._notHold = true;
-        this._localMediaStream.getVideoTracks().forEach(function (track) {
-          if (track.readyState !== 'ended') {
-            _this20._notHold = false;
-          }
-        });
-        this._processInDialogSdpOffer(request)
-        // Send answer.
-        .then(function (desc) {
-          /**
-           * 解决UPDATE场景到H5的媒体传输tcap AVPF协商问题
-           * O/A方SDP中对应媒体携带a=cc-xfb属性，对应行为是SBC转发后把媒体传输AVP改为AVPF
-           * 其中远端Offer tcap，本端应答时不能携带tcap属性，现修改为5G授权默认不携带tcap等
-           *
-           * 1、本端初始offer主动设置tcap，不带xfb
-           * 2、本端初始offer未设置tcap，不带xfb
-           * 3、本端初始answer，远端带tcap。带xfb
-           * 4、本端初始answer，远端不带带tcap。不带xfb
-           * 5、本端offer关闭视频，不带xfb
-           * 6、本端answer关闭视频，不带xfb
-           *
-           * 有特殊场景update不带tcap，暂时改为全部响应带xfb
-           */
-          if (_this20._ua.sk[7] >= 3 && desc) {
-            desc = desc.replace(/(m=video.*)\r\n/, '$1\r\na=cc-xfb\r\n');
-            desc = desc.replace(/a=pcfg:1 t=1\r\n/, '');
-            desc = desc.replace(/a=tcap.*AVPF\r\n/, '');
-          }
-          if (_this20._enableBFCP && _this20._floorctrl == 's-only') {
-            desc = desc.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this20._floorctrl, "\r\na=floorid:").concat(_this20._floorId, " mstrm:12\r\na=confid:123\r\na=userid:456\r\n"));
-          }
-          if (_this20._status === C.STATUS_TERMINATED) {
-            return;
-          }
-          sendAnswer.call(_this20, desc);
-        })["catch"](function (error) {
-          logger.warn(error);
-        });
-      }
-
-      /**
-       * 音视频切换相关
-       * 收到reinvite时候判断是否要就行音视频模式切换
-       * @author: lei
-       */
-      if (request.body) {
-        var waiting = false;
-        var mediaIndex = 0;
-
-        // 适配通用情况下的SDP H224
-        var _Utils$getApplication = Utils.getApplicationMediaPositions(request.body),
-          originalIndexes = _Utils$getApplication.originalIndexes,
-          sdp = _Utils$getApplication.sdp;
-        applicationIndex = originalIndexes;
-        request.body = sdp;
-        logger.debug("".concat(this._id, " applicationIndex: "), applicationIndex);
-        logger.debug("".concat(this._id, " NEW Reinvite SDP: "), sdp);
-        var sdp_request = sdp_transform.parse(request.body);
-
-        // request['mode'] = 'audio';
-
-        this._remoteToAudio = true;
-        this._remoteToVideo = false;
-        var _iterator8 = _createForOfIteratorHelper(sdp_request.media),
-          _step8;
-        try {
-          for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
-            var m = _step8.value;
-            if (m.type == 'audio') {
-              continue;
-            }
-            mediaIndex++;
-            if (mediaIndex == 1 && (m.port === 0 || m.port === 0 && this._mode === 'video')) {
-              this._ontogglemode('audio');
-            } else if (this._mode === 'audio') {
-              waiting = true;
-              // 触发切换事件，要求用户授权
-              this._remoteToVideo = true;
-              this._remoteToAudio = false;
-              this._localToAudio = false;
-              this._localToVideo = true;
-              if (this.listeners('upgradeToVideo').length === 0) {
-                this._localToAudio = false;
-                nextS.call(this);
-              } else {
-                logger.debug("".concat(this._id, " has upgradeToVideo listeners."));
-                this.emit('upgradeToVideo', {
-                  request: request,
-                  accept: function accept(videoConstraints) {
-                    videoConstraints && (_this19._inviteMediaConstraints.video = videoConstraints);
-                    console.warn('tin: ', _this19._inviteMediaConstraints);
-                    _this19._localToAudio = false;
-                    nextS.call(_this19);
-                  },
-                  reject: function reject() {
-                    _this19._localToAudio = true;
-                    request.body = Utils.disableVideoInSdp(request.body);
-                    nextS.call(_this19);
-                  }
-                });
-              }
-            }
-            // 兼容多流分享
-            // else
-            // {
-            //   waiting = true;
-            //   nextS.call(this);
-            // }
-          }
-        } catch (err) {
-          _iterator8.e(err);
-        } finally {
-          _iterator8.f();
-        }
-        if (!waiting) {
-          if (sdp_request.media.length < 3) {
-            // 自动响应的时候不改变这个参数，改变就变成音频模式了
-            this._localToVideo = false;
-            nextS.call(this);
-          } else {
-            this._localToAudio = false;
-            this._localToVideo = true;
-            nextS.call(this);
-          }
-        }
-      }
-      function sendAnswer(desc) {
-        var _this21 = this;
-        var extraHeaders = ["Contact: ".concat(this._contact)];
-
-        // 5G Headers
-        if (this._ua.sk[7] >= 3) {
-          extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
-          extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
-        }
-        this._handleSessionTimersInIncomingRequest(request, extraHeaders);
-        if (this._late_sdp) {
-          desc = this._mangleOffer(desc);
-        }
-        if (this._enableBFCP) {
-          // 适配通用情况下的SDP H224
-          applicationIndex && applicationIndex[1] !== -1 && (desc += 'm=application 0 UDP/TLS/RTP/SAVPF 100\r\na=rtpmap:100 H224/4800\r\na=inactive\r\n');
-          logger.debug("".concat(this._id, " OLD SDP: "), desc);
-          desc = Utils.reorderApplicationMedia(desc, applicationIndex);
-          logger.debug("".concat(this._id, " NEW Answer SDP: "), desc);
-        }
-        request.reply(200, null, extraHeaders, desc, function () {
-          _this21._status = C.STATUS_WAITING_FOR_ACK;
-          _this21._setInvite2xxTimer(request, desc);
-          _this21._setACKTimer();
-        });
-
-        // If callback is given execute it.
-        if (typeof data.callback === 'function') {
-          data.callback();
-        }
-      }
->>>>>>> CRTC-new
     }
 
     /**
@@ -34250,7 +30264,6 @@ module.exports = class RTCSession extends EventEmitter {
      * 根据远端offer的sdp判断呼入的通话模式
      * @author: lei
      */
-<<<<<<< HEAD
     if (request.body) {
       var sdp = sdp_transform.parse(request.body);
       request['mode'] = 'audio';
@@ -34495,7 +30508,7 @@ module.exports = class RTCSession extends EventEmitter {
           throw new Error('getUserMedia() failed');
         });
         if (mediaConstraints.video && mStream) {
-          this._environment = await Utils.getHuaweiAndroidEnvironment();
+          this._environment = await Utils.getEnvironmentId();
           logger.debug(`${this._id} environment id: `, this._environment);
         }
 
@@ -34556,194 +30569,6 @@ module.exports = class RTCSession extends EventEmitter {
     .then(() => {
       if (this._late_sdp) {
         return;
-=======
-  }, {
-    key: "_receiveUpdate",
-    value: function _receiveUpdate(request) {
-      var _this23 = this;
-      logger.debug("".concat(this._id, " receiveUpdate()"));
-      var contentType = request.hasHeader('Content-Type') ? request.getHeader('Content-Type').toLowerCase() : undefined;
-      var data = {
-        request: request,
-        callback: undefined,
-        reject: reject.bind(this)
-      };
-      var rejected = false;
-      function reject() {
-        var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-        rejected = true;
-        var status_code = options.status_code || 403;
-        var reason_phrase = options.reason_phrase || '';
-        var extraHeaders = Utils.cloneArray(options.extraHeaders);
-        if (this._status !== C.STATUS_CONFIRMED) {
-          return false;
-        }
-        if (status_code < 300 || status_code >= 700) {
-          throw new TypeError("Invalid status_code: ".concat(status_code));
-        }
-        request.reply(status_code, reason_phrase, extraHeaders);
-      }
-
-      // Emit 'update'.
-      this.emit('update', data);
-      if (rejected) {
-        return;
-      }
-      if (!request.body) {
-        sendAnswer.call(this, null);
-        return;
-      }
-      if (contentType !== 'application/sdp') {
-        logger.debug("".concat(this._id, " invalid Content-Type"));
-        request.reply(415);
-        return;
-      }
-
-      // 适配 100rel 调整update带sdp的处理
-      function nextS() {
-        var _this22 = this;
-        this._notHold = true;
-        this._processInDialogSdpOffer(request)
-        // Send answer.
-        .then(function (desc) {
-          /**
-           * 解决UPDATE场景到H5的媒体传输tcap AVPF协商问题
-           * O/A方SDP中对应媒体携带a=cc-xfb属性，对应行为是SBC转发后把媒体传输AVP改为AVPF
-           * 其中远端Offer tcap，本端应答时不能携带tcap属性，现修改为5G授权默认不携带tcap等
-           *
-           * 1、本端初始offer主动设置tcap，不带xfb
-           * 2、本端初始offer未设置tcap，不带xfb
-           * 3、本端初始answer，远端带tcap。带xfb
-           * 4、本端初始answer，远端不带带tcap。不带xfb
-           * 5、本端offer关闭视频，不带xfb
-           * 6、本端answer关闭视频，不带xfb
-           *
-           * 有特殊场景update不带tcap，暂时改为全部响应带xfb
-           */
-          if (_this22._ua.sk[7] >= 3 && desc) {
-            desc = desc.replace(/(m=video.*)\r\n/, '$1\r\na=cc-xfb\r\n');
-            desc = desc.replace(/a=pcfg:1 t=1\r\n/, '');
-            desc = desc.replace(/a=tcap.*AVPF\r\n/, '');
-          }
-          if (_this22._status === C.STATUS_TERMINATED) {
-            return;
-          }
-          sendAnswer.call(_this22, desc);
-        })["catch"](function (error) {
-          logger.warn(error);
-        });
-      }
-
-      /**
-       * 音视频切换相关
-       * 收到reinvite时候判断是否要就行音视频模式切换
-       * @author: lei
-       */
-      if (request.body) {
-        var waiting = false;
-
-        // 适配 183 视频有端口但是 a=inactive
-        if (this._ealyAudio && request.body.indexOf('m=video 0 ') === -1) {
-          this._ealyAudio = undefined;
-        }
-        var sdp_request = sdp_transform.parse(request.body);
-        this._remoteToAudio = true;
-        this._remoteToVideo = false;
-        var _iterator9 = _createForOfIteratorHelper(sdp_request.media),
-          _step9;
-        try {
-          for (_iterator9.s(); !(_step9 = _iterator9.n()).done;) {
-            var m = _step9.value;
-            if (m.type == 'audio') {
-              continue;
-            }
-            if (m.port === 0 || m.port === 0 && this._mode === 'video') {
-              this._ontogglemode('audio');
-            } else {
-              waiting = true;
-              // 触发切换事件，要求用户授权
-              this._remoteToVideo = true;
-              this._remoteToAudio = false;
-              this._localToAudio = false;
-              this._localToVideo = true;
-              if (this.listeners('upgradeToVideo').length === 0) {
-                this._localToAudio = false;
-                nextS.call(this);
-              } else {
-                logger.debug("".concat(this._id, " has upgradeToVideo listeners."));
-                this.emit('upgradeToVideo', {
-                  request: request,
-                  accept: function accept() {
-                    _this23._localToAudio = false;
-                    nextS.call(_this23);
-                  },
-                  reject: function reject() {
-                    _this23._localToAudio = true;
-                    nextS.call(_this23);
-                  }
-                });
-              }
-            }
-          }
-        } catch (err) {
-          _iterator9.e(err);
-        } finally {
-          _iterator9.f();
-        }
-        if (!waiting) {
-          logger.debug("".concat(this._id, " !waiting."));
-          this._localToAudio = true;
-          this._localToVideo = false;
-          nextS.call(this);
-        }
-      }
-      function sendAnswer(desc) {
-        var extraHeaders = ["Contact: ".concat(this._contact)];
-
-        // 5G Headers
-        if (this._ua.sk[7] >= 3) {
-          extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
-          extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
-        }
-        this._handleSessionTimersInIncomingRequest(request, extraHeaders);
-        request.reply(200, null, extraHeaders, desc);
-
-        // If callback is given execute it.
-        if (typeof data.callback === 'function') {
-          data.callback();
-        }
-      }
-    }
-  }, {
-    key: "_processInDialogSdpOffer",
-    value: function _processInDialogSdpOffer(request) {
-      var _this24 = this;
-      logger.debug("".concat(this._id, " _processInDialogSdpOffer()"));
-      var sdp = request.parseSDP();
-      var hold = false;
-      var _iterator0 = _createForOfIteratorHelper(sdp.media),
-        _step0;
-      try {
-        for (_iterator0.s(); !(_step0 = _iterator0.n()).done;) {
-          var m = _step0.value;
-          if (holdMediaTypes.indexOf(m.type) === -1) {
-            continue;
-          }
-          var direction = m.direction || sdp.direction || 'sendrecv';
-          if (direction === 'sendonly' || direction === 'inactive') {
-            hold = true;
-          }
-          // If at least one of the streams is active don't emit 'hold'.
-          else {
-            hold = false;
-            break;
-          }
-        }
-      } catch (err) {
-        _iterator0.e(err);
-      } finally {
-        _iterator0.f();
->>>>>>> CRTC-new
       }
       var newSdp = this._sdpAddMid(request.body);
       var e = {
@@ -34757,7 +30582,6 @@ module.exports = class RTCSession extends EventEmitter {
         type: 'offer',
         sdp: e.sdp
       });
-<<<<<<< HEAD
       this._connectionPromiseQueue = this._connectionPromiseQueue.then(() => this._connection.setRemoteDescription(offer)).catch(error => {
         request.reply(488);
         this._failed('system', null, CRTC_C.causes.WEBRTC_ERROR);
@@ -34902,7 +30726,7 @@ module.exports = class RTCSession extends EventEmitter {
           throw error;
         });
         if (stream) {
-          this._environment = await Utils.getHuaweiAndroidEnvironment();
+          this._environment = await Utils.getEnvironmentId();
           logger.debug(`${this._id} environment id: `, this._environment);
         }
       }
@@ -35244,91 +31068,6 @@ module.exports = class RTCSession extends EventEmitter {
           } catch (error) {
             logger.error(`${this._id} stream error: `, error.message);
           }
-=======
-      this._connectionPromiseQueue = this._connectionPromiseQueue
-      // Set remote description.
-      .then(function () {
-        if (_this24._status === C.STATUS_TERMINATED) {
-          throw new Error('terminated');
-        }
-        return _this24._connection.setRemoteDescription(offer)["catch"](function (error) {
-          request.reply(488);
-          logger.warn("".concat(_this24._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]"), error);
-          logger.warn("".concat(_this24._id, " emit \"peerconnection:setremotedescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
-          _this24.emit('peerconnection:setremotedescriptionfailed', error);
-          throw error;
-        });
-      }).then(function () {
-        if (_this24._status === C.STATUS_TERMINATED) {
-          throw new Error('terminated');
-        }
-        if (_this24._remoteHold === true && hold === false) {
-          _this24._remoteHold = false;
-          _this24._onunhold('remote');
-        } else if (_this24._remoteHold === false && hold === true) {
-          _this24._remoteHold = true;
-          _this24._onhold('remote');
-        }
-      }).then(function () {
-        // 新增判断是否已经存在一个视频
-        var hasVideo = false;
-        _this24._connection.getSenders().forEach(function (sender) {
-          try {
-            logger.debug('sender: ', sender.track.kind, sender.track.readyState);
-          } catch (error) {}
-          if (sender.track && sender.track.kind === 'video' && sender.track.readyState === 'live') {
-            hasVideo = true;
-          }
-        });
-        logger.debug("".concat(_this24._id, " stats: "), _this24._remoteToVideo, _this24._localToAudio, _this24._notHold, hasVideo, _this24._customMediaStream);
-
-        // 适配 100rel 调整 hold 的判断
-        if (_this24._remoteToVideo && !_this24._localToAudio && _this24._notHold && !hasVideo && _this24._customMediaStream === false) {
-          if (!_this24._localMediaStreamLocallyGenerated) {
-            return false;
-          }
-          var videoConstraints = _this24._inviteMediaConstraints ? {
-            video: _this24._inviteMediaConstraints.video || true
-          } : {
-            video: true
-          };
-          if (CRTC_C.SDP_LEVELID_AS[_this24._sdpResolution].VIDEOCONSTRAINTS) {
-            Object.assign(videoConstraints.video, CRTC_C.SDP_LEVELID_AS[_this24._sdpResolution].VIDEOCONSTRAINTS);
-          }
-          logger.debug('video constraints: ', JSON.stringify(videoConstraints));
-          return navigator.mediaDevices.getUserMedia(videoConstraints).then(/*#__PURE__*/function () {
-            var _ref0 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee12(stream) {
-              return _regenerator().w(function (_context13) {
-                while (1) switch (_context13.n) {
-                  case 0:
-                    _context13.n = 1;
-                    return _this24._processMediaStream(stream);
-                  case 1:
-                    return _context13.a(2, _context13.v);
-                }
-              }, _callee12);
-            }));
-            return function (_x14) {
-              return _ref0.apply(this, arguments);
-            };
-          }())["catch"](function (error) {
-            if (_this24._status === C.STATUS_TERMINATED) {
-              throw new Error('terminated');
-            }
-
-            // this._failed('local', null, CRTC_C.causes.USER_DENIED_MEDIA_ACCESS);
-
-            logger.warn("".concat(_this24._id, " emit \"getusermediafailed\" [error:%o]"), error);
-            logger.warn("".concat(_this24._id, " emit \"getusermediafailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
-            _this24.emit('getusermediafailed', error);
-            return false;
-            // throw error;
-          });
-        }
-      }).then(function (stream) {
-        if (stream) {
-          logger.debug("".concat(_this24._id, " has stream."));
->>>>>>> CRTC-new
 
           // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
           var ua;
@@ -35389,7 +31128,6 @@ module.exports = class RTCSession extends EventEmitter {
           };
           if (typeof currentComposer.getSourceAiVirtualBackground === 'function') {
             try {
-<<<<<<< HEAD
               var aiVirtualBackground = currentComposer.getSourceAiVirtualBackground(0);
               if (aiVirtualBackground) {
                 sourceOptions.aiVirtualBackground = aiVirtualBackground;
@@ -35569,70 +31307,8 @@ module.exports = class RTCSession extends EventEmitter {
           });
           _sender.replaceTrack(track);
         }
-=======
-              _this24._localMediaStream.addTrack(track);
-            } catch (error) {
-              logger.warn("".concat(_this24._id, " _processInDialogSdpOffer() failed local stream ").concat(error.name, " ").concat(track.kind, " ").concat(error.message, " ").concat(JSON.stringify(error)));
-            }
-
-            // 兼容低版本浏览器不支持addTrack的情况
-            if (RTCPeerConnection.prototype.addTrack) {
-              try {
-                _this24._connection.addTrack(track, stream);
-              } catch (error) {
-                logger.warn("".concat(_this24._id, " _processInDialogSdpOffer() failed no stream ").concat(error.name, " ").concat(track.kind, " ").concat(error.message, " ").concat(JSON.stringify(error)));
-              }
-            } else {
-              _this24._connection.addStream(stream);
-            }
-          });
-          _this24._iceReady = false;
-        } else {
-          logger.debug("".concat(_this24._id, " no stream."));
-
-          // 兼容低版本浏览器不支持addTrack的情况
-          // eslint-disable-next-line no-lonely-if
-          if (RTCPeerConnection.prototype.addTrack) {
-            if (_this24._localMediaStream.getVideoTracks()[0]) {
-              var videoTrack = _this24._localMediaStream.getVideoTracks()[0];
-              var senders = _this24._connection.getSenders();
-              var trackAlreadyAdded = senders.some(function (sender) {
-                return sender.track === videoTrack;
-              });
-              if (!trackAlreadyAdded) {
-                try {
-                  _this24._connection.addTrack(_this24._localMediaStream.getVideoTracks()[0], _this24._localMediaStream);
-                } catch (error) {
-                  logger.warn("".concat(_this24._id, " _processInDialogSdpOffer() failed no stream ").concat(error.name, " ").concat(_this24._localMediaStream.getVideoTracks()[0].kind, " ").concat(error.message, " ").concat(JSON.stringify(error)));
-                }
-              } else {
-                logger.warn("".concat(_this24._id, " Track is already added to the peer connection."));
-              }
-            }
-          } else {
-            _this24._connection.addStream(_this24._localMediaStream);
-          }
-          _this24._iceReady = true;
-        }
-      })
-      // Create local description.
-      .then(function () {
-        if (_this24._status === C.STATUS_TERMINATED) {
-          throw new Error('terminated');
-        }
-        return _this24._createLocalDescription('answer', _this24._rtcAnswerConstraints)["catch"](function (error) {
-          request.reply(500);
-          logger.warn("".concat(_this24._id, " emit \"peerconnection:createtelocaldescriptionfailed\" [error:%o]"), error);
-          logger.warn("".concat(_this24._id, " emit \"peerconnection:createtelocaldescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
-          throw error;
-        });
-      })["catch"](function (error) {
-        logger.warn("".concat(_this24._id, " _processInDialogSdpOffer() failed [error: %o]"), error);
-        logger.warn("".concat(_this24._id, " _processInDialogSdpOffer() failed ").concat(error.message, " ").concat(JSON.stringify(error)));
->>>>>>> CRTC-new
       });
     }
-<<<<<<< HEAD
     // 分享图片
     else if (type === 'pic') {
       logger.debug(`${this._id} share pic`);
@@ -35668,20 +31344,6 @@ module.exports = class RTCSession extends EventEmitter {
     else if (type === 'html') {
       logger.debug(`${this._id} share html`);
       if (!assembly) {
-=======
-
-    /**
-     * In dialog Refer Reception
-     */
-  }, {
-    key: "_receiveRefer",
-    value: function _receiveRefer(request) {
-      var _this25 = this;
-      logger.debug("".concat(this._id, " receiveRefer()"));
-      if (!request.refer_to) {
-        logger.debug("".concat(this._id, " no Refer-To header field present in REFER"));
-        request.reply(400);
->>>>>>> CRTC-new
         return;
       }
       var _canvas = document.createElement('canvas');
@@ -35717,7 +31379,6 @@ module.exports = class RTCSession extends EventEmitter {
         this.emit('getdisplaymediafailed');
       }
 
-<<<<<<< HEAD
       // 分享屏幕 默认帧率 15
       return navigator.mediaDevices.getDisplayMedia({
         video: {
@@ -35746,111 +31407,6 @@ module.exports = class RTCSession extends EventEmitter {
                 });
                 sender.replaceTrack(track);
               }
-=======
-      // Reply before the transaction timer expires.
-      request.reply(202);
-      var notifier = new RTCSession_ReferNotifier(this, request.cseq);
-      logger.debug("".concat(this._id, " emit \"refer\""));
-
-      // Emit 'refer'.
-      this.emit('refer', {
-        request: request,
-        accept: function accept(initCallback, options) {
-          _accept.call(_this25, initCallback, options);
-        },
-        reject: function reject() {
-          _reject.call(_this25);
-        }
-      });
-      function _accept(initCallback) {
-        var _this26 = this;
-        var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-        initCallback = typeof initCallback === 'function' ? initCallback : null;
-        if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
-          return false;
-        }
-        if (this._enableBFCP) {
-          initCallback && initCallback();
-          return;
-        }
-        var session = new RTCSession(this._ua);
-        session.on('progress', function (_ref1) {
-          var response = _ref1.response;
-          _this26._enableBFCP || notifier.notify(response.status_code, response.reason_phrase);
-        });
-        session.on('accepted', function (_ref10) {
-          var response = _ref10.response;
-          _this26._enableBFCP || notifier.notify(response.status_code, response.reason_phrase);
-
-          // 华为MCU需要挂断
-          _this26._enableBFCP && _this26.terminate();
-        });
-        session.on('_failed', function (_ref11) {
-          var message = _ref11.message,
-            cause = _ref11.cause;
-          if (message) {
-            _this26._enableBFCP || notifier.notify(message.status_code, message.reason_phrase);
-          } else {
-            _this26._enableBFCP || notifier.notify(487, cause);
-          }
-        });
-
-        // Consider the Replaces header present in the Refer-To URI.
-        if (request.refer_to.uri.hasHeader('replaces')) {
-          var replaces = decodeURIComponent(request.refer_to.uri.getHeader('replaces'));
-          options.extraHeaders = Utils.cloneArray(options.extraHeaders);
-          options.extraHeaders.push("Replaces: ".concat(replaces));
-        }
-        options.mediaConstraints = options.mediaConstraints || this._inviteMediaConstraints || this._answerMediaConstraints;
-        session.connect(request.refer_to.uri.toAor(), options, initCallback);
-      }
-      function _reject() {
-        notifier.notify(603);
-      }
-    }
-
-    /**
-     * In dialog Notify Reception
-     */
-  }, {
-    key: "_receiveNotify",
-    value: function _receiveNotify(request) {
-      logger.debug("".concat(this._id, " receiveNotify()"));
-      if (!request.event) {
-        request.reply(400);
-      }
-      switch (request.event.event) {
-        case 'refer':
-          {
-            var id;
-            var referSubscriber;
-            if (request.event.params && request.event.params.id) {
-              id = request.event.params.id;
-              referSubscriber = this._referSubscribers[id];
-            } else if (Object.keys(this._referSubscribers).length === 1) {
-              referSubscriber = this._referSubscribers[Object.keys(this._referSubscribers)[0]];
-            } else {
-              request.reply(400, 'Missing event id parameter');
-              return;
-            }
-            if (!referSubscriber) {
-              request.reply(481, 'Subscription does not exist');
-              return;
-            }
-            referSubscriber.receiveNotify(request);
-            request.reply(200);
-            break;
-          }
-
-        // for 3pcc
-        case 'talk':
-        case 'hold':
-          {
-            request.reply(200);
-            this.emit('notify', {
-              event: request.event.event,
-              request: request
->>>>>>> CRTC-new
             });
             this._localShareStreamLocallyGenerated = true;
             return stream;
@@ -35859,7 +31415,6 @@ module.exports = class RTCSession extends EventEmitter {
             this.unShare();
             return Promise.reject(new Error('Yours sharing permission has been revoked.'));
           }
-<<<<<<< HEAD
         } else {
           // 替换流方式分享屏幕
           stream.getTracks().forEach(track => {
@@ -35880,49 +31435,6 @@ module.exports = class RTCSession extends EventEmitter {
         } else {
           // BFCP 释放资源
           this._enableBFCP && this._sendFloorRelease();
-=======
-        default:
-          {
-            request.reply(489);
-          }
-      }
-    }
-
-    /**
-     * INVITE with Replaces Reception
-     */
-  }, {
-    key: "_receiveReplaces",
-    value: function _receiveReplaces(request) {
-      var _this28 = this;
-      logger.debug("".concat(this._id, " receiveReplaces()"));
-      function _accept2(initCallback) {
-        var _this27 = this;
-        if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
-          return false;
-        }
-        var session = new RTCSession(this._ua);
-
-        // Terminate the current session when the new one is confirmed.
-        session.on('confirmed', function () {
-          _this27.terminate();
-        });
-        session.init_incoming(request, initCallback);
-      }
-      function _reject2() {
-        logger.debug("".concat(this._id, " Replaced INVITE rejected by the user"));
-        request.reply(486);
-      }
-
-      // Emit 'replace'.
-      this.emit('replaces', {
-        request: request,
-        accept: function accept(initCallback) {
-          _accept2.call(_this28, initCallback);
-        },
-        reject: function reject() {
-          _reject2.call(_this28);
->>>>>>> CRTC-new
         }
         this._logEventError('warn', 'getdisplaymediafailed', error);
         this.emit('getdisplaymediafailed', error);
@@ -35931,7 +31443,6 @@ module.exports = class RTCSession extends EventEmitter {
     }
   }
 
-<<<<<<< HEAD
   /**
    * 停止分享媒体
    */
@@ -36063,150 +31574,6 @@ module.exports = class RTCSession extends EventEmitter {
     var transportType = options.transportType || CRTC_C.DTMF_TRANSPORT.INFO;
     if (tones === undefined) {
       throw new TypeError('Not enough arguments');
-=======
-    /**
-     * Initial Request Sender
-     */
-  }, {
-    key: "_sendInitialRequest",
-    value: function _sendInitialRequest(rtcOfferConstraints, mediaStream) {
-      var _this29 = this;
-      var request_sender = new RequestSender(this._ua, this._request, {
-        onRequestTimeout: function onRequestTimeout() {
-          _this29.onRequestTimeout();
-        },
-        onTransportError: function onTransportError() {
-          _this29.onTransportError();
-        },
-        // Update the request on authentication.
-        onAuthenticated: function onAuthenticated(request) {
-          _this29._request = request;
-        },
-        onReceiveResponse: function onReceiveResponse(response) {
-          _this29._receiveInviteResponse(response);
-        }
-      });
-
-      // This Promise is resolved within the next iteration, so the app has now
-      // a chance to set events such as 'peerconnection' and 'connecting'.
-      Promise.resolve().then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee13() {
-        var stream, _Utils$generateAnEmpt2, videoTrack;
-        return _regenerator().w(function (_context14) {
-          while (1) switch (_context14.n) {
-            case 0:
-              if (!(_this29._status === C.STATUS_TERMINATED)) {
-                _context14.n = 1;
-                break;
-              }
-              throw new Error('terminated');
-            case 1:
-              // 兼容BFCP需要做音频混音
-              if (_this29._enableBFCP) {
-                stream = new MediaStream([_this29._createBfcpAudioTrack(mediaStream), mediaStream.getVideoTracks()[0]]);
-                _this29._bfcpMediastreams.push(mediaStream);
-                _this29._localMediaStream = stream;
-              } else {
-                _this29._localMediaStream = mediaStream;
-              }
-              if (_this29._localMediaStream) {
-                // 兼容低版本浏览器不支持addTrack的情况
-                if (RTCPeerConnection.prototype.addTrack) {
-                  _this29._localMediaStream.getAudioTracks().forEach(function (track) {
-                    _this29._connection.addTrack(track, _this29._localMediaStream);
-                  });
-                  _this29._localMediaStream.getVideoTracks().forEach(function (track) {
-                    _this29._connection.addTrack(track, _this29._localMediaStream);
-                  });
-                } else {
-                  _this29._connection.addStream(_this29._localMediaStream);
-                }
-              }
-
-              /**
-               * 是否启用 DataChannel
-               **/
-              if (_this29._enableBFCP) {
-                _Utils$generateAnEmpt2 = Utils.generateAnEmptyVideoTrack(), videoTrack = _Utils$generateAnEmpt2.videoTrack;
-                _this29._bfcpVideoTrack = videoTrack;
-                _this29._connection.addTrack(_this29._bfcpVideoTrack, _this29._localMediaStream);
-                _this29._initDataChannel();
-              }
-
-              // TODO: should this be triggered here?
-              _this29._connecting(_this29._request);
-              return _context14.a(2, _this29._createLocalDescription('offer', rtcOfferConstraints)["catch"](function (error) {
-                _this29._failed('local', null, CRTC_C.causes.WEBRTC_ERROR);
-                throw error;
-              }));
-          }
-        }, _callee13);
-      }))).then(function (desc) {
-        if (_this29._is_canceled || _this29._status === C.STATUS_TERMINATED) {
-          throw new Error('terminated');
-        }
-
-        // 添加BFCP所需属性
-        if (_this29._enableBFCP) {
-          // 根据 MediaStreamTrackGenerator 是否支持判断是否存在第二个视频流
-          var supportedMSTC = false;
-          if ('MediaStreamTrackGenerator' in window) {
-            supportedMSTC = true;
-          }
-          _this29._connection.getTransceivers().forEach(function (transceiver) {
-            var track = transceiver.sender.track;
-            if (!track) {
-              return;
-            }
-            if (supportedMSTC) {
-              // eslint-disable-next-line no-undef
-              if (track instanceof MediaStreamTrackGenerator || _this29._isCanvasTrack(track)) {
-                _this29._mStream = transceiver.mid;
-                sessionStorage.setItem(CRTC_C.BFCP_SHARED_STREAM_INDEX, transceiver.mid);
-              }
-            } else if (_this29._isCanvasTrack(track)) {
-              _this29._mStream = transceiver.mid;
-              sessionStorage.setItem(CRTC_C.BFCP_SHARED_STREAM_INDEX, transceiver.mid);
-            }
-          });
-          desc = desc.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this29._floorctrl ? _this29._floorctrl : 'c-s', "\r\n"));
-
-          // 添加主辅流标志
-          desc = _this29._addMediastreamFlag(desc, _this29._mStream);
-        }
-        _this29._request.body = desc;
-        _this29._status = C.STATUS_INVITE_SENT;
-
-        // 获取DTMF的payload
-        if (desc && !_this29._dtmf_payload) {
-          _this29._dtmf_payload = Utils.getDtmfPayloadAndClockRate(desc);
-        }
-        logger.debug("".concat(_this29._id, " dtmf payload ").concat(JSON.stringify(_this29._dtmf_payload)));
-        logger.debug("".concat(_this29._id, " emit \"sending\" [request:%o] "), _this29._request);
-        var cache = [];
-        logger.debug("".concat(_this29._id, " emit \"sending\" [request:%o] ").concat(JSON.stringify(_this29._request, function (key, value) {
-          if (_typeof(value) === 'object' && value !== null) {
-            if (cache.indexOf(value) !== -1) {
-              // 移除
-              return;
-            }
-            // 收集所有的值
-            cache.push(value);
-          }
-          return value;
-        })));
-
-        // Emit 'sending' so the app can mangle the body before the request is sent.
-        _this29.emit('sending', {
-          request: _this29._request
-        });
-        request_sender.send();
-      })["catch"](function (error) {
-        if (_this29._status === C.STATUS_TERMINATED) {
-          return;
-        }
-        logger.warn(error);
-      });
->>>>>>> CRTC-new
     }
 
     // Check Session Status.
@@ -36380,45 +31747,163 @@ module.exports = class RTCSession extends EventEmitter {
   }
 
   /**
-   * 设置视频内容提示，主要用于提升在不同场景下的视频编码质量
+   * 设置视频内容类型
+   *
+   * hint:
+   *  - motion  -> 动态视频优先（保帧率）
+   *  - detail  -> 细节优先（保分辨率）
+   *  - text    -> 文本共享优化
+   *  - ''      -> 恢复默认策略
+   *
+   * shared:
+   *  - true  屏幕共享
+   *  - false 摄像头
    */
-  setVideoContentHint(hint, shared) {
-    logger.debug(`${this._id} setVideoContentHint()`, hint);
-    var hints = ['detail', 'text', 'motion'];
+  async setVideoContentHint(hint = '', shared = false) {
+    var _this = this;
+    logger.debug(`${this._id} setVideoContentHint()`, hint, shared);
+    var validHints = ['detail', 'text', 'motion', ''];
+    if (!validHints.includes(hint)) {
+      logger.warn(`invalid contentHint: ${hint}`);
+      return false;
+    }
     if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
+      logger.warn('invalid session status');
       return false;
     }
     if (!this._isReadyToReOffer()) {
+      logger.warn('peerconnection not ready');
       return false;
     }
-    if (hints[hint] !== -1) {
-      var tracks;
-      if (shared) {
-        tracks = this._localShareStream.getVideoTracks();
-      } else {
-        tracks = this._localMediaStream.getVideoTracks();
+    var stream = shared ? this._localShareStream : this._localMediaStream;
+    if (!stream) {
+      logger.warn('stream not found');
+      return false;
+    }
+    var tracks = stream.getVideoTracks();
+    if (!tracks.length) {
+      logger.warn('video track not found');
+      return false;
+    }
+    var _loop = async function (track) {
+      // 设置 contentHint
+      if ('contentHint' in track) {
+        track.contentHint = hint;
+        logger.debug(`track.contentHint = ${hint}`);
       }
-      tracks.forEach(track => {
-        this.connection.getSenders().forEach(sender => {
-          if (sender.track && sender.track.kind === 'video') {
-            var parameters = sender.getParameters();
-            var degradationPreference = hint !== 'motion' ? 'balanced' : 'maintain-resolution';
+      _this.connection.getSenders().forEach(sender => {
+        if (sender.track && sender.track.kind === 'video') {
+          var parameters = sender.getParameters();
+          var degradationPreference = hint !== 'motion' ? 'balanced' : 'maintain-resolution';
 
-            // 强制保持分辨率，可以不降分辨率只降帧
-            parameters.degradationPreference = degradationPreference;
-            sender.setParameters(parameters).then(() => {
-              logger.debug(`setParameters success ${degradationPreference}`);
-            }).catch(err => {
-              logger.error(`setParameters error: ${err.message}`);
-            });
-          }
-        });
-        if ('contentHint' in track) {
-          track.contentHint = hint;
-        } else {
-          return false;
+          // 强制保持分辨率，可以不降分辨率只降帧
+          parameters.degradationPreference = degradationPreference;
+          sender.setParameters(parameters).then(() => {
+            logger.debug(`setParameters success ${degradationPreference}`);
+          }).catch(err => {
+            logger.error(`setParameters error: ${err.message}`);
+          });
         }
       });
+
+      // 找到对应 sender
+      var sender = _this.connection.getSenders().find(s => s.track === track);
+      if (!sender) {
+        logger.warn('RTCRtpSender not found');
+        return 1; // continue
+      }
+
+      // 设置 degradationPreference
+      await _this._setSenderDegradationPreference(sender, hint, shared);
+    };
+    for (var track of tracks) {
+      if (await _loop(track)) continue;
+    }
+    return true;
+  }
+
+  /**
+   * 设置编码降级策略
+   *
+   * motion:
+   *   maintain-framerate
+   *
+   * detail/text:
+   *   maintain-resolution
+   *
+   * fallback:
+   *   balanced
+   */
+  async _setSenderDegradationPreference(sender, hint) {
+    // 浏览器兼容检测
+    if (!this._isDegradationPreferenceSupported()) {
+      logger.debug('degradationPreference unsupported');
+      return;
+    }
+    var degradationPreference = 'balanced';
+    switch (hint) {
+      case 'motion':
+        // 保帧率
+        degradationPreference = 'maintain-framerate';
+        break;
+      case 'detail':
+      case 'text':
+        // 保清晰度
+        degradationPreference = 'maintain-resolution';
+        break;
+      case '':
+      default:
+        degradationPreference = 'balanced';
+        break;
+    }
+    try {
+      var parameters = sender.getParameters();
+      if (!parameters) {
+        logger.warn('sender.getParameters() empty');
+        return;
+      }
+
+      // 避免重复 setParameters
+      if (parameters.degradationPreference === degradationPreference) {
+        logger.debug(`degradationPreference already ${degradationPreference}`);
+        return;
+      }
+      parameters.degradationPreference = degradationPreference;
+      await sender.setParameters(parameters);
+      logger.debug(`set degradationPreference success: ${degradationPreference}`);
+    } catch (err) {
+      logger.error(`set degradationPreference failed: ${err.message}`);
+    }
+  }
+
+  /**
+  * 浏览器是否支持 degradationPreference
+  */
+  _isDegradationPreferenceSupported() {
+    try {
+      var ua = navigator.userAgent;
+
+      // Safari
+      var isSafari = /^((?!chrome|android).)*safari/i.test(ua);
+      if (isSafari) {
+        var safariMatch = ua.match(/Version\/(\d+)/);
+        var version = safariMatch && safariMatch[1];
+        if (version && Number(version) < 12) {
+          return false;
+        }
+      }
+
+      // Firefox
+      var firefoxMatch = ua.match(/Firefox\/(\d+)/);
+      if (firefoxMatch) {
+        var firefoxVersion = Number(firefoxMatch[1]);
+        if (firefoxVersion < 138) {
+          return false;
+        }
+      }
+      return true;
+    } catch (err) {
+      return false;
     }
   }
 
@@ -36565,7 +32050,6 @@ module.exports = class RTCSession extends EventEmitter {
       return false;
     }
 
-<<<<<<< HEAD
     // Check target validity.
     target = this._ua.normalizeTarget(target);
     if (!target) {
@@ -36573,16 +32057,6 @@ module.exports = class RTCSession extends EventEmitter {
     }
     var referSubscriber = new RTCSession_ReferSubscriber(this);
     referSubscriber.sendRefer(target, options);
-=======
-    /**
-     * Reception of Response for Initial INVITE
-     */
-  }, {
-    key: "_receiveInviteResponse",
-    value: function _receiveInviteResponse(response) {
-      var _this30 = this;
-      logger.debug("".concat(this._id, " receiveInviteResponse()"));
->>>>>>> CRTC-new
 
     // Store in the map.
     var id = referSubscriber.id;
@@ -36708,7 +32182,6 @@ module.exports = class RTCSession extends EventEmitter {
             return;
           }
 
-<<<<<<< HEAD
           // Update signaling status.
           this._status = C.STATUS_CONFIRMED;
           clearTimeout(this._timers.ackTimer);
@@ -36718,50 +32191,6 @@ module.exports = class RTCSession extends EventEmitter {
               this.terminate({
                 cause: CRTC_C.causes.MISSING_SDP,
                 status_code: 400
-=======
-      // Proceed to cancellation if the user requested.
-      if (this._is_canceled) {
-        if (response.status_code >= 100 && response.status_code < 200) {
-          this._request.cancel(this._cancel_reason);
-        } else if (response.status_code >= 200 && response.status_code < 299) {
-          this._acceptAndTerminate(response);
-        }
-        return;
-      }
-      if (this._status !== C.STATUS_INVITE_SENT && this._status !== C.STATUS_1XX_RECEIVED) {
-        return;
-      }
-      switch (true) {
-        case /^100$/.test(response.status_code):
-          this._status = C.STATUS_1XX_RECEIVED;
-          this._trying(response);
-          break;
-        case /^1[0-9]{2}$/.test(response.status_code):
-          {
-            // Do nothing with 1xx responses without To tag.
-            if (!response.to_tag) {
-              logger.debug("".concat(this._id, " 1xx response received without to tag"));
-              break;
-            }
-
-            // Create Early Dialog if 1XX comes with contact.
-            if (response.hasHeader('contact')) {
-              // An error on dialog creation will fire 'failed' event.
-              if (!this._createDialog(response, 'UAC', true)) {
-                break;
-              }
-            }
-            this._status = C.STATUS_1XX_RECEIVED;
-            if (!response.body) {
-              Promise.resolve().then(function () {
-                if (response.getHeader('require') && response.getHeader('require').indexOf('100rel') !== -1 && Boolean(response.getHeader('rseq'))) {
-                  _this30._earlyDialogs[Object.keys(_this30._earlyDialogs)[0]].sendRequest(CRTC_C.PRACK, {
-                    RSeq: response.getHeader('rseq')
-                  });
-                }
-              }).then(function () {
-                _this30._progress('remote', response);
->>>>>>> CRTC-new
               });
               break;
             }
@@ -36777,7 +32206,6 @@ module.exports = class RTCSession extends EventEmitter {
               type: 'answer',
               sdp: e.sdp
             });
-<<<<<<< HEAD
             this._connectionPromiseQueue = this._connectionPromiseQueue.then(() => this._connection.setRemoteDescription(answer)).then(() => {
               if (!this._is_confirmed) {
                 this._confirmed('remote', request);
@@ -36786,205 +32214,6 @@ module.exports = class RTCSession extends EventEmitter {
               this.terminate({
                 cause: CRTC_C.causes.BAD_MEDIA_DESCRIPTION,
                 status_code: 488
-=======
-            // TODO:如果改成pranswer接通前远端update会有问题
-            // const answer = new RTCSessionDescription({ type: 'pranswer', sdp: e.sdp });
-
-            this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-              // 兼容部分场景180多次返回SDP问题
-              if (_this30._connection.signalingState !== 'stable') {
-                return _this30._connection.setRemoteDescription(answer);
-              } else {
-                logger.warn("".concat(_this30._id, " Failed to execute 'setRemoteDescription' on 'RTCPeerConnection': Failed to set remote answer sdp: Called in wrong state: stable"));
-              }
-            })
-            // 发送 RFC3262 183 PRACK
-            .then(function () {
-              if (e.sdp.indexOf('m=video 0 ') !== -1) {
-                _this30._ealyAudio = true;
-              }
-              if (response.getHeader('require') && response.getHeader('require').indexOf('100rel') !== -1 && Boolean(response.getHeader('rseq'))) {
-                _this30._earlyDialogs[Object.keys(_this30._earlyDialogs)[0]].sendRequest(CRTC_C.PRACK, {
-                  RSeq: response.getHeader('rseq')
-                });
-              }
-            }).then(function () {
-              return _this30._progress('remote', response);
-            })["catch"](function (error) {
-              logger.warn("".concat(_this30._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]"), error);
-              logger.warn("".concat(_this30._id, " emit \"peerconnection:setremotedescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
-              _this30.emit('peerconnection:setremotedescriptionfailed', error);
-            });
-            break;
-          }
-        case /^2[0-9]{2}$/.test(response.status_code):
-          {
-            this._status = C.STATUS_CONFIRMED;
-
-            // An error on dialog creation will fire 'failed' event.
-            if (!this._createDialog(response, 'UAC')) {
-              break;
-            }
-
-            // 以下修改为兼容 VoLTE 的 200ok 不带 SDP 的情况
-            if (!response.body) {
-              this._accepted('remote', response);
-              if (this._ealyAudio) {
-                this._ontogglemode('audio');
-              }
-
-              // 兼容安卓微信Bug
-              if (this._replaceAudioTrack && navigator.userAgent.indexOf('WeChat') != -1) {
-                navigator.mediaDevices.getUserMedia({
-                  audio: this._inviteMediaConstraints.audio || true,
-                  video: false
-                }).then(function (stream) {
-                  var sender = _this30._connection.getSenders().find(function (s) {
-                    return s.track.kind == 'audio';
-                  });
-                  sender.replaceTrack(stream.getAudioTracks()[0]).then(function () {
-                    logger.debug("WeChat replactTrack ".concat(stream.getAudioTracks()[0].id, " success."));
-                    // 适配 100rel 调整 ack 的 cseq
-                    _this30.sendRequest(CRTC_C.ACK);
-                    _this30._confirmed('local', null);
-                  });
-                });
-              } else {
-                // 适配 100rel 调整 ack 的 cseq
-                this.sendRequest(CRTC_C.ACK);
-                this._confirmed('local', null);
-              }
-              break;
-            }
-
-            /**
-                 * 音视频切换相关
-                 * 根据sdp判断用户Answer的通话模式，并触发mode事件
-                 * @author: lei
-                 */
-            var sdp = sdp_transform.parse(response.body);
-            this._remoteToAudio = true;
-            this._remoteToVideo = false;
-            var _iterator1 = _createForOfIteratorHelper(sdp.media),
-              _step1;
-            try {
-              for (_iterator1.s(); !(_step1 = _iterator1.n()).done;) {
-                var m = _step1.value;
-                if (m.type === 'audio') {
-                  continue;
-                }
-                if (m.port !== 0) {
-                  this._remoteToAudio = false;
-                  this._remoteToVideo = true;
-                }
-              }
-            } catch (err) {
-              _iterator1.e(err);
-            } finally {
-              _iterator1.f();
-            }
-            if (this._remoteToAudio) {
-              this._ontogglemode('audio');
-            } else {
-              this._ontogglemode('video');
-            }
-            var _newSdp = this._sdpAddMid(response.body);
-            var _e = {
-              originator: 'remote',
-              type: 'answer',
-              sdp: _newSdp
-            };
-            logger.debug("".concat(this._id, " emit \"sdp\""));
-            this.emit('sdp', _e);
-            if (this._enableBFCP) {
-              // 获取响应中BFCP相关属性
-              this._floorId = Number((_e.sdp.match(/a=floorid:(\d+)/) || [null, 1])[1]);
-              this._floorctrl = (_e.sdp.match(/a=floorctrl:([a-z-]+)/) || [null, ''])[1] === 's-only' ? 'c-only' : 'c-s';
-              this._confId = (_e.sdp.match(/a=confid:(\d+)/) || [null, ''])[1];
-              this._bfcpUserId = (_e.sdp.match(/a=userid:(\d+)/) || [null, ''])[1];
-              this._mstrm = (_e.sdp.match(/mstrm:(\d+)/) || [null, ''])[1];
-
-              // 把协商来的userId 和 confId赋值给bfcpUser对象
-              this._bfcpUser.userId = Number(this._bfcpUserId);
-              this._bfcpUser.conferenceId = Number(this._confId);
-            }
-            var _answer = new RTCSessionDescription({
-              type: 'answer',
-              sdp: _e.sdp
-            });
-            this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-              // Be ready for 200 with SDP after a 180/183 with SDP.
-              // We created a SDP 'answer' for it, so check the current signaling state.
-              if (_this30._connection.signalingState === 'stable') {
-                return _this30._connection.createOffer(_this30._rtcOfferConstraints).then(function (offer) {
-                  return _this30._connection.setLocalDescription(offer);
-                })["catch"](function (error) {
-                  _this30._acceptAndTerminate(response, 500, error.toString());
-                  _this30._failed('local', response, CRTC_C.causes.WEBRTC_ERROR);
-                });
-              }
-            }).then(function () {
-              _this30._connection.setRemoteDescription(_answer).then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee14() {
-                var mics, sender;
-                return _regenerator().w(function (_context15) {
-                  while (1) switch (_context15.n) {
-                    case 0:
-                      // Handle Session Timers.
-                      _this30._handleSessionTimersInIncomingResponse(response);
-                      _this30._accepted('remote', response);
-                      _this30.sendRequest(CRTC_C.ACK);
-
-                      // 兼容安卓微信Bug及iOS蓝牙问题
-                      _context15.n = 1;
-                      return Utils.getMicrophones();
-                    case 1:
-                      mics = _context15.v;
-                      if (_this30._replaceAudioTrack && navigator.userAgent.indexOf('WeChat') != -1) {
-                        navigator.mediaDevices.getUserMedia({
-                          audio: _this30._inviteMediaConstraints.audio || true,
-                          video: false
-                        }).then(function (stream) {
-                          var sender = _this30._connection.getSenders().find(function (s) {
-                            return s.track.kind == 'audio';
-                          });
-                          if (sender) {
-                            sender.replaceTrack(stream.getAudioTracks()[0]).then(function () {
-                              _this30._confirmed('local', null);
-                            });
-                          } else {
-                            _this30._confirmed('local', null);
-                          }
-                        });
-                      } else if (_this30._receiveInviteResponse && navigator.userAgent.indexOf('iPhone') != -1 && mics.length > 1) {
-                        if (_this30._localMediaStream) {
-                          sender = _this30._connection.getSenders().find(function (s) {
-                            return s.track.kind == 'audio';
-                          });
-                          if (sender) {
-                            sender.replaceTrack(_this30._localMediaStream.getAudioTracks()[0]).then(function () {
-                              _this30._confirmed('local', null);
-                            });
-                          } else {
-                            _this30._confirmed('local', null);
-                          }
-                        }
-                      } else {
-                        _this30._confirmed('local', null);
-                      }
-
-                      // 开启 BFCP，自动发送reInvite
-                      _this30._enableBFCP && _this30.renegotiate();
-                    case 2:
-                      return _context15.a(2);
-                  }
-                }, _callee14);
-              })))["catch"](function (error) {
-                _this30._acceptAndTerminate(response, 488, 'Not Acceptable Here');
-                _this30._failed('remote', response, CRTC_C.causes.BAD_MEDIA_DESCRIPTION);
-                logger.warn("".concat(_this30._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]"), error);
-                logger.warn("".concat(_this30._id, " emit \"peerconnection:setremotedescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
-                _this30.emit('peerconnection:setremotedescriptionfailed', error);
->>>>>>> CRTC-new
               });
               emitSetRemoteDescriptionFailed(this, error);
             });
@@ -37181,7 +32410,6 @@ module.exports = class RTCSession extends EventEmitter {
      *
      * 这些 stop 方法各自安全关闭输入流，确保设备采集流不悬挂。
      */
-<<<<<<< HEAD
     this._mediaPipeline.stopSessionMediaEffectsComposer();
     this._mediaPipeline.stopSessionAiNoiseSuppression();
     this._sessionMediaEffectsComposerOptions = null;
@@ -37190,18 +32418,6 @@ module.exports = class RTCSession extends EventEmitter {
       return;
     }
     this._status = C.STATUS_TERMINATED;
-=======
-  }, {
-    key: "_sendReinvite",
-    value: function _sendReinvite() {
-      var _this31 = this;
-      var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-      logger.debug("".concat(this._id, " sendReinvite()"));
-      var extraHeaders = Utils.cloneArray(options.extraHeaders);
-      var eventHandlers = Utils.cloneObject(options.eventHandlers);
-      var rtcOfferConstraints = options.rtcOfferConstraints || this._rtcOfferConstraints || null;
-      var succeeded = false;
->>>>>>> CRTC-new
 
     // Terminate RTC.
     if (this._connection) {
@@ -37219,7 +32435,6 @@ module.exports = class RTCSession extends EventEmitter {
       if (Object.prototype.hasOwnProperty.call(this._timers, timer)) {
         clearTimeout(this._timers[timer]);
       }
-<<<<<<< HEAD
     }
 
     // Clear Session Timers.
@@ -37494,48 +32709,6 @@ module.exports = class RTCSession extends EventEmitter {
               }, {
                 value: 'pcfg:1 t=1'
               }];
-=======
-      this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-        return _this31._createLocalDescription('offer', rtcOfferConstraints);
-      }).then(function (sdp) {
-        sdp = _this31._mangleOffer(sdp);
-
-        // 添加BFCP所需属性
-        _this31._enableBFCP && (sdp = sdp.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this31._floorctrl, "\r\na=floorid:").concat(_this31._floorId, " m-stream:").concat(_this31._mStream, "\r\n")));
-        // 添加主辅流标志
-        sdp = _this31._addMediastreamFlag(sdp, _this31._mStream);
-        var e = {
-          originator: 'local',
-          type: 'offer',
-          sdp: sdp
-        };
-        _this31._enableBFCP && (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
-        logger.debug("".concat(_this31._id, " emit \"sdp\""));
-        _this31.emit('sdp', e);
-
-        // 新增reinvite时更新via_host
-        options.changeViaHost && _this31._ua.set('via_host', "".concat(Utils.createRandomToken(12), ".invalid"));
-        extraHeaders.push("Contact: ".concat(_this31._ua.contact.toString()));
-        _this31.sendRequest(CRTC_C.INVITE, {
-          extraHeaders: extraHeaders,
-          body: sdp,
-          eventHandlers: {
-            onSuccessResponse: function onSuccessResponse(response) {
-              onSucceeded.call(_this31, response);
-              succeeded = true;
-            },
-            onErrorResponse: function onErrorResponse(response) {
-              onFailed.call(_this31, response);
-            },
-            onTransportError: function onTransportError() {
-              _this31.onTransportError(); // Do nothing because session ends.
-            },
-            onRequestTimeout: function onRequestTimeout() {
-              _this31.onRequestTimeout(); // Do nothing because session ends.
-            },
-            onDialogError: function onDialogError() {
-              _this31.onDialogError(); // Do nothing because session ends.
->>>>>>> CRTC-new
             }
           }
         });
@@ -37564,7 +32737,6 @@ module.exports = class RTCSession extends EventEmitter {
         this.emit('peerconnection:setlocaldescriptionfailed', error);
         return Promise.reject(error);
       });
-<<<<<<< HEAD
     }).then(() => {
       // Resolve right away if 'pc.iceGatheringState' is 'complete'.
       /**
@@ -37931,10 +33103,6 @@ module.exports = class RTCSession extends EventEmitter {
         if (this._enableBFCP && this._floorctrl == 's-only') {
           desc = desc.replace(/^(m=application .*\r\n)/mg, `$1a=floorctrl:${this._floorctrl}\r\na=floorid:${this._floorId} mstrm:12\r\na=confid:123\r\na=userid:456\r\n`);
         }
-=======
-      function onSucceeded(response) {
-        var _this32 = this;
->>>>>>> CRTC-new
         if (this._status === C.STATUS_TERMINATED) {
           return;
         }
@@ -39213,7 +34381,6 @@ module.exports = class RTCSession extends EventEmitter {
          * 远端接听模式
          * @author: lei
          */
-<<<<<<< HEAD
         var sdp_body = sdp_transform.parse(sdp);
         for (var m of sdp_body.media) {
           if (m.type == 'audio') {
@@ -39228,33 +34395,6 @@ module.exports = class RTCSession extends EventEmitter {
             this._remoteToVideo = false;
             this._ontogglemode('audio');
           }
-=======
-        var sdp_body = sdp_transform.parse(response.body);
-        var mediaIndex = 0;
-        var _iterator10 = _createForOfIteratorHelper(sdp_body.media),
-          _step10;
-        try {
-          for (_iterator10.s(); !(_step10 = _iterator10.n()).done;) {
-            var m = _step10.value;
-            if (m.type == 'audio') {
-              continue;
-            }
-            mediaIndex++;
-            if (m.port === 0 && mediaIndex == 1) {
-              this._remoteToAudio = true;
-              this._remoteToVideo = false;
-              this._ontogglemode('audio');
-            } else {
-              this._remoteToAudio = false;
-              this._remoteToVideo = true;
-              this._ontogglemode('video');
-            }
-          }
-        } catch (err) {
-          _iterator10.e(err);
-        } finally {
-          _iterator10.f();
->>>>>>> CRTC-new
         }
         var newSdp = this._sdpAddMid(sdp);
         var e = {
@@ -39268,7 +34408,6 @@ module.exports = class RTCSession extends EventEmitter {
           type: 'answer',
           sdp: e.sdp
         });
-<<<<<<< HEAD
         this._connectionPromiseQueue = this._connectionPromiseQueue.then(() => this._connection.setRemoteDescription(answer)).then(() => {
           if (eventHandlers.succeeded) {
             eventHandlers.succeeded(response);
@@ -39276,19 +34415,6 @@ module.exports = class RTCSession extends EventEmitter {
         }).catch(error => {
           onFailed.call(this);
           emitSetRemoteDescriptionFailed(this, error);
-=======
-        this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-          return _this32._connection.setRemoteDescription(answer);
-        }).then(function () {
-          if (eventHandlers.succeeded) {
-            eventHandlers.succeeded(response);
-          }
-        })["catch"](function (error) {
-          onFailed.call(_this32);
-          logger.warn("".concat(_this32._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]"), error);
-          logger.warn("".concat(_this32._id, " emit \"peerconnection:setremotedescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
-          _this32.emit('peerconnection:setremotedescriptionfailed', error);
->>>>>>> CRTC-new
         });
       }
       // No SDP answer.
@@ -39347,7 +34473,6 @@ module.exports = class RTCSession extends EventEmitter {
         }
       }
     }
-<<<<<<< HEAD
     // Local and remote hold.
     else if (this._localHold && this._remoteHold) {
       logger.debug(`${this._id} mangleOffer() | both on hold, mangling offer`);
@@ -39356,29 +34481,6 @@ module.exports = class RTCSession extends EventEmitter {
           continue;
         }
         _m2.direction = 'inactive';
-=======
-
-    /**
-     * Send UPDATE
-     */
-  }, {
-    key: "_sendUpdate",
-    value: function _sendUpdate() {
-      var _this33 = this;
-      var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-      logger.debug("".concat(this._id, " sendUpdate()"));
-      var extraHeaders = Utils.cloneArray(options.extraHeaders);
-      var eventHandlers = Utils.cloneObject(options.eventHandlers);
-      var rtcOfferConstraints = options.rtcOfferConstraints || this._rtcOfferConstraints || null;
-      var sdpOffer = options.sdpOffer || false;
-      var succeeded = false;
-      extraHeaders.push("Contact: ".concat(this._contact));
-
-      // 5G Headers
-      if (this._ua.sk[7] >= 3) {
-        extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
-        extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
->>>>>>> CRTC-new
       }
     }
     // Remote hold.
@@ -39396,7 +34498,6 @@ module.exports = class RTCSession extends EventEmitter {
           _m3.direction = 'inactive';
         }
       }
-<<<<<<< HEAD
     }
     return sdp_transform.write(sdp);
   }
@@ -39542,168 +34643,17 @@ module.exports = class RTCSession extends EventEmitter {
     // I'm the refresher.
     if (this._sessionTimers.refresher) {
       this._sessionTimers.timer = setTimeout(() => {
-=======
-      if (sdpOffer) {
-        extraHeaders.push('Content-Type: application/sdp');
-        this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-          return _this33._createLocalDescription('offer', rtcOfferConstraints);
-        }).then(function (sdp) {
-          sdp = _this33._mangleOffer(sdp);
-          var e = {
-            originator: 'local',
-            type: 'offer',
-            sdp: sdp
-          };
-          _this33._enableBFCP && (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
-          logger.debug("".concat(_this33._id, " emit \"sdp\""));
-          _this33.emit('sdp', e);
-          _this33.sendRequest(CRTC_C.UPDATE, {
-            extraHeaders: extraHeaders,
-            body: sdp,
-            eventHandlers: {
-              onSuccessResponse: function onSuccessResponse(response) {
-                onSucceeded.call(_this33, response);
-                succeeded = true;
-              },
-              onErrorResponse: function onErrorResponse(response) {
-                onFailed.call(_this33, response);
-              },
-              onTransportError: function onTransportError() {
-                _this33.onTransportError(); // Do nothing because session ends.
-              },
-              onRequestTimeout: function onRequestTimeout() {
-                _this33.onRequestTimeout(); // Do nothing because session ends.
-              },
-              onDialogError: function onDialogError() {
-                _this33.onDialogError(); // Do nothing because session ends.
-              }
-            }
-          });
-        })["catch"](function () {
-          onFailed.call(_this33);
-        });
-      }
-      // No SDP.
-      else {
-        this.sendRequest(CRTC_C.UPDATE, {
-          extraHeaders: extraHeaders,
-          eventHandlers: {
-            onSuccessResponse: function onSuccessResponse(response) {
-              onSucceeded.call(_this33, response);
-            },
-            onErrorResponse: function onErrorResponse(response) {
-              onFailed.call(_this33, response);
-            },
-            onTransportError: function onTransportError() {
-              _this33.onTransportError(); // Do nothing because session ends.
-            },
-            onRequestTimeout: function onRequestTimeout() {
-              _this33.onRequestTimeout(); // Do nothing because session ends.
-            },
-            onDialogError: function onDialogError() {
-              _this33.onDialogError(); // Do nothing because session ends.
-            }
-          }
-        });
-      }
-      function onSucceeded(response) {
-        var _this34 = this;
->>>>>>> CRTC-new
         if (this._status === C.STATUS_TERMINATED) {
           return;
         }
         if (!this._isReadyToReOffer()) {
           return;
         }
-<<<<<<< HEAD
         logger.debug(`${this._id} runSessionTimer() | sending session refresh request`);
         if (this._sessionTimers.refreshMethod === CRTC_C.UPDATE) {
           this._sendUpdate();
         } else {
           this._sendReinvite();
-=======
-
-        // 单向视频将收到的sdp内packetization-mode=1改为0
-        // if (response.body && rtcOfferConstraints.offerToReceiveVideo === false)
-        // {
-        //   response.body = response.body.replace(/packetization-mode=1/g, 'packetization-mode=0');
-        // }
-
-        // Handle Session Timers.
-        this._handleSessionTimersInIncomingResponse(response);
-
-        // Must have SDP answer.
-        if (sdpOffer) {
-          if (!response.body) {
-            logger.warn("".concat(this._id, " no body."));
-            onFailed.call(this);
-            return;
-          } else if (!response.hasHeader('Content-Type') || response.getHeader('Content-Type').toLowerCase() !== 'application/sdp') {
-            logger.warn("".concat(this._id, " not sdp."));
-            onFailed.call(this);
-            return;
-          }
-          var sdp = response.body;
-
-          // 适配特殊情况，本端切视频远端没有 video 0 的问题
-          if (this._localToAudio) {
-            sdp = Utils.ensureVideoSdpAttrs(sdp);
-          }
-
-          /**
-           * 音视频切换相关
-           * 远端接听模式
-           * @author: lei
-           */
-          var sdp_body = sdp_transform.parse(sdp);
-          var _iterator11 = _createForOfIteratorHelper(sdp_body.media),
-            _step11;
-          try {
-            for (_iterator11.s(); !(_step11 = _iterator11.n()).done;) {
-              var m = _step11.value;
-              if (m.type == 'audio') {
-                continue;
-              }
-              if (m.port !== 0) {
-                this._remoteToAudio = false;
-                this._remoteToVideo = true;
-                this._ontogglemode('video');
-              } else {
-                this._remoteToAudio = true;
-                this._remoteToVideo = false;
-                this._ontogglemode('audio');
-              }
-            }
-          } catch (err) {
-            _iterator11.e(err);
-          } finally {
-            _iterator11.f();
-          }
-          var newSdp = this._sdpAddMid(sdp);
-          var e = {
-            originator: 'remote',
-            type: 'answer',
-            sdp: newSdp
-          };
-          logger.debug("".concat(this._id, " emit \"sdp\""));
-          this.emit('sdp', e);
-          var answer = new RTCSessionDescription({
-            type: 'answer',
-            sdp: e.sdp
-          });
-          this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-            return _this34._connection.setRemoteDescription(answer);
-          }).then(function () {
-            if (eventHandlers.succeeded) {
-              eventHandlers.succeeded(response);
-            }
-          })["catch"](function (error) {
-            onFailed.call(_this34);
-            logger.warn("".concat(_this34._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]"), error);
-            logger.warn("".concat(_this34._id, " emit \"peerconnection:setremotedescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
-            _this34.emit('peerconnection:setremotedescriptionfailed', error);
-          });
->>>>>>> CRTC-new
         }
       }, expires * 500); // Half the given interval (as the RFC states).
     }
@@ -39823,6 +34773,7 @@ module.exports = class RTCSession extends EventEmitter {
       logger.debug('remoteSupportsVideo');
       this.emit('remoteSupportsVideo', true);
     }
+    this._remoteSupportsVideo && this.emit('remoteSupportsVideo', this._remoteSupportsVideo);
   }
   _confirmed(originator, ack) {
     logger.debug(`${this._id} session confirmed`);
@@ -39861,6 +34812,7 @@ module.exports = class RTCSession extends EventEmitter {
   _ended(originator, message, cause) {
     logger.debug(`${this._id} session ended`);
     this._end_time = new Date();
+    this._stopVideoFrameRateMonitor();
     this._close();
     logger.debug(`${this._id} emit "ended"`);
 
@@ -39886,103 +34838,12 @@ module.exports = class RTCSession extends EventEmitter {
     this._bfcpHeatbeatTimer && clearInterval(this._bfcpHeatbeatTimer);
     this._bfcpHeatbeatTimer = null; // 避免潜在的内存泄漏
 
-<<<<<<< HEAD
     // 停止检测close状态
     this._closingInterval && clearInterval(this._closingInterval);
   }
   _failed(originator, message, cause) {
     logger.debug(`${this._id} session failed`);
-=======
-      // Local hold.
-      if (this._localHold && !this._remoteHold) {
-        logger.debug("".concat(this._id, " mangleOffer() | me on hold, mangling offer"));
-        var _iterator12 = _createForOfIteratorHelper(sdp.media),
-          _step12;
-        try {
-          for (_iterator12.s(); !(_step12 = _iterator12.n()).done;) {
-            var m = _step12.value;
-            if (holdMediaTypes.indexOf(m.type) === -1) {
-              continue;
-            }
-            if (!m.direction) {
-              m.direction = 'sendonly';
-            } else if (m.direction === 'sendrecv') {
-              m.direction = 'sendonly';
-            } else if (m.direction === 'recvonly') {
-              m.direction = 'inactive';
-            }
-          }
-        } catch (err) {
-          _iterator12.e(err);
-        } finally {
-          _iterator12.f();
-        }
-      }
-      // Local and remote hold.
-      else if (this._localHold && this._remoteHold) {
-        logger.debug("".concat(this._id, " mangleOffer() | both on hold, mangling offer"));
-        var _iterator13 = _createForOfIteratorHelper(sdp.media),
-          _step13;
-        try {
-          for (_iterator13.s(); !(_step13 = _iterator13.n()).done;) {
-            var _m2 = _step13.value;
-            if (holdMediaTypes.indexOf(_m2.type) === -1) {
-              continue;
-            }
-            _m2.direction = 'inactive';
-          }
-        } catch (err) {
-          _iterator13.e(err);
-        } finally {
-          _iterator13.f();
-        }
-      }
-      // Remote hold.
-      else if (this._remoteHold) {
-        logger.debug("".concat(this._id, " mangleOffer() | remote on hold, mangling offer"));
-        var _iterator14 = _createForOfIteratorHelper(sdp.media),
-          _step14;
-        try {
-          for (_iterator14.s(); !(_step14 = _iterator14.n()).done;) {
-            var _m3 = _step14.value;
-            if (holdMediaTypes.indexOf(_m3.type) === -1) {
-              continue;
-            }
-            if (!_m3.direction) {
-              _m3.direction = 'recvonly';
-            } else if (_m3.direction === 'sendrecv') {
-              _m3.direction = 'recvonly';
-            } else if (_m3.direction === 'recvonly') {
-              _m3.direction = 'inactive';
-            }
-          }
-        } catch (err) {
-          _iterator14.e(err);
-        } finally {
-          _iterator14.f();
-        }
-      }
-      return sdp_transform.write(sdp);
-    }
-  }, {
-    key: "_setLocalMediaStatus",
-    value: function _setLocalMediaStatus() {
-      var enableAudio = true,
-        enableVideo = true;
-      if (this._localHold || this._remoteHold) {
-        enableAudio = false;
-        enableVideo = false;
-      }
-      if (this._audioMuted) {
-        enableAudio = false;
-      }
-      if (this._videoMuted) {
-        enableVideo = false;
-      }
-      this._toggleMuteAudio(!enableAudio);
-      this._toggleMuteVideo(!enableVideo);
-    }
->>>>>>> CRTC-new
+    this._stopVideoFrameRateMonitor();
 
     // Emit private '_failed' event first.
     logger.debug(`${this._id} emit "_failed"`);
@@ -40077,7 +34938,6 @@ module.exports = class RTCSession extends EventEmitter {
     if (sdp.indexOf('a=mid:') !== -1) {
       return sdp;
     }
-<<<<<<< HEAD
     var lSdp = this.connection && this.connection.localDescription && this.connection.localDescription.sdp;
     var mids = [];
     if (lSdp) {
@@ -40110,865 +34970,6 @@ module.exports = class RTCSession extends EventEmitter {
             muted: track.muted,
             label: track.label
           });
-=======
-
-    // 如果是音频模式，则关闭本地视频
-  }, {
-    key: "_setLocalMedia",
-    value: function _setLocalMedia(mode) {
-      var _this35 = this;
-      logger.debug("".concat(this._id, " setLocalMedia() ").concat(mode));
-      if (mode === 'audio' && this._customMediaStream === false) {
-        this._localMediaStream.getVideoTracks().forEach(function (track) {
-          track.stop();
-          _this35._localMediaStream.removeTrack(track);
-        });
-        this._localShareStream && this._localShareStream.getVideoTracks().forEach(function (track) {
-          track.stop();
-        });
-      }
-    }
-  }, {
-    key: "_streamInactiveHandle",
-    value: function _streamInactiveHandle(dual) {
-      var _this36 = this;
-      var ended = false;
-      var mediaStreamTrackEndedHandler = function mediaStreamTrackEndedHandler() {
-        if (_this36._localShareStream && _this36._localShareStreamLocallyGenerated) {
-          if (dual) {
-            _this36._connection.getTransceivers().forEach(function (transeiver) {
-              if (transeiver.sender.track && transeiver.sender.track.kind === 'video') {
-                if (transeiver.sender.track.id === _this36._localShareStream.getVideoTracks()[0].id) {
-                  _this36._connection.connectionState === 'connected' && transeiver.sender.replaceTrack(_this36._bfcpVideoTrack);
-                }
-              }
-            });
-            _this36._localShareStream = null;
-            _this36._localShareStreamLocallyGenerated = false;
-
-            // BFCP 释放资源，当被取消权限以后不再用发送release
-            _this36._bfcpRequestStatus !== RequestStatusValue.Revoked && _this36._sendFloorRelease();
-          } else {
-            _this36._localMediaStream.getVideoTracks().forEach(function (track) {
-              var sender = _this36._connection.getSenders().find(function (s) {
-                return s.track.kind == 'video' && (s.track.label.indexOf('window') === -1 || s.track.label.indexOf('web-') === -1 || s.track.label.indexOf('screen') === -1);
-              });
-              track.readyState === 'live' && _this36._connection.connectionState === 'connected' && sender.replaceTrack(track);
-            });
-            _this36._localShareStreamLocallyGenerated = false;
-          }
-          _this36._localShareStream = null;
-          _this36._localShareStreamLocallyGenerated = false;
-        }
-      };
-
-      // safari 等场景ended 或者 inactive 事件不会触发
-      var timer = setInterval(function () {
-        if (_this36._localShareStream && _this36._localShareStream.getVideoTracks() && _this36._localShareStream.getVideoTracks()[0].readyState === 'ended') {
-          clearInterval(timer);
-          ended || mediaStreamTrackEndedHandler();
-          ended = true;
-        }
-      }, 200);
-
-      // 分享屏幕点击系统停止按钮后停止分享
-      this._localShareStream.getVideoTracks()[0].addEventListener('ended', function () {
-        ended || mediaStreamTrackEndedHandler();
-        ended = true;
-      });
-      this._localShareStream.addEventListener('inactive', function () {
-        ended || mediaStreamTrackEndedHandler();
-        ended = true;
-      });
-    }
-
-    /**
-     * Handle SessionTimers for an incoming INVITE or UPDATE.
-     * @param  {IncomingRequest} request
-     * @param  {Array} responseExtraHeaders  Extra headers for the 200 response.
-     */
-  }, {
-    key: "_handleSessionTimersInIncomingRequest",
-    value: function _handleSessionTimersInIncomingRequest(request, responseExtraHeaders) {
-      if (!this._sessionTimers.enabled) {
-        return;
-      }
-      var session_expires_refresher;
-      if (request.session_expires && request.session_expires >= CRTC_C.MIN_SESSION_EXPIRES) {
-        this._sessionTimers.currentExpires = request.session_expires;
-        session_expires_refresher = request.session_expires_refresher || 'uas';
-      } else {
-        this._sessionTimers.currentExpires = this._sessionTimers.defaultExpires;
-        session_expires_refresher = 'uas';
-      }
-      responseExtraHeaders.push("Session-Expires: ".concat(this._sessionTimers.currentExpires, ";refresher=").concat(session_expires_refresher));
-      this._sessionTimers.refresher = session_expires_refresher === 'uas';
-      this._runSessionTimer();
-    }
-
-    /**
-     * Handle SessionTimers for an incoming response to INVITE or UPDATE.
-     * @param  {IncomingResponse} response
-     */
-  }, {
-    key: "_handleSessionTimersInIncomingResponse",
-    value: function _handleSessionTimersInIncomingResponse(response) {
-      if (!this._sessionTimers.enabled) {
-        return;
-      }
-      var session_expires_refresher;
-      if (response.session_expires && response.session_expires >= CRTC_C.MIN_SESSION_EXPIRES) {
-        this._sessionTimers.currentExpires = response.session_expires;
-        session_expires_refresher = response.session_expires_refresher || 'uac';
-      } else {
-        this._sessionTimers.currentExpires = this._sessionTimers.defaultExpires;
-        session_expires_refresher = 'uac';
-      }
-      this._sessionTimers.refresher = session_expires_refresher === 'uac';
-      this._runSessionTimer();
-    }
-  }, {
-    key: "_runSessionTimer",
-    value: function _runSessionTimer() {
-      var _this37 = this;
-      var expires = this._sessionTimers.currentExpires;
-      this._sessionTimers.running = true;
-      clearTimeout(this._sessionTimers.timer);
-
-      // I'm the refresher.
-      if (this._sessionTimers.refresher) {
-        this._sessionTimers.timer = setTimeout(function () {
-          if (_this37._status === C.STATUS_TERMINATED) {
-            return;
-          }
-          if (!_this37._isReadyToReOffer()) {
-            return;
-          }
-          logger.debug("".concat(_this37._id, " runSessionTimer() | sending session refresh request"));
-          if (_this37._sessionTimers.refreshMethod === CRTC_C.UPDATE) {
-            _this37._sendUpdate();
-          } else {
-            _this37._sendReinvite();
-          }
-        }, expires * 500); // Half the given interval (as the RFC states).
-      }
-
-      // I'm not the refresher.
-      else {
-        this._sessionTimers.timer = setTimeout(function () {
-          if (_this37._status === C.STATUS_TERMINATED) {
-            return;
-          }
-          logger.warn("".concat(_this37._id, " runSessionTimer() | timer expired, terminating the session"));
-          _this37.terminate({
-            cause: CRTC_C.causes.REQUEST_TIMEOUT,
-            status_code: 408,
-            reason_phrase: 'Session Timer Expired'
-          });
-        }, expires * 1100);
-      }
-    }
-  }, {
-    key: "_toggleMuteAudio",
-    value: function _toggleMuteAudio(mute) {
-      var senders = this._connection.getSenders().filter(function (sender) {
-        return sender.track && sender.track.kind === 'audio';
-      });
-      var _iterator15 = _createForOfIteratorHelper(senders),
-        _step15;
-      try {
-        for (_iterator15.s(); !(_step15 = _iterator15.n()).done;) {
-          var sender = _step15.value;
-          sender.track.enabled = !mute;
-        }
-      } catch (err) {
-        _iterator15.e(err);
-      } finally {
-        _iterator15.f();
-      }
-    }
-  }, {
-    key: "_toggleMuteVideo",
-    value: function _toggleMuteVideo(mute) {
-      var _this38 = this;
-      var senders = this._connection.getSenders().filter(function (sender) {
-        if (_this38._enableBFCP) {
-          // 检查是否存在视频轨道
-          if (!sender.track || sender.track.kind !== 'video') {
-            return false;
-          }
-
-          // 获取本地共享流的视频轨道ID
-          var localShareTrackId = null;
-          if (_this38._localShareStream && _this38._localShareStream.getVideoTracks() && _this38._localShareStream.getVideoTracks()[0]) {
-            localShareTrackId = _this38._localShareStream.getVideoTracks()[0].id;
-          }
-
-          // 验证视频轨道条件
-          return !_this38._isCanvasTrack(sender.track) && sender.track !== _this38._bfcpVideoTrack && sender.track.id !== localShareTrackId;
-        }
-        return sender.track && sender.track.kind === 'video';
-      });
-      var _iterator16 = _createForOfIteratorHelper(senders),
-        _step16;
-      try {
-        for (_iterator16.s(); !(_step16 = _iterator16.n()).done;) {
-          var sender = _step16.value;
-          if (this._videoOnlyMute) {
-            if (this._isCurrentlyMuted === mute) return;
-            this._isCurrentlyMuted = mute;
-            if (mute) {
-              if (!this._onMutedVideoTrack) {
-                this._onMutedVideoTrack = sender.track;
-                this._replaceMutedCanvasTrack = Utils.generateAnBlackVideoTrack({
-                  svgSource: CRTC_C.NO_CAMERA_SVG,
-                  width: 640,
-                  height: 480,
-                  fps: 25
-                });
-                sender.replaceTrack(this._replaceMutedCanvasTrack.videoTrack);
-              }
-            } else {
-              sender.replaceTrack(this._onMutedVideoTrack);
-              this._replaceMutedCanvasTrack.cleanup();
-              setTimeout(function () {
-                _this38._onMutedVideoTrack = null;
-                _this38._replaceMutedCanvasTrack = null;
-              }, 0);
-            }
-          } else {
-            sender.track.enabled = !mute;
-            this._isCurrentlyMuted = mute;
-          }
-        }
-      } catch (err) {
-        _iterator16.e(err);
-      } finally {
-        _iterator16.f();
-      }
-    }
-  }, {
-    key: "_newRTCSession",
-    value: function _newRTCSession(originator, request) {
-      logger.debug("".concat(this._id, " newRTCSession()"));
-      this._ua.newRTCSession(this, {
-        originator: originator,
-        session: this,
-        request: request
-      });
-    }
-  }, {
-    key: "_connecting",
-    value: function _connecting(request) {
-      logger.debug("".concat(this._id, " session connecting"));
-      logger.debug("".concat(this._id, " emit \"connecting\""));
-      this.emit('connecting', {
-        request: request
-      });
-    }
-  }, {
-    key: "_trying",
-    value: function _trying(response) {
-      logger.debug("".concat(this._id, " session trying"));
-      logger.debug("".concat(this._id, " emit \"trying\""));
-      this.emit('trying', {
-        response: response || null
-      });
-    }
-  }, {
-    key: "_progress",
-    value: function _progress(originator, response) {
-      logger.debug("".concat(this._id, " session progress"));
-      logger.debug("".concat(this._id, " emit \"progress\""));
-      this.emit('progress', {
-        originator: originator,
-        response: response || null
-      });
-    }
-  }, {
-    key: "_accepted",
-    value: function _accepted(originator, message) {
-      logger.debug("".concat(this._id, " session accepted"));
-      this._start_time = new Date();
-      logger.debug("".concat(this._id, " emit \"accepted\""));
-      this.emit('accepted', {
-        originator: originator,
-        response: message || null
-      });
-
-      // 远端支持视频模式，触发回调
-      if (originator !== 'local' && /(^|[;>])\s*\+?video\s*([;=]|$)/i.test(message.getHeader('contact'))) {
-        this._remoteSupportsVideo = true;
-      }
-      this._remoteSupportsVideo && this.emit('remoteSupportsVideo', this._remoteSupportsVideo);
-    }
-  }, {
-    key: "_confirmed",
-    value: function _confirmed(originator, ack) {
-      logger.debug("".concat(this._id, " session confirmed"));
-      this._is_confirmed = true;
-
-      // 如果是SDK调用媒体设备，则启动媒体状态监测,停用媒体状态检测
-      // this._localMediaStreamLocallyGenerated && this._checkMediaStreamStatus();
-
-      logger.debug("".concat(this._id, " emit \"confirmed\""));
-
-      // 主动发送关键帧，兼容部分手机接听时黑屏问题
-      Utils.sendKeyFrames(this._connection, 0.5, 2);
-      this._startVideoFrameRateMonitor();
-      this.emit('confirmed', {
-        originator: originator,
-        ack: ack || null
-      });
-    }
-  }, {
-    key: "_ended",
-    value: function _ended(originator, message, cause) {
-      logger.debug("".concat(this._id, " session ended"));
-      this._end_time = new Date();
-      this._stopVideoFrameRateMonitor();
-      this._close();
-      logger.debug("".concat(this._id, " emit \"ended\""));
-
-      // 停止全部统计信息事件
-      window.CRTCStats = 'stop';
-      this.emit('ended', {
-        originator: originator,
-        message: message || null,
-        cause: cause
-      });
-      this._dataChannel && this._dataChannel.close();
-      this._dataChannel = null;
-      if (this._inviteVideoTrackStatsTimer) {
-        clearInterval(this._inviteVideoTrackStatsTimer);
-      }
-      if (this._answerVideoTrackStatsTimer) {
-        clearInterval(this._answerVideoTrackStatsTimer);
-      }
-
-      // DC 状态设置为未准备好
-      this._dataChannelReady = false;
-      // 停止发送心跳
-      this._bfcpHeatbeatTimer && clearInterval(this._bfcpHeatbeatTimer);
-      this._bfcpHeatbeatTimer = null; // 避免潜在的内存泄漏
-
-      // 停止检测close状态
-      this._closingInterval && clearInterval(this._closingInterval);
-    }
-  }, {
-    key: "_failed",
-    value: function _failed(originator, message, cause) {
-      logger.debug("".concat(this._id, " session failed"));
-      this._stopVideoFrameRateMonitor();
-
-      // Emit private '_failed' event first.
-      logger.debug("".concat(this._id, " emit \"_failed\""));
-
-      // 停止全部统计信息事件
-      window.CRTCStats = 'stop';
-      this.emit('_failed', {
-        originator: originator,
-        message: message || null,
-        cause: cause
-      });
-      this._dataChannel && this._dataChannel.close();
-      this._dataChannel = null;
-      this._close();
-      logger.debug("".concat(this._id, " emit \"failed\""));
-      this.emit('failed', {
-        originator: originator,
-        message: message || null,
-        cause: cause
-      });
-
-      // DC 状态设置为未准备好
-      this._dataChannelReady = false;
-      // 停止发送心跳
-      this._bfcpHeatbeatTimer && clearInterval(this._bfcpHeatbeatTimer);
-      this._bfcpHeatbeatTimer = null; // 避免潜在的内存泄漏
-
-      // 停止检测close状态
-      this._closingInterval && clearInterval(this._closingInterval);
-    }
-  }, {
-    key: "_onhold",
-    value: function _onhold(originator) {
-      logger.debug("".concat(this._id, " session onhold"));
-      this._setLocalMediaStatus();
-      logger.debug("".concat(this._id, " emit \"hold\""));
-      this.emit('hold', {
-        originator: originator
-      });
-    }
-  }, {
-    key: "_onunhold",
-    value: function _onunhold(originator) {
-      logger.debug("".concat(this._id, " session onunhold"));
-      this._setLocalMediaStatus();
-      logger.debug("".concat(this._id, " emit \"unhold\""));
-      this.emit('unhold', {
-        originator: originator
-      });
-    }
-  }, {
-    key: "_onmute",
-    value: function _onmute(_ref14) {
-      var audio = _ref14.audio,
-        video = _ref14.video;
-      logger.debug("".concat(this._id, " session onmute"));
-      this._setLocalMediaStatus();
-      logger.debug("".concat(this._id, " emit \"muted\""));
-      this.emit('muted', {
-        audio: audio,
-        video: video
-      });
-    }
-  }, {
-    key: "_onunmute",
-    value: function _onunmute(_ref15) {
-      var audio = _ref15.audio,
-        video = _ref15.video;
-      logger.debug("".concat(this._id, " session onunmute"));
-      this._setLocalMediaStatus();
-      logger.debug("".concat(this._id, " emit \"unmuted\""));
-      this.emit('unmuted', {
-        audio: audio,
-        video: video
-      });
-    }
-
-    // 切换音视频模式触发 mode 事件
-  }, {
-    key: "_ontogglemode",
-    value: function _ontogglemode(mode) {
-      logger.debug("".concat(this._id, " ontogglemode() ").concat(mode, " ").concat(this._mode));
-      if (mode === this._mode) {
-        return;
-      }
-      this._mode = mode;
-      logger.debug("".concat(this._id, " session ontogglemode"));
-      if (!this._remoteHold) {
-        this._setLocalMedia(mode);
-      }
-      logger.debug("".concat(this._id, " emit \"mode\""));
-      this.emit('mode', {
-        mode: mode
-      });
-    }
-
-    // sdp 中增加 mid 属性
-  }, {
-    key: "_sdpAddMid",
-    value: function _sdpAddMid(sdp) {
-      logger.debug("".concat(this._id, " _sdpAddMid()"));
-      if (sdp.indexOf('a=mid:') !== -1) {
-        return sdp;
-      }
-      var lSdp = this.connection && this.connection.localDescription && this.connection.localDescription.sdp;
-      var mids = [];
-      if (lSdp) {
-        var parts = lSdp.split('\r\nm=');
-        parts.slice(1).forEach(function (p) {
-          var m = p.match(/\r\na=mid:([^\r\n]+)/);
-          mids.push(m ? m[1] : null);
-        });
-      }
-      var index = 0;
-      var newSdp = sdp.replace(/(^m=[^\r\n]+)/gm, function (match) {
-        var mid = mids[index] !== null && mids[index] !== undefined ? mids[index] : String(index);
-        index++;
-        return "".concat(match, "\r\na=mid:").concat(mid);
-      });
-      return newSdp;
-    }
-
-    /**
-     * 生成一个空的音频轨道
-     */
-  }, {
-    key: "_generateAnEmptyAudioTrack",
-    value: function _generateAnEmptyAudioTrack() {
-      var _this39 = this;
-      // 增加安卓微信呼叫的语音提醒
-      // const audio = new Audio('./sound/waiting.mp3');
-      var audio = new Audio();
-      var audioCtx = new AudioContext();
-      var destination = audioCtx.createMediaStreamDestination();
-      var source = audioCtx.createMediaElementSource(audio);
-      audio.loop = true;
-      audio.crossOrigin = 'anonymous';
-      audio.play()["catch"](function (error) {
-        logger.error("".concat(_this39._id, " new Audio() error: ").concat(error.message, " ").concat(JSON.stringify(error)));
-      });
-      source.connect(destination);
-      return destination.stream.getAudioTracks()[0];
-    }
-
-    /**
-     * 将临时的音频恢复为麦克风audioTrack
-     */
-  }, {
-    key: "_replaceAudioToMic",
-    value: function _replaceAudioToMic() {
-      var _this40 = this;
-      // 获取麦克风流，成功后替换canvas视频，失败后重新获取麦克风媒体并替换
-      navigator.mediaDevices.getUserMedia({
-        audio: this._inviteMediaConstraints.audio || true,
-        video: false
-      }).then(function (stream) {
-        _this40._connection.getSenders().forEach(function (sender) {
-          if (sender.track && sender.track.kind == 'audio') {
-            // 保持媒体的muted状态
-            stream.getAudioTracks()[0].enabled = _this40.isMuted().audio;
-
-            // 替换音频轨道
-            sender.replaceTrack(stream.getAudioTracks()[0]);
-
-            // 本地播放本地音频轨道
-            _this40._localMediaStream.removeTrack(_this40._localMediaStream.getAudioTracks()[0]);
-            _this40._localMediaStream.addTrack(stream.getAudioTracks()[0]);
-
-            // 触发本地媒体更新事件
-            _this40.emit('localMediastreamUpdate', _this40._localMediaStream);
-
-            // 继续监听mute和ended事件
-            stream.getAudioTracks()[0].addEventListener('mute', _this40._boundReplaceMicToAudios);
-            stream.getAudioTracks()[0].addEventListener('ended', _this40._boundReplaceMicToAudios);
-          }
-        });
-      })["catch"](function (error) {
-        // 获取麦克风失败，重新获取
-        logger.error("".concat(_this40._id, " replaceAudioToMic error: ").concat(error.message, " ").concat(JSON.stringify(error)));
-        _this40._replaceAudioToMic();
-      });
-    }
-
-    /**
-     * 先将原来麦克风audioTrack替换为audio音频，并关闭原来audioTrack释放麦克风
-     */
-  }, {
-    key: "_replaceMicToAudio",
-    value: function _replaceMicToAudio() {
-      var _this41 = this;
-      // 判断是否在通话中
-      if (!this.isEstablished()) {
-        return;
-      }
-      this._connection.getSenders().forEach(function (sender) {
-        if (sender.track && sender.track.kind == 'audio') {
-          // TODO: 可能多次触发事件
-          // 清除事件绑定
-          sender.track.removeEventListener('mute', _this41._boundReplaceMicToAudios);
-          sender.track.removeEventListener('ended', _this41._boundReplaceMicToAudios);
-
-          // 释放麦克风
-          sender.track.stop();
-
-          // 替换音频轨道
-          sender.replaceTrack(_this41._generateAnEmptyAudioTrack());
-
-          // 本地播放本地音频轨道
-          _this41._localMediaStream.removeTrack(_this41._localMediaStream.getVideoTracks()[0]);
-          _this41._localMediaStream.addTrack(_this41._generateAnEmptyAudioTrack());
-
-          // 触发本地媒体更新事件
-          _this41.emit('localMediastreamUpdate', _this41._localMediaStream);
-
-          // 开始尝试获取麦克风体并恢复
-          _this41._replaceAudioToMic();
-        }
-      });
-    }
-
-    /**
-     * 将临时的canvas视频恢复为摄像头videoTrack
-     */
-  }, {
-    key: "_replaceCanvasToVideo",
-    value: function _replaceCanvasToVideo() {
-      var _this42 = this;
-      // 获取摄像头流，成功后替换canvas视频，失败后重新获取摄像头媒体并替换
-      navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: this._inviteMediaConstraints.video || true
-      }).then(function (stream) {
-        _this42._connection.getSenders().forEach(function (sender) {
-          if (sender.track && sender.track.kind == 'video') {
-            // 停止绘制并清空画布
-            window.cancelAnimationFrame(_this42._restoreCameraTrackDraw);
-            _this42._restoreCameraTrackCtx.clearRect(0, 0, _this42._inviteMediaConstraints.width || 640, _this42._inviteMediaConstraints.height || 480);
-            // 保持媒体的muted状态
-            stream.getVideoTracks()[0].enabled = _this42.isMuted().video;
-            // 替换视频轨道
-            sender.replaceTrack(stream.getVideoTracks()[0]);
-
-            // 本地播放本地视频轨道
-            _this42._localMediaStream.removeTrack(_this42._localMediaStream.getVideoTracks()[0]);
-            _this42._localMediaStream.addTrack(stream.getVideoTracks()[0]);
-
-            // 触发本地媒体更新事件
-            _this42.emit('localMediastreamUpdate', _this42._localMediaStream);
-
-            // 继续监听mute和ended事件
-            sender.track.addEventListener('mute', _this42._boundReplaceVideoToCanvas);
-            sender.track.addEventListener('ended', _this42._boundReplaceVideoToCanvas);
-          }
-        });
-      })["catch"](function (error) {
-        // 获取摄像头失败，重新获取
-        logger.error("".concat(_this42._id, " replaceCanvasToVideo error: ").concat(error.message, " ").concat(JSON.stringify(error)));
-        _this42._replaceCanvasToVideo();
-      });
-    }
-
-    /**
-     * 先将原来videoTrack替换为canvas视频，并关闭原来videoTrack
-     */
-  }, {
-    key: "_replaceVideoToCanvas",
-    value: function _replaceVideoToCanvas() {
-      var _this43 = this;
-      logger.debug("".concat(this._id, " _replaceVideoToCanvas()"));
-
-      // 判断是否在通话中
-      if (!this.isEstablished()) {
-        return;
-      }
-
-      // 创建画布
-      this._restoreCameraTrackCanvas = document.createElement('canvas');
-      this._restoreCameraTrackCanvas.setAttribute('style', 'disable:none');
-      this._restoreCameraTrackCtx = this._restoreCameraTrackCanvas.getContext('2d');
-
-      // 开始绘制纯色
-      var _drawToCanvas = function drawToCanvas() {
-        _this43._restoreCameraTrackCanvas.width = _this43._inviteMediaConstraints.width || 640;
-        _this43._restoreCameraTrackCanvas.height = _this43._inviteMediaConstraints.height || 480;
-        _this43._restoreCameraTrackCtx.fillStyle = 'blue';
-        _this43._restoreCameraTrackCtx.fillRect(0, 0, _this43._inviteMediaConstraints.width || 640, _this43._inviteMediaConstraints.height || 480);
-        _this43._restoreCameraTrackDraw = window.requestAnimationFrame(_drawToCanvas);
-      };
-      _drawToCanvas();
-
-      // 从画布获取15fps视频流
-      var newStream = this._restoreCameraTrackCanvas.captureStream(15);
-      this._connection.getSenders().forEach(function (sender) {
-        // eslint-disable-next-line no-undef
-        if (sender.track && sender.track.kind == 'video' && (sender.track.readyState === 'ended' || sender.track.muted === true) && !(sender.track instanceof MediaStreamTrackGenerator)) {
-          // TODO: 可能多次触发事件
-          // 清除事件绑定
-          sender.track.removeEventListener('mute', _this43._boundReplaceVideoToCanvas);
-          sender.track.removeEventListener('ended', _this43._boundReplaceVideoToCanvas);
-
-          // 释放摄像头
-          sender.track.stop();
-          // 替换视频轨道
-          sender.replaceTrack(newStream.getVideoTracks()[0]);
-          // 本地播放本地视频轨道
-          _this43._localMediaStream.removeTrack(_this43._localMediaStream.getVideoTracks()[0]);
-          _this43._localMediaStream.addTrack(newStream.getVideoTracks()[0]);
-          // 触发本地媒体更新事件
-          _this43.emit('localMediastreamUpdate', _this43._localMediaStream);
-          // 开始尝试获取摄像头媒体并恢复
-          _this43._replaceCanvasToVideo();
-        }
-      });
-    }
-
-    /**
-     * 检查媒体轨道是否异常并处理
-     */
-  }, {
-    key: "_checkMediaStreamStatus",
-    value: function _checkMediaStreamStatus() {
-      var _this44 = this;
-      var timer = null;
-
-      // 监听系统音视频设备变化替换媒体轨道，如：蓝牙耳机、外接摄像头等
-      navigator.mediaDevices.ondevicechange = function () {
-        if (timer) {
-          clearTimeout(timer);
-        }
-        timer = setTimeout(function () {
-          timer = null;
-
-          // 如果设备变化则替换轨道流
-          _this44._connection.getSenders().forEach(function (sender) {
-            // 视频轨道
-            if (sender.track && sender.track.kind === 'video') {
-              _this44._replaceVideoToCanvas();
-            }
-            // 音频轨道
-            else if (sender.track && sender.track.kind === 'audio') {
-              _this44._replaceMicToAudio();
-            }
-          });
-        }, 300);
-      };
-
-      // 先判断现在PC里面的媒体是否已经是muted
-      this._connection.getSenders().forEach(function (sender) {
-        // 视频轨道
-        if (sender.track && sender.track.kind === 'video' && sender.track instanceof MediaStreamTrack) {
-          if (sender.track && sender.track.muted) {
-            _this44._replaceVideoToCanvas();
-          } else if (sender.track instanceof MediaStreamTrack) {
-            // iOS Safari 按 HOME 切后台，会触发两次 mute 和 unmute
-            // mute 事件触发替换视频流为临时视频，并释放摄像头
-            sender.track.addEventListener('mute', _this44._boundReplaceVideoToCanvas);
-            sender.track.addEventListener('ended', _this44._boundReplaceVideoToCanvas);
-          }
-        }
-        // 音频轨道
-        else if (sender.track && sender.track.kind === 'audio') {
-          if (sender.track && sender.track.muted) {
-            _this44._replaceMicToAudio();
-          } else {
-            // mute 事件触发替换视频流为临时空音频，并释放麦克风
-            sender.track.addEventListener('mute', _this44._boundReplaceMicToAudios);
-            sender.track.addEventListener('ended', _this44._boundReplaceMicToAudios);
-          }
-        }
-      });
-    }
-
-    /**
-     * BFCP && DataChannel
-     */
-
-    /**
-     * 处理 Hello 消息
-     * @param {Object} message - 接收到的消息对象
-     */
-  }, {
-    key: "_handleHelloMessage",
-    value: function _handleHelloMessage(message) {
-      logger.debug("".concat(this._id, " BFCP send HACK: Transaction ID: ").concat(message.commonHeader.transactionId, ", Timestamp: ").concat(Date.now()));
-      var response = this._bfcpUser.helloAckMessage(message);
-      this._sendDataChannelMessage(response);
-    }
-
-    /**
-     * 处理 FloorRequestStatus 消息
-     * @param {Object} message - 接收到的消息对象
-     */
-  }, {
-    key: "_handleFloorRequestStatusMessage",
-    value: function _handleFloorRequestStatusMessage(message) {
-      logger.debug("".concat(this._id, " BFCP send FloorRequestStatusACK: Transaction ID: ").concat(message.commonHeader.transactionId, ", Timestamp: ").concat(Date.now()));
-      var response = this._bfcpUser.floorRequestStatusAckMessage(message);
-      this._sendDataChannelMessage(response);
-
-      // 处理本端分享被撤销的情况
-      var status = message.getAttribute(AttributeName.FloorRequestInformation).content[1].content[1].content[0];
-      if (status === RequestStatusValue.Revoked) {
-        this._bfcpRequestStatus = status;
-        // 已经共享了的自动取消共享
-        if (this._localShareStreamLocallyGenerated) {
-          this.unShare();
-        }
-      }
-    }
-
-    /**
-     * 处理 FloorStatus 消息
-     * @param {Object} message - 接收到的消息对象
-     */
-  }, {
-    key: "_handleFloorStatusMessage",
-    value: function _handleFloorStatusMessage(message) {
-      // 不再回ack，根据support里面是否支持做出这个决定
-      // this._sendFloorStatusAck(message);
-      var floorStatus = message.getAttribute(AttributeName.FloorRequestInformation).content[1].content[1].content[0];
-
-      // 根据状态触发事件
-      if (floorStatus === RequestStatusValue.Granted && !this._remoteShared) {
-        this._remoteShared = true;
-        this.emit('remoteShared', {
-          sharedStream: this._bfcpStream
-        });
-      } else if (floorStatus === RequestStatusValue.Released && this._remoteShared) {
-        this._remoteShared = false;
-        this.emit('remoteUnShared');
-      } else {
-        logger.warn("".concat(this._id, " Unknown floor status: ").concat(floorStatus));
-      }
-    }
-
-    /**
-     * 处理 FloorRequest 消息
-     * @param {Object} message - 接收到的消息对象
-     */
-  }, {
-    key: "_handleFloorRequestMessage",
-    value: function _handleFloorRequestMessage(message) {
-      var _this45 = this;
-      var wantedFloorId = message.getAttribute(AttributeName.FloorId).content;
-      if (this.listeners('floorRequest').length === 0 || (message.commonHeader.primitive = Primitive.FloorRelease)) {
-        // 自动接受请求
-        var response = this._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Granted);
-        this._sendDataChannelMessage(response, message.commonHeader.transactionId);
-      } else {
-        // 触发事件，允许外部处理
-        this.emit('floorRequest', {
-          message: message,
-          accept: function accept() {
-            var response = _this45._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Granted);
-            _this45._sendDataChannelMessage(response, message.commonHeader.transactionId);
-          },
-          reject: function reject() {
-            var response = _this45._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Denied);
-            _this45._sendDataChannelMessage(response, message.commonHeader.transactionId);
-          }
-        });
-      }
-    }
-
-    /**
-     * 发送消息到数据通道
-     * @param {Buffer} message - 要发送的消息
-     * @param {number} [transactionId] - 可选的事务 ID
-     */
-  }, {
-    key: "_sendDataChannelMessage",
-    value: function _sendDataChannelMessage(message, transactionId) {
-      logger.debug("".concat(this._id, " Sending message ").concat(Utils.uint8ArrayToBase64(message), " with Transaction ID: ").concat(transactionId, ", Timestamp: ").concat(Date.now()));
-      this._dataChannel.send(message);
-    }
-
-    /**
-     * 处理数据通道接收到的消息。
-     *
-     * @param {Object} event - 数据通道消息事件对象。
-     * @param {ArrayBuffer|string} event.data - 接收到的消息数据，通常为 ArrayBuffer 类型。
-     *
-     * 该方法会解析消息并根据消息类型执行相应逻辑。如果数据通道未准备好或消息格式不正确，则忽略处理。
-     */
-  }, {
-    key: "_onChannelMessage",
-    value: function _onChannelMessage(event) {
-      logger.debug("".concat(this._id, " onChannelMessage()"));
-
-      // 如果数据通道未准备好，则忽略消息
-      if (!this._dataChannelReady) {
-        logger.warn("".concat(this._id, " onChannelMessage(): Data channel is not ready, ignoring message."));
-        return;
-      }
-      var data = event.data;
-
-      // 确保接收到的数据是 ArrayBuffer 类型
-      if (!(data instanceof ArrayBuffer)) {
-        logger.warn("".concat(this._id, " onChannelMessage(): Received non-ArrayBuffer message, ignoring."));
-        return;
-      }
-      try {
-        // 将 ArrayBuffer 转换为 Buffer 并解析消息
-        var bufferData = Buffer.from(data);
-        logger.debug("".concat(this._id, " recv unit8: "), Utils.uint8ArrayToBase64(bufferData));
-
-        // 适配 0002 0000  的包
-        if (Utils.uint8ArrayToBase64(bufferData) === 'AgAAAA==') {
->>>>>>> CRTC-new
           return;
         }
         var trackStat = videoTrackStates.get(track.id);
@@ -40990,7 +34991,6 @@ module.exports = class RTCSession extends EventEmitter {
           });
           logger.debug(`${this._id} ${track.id} videoTrackState readyState: ${track.readyState}`);
         }
-<<<<<<< HEAD
         if (track.muted != trackStat.muted || track.mute == true) {
           trackStat.muted = track.muted;
           this.emit('videoTrackState', {
@@ -41008,34 +35008,6 @@ module.exports = class RTCSession extends EventEmitter {
             value: track.label
           });
           logger.debug(`${this._id} ${track.id} videoTrackState label: ${track.label}`);
-=======
-      } catch (error) {
-        logger.error("".concat(this._id, " onChannelMessage(): Error while processing message."), error);
-      }
-    }
-
-    /**
-     * DC 关闭后清理
-     */
-  }, {
-    key: "_onChannelClose",
-    value: function _onChannelClose() {
-      var _this46 = this;
-      logger.debug("".concat(this._id, " datachannel closed."));
-      setTimeout(function () {
-        // 判断dc如果断开1秒后ice状态正常则重连dc
-        if (_this46.connection.iceConnectionState === 'connected') {
-          _this46.renegotiate();
-        } else {
-          // DC 状态设置为未准备好
-          _this46._dataChannelReady = false;
-          // 停止发送心跳
-          clearInterval(_this46._bfcpHeatbeatTimer);
-          _this46._bfcpHeatbeatTimer = null; // 避免潜在的内存泄漏
-
-          // 停止检测close状态
-          clearInterval(_this46._closingInterval);
->>>>>>> CRTC-new
         }
       }, 1000);
     });
@@ -41240,7 +35212,6 @@ module.exports = class RTCSession extends EventEmitter {
       return;
     }
 
-<<<<<<< HEAD
     // 创建画布
     this._restoreCameraTrackCanvas = document.createElement('canvas');
     this._restoreCameraTrackCanvas.setAttribute('style', 'disable:none');
@@ -41414,63 +35385,6 @@ module.exports = class RTCSession extends EventEmitter {
           var response = this._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Denied);
           this._sendDataChannelMessage(response, message.commonHeader.transactionId);
         }
-=======
-    /**
-     * DC 发送消息
-     * @param {*} message
-     * @param {*} transactionId
-     * @returns
-     */
-  }, {
-    key: "_dataChannelSend",
-    value: function _dataChannelSend(message, transactionId) {
-      var _this47 = this;
-      logger.debug("".concat(this._id, " dataChannelSend() ").concat(transactionId));
-      return new Promise(function (resolve, reject) {
-        // DataChannel 未准备好
-        if (!_this47._dataChannelReady) {
-          reject("[DataChannel] Not ready for transactionId: ".concat(transactionId));
-          logger.error("".concat(_this47._id, " [DataChannel] Not ready for transactionId: ").concat(transactionId));
-          return;
-        }
-
-        // 保存发送的处理中的 DC 消息，收到响应后删除
-        if (!_this47._dataChannelMsgs[transactionId]) {
-          _this47._dataChannelMsgs[transactionId] = {
-            retries: 0,
-            sendAt: Date.now(),
-            message: message,
-            received: false,
-            resolve: resolve,
-            reject: reject
-          };
-        }
-        var messageState = _this47._dataChannelMsgs[transactionId];
-
-        // 如果已经超出最大重试次数，则报告错误
-        if (messageState.retries !== 0 && messageState.retries > CRTC_C.MAX_RETRY_ATTEMPTS) {
-          logger.warn("".concat(_this47._id, " [DataChannel] Max retry attempts (").concat(CRTC_C.MAX_RETRY_ATTEMPTS, ") reached for transactionId: ").concat(transactionId));
-          messageState.reject("[DataChannel] Max retry attempts (".concat(CRTC_C.MAX_RETRY_ATTEMPTS, ") reached for transactionId: ").concat(transactionId));
-          return;
-        }
-
-        // 输出日志：发送消息次数及tid，时间戳
-        logger.debug("".concat(_this47._id, " BFCP send: ").concat(JSON.stringify(_this47._bfcpUser.receiveMessage(messageState.message)), " ").concat(JSON.stringify(Utils.uint8ArrayToBase64(messageState.message)), " ").concat(messageState.retries + 1, ", ").concat(transactionId, " ").concat(Date.now()));
-        var sendMessage = _this47._bfcpUser.receiveMessage(messageState.message);
-
-        // DC 消息超时重试, FloorRelease消息不重发
-        if (CRTC_C.MAX_RETRY_ATTEMPTS > 0 && sendMessage.commonHeader.primitive != Primitive.FloorRelease) {
-          setTimeout(function () {
-            // 如果没有收到响应，则重试
-            if (messageState && !messageState.received) {
-              messageState.retries++;
-              // 增加重试的间隔
-              _this47._dataChannelSend(messageState.message, transactionId);
-            }
-          }, Math.pow(2, messageState.retries) * 500);
-        }
-        _this47._dataChannel && _this47._dataChannel.send(messageState.message);
->>>>>>> CRTC-new
       });
     }
   }
@@ -41503,7 +35417,6 @@ module.exports = class RTCSession extends EventEmitter {
     }
     var data = event.data;
 
-<<<<<<< HEAD
     // 确保接收到的数据是 ArrayBuffer 类型
     if (!(data instanceof ArrayBuffer)) {
       logger.warn(`${this._id} onChannelMessage(): Received non-ArrayBuffer message, ignoring.`);
@@ -41513,16 +35426,6 @@ module.exports = class RTCSession extends EventEmitter {
       // 将 ArrayBuffer 转换为 Buffer 并解析消息
       var bufferData = Buffer.from(data);
       logger.debug(`${this._id} recv unit8: `, Utils.uint8ArrayToBase64(bufferData));
-=======
-    /**
-     * 初始化 DataChannel
-     */
-  }, {
-    key: "_initDataChannel",
-    value: function _initDataChannel(event) {
-      var _this48 = this;
-      logger.debug("".concat(this._id, " initDataChannel() ").concat(JSON.stringify(event)));
->>>>>>> CRTC-new
 
       // 适配 0002 0000  的包
       if (Utils.uint8ArrayToBase64(bufferData) === 'AgAAAA==') {
@@ -41566,7 +35469,6 @@ module.exports = class RTCSession extends EventEmitter {
     }
   }
 
-<<<<<<< HEAD
   /**
    * DC 关闭后清理
    */
@@ -41676,64 +35578,11 @@ module.exports = class RTCSession extends EventEmitter {
     if (!datachannel) {
       logger.error(`${this._id} Data channel event is missing \`channel\` property`);
       return;
-=======
-      /**
-       * 事件监听
-       */
-      datachannel.onmessage = function (ev) {
-        // 收到数据
-        _this48._onChannelMessage(ev);
-      };
-
-      // 端口状态处于 established 的时候会触发
-      datachannel.onopen = function () {
-        logger.warn("".concat(_this48._id, " datachannel opened."));
-        _this48._dataChannelReady = true;
-        // 开始发送心跳消息
-        _this48._sendHello();
-        _this48._bfcpHeatbeatTimer = setInterval(function () {
-          _this48._sendHello();
-        }, CRTC_C.BFCP_HEARTBEAT_INTERVAL);
-      };
-      datachannel.onclose = function () {
-        // 底层链路被关闭的时候会触发
-        _this48._onChannelClose();
-      };
-
-      // 遇到错误的时候会触发
-      datachannel.onerror = function (ev) {
-        logger.error("".concat(_this48._id, " datachannel error."));
-        var err = ev.error instanceof Error ? ev.error : new Error("Datachannel error: ".concat(ev.message, " ").concat(ev.filename, ":").concat(ev.lineno, ":").concat(ev.colno));
-        _this48._dataChannelReady = false;
-        logger.warn("".concat(_this48._id, " data err: "), err);
-
-        // 异常重连
-        if (_this48.connection.iceConnectionState === 'connected') {
-          _this48.renegotiate();
-        }
-      };
-
-      // HACK: Chrome will sometimes get stuck in readyState "closing", let's check for this condition
-      // https://bugs.chromium.org/p/chromium/issues/detail?id=882743
-      var isClosing = false;
-      this._closingInterval = setInterval(function () {
-        // No "onclosing" event
-        if (datachannel && datachannel.readyState === 'closing') {
-          // closing timed out: equivalent to onclose firing
-          if (isClosing) _this48._onChannelClose();
-          isClosing = true;
-        } else {
-          isClosing = false;
-        }
-      }, CRTC_C.CHANNEL_CLOSING_TIMEOUT);
-      return datachannel;
->>>>>>> CRTC-new
     }
 
     /**
      * 设置DC默认属性
      */
-<<<<<<< HEAD
     datachannel.binaryType = 'arraybuffer';
     this._dataChannelName = datachannel.label;
 
@@ -41809,8 +35658,73 @@ module.exports = class RTCSession extends EventEmitter {
   }
 
   /**
-   * 页面隐藏时：等待 track muted 后替换为黑屏 track
+   * 启动视频帧率监控。
+   *
+   * 仅在需要纠偏的 UA 环境下生效（由 Utils.shouldRecoverVideoFrameRateByUA 判断）。
+   * 先将帧率约束设为 30fps，之后每 2 秒检查一次，若帧率异常则重新应用约束。
    */
+  _startVideoFrameRateMonitor() {
+    if (!Utils.shouldRecoverVideoFrameRateByUA()) {
+      return;
+    }
+    this._stopVideoFrameRateMonitor();
+    this._checkAndRecoverVideoFrameRate(true);
+    this._videoFrameRateMonitorTimer = setInterval(() => {
+      this._checkAndRecoverVideoFrameRate();
+    }, 2000);
+  }
+
+  /**
+   * 停止视频帧率监控。
+   *
+   * 清除定时器并重置应用约束标志位。
+   */
+  _stopVideoFrameRateMonitor() {
+    if (this._videoFrameRateMonitorTimer) {
+      clearInterval(this._videoFrameRateMonitorTimer);
+      this._videoFrameRateMonitorTimer = null;
+    }
+    this._isApplyingVideoFrameRateConstraints = false;
+  }
+
+  /**
+   * 检查并恢复视频帧率为 30fps。
+   *
+   * 获取当前视频轨道，读取其帧率约束。如果帧率低于 30，则重新应用 30fps 约束。
+   */
+  async _checkAndRecoverVideoFrameRate(force = false) {
+    if (this._isApplyingVideoFrameRateConstraints || !this._connection || this._status === C.STATUS_TERMINATED) {
+      return;
+    }
+    var videoSender = this._connection.getSenders().find(sender => {
+      return sender.track && sender.track.kind === 'video' && sender.track.readyState !== 'ended';
+    });
+    var track = videoSender && videoSender.track;
+    if (!track || typeof track.getConstraints !== 'function' || typeof track.applyConstraints !== 'function') {
+      return;
+    }
+    var constraints = track.getConstraints() || {};
+    var frameRateConstraints = constraints.frameRate;
+    var frameRate = typeof frameRateConstraints === 'number' ? frameRateConstraints : frameRateConstraints && (frameRateConstraints.exact || frameRateConstraints.ideal || frameRateConstraints.max || frameRateConstraints.min);
+    if (!force && (!Number.isFinite(frameRate) || frameRate >= 30)) {
+      return;
+    }
+    this._isApplyingVideoFrameRateConstraints = true;
+    try {
+      await track.applyConstraints(Object.assign({}, constraints, {
+        frameRate: 30
+      }));
+      logger.debug(`${this._id} apply video frameRate to 30, trackId:${track.id}, oldConstraints:${JSON.stringify(constraints)}`);
+    } catch (error) {
+      logger.warn(`${this._id} apply video frameRate constraints failed ${error.message} ${JSON.stringify(error)}`);
+    } finally {
+      this._isApplyingVideoFrameRateConstraints = false;
+    }
+  }
+
+  /**
+    * 页面隐藏时：等待 track muted 后替换为黑屏 track
+    */
   _handlePageHidden(conn) {
     var videoSender = conn.getSenders().find(s => s.track.kind === 'video');
     if (!videoSender) return;
@@ -41845,13 +35759,6 @@ module.exports = class RTCSession extends EventEmitter {
     this._visibilitychangeVideoTrack = null;
     if (this._blackVideoTrack) {
       this._blackVideoTrack.cleanup();
-=======
-  }, {
-    key: "_initVisibilityChangeHandler",
-    value: function _initVisibilityChangeHandler() {
-      var _this49 = this;
-      this._visibilitychangeVideoTrack = null;
->>>>>>> CRTC-new
       this._blackVideoTrack = null;
     }
   }
@@ -41863,209 +35770,12 @@ module.exports = class RTCSession extends EventEmitter {
     if (this._trackMutedTimer) {
       clearInterval(this._trackMutedTimer);
       this._trackMutedTimer = null;
-<<<<<<< HEAD
     }
   }
 };
-=======
-      var handleVisibilityChange = function handleVisibilityChange() {
-        var conn = _this49._connection;
-        if (!conn || conn.connectionState !== 'connected' || !_this49._is_confirmed || _this49._enableBFCP) return;
-        if (document.hidden) {
-          _this49._handlePageHidden(conn);
-        } else {
-          _this49._handlePageVisible(conn);
-        }
-      };
-      document.addEventListener('visibilitychange', handleVisibilityChange);
-    }
-
-    /**
-     * 启动视频帧率监控。
-     *
-     * 仅在需要纠偏的 UA 环境下生效（由 Utils.shouldRecoverVideoFrameRateByUA 判断）。
-     * 先将帧率约束设为 30fps，之后每 2 秒检查一次，若帧率异常则重新应用约束。
-     */
-  }, {
-    key: "_startVideoFrameRateMonitor",
-    value: function _startVideoFrameRateMonitor() {
-      var _this50 = this;
-      if (!Utils.shouldRecoverVideoFrameRateByUA()) {
-        return;
-      }
-      this._stopVideoFrameRateMonitor();
-      this._checkAndRecoverVideoFrameRate(true);
-      this._videoFrameRateMonitorTimer = setInterval(function () {
-        _this50._checkAndRecoverVideoFrameRate();
-      }, 2000);
-    }
-
-    /**
-     * 停止视频帧率监控。
-     *
-     * 清除定时器并重置应用约束标志位。
-     */
-  }, {
-    key: "_stopVideoFrameRateMonitor",
-    value: function _stopVideoFrameRateMonitor() {
-      if (this._videoFrameRateMonitorTimer) {
-        clearInterval(this._videoFrameRateMonitorTimer);
-        this._videoFrameRateMonitorTimer = null;
-      }
-      this._isApplyingVideoFrameRateConstraints = false;
-    }
-
-    /**
-     * 检查并恢复视频帧率为 30fps。
-     *
-     * 获取当前视频轨道，读取其帧率约束。如果帧率低于 30，则重新应用 30fps 约束。
-     */
-  }, {
-    key: "_checkAndRecoverVideoFrameRate",
-    value: (function () {
-      var _checkAndRecoverVideoFrameRate2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee15() {
-        var force,
-          videoSender,
-          track,
-          constraints,
-          frameRateConstraints,
-          frameRate,
-          _args16 = arguments,
-          _t6;
-        return _regenerator().w(function (_context16) {
-          while (1) switch (_context16.p = _context16.n) {
-            case 0:
-              force = _args16.length > 0 && _args16[0] !== undefined ? _args16[0] : false;
-              if (!(this._isApplyingVideoFrameRateConstraints || !this._connection || this._status === C.STATUS_TERMINATED)) {
-                _context16.n = 1;
-                break;
-              }
-              return _context16.a(2);
-            case 1:
-              videoSender = this._connection.getSenders().find(function (sender) {
-                return sender.track && sender.track.kind === 'video' && sender.track.readyState !== 'ended';
-              });
-              track = videoSender && videoSender.track;
-              if (!(!track || typeof track.getConstraints !== 'function' || typeof track.applyConstraints !== 'function')) {
-                _context16.n = 2;
-                break;
-              }
-              return _context16.a(2);
-            case 2:
-              constraints = track.getConstraints() || {};
-              frameRateConstraints = constraints.frameRate;
-              frameRate = typeof frameRateConstraints === 'number' ? frameRateConstraints : frameRateConstraints && (frameRateConstraints.exact || frameRateConstraints.ideal || frameRateConstraints.max || frameRateConstraints.min);
-              if (!(!force && (!Number.isFinite(frameRate) || frameRate >= 30))) {
-                _context16.n = 3;
-                break;
-              }
-              return _context16.a(2);
-            case 3:
-              this._isApplyingVideoFrameRateConstraints = true;
-              _context16.p = 4;
-              _context16.n = 5;
-              return track.applyConstraints(Object.assign({}, constraints, {
-                frameRate: 30
-              }));
-            case 5:
-              logger.debug("".concat(this._id, " apply video frameRate to 30, trackId:").concat(track.id, ", oldConstraints:").concat(JSON.stringify(constraints)));
-              _context16.n = 7;
-              break;
-            case 6:
-              _context16.p = 6;
-              _t6 = _context16.v;
-              logger.warn("".concat(this._id, " apply video frameRate constraints failed ").concat(_t6.message, " ").concat(JSON.stringify(_t6)));
-            case 7:
-              _context16.p = 7;
-              this._isApplyingVideoFrameRateConstraints = false;
-              return _context16.f(7);
-            case 8:
-              return _context16.a(2);
-          }
-        }, _callee15, this, [[4, 6, 7, 8]]);
-      }));
-      function _checkAndRecoverVideoFrameRate() {
-        return _checkAndRecoverVideoFrameRate2.apply(this, arguments);
-      }
-      return _checkAndRecoverVideoFrameRate;
-    }()
-    /**
-      * 页面隐藏时：等待 track muted 后替换为黑屏 track
-      */
-    )
-  }, {
-    key: "_handlePageHidden",
-    value: function _handlePageHidden(conn) {
-      var _this51 = this;
-      var videoSender = conn.getSenders().find(function (s) {
-        return s.track.kind === 'video';
-      });
-      if (!videoSender) return;
-
-      // 清理之前的定时器
-      this._clearTrackMutedTimer();
-      this._trackMutedTimer = setInterval(function () {
-        var track = videoSender.track;
-        if (track.muted) {
-          _this51._clearTrackMutedTimer();
-          _this51._visibilitychangeVideoTrack = track;
-          _this51._blackVideoTrack = Utils.generateAnBlackVideoTrack({
-            hidden: true,
-            width: track.getSettings().width || 640,
-            height: track.getSettings().height || 480
-          });
-          videoSender.replaceTrack(_this51._blackVideoTrack.videoTrack);
-        }
-      }, 100);
-    }
-
-    /**
-     * 页面可见时：恢复原视频 track
-     */
-  }, {
-    key: "_handlePageVisible",
-    value: function _handlePageVisible(conn) {
-      this._clearTrackMutedTimer();
-      if (!this._visibilitychangeVideoTrack || conn.connectionState !== 'connected') return;
-      var videoSender = conn.getSenders().find(function (s) {
-        return s.track.kind === 'video';
-      });
-      if (videoSender) {
-        videoSender.replaceTrack(this._visibilitychangeVideoTrack);
-      }
-      this._visibilitychangeVideoTrack = null;
-      if (this._blackVideoTrack) {
-        this._blackVideoTrack.cleanup();
-        this._blackVideoTrack = null;
-      }
-    }
-
-    /**
-     * 清理定时器的通用函数
-     */
-  }, {
-    key: "_clearTrackMutedTimer",
-    value: function _clearTrackMutedTimer() {
-      if (this._trackMutedTimer) {
-        clearInterval(this._trackMutedTimer);
-        this._trackMutedTimer = null;
-      }
-    }
-  }], [{
-    key: "C",
-    get:
-    /**
-     * Expose C object.
-     */
-    function get() {
-      return C;
-    }
-  }]);
-}(EventEmitter);
->>>>>>> CRTC-new
 }).call(this)}).call(this,require("buffer").Buffer)
 
-},{"./BFCP/index":7,"./Constants":38,"./Dialog":39,"./Exceptions":42,"./Logger":45,"./MediaEffectsIssue":70,"./RTCSession/DTMF":77,"./RTCSession/Info":78,"./RTCSession/MediaPipeline":79,"./RTCSession/ReferNotifier":80,"./RTCSession/ReferSubscriber":81,"./RequestSender":83,"./SIPMessage":84,"./Timers":87,"./Transactions":88,"./URI":91,"./Utils":92,"buffer":97,"events":96,"sdp-transform":105}],77:[function(require,module,exports){
+},{"./BFCP/index":7,"./Constants":38,"./Dialog":39,"./Exceptions":42,"./Logger":45,"./MediaEffectsIssue":69,"./RTCSession/DTMF":76,"./RTCSession/Info":77,"./RTCSession/MediaPipeline":78,"./RTCSession/ReferNotifier":79,"./RTCSession/ReferSubscriber":80,"./RequestSender":82,"./SIPMessage":83,"./Timers":86,"./Transactions":87,"./URI":90,"./Utils":91,"buffer":96,"events":95,"sdp-transform":104}],76:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -42204,7 +35914,7 @@ module.exports = class DTMF extends EventEmitter {
  * Expose C object.
  */
 module.exports.C = C;
-},{"../Constants":38,"../Exceptions":42,"../Logger":45,"../Utils":92,"events":96}],78:[function(require,module,exports){
+},{"../Constants":38,"../Exceptions":42,"../Logger":45,"../Utils":91,"events":95}],77:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -42285,7 +35995,7 @@ module.exports = class Info extends EventEmitter {
     });
   }
 };
-},{"../Constants":38,"../Exceptions":42,"../Utils":92,"events":96}],79:[function(require,module,exports){
+},{"../Constants":38,"../Exceptions":42,"../Utils":91,"events":95}],78:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
@@ -43053,7 +36763,7 @@ module.exports = class MediaPipeline {
     return await this.applyMediaEffectsComposerOnSdkGumStream(aiNoiseSuppressedStream, composerOptions);
   }
 };
-},{"../AINoiseSuppression":6,"../Logger":45,"../MediaEffectsComposer":61,"../MediaEffectsIssue":70,"../Utils":92}],80:[function(require,module,exports){
+},{"../AINoiseSuppression":6,"../Logger":45,"../MediaEffectsComposer":60,"../MediaEffectsIssue":69,"../Utils":91}],79:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
@@ -43100,7 +36810,7 @@ module.exports = class ReferNotifier {
     });
   }
 };
-},{"../Constants":38,"../Logger":45}],81:[function(require,module,exports){
+},{"../Constants":38,"../Logger":45}],80:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -43224,7 +36934,7 @@ module.exports = class ReferSubscriber extends EventEmitter {
     });
   }
 };
-},{"../Constants":38,"../Grammar":43,"../Logger":45,"../Utils":92,"events":96}],82:[function(require,module,exports){
+},{"../Constants":38,"../Grammar":43,"../Logger":45,"../Utils":91,"events":95}],81:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -43522,7 +37232,7 @@ ${this._contact}${this._extraContactParams}`);
     });
   }
 };
-},{"./Constants":38,"./Logger":45,"./RequestSender":83,"./SIPMessage":84,"./Utils":92}],83:[function(require,module,exports){
+},{"./Constants":38,"./Logger":45,"./RequestSender":82,"./SIPMessage":83,"./Utils":91}],82:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -43661,7 +37371,7 @@ module.exports = class RequestSender {
     }
   }
 };
-},{"./Constants":38,"./DigestAuthentication":41,"./Logger":45,"./Transactions":88}],84:[function(require,module,exports){
+},{"./Constants":38,"./DigestAuthentication":41,"./Logger":45,"./Transactions":87}],83:[function(require,module,exports){
 "use strict";
 
 var sdp_transform = require('sdp-transform');
@@ -44122,7 +37832,6 @@ class IncomingRequest extends IncomingMessage {
       for (var header of headers) {
         response += `Record-Route: ${header}\r\n`;
       }
-<<<<<<< HEAD
     }
     var vias = this.getHeaders('via');
     for (var via of vias) {
@@ -44160,151 +37869,6 @@ class IncomingRequest extends IncomingMessage {
           supported.push('ice');
         }
         supported.push('replaces');
-=======
-      reason = reason || CRTC_C.REASON_PHRASE[code] || '';
-      extraHeaders = Utils.cloneArray(extraHeaders);
-      var response = "SIP/2.0 ".concat(code, " ").concat(reason, "\r\n");
-      if (this.method === CRTC_C.INVITE && code > 100 && code <= 200) {
-        var headers = this.getHeaders('record-route');
-        var _iterator8 = _createForOfIteratorHelper(headers),
-          _step8;
-        try {
-          for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
-            var header = _step8.value;
-            response += "Record-Route: ".concat(header, "\r\n");
-          }
-        } catch (err) {
-          _iterator8.e(err);
-        } finally {
-          _iterator8.f();
-        }
-      }
-      var vias = this.getHeaders('via');
-      var _iterator9 = _createForOfIteratorHelper(vias),
-        _step9;
-      try {
-        for (_iterator9.s(); !(_step9 = _iterator9.n()).done;) {
-          var via = _step9.value;
-          response += "Via: ".concat(via, "\r\n");
-        }
-      } catch (err) {
-        _iterator9.e(err);
-      } finally {
-        _iterator9.f();
-      }
-      if (!this.to_tag && code > 100) {
-        to += ";tag=".concat(Utils.newTag());
-      } else if (this.to_tag && !this.s('to').hasParam('tag')) {
-        to += ";tag=".concat(this.to_tag);
-      }
-      response += "To: ".concat(to, "\r\n");
-      response += "From: ".concat(this.getHeader('From'), "\r\n");
-      response += "Call-ID: ".concat(this.call_id, "\r\n");
-      response += "CSeq: ".concat(this.cseq, " ").concat(this.method, "\r\n");
-      var _iterator0 = _createForOfIteratorHelper(extraHeaders),
-        _step0;
-      try {
-        for (_iterator0.s(); !(_step0 = _iterator0.n()).done;) {
-          var _header2 = _step0.value;
-          response += "".concat(_header2.trim(), "\r\n");
-        }
-
-        // Supported.
-      } catch (err) {
-        _iterator0.e(err);
-      } finally {
-        _iterator0.f();
-      }
-      switch (this.method) {
-        case CRTC_C.INVITE:
-          if (this.ua.configuration.session_timers) {
-            supported.push('timer');
-          }
-          if (this.ua.contact.pub_gruu || this.ua.contact.temp_gruu) {
-            supported.push('gruu');
-          }
-          supported.push('ice', 'replaces');
-          break;
-        case CRTC_C.UPDATE:
-          if (this.ua.configuration.session_timers) {
-            supported.push('timer');
-          }
-          if (body) {
-            supported.push('ice');
-          }
-          supported.push('replaces');
-      }
-      supported.push('outbound');
-
-      // Allow and Accept.
-      if (this.method === CRTC_C.OPTIONS) {
-        response += "Allow: ".concat(CRTC_C.ALLOWED_METHODS, "\r\n");
-        response += "Accept: ".concat(CRTC_C.ACCEPTED_BODY_TYPES, "\r\n");
-      } else if (code === 405) {
-        response += "Allow: ".concat(CRTC_C.ALLOWED_METHODS, "\r\n");
-      } else if (code === 415) {
-        response += "Accept: ".concat(CRTC_C.ACCEPTED_BODY_TYPES, "\r\n");
-      }
-      response += "Supported: ".concat(supported, "\r\n");
-
-      // for 3PCC notify event
-      response += "Allow-Events: ".concat(allow_events, "\r\n");
-      if (body) {
-        var length = Utils.str_utf8_length(body);
-        response += 'Content-Type: application/sdp\r\n';
-        response += "Content-Length: ".concat(length, "\r\n\r\n");
-        response += body;
-      } else {
-        response += "Content-Length: ".concat(0, "\r\n\r\n");
-      }
-      this.server_transaction.receiveResponse(code, response, onSuccess, onFailure);
-    }
-
-    /**
-    * Stateless reply.
-    * -param {Number} code status code
-    * -param {String} reason reason phrase
-    */
-  }, {
-    key: "reply_sl",
-    value: function reply_sl() {
-      var code = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
-      var reason = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
-      var vias = this.getHeaders('via');
-
-      // Validate code and reason values.
-      if (!code || code < 100 || code > 699) {
-        throw new TypeError("Invalid status_code: ".concat(code));
-      } else if (reason && typeof reason !== 'string' && !(reason instanceof String)) {
-        throw new TypeError("Invalid reason_phrase: ".concat(reason));
-      }
-      reason = reason || CRTC_C.REASON_PHRASE[code] || '';
-      var response = "SIP/2.0 ".concat(code, " ").concat(reason, "\r\n");
-      var _iterator1 = _createForOfIteratorHelper(vias),
-        _step1;
-      try {
-        for (_iterator1.s(); !(_step1 = _iterator1.n()).done;) {
-          var via = _step1.value;
-          response += "Via: ".concat(via, "\r\n");
-        }
-      } catch (err) {
-        _iterator1.e(err);
-      } finally {
-        _iterator1.f();
-      }
-      var to = this.getHeader('To');
-      if (!this.to_tag && code > 100) {
-        to += ";tag=".concat(Utils.newTag());
-      } else if (this.to_tag && !this.s('to').hasParam('tag')) {
-        to += ";tag=".concat(this.to_tag);
-      }
-      response += "To: ".concat(to, "\r\n");
-      response += "From: ".concat(this.getHeader('From'), "\r\n");
-      response += "Call-ID: ".concat(this.call_id, "\r\n");
-      response += "CSeq: ".concat(this.cseq, " ").concat(this.method, "\r\n");
-      response += "Content-Length: ".concat(0, "\r\n\r\n");
-      this.transport.send(response);
->>>>>>> CRTC-new
     }
     supported.push('outbound');
 
@@ -44379,7 +37943,7 @@ module.exports = {
   IncomingRequest,
   IncomingResponse
 };
-},{"./Constants":38,"./Grammar":43,"./Logger":45,"./NameAddrHeader":72,"./Utils":92,"sdp-transform":105}],85:[function(require,module,exports){
+},{"./Constants":38,"./Grammar":43,"./Logger":45,"./NameAddrHeader":71,"./Utils":91,"sdp-transform":104}],84:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -44447,32 +38011,9 @@ exports.isSocket = socket => {
   }
   return true;
 };
-},{"./Grammar":43,"./Logger":45,"./Utils":92}],86:[function(require,module,exports){
+},{"./Grammar":43,"./Logger":45,"./Utils":91}],85:[function(require,module,exports){
 "use strict";
 
-<<<<<<< HEAD
-=======
-function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
-function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
-function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
-function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
-function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
-function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
-function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
-function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
-function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
-function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
-function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
-function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
-function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
-function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
-function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
-function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
-function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
-function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
-function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
->>>>>>> CRTC-new
 /* eslint-disable max-len */
 var EventEmitter = require('events').EventEmitter;
 var Utils = require('./Utils');
@@ -44527,149 +38068,11 @@ module.exports = class getStats extends EventEmitter {
     };
     this.start();
   }
-<<<<<<< HEAD
   start() {
     logger.debug('start()');
     window.CRTCStats = '';
     var processing = async () => {
       var inform = false;
-=======
-  _inherits(getStats, _EventEmitter);
-  return _createClass(getStats, [{
-    key: "start",
-    value: function start() {
-      var _this2 = this;
-      logger.debug('start()');
-      window.CRTCStats = '';
-      var processing = /*#__PURE__*/function () {
-        var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
-          var inform, transceivers, _iterator, _step, transceiver, senderReports, receiverReports, _t;
-          return _regenerator().w(function (_context) {
-            while (1) switch (_context.p = _context.n) {
-              case 0:
-                inform = false; // 全局停止统计信息输出
-                if (!(window.CRTCStats === 'stop')) {
-                  _context.n = 1;
-                  break;
-                }
-                logger.debug("CRTCStats: ".concat(window.CRTCStats));
-                clearInterval(_this2._statsTimer);
-                return _context.a(2);
-              case 1:
-                _this2._data = '';
-                if (_this2._count === 0) {
-                  // 第二次开始间隔5-10次输出一次完整report
-                  _this2._count = _this2._interval + (Math.random() * 5 | 0);
-                  inform = true;
-                }
-                _this2._count--;
-                _context.n = 2;
-                return _this2._pc.getTransceivers();
-              case 2:
-                transceivers = _context.v;
-                _iterator = _createForOfIteratorHelper(transceivers);
-                _context.p = 3;
-                _iterator.s();
-              case 4:
-                if ((_step = _iterator.n()).done) {
-                  _context.n = 8;
-                  break;
-                }
-                transceiver = _step.value;
-                _context.n = 5;
-                return transceiver.sender.getStats();
-              case 5:
-                senderReports = _context.v;
-                _context.n = 6;
-                return transceiver.receiver.getStats();
-              case 6:
-                receiverReports = _context.v;
-                if (transceiver.mid === sessionStorage.getItem(CRTC_C.BFCP_SHARED_STREAM_INDEX)) {
-                  _this2._parseSenderReport(senderReports, transceiver.sender, true, inform);
-                  _this2._parseReceiverReport(receiverReports, transceiver.receiver, true, inform);
-                } else {
-                  transceiver.sender.track && _this2._parseSenderReport(senderReports, transceiver.sender, false, inform);
-                  _this2._parseReceiverReport(receiverReports, transceiver.receiver, false, inform);
-                }
-              case 7:
-                _context.n = 4;
-                break;
-              case 8:
-                _context.n = 10;
-                break;
-              case 9:
-                _context.p = 9;
-                _t = _context.v;
-                _iterator.e(_t);
-              case 10:
-                _context.p = 10;
-                _iterator.f();
-                return _context.f(10);
-              case 11:
-                logger.debug("pc status: cS: ".concat(_this2._pc.connectionState, " iS:").concat(_this2._pc.iceConnectionState, " sS:").concat(_this2._pc.signalingState));
-                try {
-                  _this2._pc.getSenders().forEach(function (s) {
-                    if (!s.track) {
-                      return;
-                    }
-                    var trackStatus = "id: ".concat(s.track.id, ", enabled: ").concat(s.track.enabled, ", label: ").concat(s.track.label, ",kind: ").concat(s.track.kind, ",muted: ").concat(s.track.muted, ",readyState: ").concat(s.track.readyState, ",transport: ").concat(s.transport && s.transport.state, ";");
-                    logger.debug("curr ".concat(s.track.kind, " track status: ").concat(trackStatus));
-                    logger.debug("settings: ".concat(JSON.stringify(s.track.getSettings()), " ***** constraints: ").concat(JSON.stringify(s.track.getConstraints()), " ***** capabilities: ").concat(JSON.stringify(s.track.getCapabilities ? s.track.getCapabilities() : {})));
-                  });
-                } catch (error) {
-                  logger.error(error.toString());
-                }
-                if (!_this2._data) {
-                  _context.n = 12;
-                  break;
-                }
-                logger.debug(_this2._data);
-                return _context.a(2);
-              case 12:
-                _this2._createReport();
-              case 13:
-                return _context.a(2);
-            }
-          }, _callee, null, [[3, 9, 10, 11]]);
-        }));
-        return function processing() {
-          return _ref.apply(this, arguments);
-        };
-      }();
-      setTimeout(function () {
-        processing();
-      }, this._delay * 500);
-      this._statsTimer = setInterval(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
-        return _regenerator().w(function (_context2) {
-          while (1) switch (_context2.n) {
-            case 0:
-              processing();
-            case 1:
-              return _context2.a(2);
-          }
-        }, _callee2);
-      })), this._delay * 1000);
-    }
-  }, {
-    key: "setMode",
-    value: function setMode(value) {
-      logger.debug("setMode() ".concat(value));
-      this._mode = value;
-    }
-  }, {
-    key: "stop",
-    value: function stop() {
-      logger.debug('stop()');
-      clearInterval(this._statsTimer);
-      this._count = this._interval;
-      window.CRTCStats = '';
-    }
-  }, {
-    key: "reset",
-    value: function reset() {
-      this.stop();
-    }
->>>>>>> CRTC-new
 
       // 全局停止统计信息输出
       if (window.CRTCStats === 'stop') {
@@ -45014,7 +38417,7 @@ module.exports = class getStats extends EventEmitter {
     this.emit('network-quality', this._networkQuality);
   }
 };
-},{"./Constants":38,"./Logger":45,"./Utils":92,"events":96}],87:[function(require,module,exports){
+},{"./Constants":38,"./Logger":45,"./Utils":91,"events":95}],86:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
@@ -45035,7 +38438,7 @@ module.exports = {
   TIMER_M: 64 * T1,
   PROVISIONAL_RESPONSE_INTERVAL: 60000 // See RFC 3261 Section 13.3.1.1
 };
-},{}],88:[function(require,module,exports){
+},{}],87:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -45389,7 +38792,6 @@ class NonInviteServerTransaction extends EventEmitter {
           break;
       }
     }
-<<<<<<< HEAD
   }
 }
 class InviteServerTransaction extends EventEmitter {
@@ -45406,79 +38808,6 @@ class InviteServerTransaction extends EventEmitter {
     ua.newTransaction(this);
     this.resendProvisionalTimer = null;
     request.reply(100);
-=======
-  }, {
-    key: "receiveResponse",
-    value: function receiveResponse(status_code, response, onSuccess, onFailure) {
-      var _this0 = this;
-      if (status_code === 100) {
-        /* RFC 4320 4.1
-         * 'A SIP element MUST NOT
-         * send any provisional response with a
-         * Status-Code other than 100 to a non-INVITE request.'
-         */
-        switch (this.state) {
-          case C.STATUS_TRYING:
-            this.stateChanged(C.STATUS_PROCEEDING);
-            if (!this.transport.send(response)) {
-              this.onTransportError();
-            }
-            break;
-          case C.STATUS_PROCEEDING:
-            this.last_response = response;
-            if (!this.transport.send(response)) {
-              this.onTransportError();
-              if (onFailure) {
-                onFailure();
-              }
-            } else if (onSuccess) {
-              onSuccess();
-            }
-            break;
-        }
-      } else if (status_code >= 200 && status_code <= 699) {
-        switch (this.state) {
-          case C.STATUS_TRYING:
-          case C.STATUS_PROCEEDING:
-            this.stateChanged(C.STATUS_COMPLETED);
-            this.last_response = response;
-            this.J = setTimeout(function () {
-              _this0.timer_J();
-            }, Timers.TIMER_J);
-            if (!this.transport.send(response)) {
-              this.onTransportError();
-              if (onFailure) {
-                onFailure();
-              }
-            } else if (onSuccess) {
-              onSuccess();
-            }
-            break;
-          case C.STATUS_COMPLETED:
-            break;
-        }
-      }
-    }
-  }]);
-}(EventEmitter);
-var InviteServerTransaction = /*#__PURE__*/function (_EventEmitter5) {
-  function InviteServerTransaction(ua, transport, request) {
-    var _this1;
-    _classCallCheck(this, InviteServerTransaction);
-    _this1 = _callSuper(this, InviteServerTransaction);
-    _this1.type = C.INVITE_SERVER;
-    _this1.id = request.via_branch;
-    _this1.ua = ua;
-    _this1.transport = transport;
-    _this1.request = request;
-    _this1.last_response = '';
-    request.server_transaction = _this1;
-    _this1.state = C.STATUS_PROCEEDING;
-    ua.newTransaction(_this1);
-    _this1.resendProvisionalTimer = null;
-    request.reply(100);
-    return _this1;
->>>>>>> CRTC-new
   }
   get C() {
     return C;
@@ -45561,7 +38890,6 @@ var InviteServerTransaction = /*#__PURE__*/function (_EventEmitter5) {
             this.resendProvisionalTimer = null;
           }
 
-<<<<<<< HEAD
         /* falls through */
         case C.STATUS_ACCEPTED:
           // Note that this point will be reached for proceeding this.state also.
@@ -45569,25 +38897,12 @@ var InviteServerTransaction = /*#__PURE__*/function (_EventEmitter5) {
             this.onTransportError();
             if (onFailure) {
               onFailure();
-=======
-    // INVITE Server Transaction RFC 3261 17.2.1.
-  }, {
-    key: "receiveResponse",
-    value: function receiveResponse(status_code, response, onSuccess, onFailure) {
-      var _this10 = this;
-      if (status_code >= 100 && status_code <= 199) {
-        switch (this.state) {
-          case C.STATUS_PROCEEDING:
-            if (!this.transport.send(response)) {
-              this.onTransportError();
->>>>>>> CRTC-new
             }
           } else if (onSuccess) {
             onSuccess();
           }
           break;
       }
-<<<<<<< HEAD
     } else if (status_code >= 300 && status_code <= 699) {
       switch (this.state) {
         case C.STATUS_PROCEEDING:
@@ -45599,26 +38914,6 @@ var InviteServerTransaction = /*#__PURE__*/function (_EventEmitter5) {
             this.onTransportError();
             if (onFailure) {
               onFailure();
-=======
-      if (status_code > 100 && status_code <= 199 && this.state === C.STATUS_PROCEEDING) {
-        // Trigger the resendProvisionalTimer only for the first non 100 provisional response.
-        if (this.resendProvisionalTimer === null) {
-          this.resendProvisionalTimer = setInterval(function () {
-            _this10.resend_provisional();
-          }, Timers.PROVISIONAL_RESPONSE_INTERVAL);
-        }
-      } else if (status_code >= 200 && status_code <= 299) {
-        switch (this.state) {
-          case C.STATUS_PROCEEDING:
-            this.stateChanged(C.STATUS_ACCEPTED);
-            this.last_response = response;
-            this.L = setTimeout(function () {
-              _this10.timer_L();
-            }, Timers.TIMER_L);
-            if (this.resendProvisionalTimer !== null) {
-              clearInterval(this.resendProvisionalTimer);
-              this.resendProvisionalTimer = null;
->>>>>>> CRTC-new
             }
           } else {
             this.stateChanged(C.STATUS_COMPLETED);
@@ -45628,36 +38923,8 @@ var InviteServerTransaction = /*#__PURE__*/function (_EventEmitter5) {
             if (onSuccess) {
               onSuccess();
             }
-<<<<<<< HEAD
           }
           break;
-=======
-            break;
-        }
-      } else if (status_code >= 300 && status_code <= 699) {
-        switch (this.state) {
-          case C.STATUS_PROCEEDING:
-            if (this.resendProvisionalTimer !== null) {
-              clearInterval(this.resendProvisionalTimer);
-              this.resendProvisionalTimer = null;
-            }
-            if (!this.transport.send(response)) {
-              this.onTransportError();
-              if (onFailure) {
-                onFailure();
-              }
-            } else {
-              this.stateChanged(C.STATUS_COMPLETED);
-              this.H = setTimeout(function () {
-                _this10.timer_H();
-              }, Timers.TIMER_H);
-              if (onSuccess) {
-                onSuccess();
-              }
-            }
-            break;
-        }
->>>>>>> CRTC-new
       }
     }
   }
@@ -45761,7 +39028,7 @@ module.exports = {
   InviteServerTransaction,
   checkTransaction
 };
-},{"./Constants":38,"./Logger":45,"./SIPMessage":84,"./Timers":87,"events":96}],89:[function(require,module,exports){
+},{"./Constants":38,"./Logger":45,"./SIPMessage":83,"./Timers":86,"events":95}],88:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -46136,7 +39403,7 @@ module.exports = class Transport {
     });
   }
 };
-},{"./Constants":38,"./Logger":45,"./Socket":85,"./Utils":92}],90:[function(require,module,exports){
+},{"./Constants":38,"./Logger":45,"./Socket":84,"./Utils":91}],89:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -47196,7 +40463,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":37,"./Constants":38,"./Exceptions":42,"./Logger":45,"./Message":71,"./Options":73,"./Parser":74,"./Pk":75,"./RTCSession":76,"./Registrator":82,"./SIPMessage":84,"./Transactions":88,"./Transport":89,"./URI":91,"./Utils":92,"./sanityCheck":94,"events":96,"jsencrypt":101}],91:[function(require,module,exports){
+},{"./Config":37,"./Constants":38,"./Exceptions":42,"./Logger":45,"./Message":70,"./Options":72,"./Parser":73,"./Pk":74,"./RTCSession":75,"./Registrator":81,"./SIPMessage":83,"./Transactions":87,"./Transport":88,"./URI":90,"./Utils":91,"./sanityCheck":93,"events":95,"jsencrypt":100}],90:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('./Constants');
@@ -47368,24 +40635,9 @@ module.exports = class URI {
     return aor;
   }
 };
-},{"./Constants":38,"./Grammar":43,"./Utils":92}],92:[function(require,module,exports){
+},{"./Constants":38,"./Grammar":43,"./Utils":91}],91:[function(require,module,exports){
 "use strict";
 
-<<<<<<< HEAD
-=======
-function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
-function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
-function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
-function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
-function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
-function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
-function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
-function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
-function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
-function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
-function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
->>>>>>> CRTC-new
 var CRTC_C = require('./Constants');
 var URI = require('./URI');
 var Grammar = require('./Grammar');
@@ -47829,7 +41081,6 @@ exports.cloneObject = (obj, fallback = {}) => {
  * 因此建议在用户授权访问后， 再调用该接口获取设备详情
  *
  */
-<<<<<<< HEAD
 exports.getCameras = async () => {
   if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
     return {
@@ -47855,47 +41106,6 @@ exports.getCameras = async () => {
     };
   }
 };
-=======
-exports.getCameras = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
-  var devices, cameras, _t;
-  return _regenerator().w(function (_context) {
-    while (1) switch (_context.p = _context.n) {
-      case 0:
-        if (!(!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices)) {
-          _context.n = 1;
-          break;
-        }
-        return _context.a(2, {
-          error: 'The current browser does not support device enumeration function.'
-        });
-      case 1:
-        _context.p = 1;
-        _context.n = 2;
-        return navigator.mediaDevices.enumerateDevices();
-      case 2:
-        devices = _context.v;
-        // 筛选出视频输入设备（摄像头）
-        cameras = devices.filter(function (device) {
-          return device.kind === 'videoinput';
-        }).map(function (cam, index) {
-          return {
-            kind: cam.kind,
-            label: cam.label || "camera ".concat(index + 1),
-            // 默认标签
-            deviceId: cam.deviceId
-          };
-        });
-        return _context.a(2, cameras);
-      case 3:
-        _context.p = 3;
-        _t = _context.v;
-        return _context.a(2, {
-          error: _t.message
-        });
-    }
-  }, _callee, null, [[1, 3]]);
-}));
->>>>>>> CRTC-new
 
 /**
  * 返回麦克风设备列表
@@ -47906,7 +41116,6 @@ exports.getCameras = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().
  * 因此建议在用户授权访问后， 再调用该接口获取设备详情，比如在 initialize() 后再调用此接口获取设备详情。
  *
  */
-<<<<<<< HEAD
 exports.getMicrophones = async () => {
   if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
     return {
@@ -47932,47 +41141,6 @@ exports.getMicrophones = async () => {
     };
   }
 };
-=======
-exports.getMicrophones = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
-  var devices, microphones, _t2;
-  return _regenerator().w(function (_context2) {
-    while (1) switch (_context2.p = _context2.n) {
-      case 0:
-        if (!(!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices)) {
-          _context2.n = 1;
-          break;
-        }
-        return _context2.a(2, {
-          error: 'The current browser does not support device enumeration function.'
-        });
-      case 1:
-        _context2.p = 1;
-        _context2.n = 2;
-        return navigator.mediaDevices.enumerateDevices();
-      case 2:
-        devices = _context2.v;
-        // 筛选出音频输入设备（麦克风）
-        microphones = devices.filter(function (device) {
-          return device.kind === 'audioinput';
-        }).map(function (mic, index) {
-          return {
-            kind: mic.kind,
-            label: mic.label || "microphone ".concat(index + 1),
-            // 默认标签
-            deviceId: mic.deviceId
-          };
-        });
-        return _context2.a(2, microphones);
-      case 3:
-        _context2.p = 3;
-        _t2 = _context2.v;
-        return _context2.a(2, {
-          error: _t2.message
-        });
-    }
-  }, _callee2, null, [[1, 3]]);
-}));
->>>>>>> CRTC-new
 
 /**
  * 返回音频输出设备列表
@@ -47983,7 +41151,6 @@ exports.getMicrophones = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerato
  * 因此建议在用户授权访问后， 再调用该接口获取设备详情，比如在 initialize() 后再调用此接口获取设备详情。
  *
  */
-<<<<<<< HEAD
 exports.getSpeakers = async () => {
   if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
     return {
@@ -48009,47 +41176,6 @@ exports.getSpeakers = async () => {
     };
   }
 };
-=======
-exports.getSpeakers = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
-  var devices, speakers, _t3;
-  return _regenerator().w(function (_context3) {
-    while (1) switch (_context3.p = _context3.n) {
-      case 0:
-        if (!(!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices)) {
-          _context3.n = 1;
-          break;
-        }
-        return _context3.a(2, {
-          error: 'The current browser does not support device enumeration function.'
-        });
-      case 1:
-        _context3.p = 1;
-        _context3.n = 2;
-        return navigator.mediaDevices.enumerateDevices();
-      case 2:
-        devices = _context3.v;
-        // 筛选出音频输出设备
-        speakers = devices.filter(function (device) {
-          return device.kind === 'audiooutput';
-        }).map(function (speaker, index) {
-          return {
-            kind: speaker.kind,
-            label: speaker.label || "speaker ".concat(index + 1),
-            // 默认标签
-            deviceId: speaker.deviceId
-          };
-        });
-        return _context3.a(2, speakers);
-      case 3:
-        _context3.p = 3;
-        _t3 = _context3.v;
-        return _context3.a(2, {
-          error: _t3.message
-        });
-    }
-  }, _callee3, null, [[1, 3]]);
-}));
->>>>>>> CRTC-new
 
 /**
  * 获取音视频流（音频流、视频流或媒体流）。
@@ -48234,13 +41360,6 @@ exports.getStreamThroughCanvas = stream => {
   return newStream;
 };
 
-<<<<<<< HEAD
-// 使用 canvas.captureStream 创建空视频轨道的辅助函数
-var createCanvasVideoTrack = function ({
-  width = 64,
-  height = 48
-} = {}) {
-=======
 /**
  * 使用 canvas.captureStream 创建空视频轨道的辅助函数。
  *
@@ -48249,13 +41368,10 @@ var createCanvasVideoTrack = function ({
  * @param {number} [options.height=48] - Canvas 高度。
  * @returns {{ videoTrack: MediaStreamTrack }} 包含空视频轨道的对象。
  */
-var createCanvasVideoTrack = function createCanvasVideoTrack() {
-  var _ref4 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-    _ref4$width = _ref4.width,
-    width = _ref4$width === void 0 ? 64 : _ref4$width,
-    _ref4$height = _ref4.height,
-    height = _ref4$height === void 0 ? 48 : _ref4$height;
->>>>>>> CRTC-new
+var createCanvasVideoTrack = function ({
+  width = 64,
+  height = 48
+} = {}) {
   // 创建 Canvas 元素
   var canvas = document.createElement('canvas');
   // 适配部分情况需要绘制内容后才可以调用captureStream方法，比如：Firefox v86.0
@@ -48430,8 +41546,13 @@ exports.generateAnBlackVideoTrack = options => {
   };
 };
 
-<<<<<<< HEAD
-// 创建一个静音音频轨道
+/**
+ * 创建静音音频轨道。
+ *
+ * 通过 AudioContext 创建一个无声音频轨道，用于占位或保持音频通道活跃。
+ *
+ * @returns {Promise<{ state: string, audioContext: AudioContext, audioTrack: MediaStreamTrack }>}
+ */
 var createSilentAudioTrack = async () => {
   var audio = new Audio();
   var audioContext = new AudioContext();
@@ -48447,41 +41568,6 @@ var createSilentAudioTrack = async () => {
     state: audioContext.state,
     audioContext: audioContext,
     audioTrack: destination.stream.getAudioTracks()[0]
-=======
-/**
- * 创建静音音频轨道。
- *
- * 通过 AudioContext 创建一个无声音频轨道，用于占位或保持音频通道活跃。
- *
- * @returns {Promise<{ state: string, audioContext: AudioContext, audioTrack: MediaStreamTrack }>}
- */
-var createSilentAudioTrack = /*#__PURE__*/function () {
-  var _ref5 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
-    var audio, audioContext, destination, source;
-    return _regenerator().w(function (_context4) {
-      while (1) switch (_context4.n) {
-        case 0:
-          audio = new Audio();
-          audioContext = new AudioContext();
-          destination = audioContext.createMediaStreamDestination();
-          source = audioContext.createMediaElementSource(audio);
-          audio.loop = true;
-          audio.crossOrigin = 'anonymous';
-          audio.play()["catch"](function (error) {
-            console.warn("new Audio() error: ".concat(JSON.stringify(error)));
-          });
-          source.connect(destination);
-          return _context4.a(2, {
-            state: audioContext.state,
-            audioContext: audioContext,
-            audioTrack: destination.stream.getAudioTracks()[0]
-          });
-      }
-    }, _callee4);
-  }));
-  return function createSilentAudioTrack() {
-    return _ref5.apply(this, arguments);
->>>>>>> CRTC-new
   };
 };
 
@@ -48657,9 +41743,6 @@ exports.findLabelIndexByMstrm = sdp => {
   }
   return -1; // 如果未找到，返回 -1
 };
-<<<<<<< HEAD
-exports.uint8ArrayToBase64 = uint8Array => {
-=======
 
 /**
  * 将 Uint8Array 转换为 Base64 编码字符串。
@@ -48667,21 +41750,13 @@ exports.uint8ArrayToBase64 = uint8Array => {
  * @param {Uint8Array} uint8Array - 要转换的字节数组。
  * @returns {string} Base64 编码字符串。
  */
-exports.uint8ArrayToBase64 = function (uint8Array) {
->>>>>>> CRTC-new
+exports.uint8ArrayToBase64 = uint8Array => {
   var binary = '';
   for (var i = 0; i < uint8Array.length; i++) {
     binary += String.fromCharCode(uint8Array[i]);
   }
   return btoa(binary);
 };
-<<<<<<< HEAD
-exports.uint8ArrayToBinaryString = uint8Array => {
-  return Array.from(uint8Array, byte => byte.toString(2).padStart(8, '0') // 将每个字节转为8位二进制字符串
-  ).join(' '); // 可选：用空格分隔每个字节，增强可读性
-};
-exports.getApplicationMediaPositions = sdp => {
-=======
 
 /**
  * 将 Uint8Array 转换为二进制字符串（8 位补零格式，空格分隔）。
@@ -48689,10 +41764,8 @@ exports.getApplicationMediaPositions = sdp => {
  * @param {Uint8Array} uint8Array - 要转换的字节数组。
  * @returns {string} 二进制字符串，每字节之间用空格分隔。
  */
-exports.uint8ArrayToBinaryString = function (uint8Array) {
-  return Array.from(uint8Array, function (_byte) {
-    return _byte.toString(2).padStart(8, '0');
-  } // 将每个字节转为8位二进制字符串
+exports.uint8ArrayToBinaryString = uint8Array => {
+  return Array.from(uint8Array, byte => byte.toString(2).padStart(8, '0') // 将每个字节转为8位二进制字符串
   ).join(' '); // 可选：用空格分隔每个字节，增强可读性
 };
 
@@ -48708,8 +41781,7 @@ exports.uint8ArrayToBinaryString = function (uint8Array) {
  * @param {string} sdp - 原始 SDP 字符串。
  * @returns {{ originalIndexes: number[], sdp: string }} 原始位置索引和处理后的 SDP。
  */
-exports.getApplicationMediaPositions = function (sdp) {
->>>>>>> CRTC-new
+exports.getApplicationMediaPositions = sdp => {
   // 将SDP按媒体块分割
   var sections = sdp.split(/m=/);
   var header = sections.shift();
@@ -48763,10 +41835,6 @@ exports.getApplicationMediaPositions = function (sdp) {
     sdp: newSdp
   };
 };
-<<<<<<< HEAD
-exports.reorderApplicationMedia = (sdp, positions) => {
-  var [bfcpIndex, h224Index] = positions;
-=======
 
 /**
  * 按指定位置重新插入 application 媒体块到 SDP 中。
@@ -48778,11 +41846,8 @@ exports.reorderApplicationMedia = (sdp, positions) => {
  * @param {number[]} positions - 由 getApplicationMediaPositions 返回的原始位置数组。
  * @returns {string} 重新排序后的 SDP 字符串。
  */
-exports.reorderApplicationMedia = function (sdp, positions) {
-  var _positions = _slicedToArray(positions, 2),
-    bfcpIndex = _positions[0],
-    h224Index = _positions[1];
->>>>>>> CRTC-new
+exports.reorderApplicationMedia = (sdp, positions) => {
+  var [bfcpIndex, h224Index] = positions;
   // 将SDP按媒体块分割
   var sections = sdp.split(/m=/);
   var header = sections.shift();
@@ -48807,10 +41872,6 @@ exports.reorderApplicationMedia = function (sdp, positions) {
   return header + filteredSections.join('');
 };
 
-<<<<<<< HEAD
-// rtcp-fb 改为 *
-exports.processSdp = sdp => {
-=======
 /**
  * 处理 SDP 中的 rtcp-fb 行：将具体编码数字替换为通配符 `*`，并去除重复规则。
  *
@@ -48819,8 +41880,7 @@ exports.processSdp = sdp => {
  * @param {string} sdp - 原始 SDP 字符串。
  * @returns {string} 处理后的 SDP 字符串。
  */
-exports.processSdp = function (sdp) {
->>>>>>> CRTC-new
+exports.processSdp = sdp => {
   // 将SDP按行分割
   var lines = sdp.split('\n');
   var processedLines = [];
@@ -48857,21 +41917,12 @@ exports.processSdp = function (sdp) {
   return processedLines.join('\n');
 };
 
-<<<<<<< HEAD
-// 是否Firefox浏览器
-exports.isFirefox = () => {
-  return typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent);
-};
-
-// 从SDP里面获取DTMF的payload
-exports.getDtmfPayloadAndClockRate = sdp => {
-=======
 /**
  * 判断当前浏览器是否为 Firefox。
  *
  * @returns {boolean} Firefox 浏览器时返回 true。
  */
-exports.isFirefox = function () {
+exports.isFirefox = () => {
   return typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent);
 };
 
@@ -48885,7 +41936,7 @@ exports.isFirefox = function () {
  *
  * @returns {boolean} 需要纠偏时返回 true。
  */
-exports.shouldRecoverVideoFrameRateByUA = function () {
+exports.shouldRecoverVideoFrameRateByUA = () => {
   if (typeof navigator === 'undefined' || !navigator.userAgent) {
     return false;
   }
@@ -48904,8 +41955,7 @@ exports.shouldRecoverVideoFrameRateByUA = function () {
  * @param {string} sdp - SDP 字符串。
  * @returns {Array<{ payload: string, clockRate: string }>} payload 与时钟频率的数组。
  */
-exports.getDtmfPayloadAndClockRate = function (sdp) {
->>>>>>> CRTC-new
+exports.getDtmfPayloadAndClockRate = sdp => {
   var lines = sdp.split('\n');
   var dtmfInfo = new Map(); // 使用 Map 存储，确保 payload 唯一
 
@@ -48928,11 +41978,6 @@ exports.getDtmfPayloadAndClockRate = function (sdp) {
   }));
 };
 
-<<<<<<< HEAD
-// 修复sdp里面rtcp行缺少ip地址的问题
-exports.fixRtcpLines = sdp => {
-  return sdp.replace(/^(a=rtcp:\d+(?:\s+IN\s+IP[46])?)(?:\s*)$/gm, (match, prefix) => {
-=======
 /**
  * 修复 SDP 中 rtcp 行缺少 IP 地址的问题。
  *
@@ -48941,9 +41986,8 @@ exports.fixRtcpLines = sdp => {
  * @param {string} sdp - 原始 SDP 字符串。
  * @returns {string} 修复后的 SDP 字符串。
  */
-exports.fixRtcpLines = function (sdp) {
-  return sdp.replace(/^(a=rtcp:\d+(?:\s+IN\s+IP[46])?)(?:\s*)$/gm, function (match, prefix) {
->>>>>>> CRTC-new
+exports.fixRtcpLines = sdp => {
+  return sdp.replace(/^(a=rtcp:\d+(?:\s+IN\s+IP[46])?)(?:\s*)$/gm, (match, prefix) => {
     // 如果已经有IP地址，不做修改
     if (/\d+\.\d+\.\d+\.\d+$/.test(match) || /[0-9a-fA-F:]+$/.test(match)) {
       return match;
@@ -49050,12 +42094,6 @@ exports.replaceDtmfPayloads = (sdp, payloadMappings) => {
   return newSdpLines.join('\r\n');
 };
 
-<<<<<<< HEAD
-// 修复本端切换音频，远端sdp的问题
-// 确保 SDP 的 video m-section 中包含以下行：
-// a=setup, a=fingerprint, a=ice-ufrag, a=ice-pwd, a=rtcp-mux
-exports.ensureVideoSdpAttrs = sdp => {
-=======
 /**
  * 确保 SDP 的 video m-section 包含必要的属性。
  *
@@ -49068,8 +42106,7 @@ exports.ensureVideoSdpAttrs = sdp => {
  * @param {string} sdp - 原始 SDP 字符串。
  * @returns {string} 修复后的 SDP 字符串。
  */
-exports.ensureVideoSdpAttrs = function (sdp) {
->>>>>>> CRTC-new
+exports.ensureVideoSdpAttrs = sdp => {
   if (typeof sdp !== 'string') return sdp;
   var eol = sdp.indexOf('\r\n') !== -1 ? '\r\n' : sdp.indexOf('\n') !== -1 ? '\n' : '\r\n';
   var lines = sdp.split(/\r?\n/);
@@ -49212,117 +42249,6 @@ exports.ensureVideoSdpAttrs = function (sdp) {
 };
 
 /**
-<<<<<<< HEAD
- * 强制 WebRTC 视频发送端产生关键帧（Key Frame）
- *
- * ----------------------------------------------------------------------------
- * 设计目标
- * ----------------------------------------------------------------------------
- *
- * 浏览器标准方式：
- *
- *   RTCRtpSender.generateKeyFrame()
- *
- * 是目前最规范、副作用最小的关键帧请求方式。
- *
- * 但现实中：
- *
- * - Safari
- * - iOS WKWebView
- * - 部分 Android WebView
- * - 某些旧 Chromium 内核
- *
- * 对 generateKeyFrame 支持不完整，甚至不存在。
- *
- * 因此这里实现一个“分级 fallback”的兼容方案：
- *
- *   generateKeyFrame()
- *        ↓
- *   scaleResolutionDownBy hack（最后保底）
- *
- * ----------------------------------------------------------------------------
- * 为什么不直接只用 scaleResolutionDownBy？
- * ----------------------------------------------------------------------------
- *
- * 因为：
- *
- *   scaleResolutionDownBy: 1 ↔ 2
- *
- * 会真正改变编码分辨率。
- *
- * 浏览器通常会：
- *
- * - encoder reconfigure
- * - encoder reset
- * - bitrate controller reset
- * - reference frame reset
- *
- * 接收端可能出现：
- *
- * - 分辨率抖动
- * - 短暂模糊
- * - renderer resize
- * - 短暂卡顿
- *
- * 所以这里只把它作为最后 fallback。
- *
- * ----------------------------------------------------------------------------
- * 使用方式
- * ----------------------------------------------------------------------------
- *
- * 1. 单次发送关键帧：
- *
- *    sendKeyFrames(pc);
- *
- * 2. 周期性发送：
- *
- *    const stop = sendKeyFrames(pc, 2);
- *
- *    // 每 2 秒请求一次关键帧
- *
- * 3. 指定次数：
- *
- *    sendKeyFrames(pc, 2, 5);
- *
- *    // 每 2 秒发送一次，共发送 5 次
- *
- * ----------------------------------------------------------------------------
- * 注意事项
- * ----------------------------------------------------------------------------
- *
- * 1. 此方案本质仍属于“浏览器兼容 hack”
- *
- * WebRTC 标准设计中：
- *
- *   关键帧应该由接收端通过 RTCP PLI/FIR 请求。
- *
- * 如果你控制 SFU：
- *
- *   mediasoup
- *   Janus
- *   LiveKit
- *   ion-sfu
- *   Pion
- *
- * 更推荐服务端发送：
- *
- *   RTCP PLI / FIR
- *
- * 这是最标准、副作用最小的方案。
- *
- * 2. simulcast / SVC 注意事项
- *
- * params.encodings 可能包含：
- *
- *   low / mid / high
- *
- * 因此必须遍历所有 encoding。
- *
- * ----------------------------------------------------------------------------
- */
-
-exports.sendKeyFrames = (pc, interval, frequency) => {
-=======
  * 主动发送关键帧（I 帧）。
  *
  * 通过交替修改视频编码的 scaleResolutionDownBy 参数来触发关键帧生成。
@@ -49333,8 +42259,7 @@ exports.sendKeyFrames = (pc, interval, frequency) => {
  * @param {number} [frequency] - 最大发送次数。不传则无限循环（需配合 interval）。
  * @returns {Function|undefined} 当 interval 有效且 frequency 未指定时，返回 stop 函数用于取消定时发送。
  */
-exports.sendKeyFrames = function (pc, interval, frequency) {
->>>>>>> CRTC-new
+exports.sendKeyFrames = (pc, interval, frequency) => {
   if (!pc) {
     return;
   }
@@ -49473,25 +42398,6 @@ exports.sendKeyFrames = function (pc, interval, frequency) {
   }
 };
 
-<<<<<<< HEAD
-// 获取华为Android手机后摄列表最后一个
-exports.getHuaweiAndroidEnvironment = () => {
-  function isHuaweiAndroid(ua) {
-    return /huawei/i.test(ua) && /android/i.test(ua) && !/OpenHarmony/i.test(ua);
-  }
-  if (isHuaweiAndroid(navigator.userAgent)) {
-    var environments = [];
-    return navigator.mediaDevices.enumerateDevices().then(devices => {
-      devices.forEach(device => {
-        if (typeof device.getCapabilities === 'function') {
-          if (device.getCapabilities().facingMode && device.getCapabilities().facingMode.indexOf('environment') !== -1) {
-            environments.push(device.deviceId);
-          }
-        }
-      });
-      return environments[environments.length - 1];
-    });
-=======
 /**
  * 获取后置摄像头 deviceId（Huawei Android 特殊兼容逻辑）。
  *
@@ -49512,7 +42418,7 @@ exports.getHuaweiAndroidEnvironment = () => {
  * 返回后置摄像头 deviceId；
  * 未找到时返回 undefined。
  */
-exports.getEnvironmentId = function (devices) {
+exports.getEnvironmentId = devices => {
   /**
    * 判断是否 Huawei Android（非 OpenHarmony）。
    *
@@ -49526,7 +42432,6 @@ exports.getEnvironmentId = function (devices) {
   // 非 Huawei Android 不处理
   if (!isHuaweiAndroid(navigator.userAgent)) {
     return Promise.resolve(undefined);
->>>>>>> CRTC-new
   }
 
   /**
@@ -49535,40 +42440,31 @@ exports.getEnvironmentId = function (devices) {
    * @param {Array<MediaDeviceInfo|InputDeviceInfo>} deviceList
    * @returns {string|undefined}
    */
-  var getEnvironmentIdFromDevices = function getEnvironmentIdFromDevices(deviceList) {
+  var getEnvironmentIdFromDevices = deviceList => {
     var environments = [];
-    var _iterator9 = _createForOfIteratorHelper(deviceList),
-      _step9;
-    try {
-      for (_iterator9.s(); !(_step9 = _iterator9.n()).done;) {
-        var device = _step9.value;
-        // 仅处理视频输入设备
-        if (device.kind !== 'videoinput') {
-          continue;
-        }
-
-        // Huawei 扩展接口兼容判断
-        if (typeof device.getCapabilities !== 'function') {
-          continue;
-        }
-        var capabilities = device.getCapabilities();
-        var facingMode = capabilities.facingMode;
-
-        // 兼容：
-        // facingMode: ['environment']
-        // facingMode: 'environment'
-        var isEnvironment = Array.isArray(facingMode) ? facingMode.includes('environment') : facingMode === 'environment';
-        if (isEnvironment) {
-          environments.push(device.deviceId);
-        }
+    for (var device of deviceList) {
+      // 仅处理视频输入设备
+      if (device.kind !== 'videoinput') {
+        continue;
       }
 
-      // Huawei 某些机型后摄通常位于最后一个 environment
-    } catch (err) {
-      _iterator9.e(err);
-    } finally {
-      _iterator9.f();
+      // Huawei 扩展接口兼容判断
+      if (typeof device.getCapabilities !== 'function') {
+        continue;
+      }
+      var capabilities = device.getCapabilities();
+      var facingMode = capabilities.facingMode;
+
+      // 兼容：
+      // facingMode: ['environment']
+      // facingMode: 'environment'
+      var isEnvironment = Array.isArray(facingMode) ? facingMode.includes('environment') : facingMode === 'environment';
+      if (isEnvironment) {
+        environments.push(device.deviceId);
+      }
     }
+
+    // Huawei 某些机型后摄通常位于最后一个 environment
     return environments.length > 0 ? environments[environments.length - 1] : undefined;
   };
 
@@ -49581,10 +42477,6 @@ exports.getEnvironmentId = function (devices) {
   return navigator.mediaDevices.enumerateDevices().then(getEnvironmentIdFromDevices);
 };
 
-<<<<<<< HEAD
-// 视频轨道分辨率是否异常
-exports.isVideoTrackHealthy = mediastream => {
-=======
 /**
  * 检测视频轨道分辨率是否正常。
  *
@@ -49594,8 +42486,7 @@ exports.isVideoTrackHealthy = mediastream => {
  * @param {MediaStream} mediastream - 要检测的媒体流。
  * @returns {boolean} 分辨率正常时返回 true。
  */
-exports.isVideoTrackHealthy = function (mediastream) {
->>>>>>> CRTC-new
+exports.isVideoTrackHealthy = mediastream => {
   if (mediastream.getVideoTracks().length === 0) {
     return false;
   }
@@ -49643,9 +42534,6 @@ exports.updateSdpByConstraints = (sdp, constraints) => {
     return section;
   }).join('');
 };
-<<<<<<< HEAD
-exports.fixVideoInactive = sdp => {
-=======
 
 /**
  * 修复 video m-section 的 inactive 状态与端口的一致性。
@@ -49656,8 +42544,7 @@ exports.fixVideoInactive = sdp => {
  * @param {string} sdp - 原始 SDP 字符串。
  * @returns {string} 修复后的 SDP 字符串。
  */
-exports.fixVideoInactive = function (sdp) {
->>>>>>> CRTC-new
+exports.fixVideoInactive = sdp => {
   return sdp.replace(/(m=video[^\r\n]*[\s\S]*?)(?=\r?\nm=|$)/g,
   // 简化了 Lookahead
   block => {
@@ -49693,10 +42580,6 @@ exports.fixVideoInactive = function (sdp) {
   });
 };
 
-<<<<<<< HEAD
-// 关闭sdp里面的视频
-exports.disableVideoInSdp = sdp => {
-=======
 /**
  * 在 SDP 中关闭视频。
  *
@@ -49705,8 +42588,7 @@ exports.disableVideoInSdp = sdp => {
  * @param {string} sdp - 原始 SDP 字符串。
  * @returns {string} 修改后的 SDP 字符串。
  */
-exports.disableVideoInSdp = function (sdp) {
->>>>>>> CRTC-new
+exports.disableVideoInSdp = sdp => {
   // 1. 修改 m=video 的端口为 0
   var newSdp = sdp.replace(/(m=video\s+)\d+/, '$10');
 
@@ -49718,1996 +42600,9 @@ exports.disableVideoInSdp = function (sdp) {
   });
   return newSdp;
 };
-},{"./Constants":38,"./Grammar":43,"./URI":91}],93:[function(require,module,exports){
+},{"./Constants":38,"./Grammar":43,"./URI":90}],92:[function(require,module,exports){
 "use strict";
 
-<<<<<<< HEAD
-=======
-/**
- * 创建一个基于 Web Worker 的 Timer
- * 作用：避免主线程 setTimeout 在页面卡顿时不准的问题
- */
-exports.createTimerWorker = function () {
-  var callbacks = new Map();
-  if (typeof Worker === 'undefined' || typeof Blob === 'undefined' || typeof URL === 'undefined' || !URL.createObjectURL) {
-    var root = typeof window !== 'undefined' ? window : global;
-    var timeoutIds = new Set();
-    return {
-      setTimeout: function setTimeout(callback, timeoutMs) {
-        var timeoutId = root.setTimeout(function () {
-          timeoutIds["delete"](timeoutId);
-          callback();
-        }, timeoutMs);
-        timeoutIds.add(timeoutId);
-        return timeoutId;
-      },
-      clearTimeout: function clearTimeout(timeoutId) {
-        if (!timeoutIds.has(timeoutId)) {
-          return;
-        }
-        root.clearTimeout(timeoutId);
-        timeoutIds["delete"](timeoutId);
-      },
-      terminate: function terminate() {
-        timeoutIds.forEach(function (timeoutId) {
-          return root.clearTimeout(timeoutId);
-        });
-        timeoutIds.clear();
-      }
-    };
-  }
-
-  /**
-   * Worker 内运行的代码
-   * 负责真正执行 setTimeout
-   */
-  var code = "\n    const timeoutIds = new Map();\n\n    self.onmessage = (event) =>\n    {\n      if (event.data.timeoutMs !== undefined)\n      {\n        const timeoutId = self.setTimeout(() =>\n        {\n          self.postMessage({ callbackId: event.data.callbackId });\n          timeoutIds.delete(event.data.callbackId);\n        }, event.data.timeoutMs);\n\n        timeoutIds.set(event.data.callbackId, timeoutId);\n      }\n      else\n      {\n        const timeoutId = timeoutIds.get(event.data.callbackId);\n\n        self.clearTimeout(timeoutId);\n        timeoutIds.delete(event.data.callbackId);\n      }\n    }\n  ";
-  var blob = new Blob([code], {
-    type: 'application/javascript'
-  });
-  var url = URL.createObjectURL(blob);
-  var worker = new Worker(url);
-  URL.revokeObjectURL(url);
-  worker.onmessage = function (event) {
-    var callback = callbacks.get(event.data.callbackId);
-    if (!callback) {
-      return;
-    }
-    callbacks["delete"](event.data.callbackId);
-    callback();
-  };
-  var nextCallbackId = 1;
-
-  /**
-   * 在 Web Worker 中设置一个延时回调
-   * @param {Function} callback - 延时后执行的回调函数
-   * @param {number} timeoutMs - 延时时间（毫秒）
-   * @returns {number} 回调 ID，可用于取消该延时
-   */
-  function setTimeout(callback, timeoutMs) {
-    var callbackId = nextCallbackId++;
-    callbacks.set(callbackId, callback);
-    worker.postMessage({
-      callbackId: callbackId,
-      timeoutMs: timeoutMs
-    });
-    return callbackId;
-  }
-
-  /**
-   * 取消通过 setTimeout 设置的延时回调
-   * @param {number} callbackId - 要取消的回调 ID
-   */
-  function clearTimeout(callbackId) {
-    if (!callbacks.has(callbackId)) {
-      return;
-    }
-    worker.postMessage({
-      callbackId: callbackId
-    });
-    callbacks["delete"](callbackId);
-  }
-
-  /**
-   * 终止 Timer Worker 并清理所有资源
-   */
-  function terminate() {
-    callbacks.clear();
-    worker.terminate();
-  }
-  return {
-    setTimeout: setTimeout,
-    clearTimeout: clearTimeout,
-    terminate: terminate
-  };
-};
-}).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],63:[function(require,module,exports){
-"use strict";
-
-function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
-function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
-function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
-function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
-function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
-function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
-function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
-function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
-function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
-var _require = require('./pipelines/webgl2/webgl2Pipeline.js'),
-  buildWebGL2Pipeline = _require.buildWebGL2Pipeline;
-var _require2 = require('./helpers/timerHelper.js'),
-  createTimerWorker = _require2.createTimerWorker;
-var Logger = require('../Logger');
-var logger = new Logger('VirtualBackground');
-var DEFAULT_CONFIG = {
-  video: {
-    width: 1280,
-    height: 720,
-    targetFps: 15,
-    mirror: false
-  },
-  segmentation: {
-    backend: 'wasmSimd',
-    inputResolution: '160x96',
-    model: 'meet',
-    pipeline: 'webgl2',
-    targetFps: 15
-  },
-  postProcessing: {
-    smoothSegmentationMask: true,
-    coverage: [0.5, 0.75],
-    lightWrapping: 0.2,
-    blendMode: 'screen',
-    jointBilateralFilter: {
-      sigmaSpace: 3,
-      sigmaColor: 0.2
-    }
-  }
-};
-module.exports = /*#__PURE__*/function () {
-  /**
-   * 创建虚拟背景引擎实例
-   * @param {Object} options - 可选的配置选项
-   */
-  function VirtualBackgroundEngine() {
-    var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-    _classCallCheck(this, VirtualBackgroundEngine);
-    logger.debug('new VirtualBackgroundEngine');
-    this.config = this.mergeConfig(options);
-    this.pipeline = null;
-    this.tfs = null;
-    this.timerWorker = createTimerWorker();
-    this.inputStream = null;
-    this.outputStream = null;
-    this.canvas = null;
-    this.videoEl = null;
-    this.backgroundEl = null;
-    this.isRunning = false;
-    this.renderTimeoutId = null;
-    this.animationFrameId = null;
-    this.solidColorCanvas = null;
-    this._cachedSolidColor = null;
-    this._cachedSolidColorDataUrl = null;
-    this.lastFrameTime = 0; // 上一帧的时间戳，用于帧率控制
-    this.isRendering = false; // 渲染锁，防止并发渲染
-  }
-
-  /**
-   * 清理当前 pipeline 资源
-   */
-  return _createClass(VirtualBackgroundEngine, [{
-    key: "_cleanUpPipeline",
-    value: function _cleanUpPipeline() {
-      if (this.pipeline && this.pipeline.cleanUp) {
-        this.pipeline.cleanUp(); // 释放所有 WebGL 资源
-      }
-      this.pipeline = null;
-
-      // 清理背景图片元素，避免内存泄漏
-      if (this.backgroundEl) {
-        this.backgroundEl.onload = null;
-        this.backgroundEl.onerror = null;
-        this.backgroundEl.src = '';
-        this.backgroundEl = null;
-      }
-    }
-
-    /**
-     * 合并用户配置与默认配置
-     * @param {Object} options - 用户提供的配置选项
-     * @returns {Object} 合并后的配置对象
-     */
-  }, {
-    key: "mergeConfig",
-    value: function mergeConfig(options) {
-      options = options || {};
-      logger.debug("mergeConfig() ".concat(JSON.stringify(options)));
-
-      // 深拷贝默认配置，避免污染原始配置
-      var config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
-
-      // 递归合并用户配置
-      if (options.video) {
-        Object.assign(config.video, options.video);
-      }
-      if (options.segmentation) {
-        Object.assign(config.segmentation, options.segmentation);
-      }
-      if (options.postProcessing) {
-        var postProcessing = Object.assign({}, options.postProcessing);
-        var jointBilateralFilter = postProcessing.jointBilateralFilter;
-        delete postProcessing.jointBilateralFilter;
-        Object.assign(config.postProcessing, postProcessing);
-        // 处理嵌套对象
-        if (jointBilateralFilter) {
-          Object.assign(config.postProcessing.jointBilateralFilter, jointBilateralFilter);
-        }
-      }
-      return config;
-    }
-
-    /**
-     * 初始化虚拟背景引擎
-     * @param {Object} params - 初始化参数
-     * @param {MediaStream} params.inputStream - 输入的媒体流（必需）
-     * @param {string} params.modelPath - 模型文件路径（必需）
-     * @param {HTMLCanvasElement} [params.canvas] - 可选的画布元素
-     */
-  }, {
-    key: "init",
-    value: (function () {
-      var _init = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(_ref) {
-        var inputStream, modelPath, canvas, _t;
-        return _regenerator().w(function (_context) {
-          while (1) switch (_context.p = _context.n) {
-            case 0:
-              inputStream = _ref.inputStream, modelPath = _ref.modelPath, canvas = _ref.canvas;
-              logger.debug('init()');
-              if (inputStream) {
-                _context.n = 1;
-                break;
-              }
-              logger.error('inputStream required');
-              throw new Error('inputStream required');
-            case 1:
-              if (modelPath) {
-                _context.n = 2;
-                break;
-              }
-              logger.error('modelPath required');
-              throw new Error('modelPath required');
-            case 2:
-              this.inputStream = inputStream;
-              this.canvas = canvas || document.createElement('canvas');
-              this.canvas.width = this.config.video.width;
-              this.canvas.height = this.config.video.height;
-              _context.p = 3;
-              _context.n = 4;
-              return this.loadModel(modelPath);
-            case 4:
-              _context.n = 5;
-              return this.createVideoElement();
-            case 5:
-              this.createOutputStream();
-              _context.n = 7;
-              break;
-            case 6:
-              _context.p = 6;
-              _t = _context.v;
-              this.destroy();
-              logger.error('init error: ', _t.message);
-              throw _t;
-            case 7:
-              return _context.a(2);
-          }
-        }, _callee, this, [[3, 6]]);
-      }));
-      function init(_x) {
-        return _init.apply(this, arguments);
-      }
-      return init;
-    }()
-    /**
-     * 加载 TFLite SIMD 分割模型
-     * @param {string} modelPath - 模型文件路径
-     * @returns {Promise<void>}
-     */
-    )
-  }, {
-    key: "loadModel",
-    value: (function () {
-      var _loadModel = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(modelPath) {
-        var modelResponse, model, bufferOffset, _t2;
-        return _regenerator().w(function (_context2) {
-          while (1) switch (_context2.p = _context2.n) {
-            case 0:
-              logger.debug("loadModel() ".concat(modelPath));
-              if (!(typeof createTFLiteSIMDModule === 'undefined')) {
-                _context2.n = 1;
-                break;
-              }
-              logger.error('TFLite SIMD not loaded');
-              throw new Error('TFLite SIMD not loaded');
-            case 1:
-              _context2.n = 2;
-              return createTFLiteSIMDModule();
-            case 2:
-              this.tfs = _context2.v;
-              _context2.p = 3;
-              _context2.n = 4;
-              return fetch(modelPath);
-            case 4:
-              modelResponse = _context2.v;
-              if (modelResponse.ok) {
-                _context2.n = 5;
-                break;
-              }
-              logger.error("HTTP ".concat(modelResponse.status, ": ").concat(modelResponse.statusText));
-              throw new Error("HTTP ".concat(modelResponse.status, ": ").concat(modelResponse.statusText));
-            case 5:
-              _context2.n = 7;
-              break;
-            case 6:
-              _context2.p = 6;
-              _t2 = _context2.v;
-              logger.error("Failed to fetch model: ".concat(_t2.message));
-              throw new Error("Failed to fetch model: ".concat(_t2.message));
-            case 7:
-              _context2.n = 8;
-              return modelResponse.arrayBuffer();
-            case 8:
-              model = _context2.v;
-              _context2.n = 9;
-              return this.tfs._getModelBufferMemoryOffset();
-            case 9:
-              bufferOffset = _context2.v;
-              this.tfs.HEAPU8.set(new Uint8Array(model), bufferOffset);
-              this.tfs._loadModel(model.byteLength);
-            case 10:
-              return _context2.a(2);
-          }
-        }, _callee2, this, [[3, 6]]);
-      }));
-      function loadModel(_x2) {
-        return _loadModel.apply(this, arguments);
-      }
-      return loadModel;
-    }()
-    /**
-     * 创建视频元素并播放输入流
-     * @returns {Promise<void>}
-     */
-    )
-  }, {
-    key: "createVideoElement",
-    value: (function () {
-      var _createVideoElement = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
-        var _t3;
-        return _regenerator().w(function (_context3) {
-          while (1) switch (_context3.p = _context3.n) {
-            case 0:
-              logger.debug('createVideoElement()');
-              this.videoEl = document.createElement('video');
-              this.videoEl.muted = true;
-              this.videoEl.autoplay = true;
-              this.videoEl.playsInline = true;
-              this.videoEl.srcObject = this.inputStream;
-              _context3.p = 1;
-              _context3.n = 2;
-              return this.videoEl.play();
-            case 2:
-              _context3.n = 4;
-              break;
-            case 3:
-              _context3.p = 3;
-              _t3 = _context3.v;
-              logger.error("Video play failed: ".concat(_t3.message));
-              throw new Error("Video play failed: ".concat(_t3.message));
-            case 4:
-              return _context3.a(2);
-          }
-        }, _callee3, this, [[1, 3]]);
-      }));
-      function createVideoElement() {
-        return _createVideoElement.apply(this, arguments);
-      }
-      return createVideoElement;
-    }()
-    /**
-     * 设置 WebGL2 处理管道
-     * @param {string} type - 背景类型 ('image' | 'blur')
-     * @param {string} src - 背景图片地址（可选）
-     * @returns {Promise<void>}
-     */
-    )
-  }, {
-    key: "setupPipeline",
-    value: (function () {
-      var _setupPipeline = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(type, src) {
-        var _this = this;
-        return _regenerator().w(function (_context4) {
-          while (1) switch (_context4.n) {
-            case 0:
-              logger.debug("setupPipeline() ".concat(type));
-              this._cleanUpPipeline();
-              return _context4.a(2, new Promise(function (resolve, reject) {
-                var backgroundEl = document.createElement('img');
-                backgroundEl.onerror = function () {
-                  logger.warn('load image error.');
-                  reject(new Error('Failed to load background image'));
-                };
-                backgroundEl.onload = function () {
-                  try {
-                    var sourcePlayback = {
-                      width: _this.config.video.width,
-                      height: _this.config.video.height,
-                      htmlElement: _this.videoEl
-                    };
-                    _this.backgroundEl = backgroundEl;
-                    _this.pipeline = buildWebGL2Pipeline(sourcePlayback, _this.backgroundEl, {
-                      type: type,
-                      mirror: _this.config.video.mirror
-                    }, _this.config.segmentation, _this.canvas, _this.tfs, function () {});
-                    _this.pipeline.updatePostProcessingConfig(_this.config.postProcessing);
-                    resolve();
-                  } catch (err) {
-                    logger.error("setupPipeline error: ".concat(err.message));
-                    reject(err);
-                  }
-                };
-                backgroundEl.src = src || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
-              }));
-          }
-        }, _callee4, this);
-      }));
-      function setupPipeline(_x3, _x4) {
-        return _setupPipeline.apply(this, arguments);
-      }
-      return setupPipeline;
-    }()
-    /**
-     * 创建输出媒体流
-     * 使用画布捕获视频帧生成输出流
-     */
-    )
-  }, {
-    key: "createOutputStream",
-    value: function createOutputStream() {
-      logger.debug('createOutputStream()');
-      var stream = this.canvas.captureStream(this.config.video.targetFps);
-      this.outputStream = stream;
-    }
-
-    /**
-     * 获取输出媒体流
-     * @returns {MediaStream} 处理后的输出媒体流
-     */
-  }, {
-    key: "getOutputStream",
-    value: function getOutputStream() {
-      logger.debug('getOutputStream()');
-      return this.outputStream;
-    }
-
-    /**
-     * 设置输出画面是否水平镜像
-     * @param {boolean} mirror - true: 镜像输出，false: 原始方向输出
-     */
-  }, {
-    key: "setMirror",
-    value: function setMirror(mirror) {
-      logger.debug("setMirror() ".concat(mirror));
-      this.config.video.mirror = Boolean(mirror);
-      if (this.pipeline && this.pipeline.updateMirror) {
-        this.pipeline.updateMirror(this.config.video.mirror);
-      }
-    }
-
-    /**
-     * 启动虚拟背景渲染循环
-     * 开始处理视频帧并应用虚拟背景效果
-     */
-  }, {
-    key: "start",
-    value: function start() {
-      logger.debug("start() ".concat(this.isRunning));
-      if (this.isRunning) return;
-      this.isRunning = true;
-      this.lastFrameTime = 0;
-      this.loop = this.loop.bind(this);
-      if (this.isRunning) {
-        this.animationFrameId = requestAnimationFrame(this.loop);
-      }
-    }
-
-    /**
-     * 停止虚拟背景渲染循环
-     * 释放动画帧和定时器资源
-     */
-  }, {
-    key: "stop",
-    value: function stop() {
-      logger.debug('stop()');
-      this.isRunning = false;
-      if (this.animationFrameId) {
-        cancelAnimationFrame(this.animationFrameId);
-        this.animationFrameId = null;
-      }
-      if (this.renderTimeoutId) {
-        this.timerWorker.clearTimeout(this.renderTimeoutId);
-        this.renderTimeoutId = null;
-      }
-    }
-
-    /**
-     * 渲染循环 - 递归调用以持续处理视频帧
-     * @param {number} now - 当前时间戳（毫秒）
-     */
-  }, {
-    key: "loop",
-    value: (function () {
-      var _loop = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5(now) {
-        var interval, _t4, _t5;
-        return _regenerator().w(function (_context5) {
-          while (1) switch (_context5.p = _context5.n) {
-            case 0:
-              if (this.isRunning) {
-                _context5.n = 1;
-                break;
-              }
-              return _context5.a(2);
-            case 1:
-              interval = 1000 / this.config.video.targetFps;
-              if (!(now - this.lastFrameTime >= interval)) {
-                _context5.n = 7;
-                break;
-              }
-              this.lastFrameTime = now;
-              if (!this.isRendering) {
-                _context5.n = 2;
-                break;
-              }
-              this.animationFrameId = requestAnimationFrame(this.loop);
-              return _context5.a(2);
-            case 2:
-              this.isRendering = true;
-              _context5.p = 3;
-              _t4 = this.pipeline;
-              if (!_t4) {
-                _context5.n = 4;
-                break;
-              }
-              _context5.n = 4;
-              return this.pipeline.render();
-            case 4:
-              _context5.n = 6;
-              break;
-            case 5:
-              _context5.p = 5;
-              _t5 = _context5.v;
-              logger.error("Render error: ".concat(_t5.message));
-            case 6:
-              _context5.p = 6;
-              this.isRendering = false;
-              return _context5.f(6);
-            case 7:
-              if (this.isRunning) {
-                this.animationFrameId = requestAnimationFrame(this.loop);
-              }
-            case 8:
-              return _context5.a(2);
-          }
-        }, _callee5, this, [[3, 5, 6, 7]]);
-      }));
-      function loop(_x5) {
-        return _loop.apply(this, arguments);
-      }
-      return loop;
-    }()
-    /**
-     * 设置背景图片
-     * 异步加载图片并更新背景元素
-     * @param {string} url - 背景图片的 URL 地址
-     * @returns {Promise<void>} 图片加载完成后 resolve，加载失败则 reject
-     */
-    )
-  }, {
-    key: "setBackgroundImage",
-    value: (function () {
-      var _setBackgroundImage = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6(url) {
-        return _regenerator().w(function (_context6) {
-          while (1) switch (_context6.n) {
-            case 0:
-              logger.debug("setBackgroundImage() ".concat(url));
-
-              // 参数验证
-              if (!(typeof url !== 'string' || !url.trim())) {
-                _context6.n = 1;
-                break;
-              }
-              throw new Error('Invalid background image URL');
-            case 1:
-              if (!(url === 'none')) {
-                _context6.n = 2;
-                break;
-              }
-              this.clearBackground();
-              return _context6.a(2);
-            case 2:
-              return _context6.a(2, this.setupPipeline('image', url));
-          }
-        }, _callee6, this);
-      }));
-      function setBackgroundImage(_x6) {
-        return _setBackgroundImage.apply(this, arguments);
-      }
-      return setBackgroundImage;
-    }()
-    /**
-     * 清除虚拟背景，输出原始视频流
-     * 关闭所有虚拟背景效果，通过 WebGL2 直通管道直接将原始摄像头画面输出到画布
-     */
-    )
-  }, {
-    key: "clearBackground",
-    value: function clearBackground() {
-      logger.debug('clearBackground()');
-      this._cleanUpPipeline();
-      var gl = this.canvas.getContext('webgl2');
-      if (!gl) {
-        throw new Error('WebGL2 not available');
-      }
-
-      // 直通着色器：直接将视频帧渲染到画布，不做任何分割/背景处理
-      var vsSrc = "#version 300 es\n      in vec2 a_position;\n      in vec2 a_texCoord;\n      out vec2 v_texCoord;\n      void main() {\n        gl_Position = vec4(a_position, 0.0, 1.0);\n        v_texCoord = a_texCoord;\n      }\n    ";
-      var fsSrc = "#version 300 es\n      precision highp float;\n      in vec2 v_texCoord;\n      out vec4 outColor;\n      uniform sampler2D u_inputFrame;\n      void main() {\n        outColor = texture(u_inputFrame, v_texCoord);\n      }\n    ";
-      var vs = gl.createShader(gl.VERTEX_SHADER);
-      gl.shaderSource(vs, vsSrc);
-      gl.compileShader(vs);
-      if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
-        throw new Error("Passthrough VS compile failed: ".concat(gl.getShaderInfoLog(vs)));
-      }
-      var fs = gl.createShader(gl.FRAGMENT_SHADER);
-      gl.shaderSource(fs, fsSrc);
-      gl.compileShader(fs);
-      if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
-        throw new Error("Passthrough FS compile failed: ".concat(gl.getShaderInfoLog(fs)));
-      }
-      var program = gl.createProgram();
-      gl.attachShader(program, vs);
-      gl.attachShader(program, fs);
-      gl.linkProgram(program);
-      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-        throw new Error("Passthrough program link failed: ".concat(gl.getProgramInfoLog(program)));
-      }
-      var vao = gl.createVertexArray();
-      gl.bindVertexArray(vao);
-      var posBuf = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-      var posLoc = gl.getAttribLocation(program, 'a_position');
-      gl.enableVertexAttribArray(posLoc);
-      gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-      var texBuf = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, texBuf);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 1, 1, 1, 0, 0, 1, 0]), gl.STATIC_DRAW);
-      var texLoc = gl.getAttribLocation(program, 'a_texCoord');
-      gl.enableVertexAttribArray(texLoc);
-      gl.vertexAttribPointer(texLoc, 2, gl.FLOAT, false, 0, 0);
-      var texture = gl.createTexture();
-      gl.bindTexture(gl.TEXTURE_2D, texture);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-      gl.useProgram(program);
-      gl.uniform1i(gl.getUniformLocation(program, 'u_inputFrame'), 0);
-
-      // 使用局部变量捕获，避免方法简写中 this 指向问题
-      var videoEl = this.videoEl,
-        canvas = this.canvas;
-      this.pipeline = {
-        render: function render() {
-          return _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7() {
-            return _regenerator().w(function (_context7) {
-              while (1) switch (_context7.n) {
-                case 0:
-                  gl.activeTexture(gl.TEXTURE0);
-                  gl.bindTexture(gl.TEXTURE_2D, texture);
-                  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, videoEl);
-                  gl.bindVertexArray(vao);
-                  gl.useProgram(program);
-                  gl.viewport(0, 0, canvas.width, canvas.height);
-                  gl.clearColor(0, 0, 0, 0);
-                  gl.clear(gl.COLOR_BUFFER_BIT);
-                  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-                case 1:
-                  return _context7.a(2);
-              }
-            }, _callee7);
-          }))();
-        },
-        updatePostProcessingConfig: function updatePostProcessingConfig() {},
-        updateMirror: function updateMirror() {},
-        cleanUp: function cleanUp() {
-          gl.deleteTexture(texture);
-          gl.deleteBuffer(texBuf);
-          gl.deleteBuffer(posBuf);
-          gl.deleteShader(vs);
-          gl.deleteShader(fs);
-          gl.deleteProgram(program);
-          gl.deleteVertexArray(vao);
-        }
-      };
-    }
-
-    /**
-     * 设置模糊背景效果
-     * 使用高斯模糊对原始视频背景进行模糊处理
-     * @param {number} [radius=20] - 模糊半径，值越大模糊程度越高
-     * @returns {Promise<void>}
-     */
-  }, {
-    key: "setBlurBackground",
-    value: (function () {
-      var _setBlurBackground = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee8(radius) {
-        return _regenerator().w(function (_context8) {
-          while (1) switch (_context8.n) {
-            case 0:
-              logger.debug('setBlurBackground() ', radius);
-              _context8.n = 1;
-              return this.setupPipeline('blur');
-            case 1:
-              radius = typeof radius === 'number' ? radius : 20;
-
-              // 添加范围验证
-              if (radius < 0 || radius > 100) {
-                logger.warn('blur radius out of range, using default value 20');
-                radius = 20;
-              }
-              this.pipeline.updatePostProcessingConfig(Object.assign({}, this.config.postProcessing, {
-                blurRadius: radius
-              }));
-            case 2:
-              return _context8.a(2);
-          }
-        }, _callee8, this);
-      }));
-      function setBlurBackground(_x7) {
-        return _setBlurBackground.apply(this, arguments);
-      }
-      return setBlurBackground;
-    }()
-    /**
-     * 设置纯色背景
-     * 创建一个纯色画布作为虚拟背景
-     * @param {string} [color='#00ff00'] - 背景颜色，默认为绿色
-     * @returns {Promise<void>}
-     */
-    )
-  }, {
-    key: "setSolidColor",
-    value: (function () {
-      var _setSolidColor = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee9() {
-        var color,
-          isValidColor,
-          ctx,
-          _args9 = arguments;
-        return _regenerator().w(function (_context9) {
-          while (1) switch (_context9.n) {
-            case 0:
-              color = _args9.length > 0 && _args9[0] !== undefined ? _args9[0] : '#00ff00';
-              logger.debug("setSolidColor() ".concat(color));
-
-              // 参数验证：支持 #RRGGBB 或 rgba(r,g,b,a) 格式
-              isValidColor = /^#[0-9A-Fa-f]{6}$/.test(color) || /^rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*(,\s*[\d.]+\s*)?\)$/.test(color);
-              if (isValidColor) {
-                _context9.n = 1;
-                break;
-              }
-              throw new Error('Invalid color format. Expected #RRGGBB or rgba(r,g,b,a)');
-            case 1:
-              if (!(this._cachedSolidColor === color && this._cachedSolidColorDataUrl && this.pipeline)) {
-                _context9.n = 2;
-                break;
-              }
-              this.backgroundEl.src = this._cachedSolidColorDataUrl;
-              return _context9.a(2);
-            case 2:
-              // 创建或复用纯色画布
-              if (!this.solidColorCanvas) {
-                this.solidColorCanvas = document.createElement('canvas');
-                this.solidColorCanvas.width = 16;
-                this.solidColorCanvas.height = 16;
-              }
-              ctx = this.solidColorCanvas.getContext('2d');
-              ctx.fillStyle = color;
-              ctx.fillRect(0, 0, 16, 16);
-
-              // 更新缓存
-              this._cachedSolidColorDataUrl = this.solidColorCanvas.toDataURL();
-              this._cachedSolidColor = color;
-              return _context9.a(2, this.setupPipeline('image', this._cachedSolidColorDataUrl));
-          }
-        }, _callee9, this);
-      }));
-      function setSolidColor() {
-        return _setSolidColor.apply(this, arguments);
-      }
-      return setSolidColor;
-    }()
-    /**
-     * 销毁虚拟背景引擎实例
-     * 释放所有资源，包括 Web Worker、模型内存、媒体流等
-     */
-    )
-  }, {
-    key: "destroy",
-    value: function destroy() {
-      logger.debug('destroy()');
-      this.stop();
-
-      // 清理 pipeline 和背景元素
-      this._cleanUpPipeline();
-
-      // 清理纯色背景画布
-      if (this.solidColorCanvas) {
-        this.solidColorCanvas = null;
-      }
-
-      // 清理缓存属性
-      this._cachedSolidColor = null;
-      this._cachedSolidColorDataUrl = null;
-
-      // 释放模型内存
-      if (this.tfs && this.tfs._freeModelBuffer) {
-        this.tfs._freeModelBuffer();
-      }
-
-      // 终止定时器 Worker
-      if (this.timerWorker) {
-        this.timerWorker.terminate();
-      }
-
-      // 停止输入流的所有轨道
-      if (this.inputStream) {
-        this.inputStream.getTracks().forEach(function (t) {
-          return t.stop();
-        });
-      }
-
-      // 清理视频元素
-      if (this.videoEl) {
-        this.videoEl.srcObject = null;
-        this.videoEl.load();
-      }
-
-      // 重置所有引用
-      this.pipeline = null;
-      this.tfs = null;
-      this.inputStream = null;
-      this.outputStream = null;
-      this.canvas = null;
-      this.videoEl = null;
-      this.timerWorker = null;
-    }
-  }]);
-}();
-},{"../Logger":39,"./helpers/timerHelper.js":62,"./pipelines/webgl2/webgl2Pipeline.js":70}],64:[function(require,module,exports){
-"use strict";
-
-function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
-function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
-function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
-function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
-exports.glsl = String.raw;
-
-/**
- * 创建 WebGL 程序对象
- * @param {WebGLRenderingContext} gl - WebGL 渲染上下文
- * @param {WebGLShader} vertexShader - 顶点着色器
- * @param {WebGLShader} fragmentShader - 片元着色器
- * @returns {WebGLProgram} 创建的 WebGL 程序对象
- */
-function createProgram(gl, vertexShader, fragmentShader) {
-  var program = gl.createProgram();
-  gl.attachShader(program, vertexShader);
-  gl.attachShader(program, fragmentShader);
-  gl.linkProgram(program);
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    throw new Error("Could not link WebGL program: ".concat(gl.getProgramInfoLog(program)));
-  }
-  return program;
-}
-
-/**
- * 异步获取 WebGL 缓冲区数据
- * 通过 GPU 同步机制确保数据在读取前已完全写入
- * @param {WebGL2RenderingContext} gl - WebGL2 渲染上下文
- * @param {number} target - 缓冲区目标（如 gl.ARRAY_BUFFER）
- * @param {WebGLBuffer} buffer - WebGL 缓冲区对象
- * @param {number} srcByteOffset - 源数据的字节偏移量
- * @param {ArrayBufferView} dstBuffer - 目标缓冲区（用于存储读取的数据）
- * @param {number} dstOffset - 目标缓冲区的写入偏移量
- * @param {number} length - 要读取的数据长度
- * @returns {Promise<void>}
- */
-function getBufferSubDataAsync(_x, _x2, _x3, _x4, _x5, _x6, _x7) {
-  return _getBufferSubDataAsync.apply(this, arguments);
-}
-/**
- * 异步等待 GPU 同步对象完成
- * 使用 requestAnimationFrame 轮询 GPU 命令完成状态
- * @param {WebGL2RenderingContext} gl - WebGL2 渲染上下文
- * @param {WebGLSync} sync - GPU 同步对象
- * @returns {Promise<number>} 返回 Promise，解析为 GPU 等待结果状态
- */
-function _getBufferSubDataAsync() {
-  _getBufferSubDataAsync = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(gl, target, buffer, srcByteOffset, dstBuffer, dstOffset, length) {
-    var sync, res;
-    return _regenerator().w(function (_context2) {
-      while (1) switch (_context2.n) {
-        case 0:
-          // 创建 GPU 同步对象，用于确保 GPU 命令执行完成
-          sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0); // 刷新 GPU 命令队列，确保所有待执行的命令已发送到 GPU
-          gl.flush();
-          // 异步等待 GPU 完成所有命令
-          _context2.n = 1;
-          return clientWaitAsync(gl, sync);
-        case 1:
-          res = _context2.v;
-          // 删除同步对象，释放资源
-          gl.deleteSync(sync);
-
-          // 如果等待未失败，则读取缓冲区数据
-          if (res !== gl.WAIT_FAILED) {
-            // 绑定目标缓冲区
-            gl.bindBuffer(target, buffer);
-            // 从缓冲区读取数据到目标数组
-            gl.getBufferSubData(target, srcByteOffset, dstBuffer, dstOffset, length);
-            // 解除缓冲区绑定
-            gl.bindBuffer(target, null);
-          }
-        case 2:
-          return _context2.a(2);
-      }
-    }, _callee2);
-  }));
-  return _getBufferSubDataAsync.apply(this, arguments);
-}
-function clientWaitAsync(gl, sync) {
-  return new Promise(function (resolve) {
-    function test() {
-      // 查询同步对象的状态
-      // 参数：sync 对象, flags=0, timeout=0（立即返回，不阻塞）
-      var res = gl.clientWaitSync(sync, 0, 0);
-
-      // 如果等待失败（如 sync 对象无效），直接 resolve
-      if (res === gl.WAIT_FAILED) {
-        resolve(res);
-        return;
-      }
-      // 如果超时（GPU 尚未完成），使用 requestAnimationFrame 延迟后重试
-      if (res === gl.TIMEOUT_EXPIRED) {
-        requestAnimationFrame(test);
-        return;
-      }
-      // GPU 已完成工作，resolve 结果
-      resolve(res);
-    }
-    // 立即开始第一次检查
-    requestAnimationFrame(test);
-  });
-}
-
-/**
- * 创建并配置管道阶段的 WebGL 程序
- * 包含顶点着色器、片元着色器，并设置顶点属性和坐标缓冲区
- * @param {WebGL2RenderingContext} gl - WebGL2 渲染上下文
- * @param {WebGLShader} vertexShader - 顶点着色器
- * @param {WebGLShader} fragmentShader - 片元着色器
- * @param {WebGLBuffer} positionBuffer - 顶点位置缓冲区
- * @param {WebGLBuffer} texCoordBuffer - 纹理坐标缓冲区
- * @returns {WebGLProgram} 配置完成的 WebGL 程序对象
- */
-exports.createPiplelineStageProgram = function (gl, vertexShader, fragmentShader, positionBuffer, texCoordBuffer) {
-  // 创建 WebGL 程序并附加着色器进行链接
-  var program = createProgram(gl, vertexShader, fragmentShader);
-  // 获取顶点着色器中属性位置（a_position：顶点坐标）
-  var positionAttributeLocation = gl.getAttribLocation(program, 'a_position');
-
-  // 启用顶点属性数组，以便 GPU 可以访问属性数据
-  gl.enableVertexAttribArray(positionAttributeLocation);
-  // 绑定顶点位置缓冲区
-  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-  // 设置顶点属性指针：2个分量（x, y），FLOAT类型，不归一化，步长为0，偏移为0
-  gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
-
-  // 获取顶点着色器中属性位置（a_texCoord：纹理坐标）
-  var texCoordAttributeLocation = gl.getAttribLocation(program, 'a_texCoord');
-
-  // 启用纹理坐标属性数组
-  gl.enableVertexAttribArray(texCoordAttributeLocation);
-  // 绑定纹理坐标缓冲区
-  gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
-  // 设置纹理坐标属性指针：2个分量（u, v），FLOAT类型
-  gl.vertexAttribPointer(texCoordAttributeLocation, 2, gl.FLOAT, false, 0, 0);
-
-  // 返回配置完成的程序对象
-  return program;
-};
-
-/**
- * 编译 WebGL 着色器
- * @param {WebGL2RenderingContext} gl - WebGL2 渲染上下文
- * @param {number} shaderType - 着色器类型（如 gl.VERTEX_SHADER 或 gl.FRAGMENT_SHADER）
- * @param {string} shaderSource - 着色器源代码
- * @returns {WebGLShader} 编译完成的着色器对象
- */
-exports.compileShader = function (gl, shaderType, shaderSource) {
-  var shader = gl.createShader(shaderType);
-  gl.shaderSource(shader, shaderSource);
-  gl.compileShader(shader);
-  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    throw new Error("Could not compile shader: ".concat(gl.getShaderInfoLog(shader)));
-  }
-  return shader;
-};
-
-/**
- * 创建 WebGL 2D 纹理
- * 配置纹理参数并分配 GPU 内存
- * @param {WebGL2RenderingContext} gl - WebGL2 渲染上下文
- * @param {number} internalformat - 纹理内部格式（如 gl.R8, gl.RGBA8 等）
- * @param {number} width - 纹理宽度
- * @param {number} height - 纹理高度
- * @param {number} [minFilter=gl.NEAREST] - 缩小过滤模式
- * @param {number} [magFilter=gl.NEAREST] - 放大过滤模式
- * @returns {WebGLTexture} 创建的纹理对象
- */
-exports.createTexture = function (gl, internalformat, width, height) {
-  var minFilter = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : gl.NEAREST;
-  var magFilter = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : gl.NEAREST;
-  var texture = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, texture);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, minFilter);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, magFilter);
-  gl.texStorage2D(gl.TEXTURE_2D, 1, internalformat, width, height);
-  return texture;
-};
-
-/**
- * 异步读取像素数据
- * 使用 PIXEL_PACK_BUFFER 和 GPU 同步机制确保读取完成
- * @param {WebGL2RenderingContext} gl - WebGL2 渲染上下文
- * @param {number} x - 读取区域的起始 x 坐标
- * @param {number} y - 读取区域的起始 y 坐标
- * @param {number} width - 读取区域的宽度
- * @param {number} height - 读取区域的高度
- * @param {number} format - 像素数据格式（如 gl.RED, gl.RGBA 等）
- * @param {number} type - 像素数据类型（如 gl.UNSIGNED_BYTE, gl.FLOAT 等）
- * @param {ArrayBufferView} dest - 目标缓冲区，用于存储读取的像素数据
- * @returns {Promise<ArrayBufferView>} 返回包含像素数据的缓冲区
- */
-exports.readPixelsAsync = /*#__PURE__*/function () {
-  var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(gl, x, y, width, height, format, type, dest) {
-    var buf;
-    return _regenerator().w(function (_context) {
-      while (1) switch (_context.n) {
-        case 0:
-          buf = gl.createBuffer();
-          gl.bindBuffer(gl.PIXEL_PACK_BUFFER, buf);
-          gl.bufferData(gl.PIXEL_PACK_BUFFER, dest.byteLength, gl.STREAM_READ);
-          gl.readPixels(x, y, width, height, format, type, 0);
-          gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-          _context.n = 1;
-          return getBufferSubDataAsync(gl, gl.PIXEL_PACK_BUFFER, buf, 0, dest);
-        case 1:
-          gl.deleteBuffer(buf);
-          return _context.a(2, dest);
-      }
-    }, _callee);
-  }));
-  return function (_x8, _x9, _x0, _x1, _x10, _x11, _x12, _x13) {
-    return _ref.apply(this, arguments);
-  };
-}();
-},{}],65:[function(require,module,exports){
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.buildBackgroundBlurStage = buildBackgroundBlurStage;
-var _webglHelper = require("../helpers/webglHelper.js");
-var _templateObject, _templateObject2, _templateObject3;
-function _taggedTemplateLiteral(e, t) { return t || (t = e.slice(0)), Object.freeze(Object.defineProperties(e, { raw: { value: Object.freeze(t) } })); }
-function buildBackgroundBlurStage(gl, vertexShader, positionBuffer, texCoordBuffer, personMaskTexture, canvas, mirror) {
-  var blurPass = buildBlurPass(gl, vertexShader, positionBuffer, texCoordBuffer, personMaskTexture, canvas);
-  var blendPass = buildBlendPass(gl, positionBuffer, texCoordBuffer, canvas, mirror);
-  function render() {
-    blurPass.render();
-    blendPass.render();
-  }
-  function updateCoverage(coverage) {
-    blendPass.updateCoverage(coverage);
-  }
-  function updateBlurRadius(radius) {
-    blurPass.updateBlurRadius(radius);
-  }
-  function updateMirror(shouldMirror) {
-    blendPass.updateMirror(shouldMirror);
-  }
-  function cleanUp() {
-    blendPass.cleanUp();
-    blurPass.cleanUp();
-  }
-  return {
-    render: render,
-    updateCoverage: updateCoverage,
-    updateBlurRadius: updateBlurRadius,
-    updateMirror: updateMirror,
-    cleanUp: cleanUp
-  };
-}
-function buildBlurPass(gl, vertexShader, positionBuffer, texCoordBuffer, personMaskTexture, canvas) {
-  var fragmentShaderSource = (0, _webglHelper.glsl)(_templateObject || (_templateObject = _taggedTemplateLiteral(["#version 300 es\n\n    precision highp float;\n\n    uniform sampler2D u_inputFrame;\n    uniform sampler2D u_personMask;\n    uniform vec2 u_texelSize;\n    uniform float u_radiusScale;\n\n    in vec2 v_texCoord;\n\n    out vec4 outColor;\n\n    const float offset[5] = float[](0.0, 1.0, 2.0, 3.0, 4.0);\n    const float weight[5] = float[](0.2270270270, 0.1945945946, 0.1216216216,\n      0.0540540541, 0.0162162162);\n\n    void main() {\n      vec4 centerColor = texture(u_inputFrame, v_texCoord);\n      float personMask = texture(u_personMask, v_texCoord).a;\n\n      vec4 frameColor = centerColor * weight[0] * (1.0 - personMask);\n\n      for (int i = 1; i < 5; i++) {\n        vec2 offset = vec2(offset[i]) * u_texelSize * u_radiusScale;\n\n        vec2 texCoord = v_texCoord + offset;\n        frameColor += texture(u_inputFrame, texCoord) * weight[i] *\n          (1.0 - texture(u_personMask, texCoord).a);\n\n        texCoord = v_texCoord - offset;\n        frameColor += texture(u_inputFrame, texCoord) * weight[i] *\n          (1.0 - texture(u_personMask, texCoord).a);\n      }\n      outColor = vec4(frameColor.rgb + (1.0 - frameColor.a) * centerColor.rgb, 1.0);\n    }\n  "])));
-  var scale = 0.5;
-  var outputWidth = canvas.width * scale;
-  var outputHeight = canvas.height * scale;
-  var texelWidth = 1 / outputWidth;
-  var texelHeight = 1 / outputHeight;
-  var fragmentShader = (0, _webglHelper.compileShader)(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
-  var program = (0, _webglHelper.createPiplelineStageProgram)(gl, vertexShader, fragmentShader, positionBuffer, texCoordBuffer);
-  var inputFrameLocation = gl.getUniformLocation(program, 'u_inputFrame');
-  var personMaskLocation = gl.getUniformLocation(program, 'u_personMask');
-  var texelSizeLocation = gl.getUniformLocation(program, 'u_texelSize');
-  var radiusScaleLocation = gl.getUniformLocation(program, 'u_radiusScale');
-  var texture1 = (0, _webglHelper.createTexture)(gl, gl.RGBA8, outputWidth, outputHeight, gl.NEAREST, gl.LINEAR);
-  var texture2 = (0, _webglHelper.createTexture)(gl, gl.RGBA8, outputWidth, outputHeight, gl.NEAREST, gl.LINEAR);
-  var frameBuffer1 = gl.createFramebuffer();
-  gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer1);
-  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture1, 0);
-  var frameBuffer2 = gl.createFramebuffer();
-  gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer2);
-  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture2, 0);
-  gl.useProgram(program);
-  gl.uniform1i(personMaskLocation, 1);
-  gl.uniform1f(radiusScaleLocation, 1);
-  function render() {
-    gl.viewport(0, 0, outputWidth, outputHeight);
-    gl.useProgram(program);
-    gl.uniform1i(inputFrameLocation, 0);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, personMaskTexture);
-    for (var i = 0; i < 3; i++) {
-      gl.uniform2f(texelSizeLocation, 0, texelHeight);
-      gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer1);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-      gl.activeTexture(gl.TEXTURE2);
-      gl.bindTexture(gl.TEXTURE_2D, texture1);
-      gl.uniform1i(inputFrameLocation, 2);
-      gl.uniform2f(texelSizeLocation, texelWidth, 0);
-      gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer2);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-      gl.bindTexture(gl.TEXTURE_2D, texture2);
-    }
-  }
-  function cleanUp() {
-    gl.deleteFramebuffer(frameBuffer2);
-    gl.deleteFramebuffer(frameBuffer1);
-    gl.deleteTexture(texture2);
-    gl.deleteTexture(texture1);
-    gl.deleteProgram(program);
-    gl.deleteShader(fragmentShader);
-  }
-  function updateBlurRadius(radius) {
-    radius = Math.max(0, Math.min(radius, 100));
-    gl.useProgram(program);
-    gl.uniform1f(radiusScaleLocation, radius / 20);
-  }
-  return {
-    render: render,
-    updateBlurRadius: updateBlurRadius,
-    cleanUp: cleanUp
-  };
-}
-function buildBlendPass(gl, positionBuffer, texCoordBuffer, canvas, mirror) {
-  var vertexShaderSource = (0, _webglHelper.glsl)(_templateObject2 || (_templateObject2 = _taggedTemplateLiteral(["#version 300 es\n\n    uniform float u_mirror;\n\n    in vec2 a_position;\n    in vec2 a_texCoord;\n\n    out vec2 v_texCoord;\n\n    void main() {\n      // Flipping Y is required when rendering to canvas\n      gl_Position = vec4(a_position * vec2(1.0, -1.0), 0.0, 1.0);\n      v_texCoord = a_texCoord;\n      if (u_mirror > 0.5) {\n        v_texCoord.x = 1.0 - v_texCoord.x;\n      }\n    }\n  "])));
-  var fragmentShaderSource = (0, _webglHelper.glsl)(_templateObject3 || (_templateObject3 = _taggedTemplateLiteral(["#version 300 es\n\n    precision highp float;\n\n    uniform sampler2D u_inputFrame;\n    uniform sampler2D u_personMask;\n    uniform sampler2D u_blurredInputFrame;\n    uniform vec2 u_coverage;\n\n    in vec2 v_texCoord;\n\n    out vec4 outColor;\n\n    void main() {\n      vec3 color = texture(u_inputFrame, v_texCoord).rgb;\n      vec3 blurredColor = texture(u_blurredInputFrame, v_texCoord).rgb;\n      float personMask = texture(u_personMask, v_texCoord).a;\n      personMask = smoothstep(u_coverage.x, u_coverage.y, personMask);\n      outColor = vec4(mix(blurredColor, color, personMask), 1.0);\n    }\n  "])));
-  var outputWidth = canvas.width,
-    outputHeight = canvas.height;
-  var vertexShader = (0, _webglHelper.compileShader)(gl, gl.VERTEX_SHADER, vertexShaderSource);
-  var fragmentShader = (0, _webglHelper.compileShader)(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
-  var program = (0, _webglHelper.createPiplelineStageProgram)(gl, vertexShader, fragmentShader, positionBuffer, texCoordBuffer);
-  var inputFrameLocation = gl.getUniformLocation(program, 'u_inputFrame');
-  var personMaskLocation = gl.getUniformLocation(program, 'u_personMask');
-  var blurredInputFrame = gl.getUniformLocation(program, 'u_blurredInputFrame');
-  var coverageLocation = gl.getUniformLocation(program, 'u_coverage');
-  var mirrorLocation = gl.getUniformLocation(program, 'u_mirror');
-  gl.useProgram(program);
-  gl.uniform1i(inputFrameLocation, 0);
-  gl.uniform1i(personMaskLocation, 1);
-  gl.uniform1i(blurredInputFrame, 2);
-  gl.uniform2f(coverageLocation, 0, 1);
-  gl.uniform1f(mirrorLocation, mirror ? 1 : 0);
-  function render() {
-    gl.viewport(0, 0, outputWidth, outputHeight);
-    gl.useProgram(program);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-  }
-  function updateCoverage(coverage) {
-    gl.useProgram(program);
-    gl.uniform2f(coverageLocation, coverage[0], coverage[1]);
-  }
-  function updateMirror(shouldMirror) {
-    gl.useProgram(program);
-    gl.uniform1f(mirrorLocation, shouldMirror ? 1 : 0);
-  }
-  function cleanUp() {
-    gl.deleteProgram(program);
-    gl.deleteShader(fragmentShader);
-    gl.deleteShader(vertexShader);
-  }
-  return {
-    render: render,
-    updateCoverage: updateCoverage,
-    updateMirror: updateMirror,
-    cleanUp: cleanUp
-  };
-}
-},{"../helpers/webglHelper.js":64}],66:[function(require,module,exports){
-"use strict";
-
-var _templateObject, _templateObject2;
-function _taggedTemplateLiteral(e, t) { return t || (t = e.slice(0)), Object.freeze(Object.defineProperties(e, { raw: { value: Object.freeze(t) } })); }
-var _require = require('../helpers/webglHelper.js'),
-  compileShader = _require.compileShader,
-  createPiplelineStageProgram = _require.createPiplelineStageProgram,
-  createTexture = _require.createTexture,
-  glsl = _require.glsl;
-exports.buildBackgroundImageStage = function (gl, positionBuffer, texCoordBuffer, personMaskTexture, backgroundImage, canvas, mirror) {
-  var vertexShaderSource = glsl(_templateObject || (_templateObject = _taggedTemplateLiteral(["#version 300 es\n\n    uniform vec2 u_backgroundScale;\n    uniform vec2 u_backgroundOffset;\n    uniform float u_mirror;\n\n    in vec2 a_position;\n    in vec2 a_texCoord;\n\n    out vec2 v_texCoord;\n    out vec2 v_backgroundCoord;\n\n    void main() {\n      // Flipping Y is required when rendering to canvas\n      gl_Position = vec4(a_position * vec2(1.0, -1.0), 0.0, 1.0);\n      vec2 texCoord = a_texCoord;\n      if (u_mirror > 0.5) {\n        texCoord.x = 1.0 - texCoord.x;\n      }\n      v_texCoord = texCoord;\n      v_backgroundCoord = texCoord * u_backgroundScale + u_backgroundOffset;\n    }\n  "])));
-  var fragmentShaderSource = glsl(_templateObject2 || (_templateObject2 = _taggedTemplateLiteral(["#version 300 es\n\n    precision highp float;\n\n    uniform sampler2D u_inputFrame;\n    uniform sampler2D u_personMask;\n    uniform sampler2D u_background;\n    uniform vec2 u_coverage;\n    uniform float u_lightWrapping;\n    uniform float u_blendMode;\n\n    in vec2 v_texCoord;\n    in vec2 v_backgroundCoord;\n\n    out vec4 outColor;\n\n    vec3 screen(vec3 a, vec3 b) {\n      return 1.0 - (1.0 - a) * (1.0 - b);\n    }\n\n    vec3 linearDodge(vec3 a, vec3 b) {\n      return a + b;\n    }\n\n    void main() {\n      vec3 frameColor = texture(u_inputFrame, v_texCoord).rgb;\n      vec3 backgroundColor = texture(u_background, v_backgroundCoord).rgb;\n      float personMask = texture(u_personMask, v_texCoord).a;\n      float lightWrapMask = 1.0 - max(0.0, personMask - u_coverage.y) / (1.0 - u_coverage.y);\n      vec3 lightWrap = u_lightWrapping * lightWrapMask * backgroundColor;\n      frameColor = u_blendMode * linearDodge(frameColor, lightWrap) +\n        (1.0 - u_blendMode) * screen(frameColor, lightWrap);\n      personMask = smoothstep(u_coverage.x, u_coverage.y, personMask);\n      outColor = vec4(frameColor * personMask + backgroundColor * (1.0 - personMask), 1.0);\n    }\n  "])));
-  var outputWidth = canvas.width,
-    outputHeight = canvas.height;
-  var outputRatio = outputWidth / outputHeight;
-  var vertexShader = compileShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
-  var fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
-  var program = createPiplelineStageProgram(gl, vertexShader, fragmentShader, positionBuffer, texCoordBuffer);
-  var backgroundScaleLocation = gl.getUniformLocation(program, 'u_backgroundScale');
-  var backgroundOffsetLocation = gl.getUniformLocation(program, 'u_backgroundOffset');
-  var mirrorLocation = gl.getUniformLocation(program, 'u_mirror');
-  var inputFrameLocation = gl.getUniformLocation(program, 'u_inputFrame');
-  var personMaskLocation = gl.getUniformLocation(program, 'u_personMask');
-  var backgroundLocation = gl.getUniformLocation(program, 'u_background');
-  var coverageLocation = gl.getUniformLocation(program, 'u_coverage');
-  var lightWrappingLocation = gl.getUniformLocation(program, 'u_lightWrapping');
-  var blendModeLocation = gl.getUniformLocation(program, 'u_blendMode');
-  gl.useProgram(program);
-  gl.uniform2f(backgroundScaleLocation, 1, 1);
-  gl.uniform2f(backgroundOffsetLocation, 0, 0);
-  gl.uniform1f(mirrorLocation, mirror ? 1 : 0);
-  gl.uniform1i(inputFrameLocation, 0);
-  gl.uniform1i(personMaskLocation, 1);
-  gl.uniform2f(coverageLocation, 0, 1);
-  gl.uniform1f(lightWrappingLocation, 0);
-  gl.uniform1f(blendModeLocation, 0);
-  var backgroundTexture = null;
-  // TODO Find a better to handle background being loaded
-
-  if (backgroundImage.complete) {
-    updateBackgroundImage(backgroundImage);
-  } else if (backgroundImage) {
-    backgroundImage.onload = function () {
-      updateBackgroundImage(backgroundImage);
-    };
-  }
-  function render() {
-    gl.viewport(0, 0, outputWidth, outputHeight);
-    gl.useProgram(program);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, personMaskTexture);
-    if (backgroundTexture !== null) {
-      gl.activeTexture(gl.TEXTURE2);
-      gl.bindTexture(gl.TEXTURE_2D, backgroundTexture);
-      // TODO Handle correctly the background not loaded yet
-      gl.uniform1i(backgroundLocation, 2);
-    }
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-  }
-  function updateBackgroundImage(bgImage) {
-    if (backgroundTexture) {
-      gl.deleteTexture(backgroundTexture);
-    }
-    backgroundTexture = createTexture(gl, gl.RGBA8, bgImage.naturalWidth, bgImage.naturalHeight, gl.LINEAR, gl.LINEAR);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, bgImage.naturalWidth, bgImage.naturalHeight, gl.RGBA, gl.UNSIGNED_BYTE, bgImage);
-    var xOffset = 0;
-    var yOffset = 0;
-    var backgroundWidth = bgImage.naturalWidth;
-    var backgroundHeight = bgImage.naturalHeight;
-    var backgroundRatio = backgroundWidth / backgroundHeight;
-    if (backgroundRatio < outputRatio) {
-      backgroundHeight = backgroundWidth / outputRatio;
-      yOffset = (bgImage.naturalHeight - backgroundHeight) / 2;
-    } else {
-      backgroundWidth = backgroundHeight * outputRatio;
-      xOffset = (bgImage.naturalWidth - backgroundWidth) / 2;
-    }
-    var xScale = backgroundWidth / bgImage.naturalWidth;
-    var yScale = backgroundHeight / bgImage.naturalHeight;
-    xOffset /= bgImage.naturalWidth;
-    yOffset /= bgImage.naturalHeight;
-    gl.useProgram(program);
-    gl.uniform2f(backgroundScaleLocation, xScale, yScale);
-    gl.uniform2f(backgroundOffsetLocation, xOffset, yOffset);
-  }
-  function updateCoverage(coverage) {
-    gl.useProgram(program);
-    gl.uniform2f(coverageLocation, coverage[0], coverage[1]);
-  }
-  function updateLightWrapping(lightWrapping) {
-    gl.useProgram(program);
-    gl.uniform1f(lightWrappingLocation, lightWrapping);
-  }
-  function updateBlendMode(blendMode) {
-    gl.useProgram(program);
-    gl.uniform1f(blendModeLocation, blendMode === 'screen' ? 0 : 1);
-  }
-  function updateMirror(shouldMirror) {
-    gl.useProgram(program);
-    gl.uniform1f(mirrorLocation, shouldMirror ? 1 : 0);
-  }
-  function cleanUp() {
-    gl.deleteTexture(backgroundTexture);
-    gl.deleteProgram(program);
-    gl.deleteShader(fragmentShader);
-    gl.deleteShader(vertexShader);
-  }
-  return {
-    render: render,
-    updateCoverage: updateCoverage,
-    updateLightWrapping: updateLightWrapping,
-    updateBlendMode: updateBlendMode,
-    updateMirror: updateMirror,
-    cleanUp: cleanUp
-  };
-};
-},{"../helpers/webglHelper.js":64}],67:[function(require,module,exports){
-"use strict";
-
-var _templateObject;
-function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
-function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
-function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
-function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
-function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
-function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
-function _taggedTemplateLiteral(e, t) { return t || (t = e.slice(0)), Object.freeze(Object.defineProperties(e, { raw: { value: Object.freeze(t) } })); }
-var _require = require('../helpers/webglHelper.js'),
-  compileShader = _require.compileShader,
-  createPiplelineStageProgram = _require.createPiplelineStageProgram,
-  glsl = _require.glsl;
-var inputResolutions = {
-  '640x360': [640, 360],
-  '256x256': [256, 256],
-  '256x144': [256, 144],
-  '160x96': [160, 96]
-};
-exports.buildJointBilateralFilterStage = function (gl, vertexShader, positionBuffer, texCoordBuffer, inputTexture, segmentationConfig, outputTexture, canvas) {
-  var fragmentShaderSource = glsl(_templateObject || (_templateObject = _taggedTemplateLiteral(["#version 300 es\n\n    precision highp float;\n\n    uniform sampler2D u_inputFrame;\n    uniform sampler2D u_segmentationMask;\n    uniform vec2 u_texelSize;\n    uniform float u_step;\n    uniform float u_radius;\n    uniform float u_offset;\n    uniform float u_sigmaTexel;\n    uniform float u_sigmaColor;\n\n    in vec2 v_texCoord;\n\n    out vec4 outColor;\n\n    float gaussian(float x, float sigma) {\n      float coeff = -0.5 / (sigma * sigma * 4.0 + 1.0e-6);\n      return exp((x * x) * coeff);\n    }\n\n    void main() {\n      vec2 centerCoord = v_texCoord;\n      vec3 centerColor = texture(u_inputFrame, centerCoord).rgb;\n      float newVal = 0.0;\n\n      float spaceWeight = 0.0;\n      float colorWeight = 0.0;\n      float totalWeight = 0.0;\n\n      // Subsample kernel space.\n      for (float i = -u_radius + u_offset; i <= u_radius; i += u_step) {\n        for (float j = -u_radius + u_offset; j <= u_radius; j += u_step) {\n          vec2 shift = vec2(j, i) * u_texelSize;\n          vec2 coord = vec2(centerCoord + shift);\n          vec3 frameColor = texture(u_inputFrame, coord).rgb;\n          float outVal = texture(u_segmentationMask, coord).a;\n\n          spaceWeight = gaussian(distance(centerCoord, coord), u_sigmaTexel);\n          colorWeight = gaussian(distance(centerColor, frameColor), u_sigmaColor);\n          totalWeight += spaceWeight * colorWeight;\n\n          newVal += spaceWeight * colorWeight * outVal;\n        }\n      }\n      newVal /= totalWeight;\n\n      outColor = vec4(vec3(0.0), newVal);\n    }\n  "])));
-  var _inputResolutions$seg = _slicedToArray(inputResolutions[segmentationConfig.inputResolution], 2),
-    segmentationWidth = _inputResolutions$seg[0],
-    segmentationHeight = _inputResolutions$seg[1];
-  var outputWidth = canvas.width,
-    outputHeight = canvas.height;
-  var texelWidth = 1 / outputWidth;
-  var texelHeight = 1 / outputHeight;
-  var fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
-  var program = createPiplelineStageProgram(gl, vertexShader, fragmentShader, positionBuffer, texCoordBuffer);
-  var inputFrameLocation = gl.getUniformLocation(program, 'u_inputFrame');
-  var segmentationMaskLocation = gl.getUniformLocation(program, 'u_segmentationMask');
-  var texelSizeLocation = gl.getUniformLocation(program, 'u_texelSize');
-  var stepLocation = gl.getUniformLocation(program, 'u_step');
-  var radiusLocation = gl.getUniformLocation(program, 'u_radius');
-  var offsetLocation = gl.getUniformLocation(program, 'u_offset');
-  var sigmaTexelLocation = gl.getUniformLocation(program, 'u_sigmaTexel');
-  var sigmaColorLocation = gl.getUniformLocation(program, 'u_sigmaColor');
-  var frameBuffer = gl.createFramebuffer();
-  gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
-  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, outputTexture, 0);
-  gl.useProgram(program);
-  gl.uniform1i(inputFrameLocation, 0);
-  gl.uniform1i(segmentationMaskLocation, 1);
-  gl.uniform2f(texelSizeLocation, texelWidth, texelHeight);
-
-  // Ensures default values are configured to prevent infinite
-  // loop in fragment shader
-  updateSigmaSpace(0);
-  updateSigmaColor(0);
-  function render() {
-    gl.viewport(0, 0, outputWidth, outputHeight);
-    gl.useProgram(program);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, inputTexture);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-  }
-  function updateSigmaSpace(sigmaSpace) {
-    sigmaSpace *= Math.max(outputWidth / segmentationWidth, outputHeight / segmentationHeight);
-    var kSparsityFactor = 0.66; // Higher is more sparse.
-    var sparsity = Math.max(1, Math.sqrt(sigmaSpace) * kSparsityFactor);
-    var step = sparsity;
-    var radius = sigmaSpace;
-    var offset = step > 1 ? step * 0.5 : 0;
-    var sigmaTexel = Math.max(texelWidth, texelHeight) * sigmaSpace;
-    gl.useProgram(program);
-    gl.uniform1f(stepLocation, step);
-    gl.uniform1f(radiusLocation, radius);
-    gl.uniform1f(offsetLocation, offset);
-    gl.uniform1f(sigmaTexelLocation, sigmaTexel);
-  }
-  function updateSigmaColor(sigmaColor) {
-    gl.useProgram(program);
-    gl.uniform1f(sigmaColorLocation, sigmaColor);
-  }
-  function cleanUp() {
-    gl.deleteFramebuffer(frameBuffer);
-    gl.deleteProgram(program);
-    gl.deleteShader(fragmentShader);
-  }
-  return {
-    render: render,
-    updateSigmaSpace: updateSigmaSpace,
-    updateSigmaColor: updateSigmaColor,
-    cleanUp: cleanUp
-  };
-};
-},{"../helpers/webglHelper.js":64}],68:[function(require,module,exports){
-"use strict";
-
-var _templateObject;
-function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
-function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
-function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
-function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
-function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
-function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
-function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
-function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
-function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
-function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
-function _taggedTemplateLiteral(e, t) { return t || (t = e.slice(0)), Object.freeze(Object.defineProperties(e, { raw: { value: Object.freeze(t) } })); }
-var _require = require('../helpers/webglHelper.js'),
-  compileShader = _require.compileShader,
-  createPiplelineStageProgram = _require.createPiplelineStageProgram,
-  createTexture = _require.createTexture,
-  glsl = _require.glsl,
-  readPixelsAsync = _require.readPixelsAsync;
-var inputResolutions = {
-  '640x360': [640, 360],
-  '256x256': [256, 256],
-  '256x144': [256, 144],
-  '160x96': [160, 96]
-};
-exports.buildResizingStage = function (gl, vertexShader, positionBuffer, texCoordBuffer, segmentationConfig, tflite) {
-  var fragmentShaderSource = glsl(_templateObject || (_templateObject = _taggedTemplateLiteral(["#version 300 es\n\n    precision highp float;\n\n    uniform sampler2D u_inputFrame;\n\n    in vec2 v_texCoord;\n\n    out vec4 outColor;\n\n    void main() {\n      outColor = texture(u_inputFrame, v_texCoord);\n    }\n  "])));
-
-  // TFLite memory will be accessed as float32
-  var tfliteInputMemoryOffset = tflite._getInputMemoryOffset() / 4;
-  var _inputResolutions$seg = _slicedToArray(inputResolutions[segmentationConfig.inputResolution], 2),
-    outputWidth = _inputResolutions$seg[0],
-    outputHeight = _inputResolutions$seg[1];
-  var outputPixelCount = outputWidth * outputHeight;
-  var fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
-  var program = createPiplelineStageProgram(gl, vertexShader, fragmentShader, positionBuffer, texCoordBuffer);
-  var inputFrameLocation = gl.getUniformLocation(program, 'u_inputFrame');
-  var outputTexture = createTexture(gl, gl.RGBA8, outputWidth, outputHeight);
-  var frameBuffer = gl.createFramebuffer();
-  gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
-  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, outputTexture, 0);
-  var outputPixels = new Uint8Array(outputPixelCount * 4);
-  gl.useProgram(program);
-  gl.uniform1i(inputFrameLocation, 0);
-  function render() {
-    return _render.apply(this, arguments);
-  }
-  function _render() {
-    _render = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
-      var readPixelsPromise, i, tfliteIndex, outputIndex;
-      return _regenerator().w(function (_context) {
-        while (1) switch (_context.n) {
-          case 0:
-            // console.log('draA: ', gl.RGBA, gl.UNSIGNED_BYTE, outputPixels);
-            gl.viewport(0, 0, outputWidth, outputHeight);
-            gl.useProgram(program);
-            gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
-            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-            readPixelsPromise = readPixelsAsync(gl, 0, 0, outputWidth, outputHeight, gl.RGBA, gl.UNSIGNED_BYTE, outputPixels);
-            if (!segmentationConfig.deferInputResizing) {
-              _context.n = 1;
-              break;
-            }
-            _context.n = 2;
-            break;
-          case 1:
-            _context.n = 2;
-            return readPixelsPromise;
-          case 2:
-            for (i = 0; i < outputPixelCount; i++) {
-              tfliteIndex = tfliteInputMemoryOffset + i * 3;
-              outputIndex = i * 4;
-              tflite.HEAPF32[tfliteIndex] = outputPixels[outputIndex] / 255;
-              tflite.HEAPF32[tfliteIndex + 1] = outputPixels[outputIndex + 1] / 255;
-              tflite.HEAPF32[tfliteIndex + 2] = outputPixels[outputIndex + 2] / 255;
-            }
-          case 3:
-            return _context.a(2);
-        }
-      }, _callee);
-    }));
-    return _render.apply(this, arguments);
-  }
-  function cleanUp() {
-    gl.deleteFramebuffer(frameBuffer);
-    gl.deleteTexture(outputTexture);
-    gl.deleteProgram(program);
-    gl.deleteShader(fragmentShader);
-  }
-  return {
-    render: render,
-    cleanUp: cleanUp
-  };
-};
-},{"../helpers/webglHelper.js":64}],69:[function(require,module,exports){
-"use strict";
-
-var _templateObject;
-function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
-function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
-function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
-function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
-function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
-function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
-function _taggedTemplateLiteral(e, t) { return t || (t = e.slice(0)), Object.freeze(Object.defineProperties(e, { raw: { value: Object.freeze(t) } })); }
-var _require = require('../helpers/webglHelper.js'),
-  compileShader = _require.compileShader,
-  createPiplelineStageProgram = _require.createPiplelineStageProgram,
-  createTexture = _require.createTexture,
-  glsl = _require.glsl;
-var inputResolutions = {
-  '640x360': [640, 360],
-  '256x256': [256, 256],
-  '256x144': [256, 144],
-  '160x96': [160, 96]
-};
-exports.buildSoftmaxStage = function (gl, vertexShader, positionBuffer, texCoordBuffer, segmentationConfig, tflite, outputTexture) {
-  var fragmentShaderSource = glsl(_templateObject || (_templateObject = _taggedTemplateLiteral(["#version 300 es\n\n    precision highp float;\n\n    uniform sampler2D u_inputSegmentation;\n\n    in vec2 v_texCoord;\n\n    out vec4 outColor;\n\n    void main() {\n      vec2 segmentation = texture(u_inputSegmentation, v_texCoord).rg;\n      float shift = max(segmentation.r, segmentation.g);\n      float backgroundExp = exp(segmentation.r - shift);\n      float personExp = exp(segmentation.g - shift);\n      outColor = vec4(vec3(0.0), personExp / (backgroundExp + personExp));\n    }\n  "])));
-
-  // TFLite memory will be accessed as float32
-  var tfliteOutputMemoryOffset = tflite._getOutputMemoryOffset() / 4;
-  var _inputResolutions$seg = _slicedToArray(inputResolutions[segmentationConfig.inputResolution], 2),
-    segmentationWidth = _inputResolutions$seg[0],
-    segmentationHeight = _inputResolutions$seg[1];
-  var fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
-  var program = createPiplelineStageProgram(gl, vertexShader, fragmentShader, positionBuffer, texCoordBuffer);
-  var inputLocation = gl.getUniformLocation(program, 'u_inputSegmentation');
-  var inputTexture = createTexture(gl, gl.RG32F, segmentationWidth, segmentationHeight);
-  var frameBuffer = gl.createFramebuffer();
-  gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
-  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, outputTexture, 0);
-  gl.useProgram(program);
-  gl.uniform1i(inputLocation, 1);
-  function render() {
-    gl.viewport(0, 0, segmentationWidth, segmentationHeight);
-    gl.useProgram(program);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, inputTexture);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, segmentationWidth, segmentationHeight, gl.RG, gl.FLOAT, tflite.HEAPF32, tfliteOutputMemoryOffset);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-  }
-  function cleanUp() {
-    gl.deleteFramebuffer(frameBuffer);
-    gl.deleteTexture(inputTexture);
-    gl.deleteProgram(program);
-    gl.deleteShader(fragmentShader);
-  }
-  return {
-    render: render,
-    cleanUp: cleanUp
-  };
-};
-},{"../helpers/webglHelper.js":64}],70:[function(require,module,exports){
-"use strict";
-
-var _templateObject;
-function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
-function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
-function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
-function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
-function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
-function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
-function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
-function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
-function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
-function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
-function _taggedTemplateLiteral(e, t) { return t || (t = e.slice(0)), Object.freeze(Object.defineProperties(e, { raw: { value: Object.freeze(t) } })); }
-var _require = require('./jointBilateralFilterStage.js'),
-  buildJointBilateralFilterStage = _require.buildJointBilateralFilterStage;
-var _require2 = require('./resizingStage.js'),
-  buildResizingStage = _require2.buildResizingStage;
-var _require3 = require('./softmaxStage.js'),
-  buildSoftmaxStage = _require3.buildSoftmaxStage;
-var _require4 = require('./backgroundImageStage.js'),
-  buildBackgroundImageStage = _require4.buildBackgroundImageStage;
-var _require5 = require('./backgroundBlurStage.js'),
-  buildBackgroundBlurStage = _require5.buildBackgroundBlurStage;
-var _require6 = require('../helpers/webglHelper.js'),
-  compileShader = _require6.compileShader,
-  createTexture = _require6.createTexture,
-  glsl = _require6.glsl;
-var inputResolutions = {
-  '640x360': [640, 360],
-  '256x256': [256, 256],
-  '256x144': [256, 144],
-  '160x96': [160, 96]
-};
-
-/**
- * 构建 WebGL2 虚拟背景处理管道
- *
- * 这是虚拟背景引擎的核心模块，负责创建完整的 WebGL2 渲染管道。
- * 管道包含以下处理阶段：
- *
- * 1. 尺寸调整阶段 (ResizingStage)
- *    - 将输入视频帧缩放至分割模型所需尺寸 (160x96)
- *    - 使用双线性插值保持图像质量
- *
- * 2. Softmax 阶段 (SoftmaxStage)
- *    - 将 TFLite 模型的原始输出转换为概率分布
- *    - 生成人物分割遮罩 (person mask)
- *
- * 3. 联合双边滤波阶段 (JointBilateralFilterStage)
- *    - 对分割遮罩进行边缘平滑处理
- *    - 同时考虑颜色信息和空间距离，消除锯齿和噪声
- *
- * 4. 背景合成阶段 (BackgroundImageStage)
- *    - 将人物与虚拟背景进行合成
- *    - 支持多种混合模式和光晕效果
- *
- * @param {Object} sourcePlayback - 源视频播放配置
- * @param {number} sourcePlayback.width - 源视频宽度
- * @param {number} sourcePlayback.height - 源视频高度
- * @param {HTMLVideoElement} sourcePlayback.htmlElement - HTML 视频元素
- *
- * @param {HTMLImageElement} backgroundImage - 背景图片元素
- *
- * @param {Object} backgroundConfig - 背景配置
- * @param {string} backgroundConfig.type - 背景类型：
- *   - 'image': 使用自定义图片作为背景
- *   - 'blur': 使用模糊后的视频作为背景
- *   - 其他值: 无背景（仅显示人物）
- *
- * @param {Object} segmentationConfig - 分割配置
- * @param {string} segmentationConfig.backend - 后端类型 (如 'wasmSimd')
- * @param {string} segmentationConfig.inputResolution - 输入分辨率 (如 '160x96')
- * @param {string} segmentationConfig.model - 模型名称 (如 'meet')
- * @param {string} segmentationConfig.pipeline - 管道类型 (如 'webgl2')
- * @param {number} segmentationConfig.targetFps - 目标帧率
- *
- * @param {HTMLCanvasElement} canvas - 输出画布元素
- * @param {Object} tflite - TensorFlow Lite SIMD 模块实例
- *
- * @returns {Object} 管道对象，包含以下方法：
- *   - render(): 执行一帧渲染，返回 Promise
- *   - updatePostProcessingConfig(config): 更新后处理配置
- *   - cleanUp(): 释放所有 WebGL 资源
- *
- * @example
- * const pipeline = buildWebGL2Pipeline(
- *   { width: 1280, height: 720, htmlElement: videoEl },
- *   backgroundImgEl,
- *   { type: 'image' },
- *   { backend: 'wasmSimd', inputResolution: '160x96', model: 'meet', pipeline: 'webgl2', targetFps: 15 },
- *   canvas,
- *   tflite
- * );
- *
- * await pipeline.render(); // 渲染一帧
- * pipeline.updatePostProcessingConfig({ jointBilateralFilter: { sigmaSpace: 1, sigmaColor: 0.1 } });
- * pipeline.cleanUp(); // 清理资源
- */
-exports.buildWebGL2Pipeline = function (sourcePlayback, backgroundImage, backgroundConfig, segmentationConfig, canvas, tflite) {
-  var vertexShaderSource = glsl(_templateObject || (_templateObject = _taggedTemplateLiteral(["#version 300 es\n\n    in vec2 a_position;\n    in vec2 a_texCoord;\n\n    out vec2 v_texCoord;\n\n    void main() {\n      gl_Position = vec4(a_position, 0.0, 1.0);\n      v_texCoord = a_texCoord;\n    }\n  "])));
-  var frameWidth = sourcePlayback.width,
-    frameHeight = sourcePlayback.height;
-  var segmentationResolution = inputResolutions[segmentationConfig.inputResolution];
-  if (!segmentationResolution) {
-    throw new Error("Unsupported segmentation inputResolution: ".concat(segmentationConfig.inputResolution));
-  }
-  var _segmentationResoluti = _slicedToArray(segmentationResolution, 2),
-    segmentationWidth = _segmentationResoluti[0],
-    segmentationHeight = _segmentationResoluti[1];
-  var gl = canvas.getContext('webgl2');
-  if (!gl) {
-    throw new Error('WebGL2 not supported');
-  }
-  var vertexShader = compileShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
-  var vertexArray = gl.createVertexArray();
-  gl.bindVertexArray(vertexArray);
-  var positionBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0]), gl.STATIC_DRAW);
-  var texCoordBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0]), gl.STATIC_DRAW);
-
-  // We don't use texStorage2D here because texImage2D seems faster
-  // to upload video texture than texSubImage2D even though the latter
-  // is supposed to be the recommended way:
-  // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices#use_texstorage_to_create_textures
-  var inputFrameTexture = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, inputFrameTexture);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-
-  // TODO Rename segmentation and person mask to be more specific
-  var segmentationTexture = createTexture(gl, gl.RGBA8, segmentationWidth, segmentationHeight);
-  var personMaskTexture = createTexture(gl, gl.RGBA8, frameWidth, frameHeight);
-  var resizingStage = buildResizingStage(gl, vertexShader, positionBuffer, texCoordBuffer, segmentationConfig, tflite);
-  var loadSegmentationStage = buildSoftmaxStage(gl, vertexShader, positionBuffer, texCoordBuffer, segmentationConfig, tflite, segmentationTexture);
-  var jointBilateralFilterStage = buildJointBilateralFilterStage(gl, vertexShader, positionBuffer, texCoordBuffer, segmentationTexture, segmentationConfig, personMaskTexture, canvas);
-  var backgroundStage = backgroundConfig.type === 'blur' ? buildBackgroundBlurStage(gl, vertexShader, positionBuffer, texCoordBuffer, personMaskTexture, canvas, backgroundConfig.mirror) : buildBackgroundImageStage(gl, positionBuffer, texCoordBuffer, personMaskTexture, backgroundImage, canvas, backgroundConfig.mirror);
-
-  /**
-   * 执行一帧的渲染处理
-   *
-   * 这是 WebGL2 虚拟背景管道的核心渲染方法，负责处理视频帧的完整流程：
-   * 1. 上传视频帧到 GPU 纹理
-   * 2. 调整帧大小以适配分割模型输入
-   * 3. 运行 AI 分割模型进行人物识别
-   * 4. 加载分割结果（人物遮罩）
-   * 5. 应用联合双边滤波器进行边缘平滑
-   * 6. 渲染最终合成结果（背景+人物）
-   *
-   * 渲染流程：
-   * ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-   * │  视频帧      │───▶│  调整大小    │───▶│  AI 分割    │
-   * │ (WebGL纹理) │    │ (160x96)    │    │ (TFLite)    │
-   * └─────────────┘    └─────────────┘    └─────────────┘
-   *                                                │
-   *                                                ▼
-   * ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-   * │  最终输出   │◀───│  背景合成   │◀───│  边缘平滑   │
-   * │  (Canvas)   │    │  (Blend)    │    │ (双边滤波)  │
-   * └─────────────┘    └─────────────┘    └─────────────┘
-   *
-   * @returns {Promise<void>} 渲染完成后 resolve
-   */
-  function render() {
-    return _render.apply(this, arguments);
-  }
-  /**
-   * 更新后处理配置
-   *
-   * 用于动态调整虚拟背景的后处理效果，包括分割边缘平滑参数和背景合成参数。
-   * 可以在渲染过程中调用以实时更改效果。
-   *
-   * 后处理配置包含两个主要部分：
-   * 1. 联合双边滤波器 (Joint Bilateral Filter) - 用于平滑分割边缘
-   * 2. 背景合成参数 - 用于控制背景与人物的合成方式
-   *
-   * @param {Object} postProcessingConfig - 后处理配置对象
-   * @param {Object} postProcessingConfig.jointBilateralFilter - 联合双边滤波配置
-   * @param {number} postProcessingConfig.jointBilateralFilter.sigmaSpace - 空间 sigma，控制滤波的空间影响范围
-   * @param {number} postProcessingConfig.jointBilateralFilter.sigmaColor - 颜色 sigma，控制颜色相似性的权重
-   * @param {number[]} postProcessingConfig.coverage - 人物遮罩覆盖率 [min, max]
-   * @param {number} postProcessingConfig.lightWrapping - 光晕强度 (0-1)，使人物边缘产生光晕效果
-   * @param {string} postProcessingConfig.blendMode - 混合模式，如 'screen', 'multiply' 等
-   */
-  function _render() {
-    _render = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
-      return _regenerator().w(function (_context) {
-        while (1) switch (_context.n) {
-          case 0:
-            // 1. 激活纹理单元 0 并绑定输入帧纹理
-            // WebGL 支持多个纹理单元（TEXTURE0, TEXTURE1 等）
-            // 着色器可以从不同纹理单元采样，本例使用单元 0
-            gl.activeTexture(gl.TEXTURE0);
-            // 绑定输入帧纹理，这是存放当前视频帧的纹理对象
-            gl.bindTexture(gl.TEXTURE_2D, inputFrameTexture);
-
-            // 2. 上传视频帧数据到 GPU 纹理
-            // texImage2D 比 texSubImage2D 上传视频帧更快
-            // 参数说明：
-            //   - TEXTURE_2D: 目标纹理类型
-            //   - 0: Mipmap 级别（0 表示基础级别）
-            //   - RGBA: 内部格式（GPU 存储格式）
-            //   - RGBA: 源格式（视频数据格式）
-            //   - UNSIGNED_BYTE: 源数据类型（8位无符号）
-            //   - sourcePlayback.htmlElement: HTML 视频/图像元素
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, sourcePlayback.htmlElement);
-            // 3. 绑定顶点数组对象（VAO）
-            // VAO 存储顶点属性配置（位置、纹理坐标等）
-            // 绑定 VAO 后，后续的 draw 调用会使用这个配置
-            gl.bindVertexArray(vertexArray);
-            // 4. 渲染调整大小阶段
-            // 将视频帧从原始尺寸调整到分割模型输入尺寸 (160x96)
-            // 使用 await 确保此阶段完成后再进行下一步
-            _context.n = 1;
-            return resizingStage.render();
-          case 1:
-            // 5. 运行 TFLite 推理
-            // 调用 TensorFlow Lite SIMD 模型进行人物分割
-            // 分割结果输出到 segmentationTexture
-            tflite._runInference();
-            // 6. 渲染分割结果加载阶段
-            // 将 TFLite 的分割结果（原始遮罩数据）加载到纹理
-            loadSegmentationStage.render();
-            // 7. 渲染联合双边滤波阶段
-            // 对分割遮罩进行边缘平滑处理，消除锯齿和噪声
-            // 联合双边滤波会考虑颜色信息和空间距离
-            jointBilateralFilterStage.render();
-            // 8. 渲染背景合成阶段
-            // 将平滑后的分割遮罩与背景图像合成
-            // 人物区域显示原始视频，背景区域显示虚拟背景
-            backgroundStage.render();
-          case 2:
-            return _context.a(2);
-        }
-      }, _callee);
-    }));
-    return _render.apply(this, arguments);
-  }
-  function updatePostProcessingConfig(postProcessingConfig) {
-    // 1. 更新联合双边滤波器的空间 sigma 参数
-    // sigmaSpace 控制滤波器在空间域的影响范围，值越大表示考虑更远的像素
-    // 较大的值会产生更平滑的边缘，但可能损失细节
-    jointBilateralFilterStage.updateSigmaSpace(postProcessingConfig.jointBilateralFilter.sigmaSpace);
-    // 2. 更新联合双边滤波器的颜色 sigma 参数
-    // sigmaColor 控制颜色相似性在滤波中的权重，值越大表示颜色差异影响越小
-    // 较大的值会使滤波器对颜色差异更不敏感，产生更均匀的遮罩
-    jointBilateralFilterStage.updateSigmaColor(postProcessingConfig.jointBilateralFilter.sigmaColor);
-    // 3. 根据背景类型进行不同的配置
-    if (backgroundConfig.type === 'image') {
-      // === 背景图片模式 ===
-      // 使用自定义图片作为虚拟背景
-      var backgroundImageStage = backgroundStage;
-
-      // 更新人物遮罩覆盖率
-      // coverage 是一个 [min, max] 数组，控制遮罩的强度范围
-      // 值通常在 0-1 之间，min 控制最小覆盖率，max 控制最大覆盖率
-      backgroundImageStage.updateCoverage(postProcessingConfig.coverage);
-      // 更新光晕效果强度
-      // lightWrapping 使人物边缘产生发光效果，营造与背景融合的感觉
-      // 值为 0 时关闭光晕，值越大光晕越强
-      backgroundImageStage.updateLightWrapping(postProcessingConfig.lightWrapping);
-      // 更新混合模式
-      // 决定如何将人物与背景合成：
-      // - 'screen': 滤色模式，产生较亮的结果
-      // - 'multiply': 正片叠底模式，产生较暗的结果
-      // - 其他模式可产生不同的艺术效果
-      backgroundImageStage.updateBlendMode(postProcessingConfig.blendMode);
-    } else if (backgroundConfig.type === 'blur') {
-      // === 背景模糊模式 ===
-      // 使用模糊后的原视频作为背景（模拟景深效果）
-      var backgroundBlurStage = backgroundStage;
-
-      // 更新遮罩覆盖率
-      // 在模糊模式下，控制模糊背景的可见程度
-      backgroundBlurStage.updateCoverage(postProcessingConfig.coverage);
-      if (typeof postProcessingConfig.blurRadius === 'number') {
-        backgroundBlurStage.updateBlurRadius(postProcessingConfig.blurRadius);
-      }
-    } else {
-      // === 无背景/纯视频模式 ===
-      // TODO: 应该使用单独的管道处理无背景情况
-      // 当前实现：将覆盖率设为最大，关闭光晕效果
-      var _backgroundImageStage = backgroundStage;
-
-      // 设置覆盖率接近 100%，使视频完整显示
-      // [0, 0.9999] 而不是 [0, 1]，避免除零错误
-      _backgroundImageStage.updateCoverage([0, 0.9999]);
-      // 关闭光晕效果
-      _backgroundImageStage.updateLightWrapping(0);
-    }
-  }
-
-  /**
-   * 更新最终输出是否水平镜像。
-   * 分割和滤波阶段保持原始坐标，只在最终合成阶段翻转输出采样坐标。
-   *
-   * @param {boolean} mirror - true: 镜像输出，false: 原始方向输出
-   */
-  function updateMirror(mirror) {
-    if (backgroundStage.updateMirror) {
-      backgroundStage.updateMirror(mirror);
-    }
-  }
-
-  /**
-   * 清理 WebGL 管道资源
-   *
-   * 当不再需要 WebGL2 虚拟背景管道时，调用此函数释放所有 GPU 资源。
-   * 正确清理资源对于避免 GPU 内存泄漏至关重要，特别是在单页面应用中。
-   *
-   * 清理顺序说明：
-   * 1. 先清理各管道阶段（包含着色器程序和帧缓冲区）
-   * 2. 再清理独立的 GPU 对象（纹理、缓冲区、着色器）
-   *
-   * 清理内容：
-   * - 管道阶段：背景合成、双边滤波、分割加载、尺寸调整
-   * - GPU 资源：纹理对象、缓冲区对象、顶点数组对象、着色器对象
-   */
-  function cleanUp() {
-    // 1. 清理各管道阶段
-    // 每个阶段可能包含自己的着色器程序、帧缓冲区等资源
-    // cleanUp 方法会负责释放这些内部资源
-
-    // 清理背景合成阶段
-    // 包含背景图片/模糊的着色器程序和渲染目标
-    backgroundStage.cleanUp();
-    // 清理联合双边滤波阶段
-    // 包含边缘平滑处理的着色器程序和中间渲染目标
-    jointBilateralFilterStage.cleanUp();
-    // 清理分割结果加载阶段
-    // 包含将 TFLite 输出加载到纹理的着色器程序
-    loadSegmentationStage.cleanUp();
-    // 清理尺寸调整阶段
-    // 包含视频帧缩放的着色器程序和渲染目标
-    resizingStage.cleanUp();
-
-    // 2. 清理独立的 GPU 对象
-    // 按照依赖关系顺序清理：先清理依赖它们的资源，再清理被依赖的资源
-
-    // 删除人物遮罩纹理
-    // 存储分割后的人物遮罩数据，用于背景合成
-    gl.deleteTexture(personMaskTexture);
-    // 删除分割纹理
-    // 存储 TFLite 模型的分割结果（原始概率数据）
-    gl.deleteTexture(segmentationTexture);
-    // 删除输入帧纹理
-    // 存储当前视频帧的 RGBA 数据
-    gl.deleteTexture(inputFrameTexture);
-    // 删除纹理坐标缓冲区
-    // 存储顶点的 UV 坐标，用于纹理映射
-    gl.deleteBuffer(texCoordBuffer);
-    // 删除顶点位置缓冲区
-    // 存储顶点的 x, y 坐标
-    gl.deleteBuffer(positionBuffer);
-    // 删除顶点数组对象（VAO）
-    // VAO 存储顶点属性的配置状态
-    gl.deleteVertexArray(vertexArray);
-    // 删除顶点着色器
-    // 注意：片元着色器在各自阶段内部清理
-    gl.deleteShader(vertexShader);
-  }
-  return {
-    render: render,
-    updatePostProcessingConfig: updatePostProcessingConfig,
-    updateMirror: updateMirror,
-    cleanUp: cleanUp
-  };
-};
-},{"../helpers/webglHelper.js":64,"./backgroundBlurStage.js":65,"./backgroundImageStage.js":66,"./jointBilateralFilterStage.js":67,"./resizingStage.js":68,"./softmaxStage.js":69}],71:[function(require,module,exports){
-"use strict";
-
-function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
-function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
-function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
-function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
-function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
->>>>>>> CRTC-new
 var Logger = require('./Logger');
 var Grammar = require('./Grammar');
 var logger = new Logger('WebSocketInterface');
@@ -51824,7 +42719,7 @@ module.exports = class WebSocketInterface {
     logger.warn(`WebSocket ${this._url} error: `, e);
   }
 };
-},{"./Grammar":43,"./Logger":45}],94:[function(require,module,exports){
+},{"./Grammar":43,"./Logger":45}],93:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -52017,7 +42912,7 @@ function reply(status_code) {
   response += '\r\n';
   transport.send(response);
 }
-},{"./Constants":38,"./Logger":45,"./SIPMessage":84,"./Utils":92}],95:[function(require,module,exports){
+},{"./Constants":38,"./Logger":45,"./SIPMessage":83,"./Utils":91}],94:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -52169,7 +43064,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],96:[function(require,module,exports){
+},{}],95:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -52694,7 +43589,7 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],97:[function(require,module,exports){
+},{}],96:[function(require,module,exports){
 (function (Buffer){(function (){
 /*!
  * The buffer module from node.js, for the browser.
@@ -54476,7 +45371,7 @@ function numberIsNaN (obj) {
 
 }).call(this)}).call(this,require("buffer").Buffer)
 
-},{"base64-js":95,"buffer":97,"ieee754":100}],98:[function(require,module,exports){
+},{"base64-js":94,"buffer":96,"ieee754":99}],97:[function(require,module,exports){
 (function (process){(function (){
 /* eslint-env browser */
 
@@ -54753,7 +45648,7 @@ formatters.j = function (v) {
 
 }).call(this)}).call(this,require('_process'))
 
-},{"./common":99,"_process":103}],99:[function(require,module,exports){
+},{"./common":98,"_process":102}],98:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -55047,7 +45942,7 @@ function setup(env) {
 
 module.exports = setup;
 
-},{"ms":102}],100:[function(require,module,exports){
+},{"ms":101}],99:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
@@ -55134,7 +46029,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],101:[function(require,module,exports){
+},{}],100:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -60525,7 +51420,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{}],102:[function(require,module,exports){
+},{}],101:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -60689,7 +51584,7 @@ function plural(ms, msAbs, n, name) {
   return Math.round(ms / n) + ' ' + name + (isPlural ? 's' : '');
 }
 
-},{}],103:[function(require,module,exports){
+},{}],102:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -60875,7 +51770,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],104:[function(require,module,exports){
+},{}],103:[function(require,module,exports){
 var grammar = module.exports = {
   v: [{
     name: 'version',
@@ -61371,7 +52266,7 @@ Object.keys(grammar).forEach(function (key) {
   });
 });
 
-},{}],105:[function(require,module,exports){
+},{}],104:[function(require,module,exports){
 var parser = require('./parser');
 var writer = require('./writer');
 var grammar = require('./grammar');
@@ -61386,7 +52281,7 @@ exports.parseRemoteCandidates = parser.parseRemoteCandidates;
 exports.parseImageAttributes = parser.parseImageAttributes;
 exports.parseSimulcastStreamList = parser.parseSimulcastStreamList;
 
-},{"./grammar":104,"./parser":106,"./writer":107}],106:[function(require,module,exports){
+},{"./grammar":103,"./parser":105,"./writer":106}],105:[function(require,module,exports){
 var toIntIfInt = function (v) {
   return String(Number(v)) === v ? Number(v) : v;
 };
@@ -61512,7 +52407,7 @@ exports.parseSimulcastStreamList = function (str) {
   });
 };
 
-},{"./grammar":104}],107:[function(require,module,exports){
+},{"./grammar":103}],106:[function(require,module,exports){
 var grammar = require('./grammar');
 
 // customized util.format - discards excess arguments and can void middle ones
@@ -61628,7 +52523,7 @@ module.exports = function (session, opts) {
   return sdp.join('\r\n') + '\r\n';
 };
 
-},{"./grammar":104}]},{},[44])(44)
+},{"./grammar":103}]},{},[44])(44)
 });
 
 //# sourceMappingURL=maps/CRTC.js.map
