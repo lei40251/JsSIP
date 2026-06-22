@@ -61,21 +61,36 @@ Object.assign(window.app, {
       }
     }
 
-    // 创建 MediaEffectsComposer 实例，初始空源列表
-    this.composer = new CRTC.MediaEffectsComposer([], options);
-    // 重置监听状态，由 UI 层按需开启
-    this.monitorAudio = false;
-    // 通知 UI 层进入启动前准备（如停止旧子混音）
-    this.onComposerStarting();
+	    // 创建 MediaEffectsComposer 实例，初始空源列表
+	    this.composer = new CRTC.MediaEffectsComposer([], options);
+	    console.info('[MediaEffectsComposerDemo] ======== Composer 已创建 ========');
+	    console.info('[MediaEffectsComposerDemo] 配置:', JSON.stringify({ width: w, height: h, fps, renderMode }));
+	    // 重置监听状态，由 UI 层按需开启
+	    this.monitorAudio = false;
+	    // 通知 UI 层进入启动前准备（如停止旧子混音）
+	    this.onComposerStarting();
 
-    try
-    {
-      // 启动阶段仅获取视频输出流，避免默认拉起完整音频混流
-      const outStream = await this.composer.getOutput({ type: 'video' });
+	    try
+	    {
+	      // 启动阶段仅获取视频输出流，避免默认拉起完整音频混流
+	      const outStream = await this.composer.getOutput({ type: 'video' });
+	      console.info('[MediaEffectsComposerDemo] getOutput() 完成，视频轨:', outStream.getVideoTracks().length);
 
-      // 通知 UI 层展示预览视频
-      this.onComposerStarted(outStream, w, h, fps);
-    }
+	      const info = this.composer.getRenderInfo();
+	      console.info('[MediaEffectsComposerDemo] 渲染信息:', JSON.stringify({
+	        requestedMode  : info.requestedMode,
+	        actualMode     : info.actualMode,
+	        isWorker       : info.isWorker,
+	        isWebGL2       : info.isWebGL2,
+	        isFallback     : info.isFallback,
+	        reason         : info.reason || '-',
+	        renderedFrames : info.renderedFrames,
+	        droppedFrames  : info.droppedFrames
+	      }));
+
+	      // 通知 UI 层展示预览视频
+	      this.onComposerStarted(outStream, w, h, fps);
+	    }
     catch (e)
     {
       // 启动失败时清理 composer 实例
