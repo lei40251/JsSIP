@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.4.2026622934
+ * CRTC v1.13.5.20266221145
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.4.405212441868 (Web)',
+  USER_AGENT: 'UA/1.13.5.405212442290 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.4.405212441868');
+debug('version %s', '1.13.5.405212442290');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,7 +16893,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.4.405212441868';
+    return '1.13.5.405212442290';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":71,"debug":76}],39:[function(require,module,exports){
@@ -25095,6 +25095,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               }
               return _context16.a(2);
             case 2:
+              // 鸿蒙环境下清空 video track 的 contentHint，避免帧率异常
+              if (Utils.isHarmonyOS() && 'contentHint' in track && track.contentHint !== '') {
+                try {
+                  track.contentHint = '';
+                  logger.debug("".concat(this._id, " clear video track contentHint for HarmonyOS, trackId:").concat(track.id));
+                } catch (err) {
+                  logger.warn("".concat(this._id, " clear video track contentHint failed: ").concat(err.message));
+                }
+              }
               constraints = track.getConstraints() || {};
               frameRateConstraints = constraints.frameRate;
               frameRate = typeof frameRateConstraints === 'number' ? frameRateConstraints : frameRateConstraints && (frameRateConstraints.exact || frameRateConstraints.ideal || frameRateConstraints.max || frameRateConstraints.min);
@@ -31486,6 +31495,7 @@ exports.isFirefox = function () {
  * 当前覆盖：
  * - Android 微信内置浏览器
  * - 鸿蒙（OpenHarmony/HarmonyOS）华为浏览器
+ * - 鸿蒙（OpenHarmony/HarmonyOS）微信内置浏览器
  *
  * @returns {boolean} 需要纠偏时返回 true。
  */
@@ -31496,7 +31506,23 @@ exports.shouldRecoverVideoFrameRateByUA = function () {
   var ua = navigator.userAgent;
   var isAndroidWeChat = /android/i.test(ua) && /micromessenger/i.test(ua);
   var isHarmonyNativeBrowser = /huaweibrowser/i.test(ua) && /(OpenHarmony|HarmonyOS)/i.test(ua);
-  return isAndroidWeChat || isHarmonyNativeBrowser;
+  var isHarmonyWeChat = /(OpenHarmony|HarmonyOS)/i.test(ua) && /micromessenger/i.test(ua);
+  return isAndroidWeChat || isHarmonyNativeBrowser || isHarmonyWeChat;
+};
+
+/**
+ * 判断当前是否为鸿蒙系统环境。
+ *
+ * 用于鸿蒙（OpenHarmony/HarmonyOS）下的特殊处理逻辑，
+ * 覆盖鸿蒙华为浏览器和鸿蒙微信。
+ *
+ * @returns {boolean} 鸿蒙环境时返回 true。
+ */
+exports.isHarmonyOS = function () {
+  if (typeof navigator === 'undefined' || !navigator.userAgent) {
+    return false;
+  }
+  return /(OpenHarmony|HarmonyOS)/i.test(navigator.userAgent);
 };
 
 /**
