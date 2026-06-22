@@ -229,10 +229,10 @@ function transformUMDToESM()
       body = body.replace(/\n\}\);\s*$/, '\n})();');
 
       // 组装 ESM 格式。
-      const esmContent = banner +
-        'const CRTC = (' + body + '\n' +
+      const esmContent = `${banner 
+      }const CRTC = (${ body }\n` +
         'export default CRTC;\n';
-
+ 
       file.contents = Buffer.from(esmContent);
       callback(null, file);
     }
