@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.3.20266221149
+ * CRTC v2.0.3.20266221238
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -4044,7 +4044,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.3.405212442298 (Web)',
+  USER_AGENT: 'UA/2.0.3.405212442476 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17285,7 +17285,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var MediaEffectsComposer = require('./MediaEffectsComposer/MediaEffectsComposer');
-debug('version %s', '2.0.3.405212442298');
+debug('version %s', '2.0.3.405212442476');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17323,7 +17323,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.3.405212442298';
+    return '2.0.3.405212442476';
   }
 };
 },{"./Constants":30,"./Exceptions":34,"./Grammar":35,"./MediaEffectsComposer/MediaEffectsComposer":41,"./NameAddrHeader":58,"./Stats":72,"./UA":76,"./URI":77,"./Utils":78,"./WebSocketInterface":79,"debug":84}],37:[function(require,module,exports){
@@ -29081,6 +29081,7 @@ module.exports = class RTCSession extends EventEmitter {
     this._answerVideoTrackStatsTimer = null;
     this._videoFrameRateMonitorTimer = null;
     this._isApplyingVideoFrameRateConstraints = false;
+    this._maxBitrateRetryTimer = null;
 
     // The RTCPeerConnection instance (public attribute).
     this._connection = null;
@@ -34220,23 +34221,27 @@ module.exports = class RTCSession extends EventEmitter {
 
     // 主动发送关键帧，兼容部分手机接听时黑屏问题
     Utils.sendKeyFrames(this._connection, 0.5, 2);
-    this.connection.getSenders().forEach(sender => {
+    this._startVideoFrameRateMonitor();
+    this._connection.getSenders().forEach(sender => {
       if (sender.track && sender.track.kind === 'video') {
-        var parameters = sender.getParameters();
-        if (CRTC_C.SDP_LEVELID_AS[this._sdpResolution].AS) {
-          logger.warn(`as: ${CRTC_C.SDP_LEVELID_AS[this._sdpResolution].AS}`);
-          parameters.encodings[0].maxBitrate = CRTC_C.SDP_LEVELID_AS[this._sdpResolution].AS * 1000;
-        }
-
-        // 优先保清晰
         sender.track.contentHint = 'detail';
-        sender.setParameters(parameters).then(() => {
-          logger.warn(`setParameters success detail ${CRTC_C.SDP_LEVELID_AS[this._sdpResolution].AS}`);
-        }).catch(err => {
-          logger.error(`setParameters error: ${err.message}`);
-        });
       }
     });
+
+    // 初始设置码率，并每2秒重试，共设置3次（部分浏览器可能在接通后重置编码参数）
+    // 鸿蒙微信/鸿蒙浏览器/安卓微信除外
+    if (!Utils.shouldRecoverVideoFrameRateByUA()) {
+      this._applyVideoMaxBitrate();
+      var maxBitrateRetryCount = 0;
+      this._maxBitrateRetryTimer = setInterval(() => {
+        maxBitrateRetryCount++;
+        if (maxBitrateRetryCount >= 2) {
+          clearInterval(this._maxBitrateRetryTimer);
+          this._maxBitrateRetryTimer = null;
+        }
+        this._applyVideoMaxBitrate();
+      }, 2000);
+    }
     this.emit('confirmed', {
       originator,
       ack: ack || null
@@ -34246,6 +34251,7 @@ module.exports = class RTCSession extends EventEmitter {
     logger.debug(`${this._id} session ended`);
     this._end_time = new Date();
     this._stopVideoFrameRateMonitor();
+    this._clearMaxBitrateRetryTimer();
     this._close();
     logger.debug(`${this._id} emit "ended"`);
 
@@ -35118,6 +35124,36 @@ module.exports = class RTCSession extends EventEmitter {
       this._videoFrameRateMonitorTimer = null;
     }
     this._isApplyingVideoFrameRateConstraints = false;
+  }
+  _clearMaxBitrateRetryTimer() {
+    if (this._maxBitrateRetryTimer) {
+      clearInterval(this._maxBitrateRetryTimer);
+      this._maxBitrateRetryTimer = null;
+    }
+  }
+
+  /**
+   * 根据 SDP 协商的分辨率设置视频编码器 maxBitrate。
+   * 对应 SDP_LEVELID_AS[this._sdpResolution].AS 的值（单位 kbps），转换为 bps 后应用。
+   */
+  _applyVideoMaxBitrate() {
+    // 鸿蒙微信/鸿蒙浏览器/安卓微信下不设置 maxBitrate，避免帧率异常
+    if (!this._connection || !CRTC_C.SDP_LEVELID_AS[this._sdpResolution].AS || Utils.shouldRecoverVideoFrameRateByUA()) {
+      return;
+    }
+    this._connection.getSenders().forEach(sender => {
+      if (sender.track && sender.track.kind === 'video') {
+        var parameters = sender.getParameters();
+        if (parameters.encodings && parameters.encodings.length > 0) {
+          parameters.encodings[0].maxBitrate = CRTC_C.SDP_LEVELID_AS[this._sdpResolution].AS * 1000;
+        }
+        sender.setParameters(parameters).then(() => {
+          logger.warn(`setParameters success detail ${CRTC_C.SDP_LEVELID_AS[this._sdpResolution].AS}`);
+        }).catch(err => {
+          logger.error(`setParameters error: ${err.message}`);
+        });
+      }
+    });
   }
 
   /**
