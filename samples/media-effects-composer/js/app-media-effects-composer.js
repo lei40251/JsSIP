@@ -242,7 +242,7 @@ Object.assign(window.app, {
     const options = {
       enabled     : true,
       assetConfig : {
-        flatBaseUrl : this.aiVirtualBackgroundAssetsBaseUrl
+        cdnUrl : this.aiVirtualBackgroundAssetsBaseUrl
       }
     };
     const item = this.getSelectedLocalStreamItem();
