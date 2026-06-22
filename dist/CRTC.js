@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.3.20266221238
+ * CRTC v2.0.4.20266221327
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -4044,7 +4044,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.3.405212442476 (Web)',
+  USER_AGENT: 'UA/2.0.4.405212442654 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17285,7 +17285,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var MediaEffectsComposer = require('./MediaEffectsComposer/MediaEffectsComposer');
-debug('version %s', '2.0.3.405212442476');
+debug('version %s', '2.0.4.405212442654');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17323,7 +17323,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.3.405212442476';
+    return '2.0.4.405212442654';
   }
 };
 },{"./Constants":30,"./Exceptions":34,"./Grammar":35,"./MediaEffectsComposer/MediaEffectsComposer":41,"./NameAddrHeader":58,"./Stats":72,"./UA":76,"./URI":77,"./Utils":78,"./WebSocketInterface":79,"debug":84}],37:[function(require,module,exports){
@@ -18903,7 +18903,7 @@ exports.create = function (options) {
   var config = {
     width: exports.normalizePositiveInteger(options.width, 1280),
     height: exports.normalizePositiveInteger(options.height, 720),
-    // 安卓微信 / 鸿蒙浏览器环境下帧率可能异常，默认强制 30fps
+    // 安卓微信 / 鸿蒙浏览器环境下帧率可能异常，默认强制 60fps
     fps: exports.normalizePositiveInteger(options.fps, Utils.shouldRecoverVideoFrameRateByUA() ? 60 : 15),
     backgroundColor: options.backgroundColor || '#000',
     audioGain: exports.normalizeGain(options.audioGain, 0.8),
@@ -36041,7 +36041,7 @@ module.exports = class MediaPipeline {
       options.fps = Math.floor(frameRate);
     }
 
-    // 安卓微信 / 鸿蒙浏览器环境下强制 30fps，避免帧率异常
+    // 安卓微信 / 鸿蒙浏览器环境下强制 60fps，避免帧率异常
     if (Utils.shouldRecoverVideoFrameRateByUA()) {
       options.fps = 60;
     }
