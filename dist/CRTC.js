@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.3.2026622923
+ * CRTC v2.0.3.20266221028
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -4044,7 +4044,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.3.405212441846 (Web)',
+  USER_AGENT: 'UA/2.0.3.405212442056 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17285,7 +17285,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var MediaEffectsComposer = require('./MediaEffectsComposer/MediaEffectsComposer');
-debug('version %s', '2.0.3.405212441846');
+debug('version %s', '2.0.3.405212442056');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17323,7 +17323,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.3.405212441846';
+    return '2.0.3.405212442056';
   }
 };
 },{"./Constants":30,"./Exceptions":34,"./Grammar":35,"./MediaEffectsComposer/MediaEffectsComposer":41,"./NameAddrHeader":58,"./Stats":72,"./UA":76,"./URI":77,"./Utils":78,"./WebSocketInterface":79,"debug":84}],37:[function(require,module,exports){
@@ -18858,6 +18858,7 @@ module.exports = AudioMixer;
  */
 
 var Logger = require('../Logger');
+var Utils = require('../Utils');
 var logger = new Logger('ComposerConfig');
 
 /** 最大参与方数（含视频和纯音频源） */
@@ -18902,7 +18903,8 @@ exports.create = function (options) {
   var config = {
     width: exports.normalizePositiveInteger(options.width, 1280),
     height: exports.normalizePositiveInteger(options.height, 720),
-    fps: exports.normalizePositiveInteger(options.fps, 15),
+    // 安卓微信 / 鸿蒙浏览器环境下帧率可能异常，默认强制 30fps
+    fps: exports.normalizePositiveInteger(options.fps, Utils.shouldRecoverVideoFrameRateByUA() ? 60 : 15),
     backgroundColor: options.backgroundColor || '#000',
     audioGain: exports.normalizeGain(options.audioGain, 0.8),
     renderMode: exports.normalizeRenderMode(options.renderMode, 'auto'),
@@ -19042,7 +19044,7 @@ exports.normalizeSourceOptions = function (optionsOrSlot, index, defaultGain) {
   logger.debug(`normalizeSourceOptions: index=${index} options=${JSON.stringify(options)}`);
   return options;
 };
-},{"../Logger":37}],40:[function(require,module,exports){
+},{"../Logger":37,"../Utils":78}],40:[function(require,module,exports){
 "use strict";
 
 /**
@@ -19404,6 +19406,7 @@ module.exports = LayoutEngine;
 "use strict";
 
 var Logger = require('../Logger');
+var Utils = require('../Utils');
 var Sources = require('./Sources');
 var LayoutEngine = require('./LayoutEngine');
 var AudioMixer = require('./AudioMixer');
@@ -19736,6 +19739,46 @@ class MediaEffectsComposer {
 
     // -- 将初始传入的源加入混流 --
     this.addSource(videos, this._normalizeInitialSourceOptionsList(options, videos.length));
+
+    // 安卓微信 / 鸿蒙浏览器：强制第一个输入槽位视频为 30fps，与 RTCSession 侧保持一致
+    if (Utils.shouldRecoverVideoFrameRateByUA()) {
+      this._forceFirstSlotFrameRate();
+    }
+  }
+
+  /**
+   * 对第一个输入槽位（slot 0）的视频轨强制应用 30fps 约束。
+   *
+   * 部分 UA（安卓微信 / 鸿蒙浏览器）下视频帧率可能出现异常，
+   * 此处参考 RTCSession._checkAndRecoverVideoFrameRate 的逻辑，
+   * 读取当前约束并以 Object.assign 合并 frameRate: 30，避免覆盖轨上已有的 width/height 等约束。
+   */
+  _forceFirstSlotFrameRate() {
+    var firstSource = this._sources.find(s => s.slot === 0);
+    if (!firstSource) {
+      return;
+    }
+    var stream = firstSource.stream;
+    if (!stream || typeof stream.getVideoTracks !== 'function') {
+      return;
+    }
+    var videoTrack = stream.getVideoTracks()[0];
+    if (!videoTrack || typeof videoTrack.getConstraints !== 'function' || typeof videoTrack.applyConstraints !== 'function') {
+      return;
+    }
+    var constraints = videoTrack.getConstraints() || {};
+    var frameRateConstraints = constraints.frameRate;
+    var frameRate = typeof frameRateConstraints === 'number' ? frameRateConstraints : frameRateConstraints && (frameRateConstraints.exact || frameRateConstraints.ideal || frameRateConstraints.max || frameRateConstraints.min);
+
+    // 当前帧率已是 30 或更高则跳过
+    if (Number.isFinite(frameRate) && frameRate >= 30) {
+      return;
+    }
+    videoTrack.applyConstraints(Object.assign({}, constraints, {
+      frameRate: 30
+    })).catch(error => {
+      logger.debug(`_forceFirstSlotFrameRate applyConstraints failed: ${error.message || String(error)}`);
+    });
   }
 
   // =========================================================================
@@ -20434,6 +20477,11 @@ class MediaEffectsComposer {
     });
     this._refreshFxRenderPolicy();
     this._renderLoop.start();
+
+    // 安卓微信 / 鸿蒙浏览器：新源加入后检查 slot 0 是否需强制 30fps
+    if (Utils.shouldRecoverVideoFrameRateByUA()) {
+      this._forceFirstSlotFrameRate();
+    }
     logger.debug(`addSource complete: appended=${appended} totalSources=${this._sources.length}`);
     return appended;
   }
@@ -20938,7 +20986,7 @@ class MediaEffectsComposer {
   }
 }
 module.exports = MediaEffectsComposer;
-},{"../Logger":37,"../MediaEffectsIssue":56,"./AudioMixer":38,"./ComposerConfig":39,"./LayoutEngine":40,"./OutputStream":42,"./RenderLoop":43,"./Sources":44,"./Watermark":45,"./aiVirtualBackground/AiVBState":49}],42:[function(require,module,exports){
+},{"../Logger":37,"../MediaEffectsIssue":56,"../Utils":78,"./AudioMixer":38,"./ComposerConfig":39,"./LayoutEngine":40,"./OutputStream":42,"./RenderLoop":43,"./Sources":44,"./Watermark":45,"./aiVirtualBackground/AiVBState":49}],42:[function(require,module,exports){
 (function (global){(function (){
 "use strict";
 
@@ -34176,15 +34224,14 @@ module.exports = class RTCSession extends EventEmitter {
       if (sender.track && sender.track.kind === 'video') {
         var parameters = sender.getParameters();
         if (CRTC_C.SDP_LEVELID_AS[this._sdpResolution].AS) {
+          logger.warn(`as: ${CRTC_C.SDP_LEVELID_AS[this._sdpResolution].AS}`);
           parameters.encodings[0].maxBitrate = CRTC_C.SDP_LEVELID_AS[this._sdpResolution].AS * 1000;
         }
 
         // 优先保清晰
         sender.track.contentHint = 'detail';
-        // 默认强制保持分辨率
-        // parameters.degradationPreference = 'maintain-resolution';
         sender.setParameters(parameters).then(() => {
-          logger.debug('setParameters success maintain-resolution');
+          logger.warn(`setParameters success detail ${CRTC_C.SDP_LEVELID_AS[this._sdpResolution].AS}`);
         }).catch(err => {
           logger.error(`setParameters error: ${err.message}`);
         });
@@ -35946,6 +35993,11 @@ module.exports = class MediaPipeline {
     }
     if (options.fps === undefined && Number.isFinite(frameRate) && frameRate > 0) {
       options.fps = Math.floor(frameRate);
+    }
+
+    // 安卓微信 / 鸿蒙浏览器环境下强制 30fps，避免帧率异常
+    if (Utils.shouldRecoverVideoFrameRateByUA()) {
+      options.fps = 60;
     }
     return options;
   }
