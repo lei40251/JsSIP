@@ -1,5 +1,9 @@
 CHANGELOG
 =========
+### 1.13.4
+
+* 兼容安卓微信和鸿蒙浏览器视频质量问题
+
 ### 1.13.3
 
 * getEnvironmentId() 支持传入设备列表 devices
