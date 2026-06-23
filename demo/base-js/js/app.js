@@ -1915,7 +1915,8 @@ async function call(type, direction, mediaStream)
       engine.setBackgroundImage('./virtual-background/backgrounds/sky.jpg');
       setTimeout(() => 
       {
-        engine.setBlurBackground();
+        // engine.setBlurBackground();
+        engine.setBackgroundImage('none');
       }, 5000);
     }, 10000);
 

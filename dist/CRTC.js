@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.5.20266221145
+ * CRTC v1.13.5.2026623228
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.5.405212442290 (Web)',
+  USER_AGENT: 'UA/1.13.5.405212464416 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.5.405212442290');
+debug('version %s', '1.13.5.405212464416');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,7 +16893,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.5.405212442290';
+    return '1.13.5.405212464416';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":71,"debug":76}],39:[function(require,module,exports){
@@ -32783,7 +32783,7 @@ module.exports = /*#__PURE__*/function () {
       }
 
       // 直通着色器：直接将视频帧渲染到画布，不做任何分割/背景处理
-      var vsSrc = "#version 300 es\n      in vec2 a_position;\n      in vec2 a_texCoord;\n      out vec2 v_texCoord;\n      void main() {\n        gl_Position = vec4(a_position, 0.0, 1.0);\n        v_texCoord = a_texCoord;\n      }\n    ";
+      var vsSrc = "#version 300 es\n      in vec2 a_position;\n      in vec2 a_texCoord;\n      out vec2 v_texCoord;\n      uniform float u_mirror;\n      void main() {\n        gl_Position = vec4(a_position, 0.0, 1.0);\n        vec2 texCoord = a_texCoord;\n        if (u_mirror > 0.5) {\n          texCoord.x = 1.0 - texCoord.x;\n        }\n        v_texCoord = texCoord;\n      }\n    ";
       var fsSrc = "#version 300 es\n      precision highp float;\n      in vec2 v_texCoord;\n      out vec4 outColor;\n      uniform sampler2D u_inputFrame;\n      void main() {\n        outColor = texture(u_inputFrame, v_texCoord);\n      }\n    ";
       var vs = gl.createShader(gl.VERTEX_SHADER);
       gl.shaderSource(vs, vsSrc);
@@ -32824,8 +32824,10 @@ module.exports = /*#__PURE__*/function () {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      var mirrorLoc = gl.getUniformLocation(program, 'u_mirror');
       gl.useProgram(program);
       gl.uniform1i(gl.getUniformLocation(program, 'u_inputFrame'), 0);
+      gl.uniform1f(mirrorLoc, this.config.video.mirror ? 1.0 : 0.0);
 
       // 使用局部变量捕获，避免方法简写中 this 指向问题
       var videoEl = this.videoEl,
@@ -32852,7 +32854,10 @@ module.exports = /*#__PURE__*/function () {
           }))();
         },
         updatePostProcessingConfig: function updatePostProcessingConfig() {},
-        updateMirror: function updateMirror() {},
+        updateMirror: function updateMirror(mirror) {
+          gl.useProgram(program);
+          gl.uniform1f(mirrorLoc, mirror ? 1.0 : 0.0);
+        },
         cleanUp: function cleanUp() {
           gl.deleteTexture(texture);
           gl.deleteBuffer(texBuf);
