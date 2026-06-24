@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.3.2026624145
+ * CRTC v1.13.3.20266241836
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.3.405212482810 (Web)',
+  USER_AGENT: 'UA/1.13.3.405212483672 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.3.405212482810');
+debug('version %s', '1.13.3.405212483672');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,7 +16893,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.3.405212482810';
+    return '1.13.3.405212483672';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":71,"debug":76}],39:[function(require,module,exports){
@@ -22414,13 +22414,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }
       function sendAnswer(desc) {
         var _this21 = this;
-        var extraHeaders = ["Contact: ".concat(this._contact)];
+        var extraHeaders = [];
 
         // 5G Headers
         if (this._ua.sk[7] >= 3) {
           extraHeaders = ["Contact: ".concat(this._contact, ";+sip.app-subtype=\"webrtc-datachannel\"")];
           extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video;+sip.app-subtype="webrtc-datachannel"');
           extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
+        } else {
+          extraHeaders.push("Contact: ".concat(this._contact));
         }
         this._handleSessionTimersInIncomingRequest(request, extraHeaders);
         if (this._late_sdp) {
