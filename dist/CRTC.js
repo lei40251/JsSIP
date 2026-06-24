@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.6.20266232211
+ * CRTC v1.13.6.20266241538
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.6.405212464422 (Web)',
+  USER_AGENT: 'UA/1.13.6.405212483076 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.6.405212464422');
+debug('version %s', '1.13.6.405212483076');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,7 +16893,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.6.405212464422';
+    return '1.13.6.405212483076';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":71,"debug":76}],39:[function(require,module,exports){
@@ -32304,6 +32304,8 @@ module.exports = /*#__PURE__*/function () {
     this.inputStream = null;
     this.outputStream = null;
     this.canvas = null;
+    this.processingCanvas = null;
+    this.outputCtx = null;
     this.videoEl = null;
     this.backgroundEl = null;
     this.isRunning = false;
@@ -32405,6 +32407,17 @@ module.exports = /*#__PURE__*/function () {
               this.canvas = canvas || document.createElement('canvas');
               this.canvas.width = this.config.video.width;
               this.canvas.height = this.config.video.height;
+              this.processingCanvas = document.createElement('canvas');
+              this.processingCanvas.width = this.config.video.width;
+              this.processingCanvas.height = this.config.video.height;
+              this.outputCtx = this.canvas.getContext('2d');
+              if (this.outputCtx) {
+                _context.n = 3;
+                break;
+              }
+              logger.error('Output canvas 2D context not available');
+              throw new Error('Output canvas 2D context not available');
+            case 3:
               _context.p = 3;
               _context.n = 4;
               return this.loadModel(modelPath);
@@ -32571,7 +32584,7 @@ module.exports = /*#__PURE__*/function () {
                     _this.pipeline = buildWebGL2Pipeline(sourcePlayback, _this.backgroundEl, {
                       type: type,
                       mirror: _this.config.video.mirror
-                    }, _this.config.segmentation, _this.canvas, _this.tfs, function () {});
+                    }, _this.config.segmentation, _this.processingCanvas, _this.tfs, function () {});
                     _this.pipeline.updatePostProcessingConfig(_this.config.postProcessing);
                     resolve();
                   } catch (err) {
@@ -32614,6 +32627,29 @@ module.exports = /*#__PURE__*/function () {
     }
 
     /**
+     * 将处理结果输出到最终画布，并在这里统一做镜像。
+     */
+  }, {
+    key: "_presentOutputFrame",
+    value: function _presentOutputFrame() {
+      if (!this.outputCtx || !this.processingCanvas || !this.canvas) {
+        return;
+      }
+      var _this$canvas = this.canvas,
+        width = _this$canvas.width,
+        height = _this$canvas.height;
+      this.outputCtx.save();
+      this.outputCtx.setTransform(1, 0, 0, 1, 0, 0);
+      this.outputCtx.clearRect(0, 0, width, height);
+      if (this.config.video.mirror) {
+        this.outputCtx.translate(width, 0);
+        this.outputCtx.scale(-1, 1);
+      }
+      this.outputCtx.drawImage(this.processingCanvas, 0, 0, width, height);
+      this.outputCtx.restore();
+    }
+
+    /**
      * 设置输出画面是否水平镜像
      * @param {boolean} mirror - true: 镜像输出，false: 原始方向输出
      */
@@ -32622,9 +32658,7 @@ module.exports = /*#__PURE__*/function () {
     value: function setMirror(mirror) {
       logger.debug("setMirror() ".concat(mirror));
       this.config.video.mirror = Boolean(mirror);
-      if (this.pipeline && this.pipeline.updateMirror) {
-        this.pipeline.updateMirror(this.config.video.mirror);
-      }
+      this._presentOutputFrame();
     }
 
     /**
@@ -32704,6 +32738,7 @@ module.exports = /*#__PURE__*/function () {
               _context5.n = 4;
               return this.pipeline.render();
             case 4:
+              this._presentOutputFrame();
               _context5.n = 6;
               break;
             case 5:
@@ -32769,7 +32804,7 @@ module.exports = /*#__PURE__*/function () {
     }()
     /**
      * 清除虚拟背景，输出原始视频流
-     * 关闭所有虚拟背景效果，通过 WebGL2 直通管道直接将原始摄像头画面输出到画布
+     * 关闭所有虚拟背景效果，通过 WebGL2 直通管道直接将原始摄像头画面输出到内部处理画布
      */
     )
   }, {
@@ -32777,13 +32812,11 @@ module.exports = /*#__PURE__*/function () {
     value: function clearBackground() {
       logger.debug('clearBackground()');
       this._cleanUpPipeline();
-      var gl = this.canvas.getContext('webgl2');
+      var gl = this.processingCanvas.getContext('webgl2');
       if (!gl) {
         throw new Error('WebGL2 not available');
       }
-
-      // 直通着色器：直接将视频帧渲染到画布，不做任何分割/背景处理
-      var vsSrc = "#version 300 es\n      in vec2 a_position;\n      in vec2 a_texCoord;\n      out vec2 v_texCoord;\n      uniform float u_mirror;\n      void main() {\n        gl_Position = vec4(a_position, 0.0, 1.0);\n        vec2 texCoord = a_texCoord;\n        if (u_mirror > 0.5) {\n          texCoord.x = 1.0 - texCoord.x;\n        }\n        v_texCoord = texCoord;\n      }\n    ";
+      var vsSrc = "#version 300 es\n      in vec2 a_position;\n      in vec2 a_texCoord;\n      out vec2 v_texCoord;\n      void main() {\n        gl_Position = vec4(a_position, 0.0, 1.0);\n        v_texCoord = a_texCoord;\n      }\n    ";
       var fsSrc = "#version 300 es\n      precision highp float;\n      in vec2 v_texCoord;\n      out vec4 outColor;\n      uniform sampler2D u_inputFrame;\n      void main() {\n        outColor = texture(u_inputFrame, v_texCoord);\n      }\n    ";
       var vs = gl.createShader(gl.VERTEX_SHADER);
       gl.shaderSource(vs, vsSrc);
@@ -32824,14 +32857,10 @@ module.exports = /*#__PURE__*/function () {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-      var mirrorLoc = gl.getUniformLocation(program, 'u_mirror');
       gl.useProgram(program);
       gl.uniform1i(gl.getUniformLocation(program, 'u_inputFrame'), 0);
-      gl.uniform1f(mirrorLoc, this.config.video.mirror ? 1.0 : 0.0);
-
-      // 使用局部变量捕获，避免方法简写中 this 指向问题
       var videoEl = this.videoEl,
-        canvas = this.canvas;
+        processingCanvas = this.processingCanvas;
       this.pipeline = {
         render: function render() {
           return _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7() {
@@ -32843,7 +32872,7 @@ module.exports = /*#__PURE__*/function () {
                   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, videoEl);
                   gl.bindVertexArray(vao);
                   gl.useProgram(program);
-                  gl.viewport(0, 0, canvas.width, canvas.height);
+                  gl.viewport(0, 0, processingCanvas.width, processingCanvas.height);
                   gl.clearColor(0, 0, 0, 0);
                   gl.clear(gl.COLOR_BUFFER_BIT);
                   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -32854,10 +32883,6 @@ module.exports = /*#__PURE__*/function () {
           }))();
         },
         updatePostProcessingConfig: function updatePostProcessingConfig() {},
-        updateMirror: function updateMirror(mirror) {
-          gl.useProgram(program);
-          gl.uniform1f(mirrorLoc, mirror ? 1.0 : 0.0);
-        },
         cleanUp: function cleanUp() {
           gl.deleteTexture(texture);
           gl.deleteBuffer(texBuf);
@@ -33017,6 +33042,8 @@ module.exports = /*#__PURE__*/function () {
       this.inputStream = null;
       this.outputStream = null;
       this.canvas = null;
+      this.processingCanvas = null;
+      this.outputCtx = null;
       this.videoEl = null;
       this.timerWorker = null;
     }
@@ -33253,9 +33280,9 @@ exports.buildBackgroundBlurStage = buildBackgroundBlurStage;
 var _webglHelper = require("../helpers/webglHelper.js");
 var _templateObject, _templateObject2, _templateObject3;
 function _taggedTemplateLiteral(e, t) { return t || (t = e.slice(0)), Object.freeze(Object.defineProperties(e, { raw: { value: Object.freeze(t) } })); }
-function buildBackgroundBlurStage(gl, vertexShader, positionBuffer, texCoordBuffer, personMaskTexture, canvas, mirror) {
+function buildBackgroundBlurStage(gl, vertexShader, positionBuffer, texCoordBuffer, personMaskTexture, canvas) {
   var blurPass = buildBlurPass(gl, vertexShader, positionBuffer, texCoordBuffer, personMaskTexture, canvas);
-  var blendPass = buildBlendPass(gl, positionBuffer, texCoordBuffer, canvas, mirror);
+  var blendPass = buildBlendPass(gl, positionBuffer, texCoordBuffer, canvas);
   function render() {
     blurPass.render();
     blendPass.render();
@@ -33266,9 +33293,6 @@ function buildBackgroundBlurStage(gl, vertexShader, positionBuffer, texCoordBuff
   function updateBlurRadius(radius) {
     blurPass.updateBlurRadius(radius);
   }
-  function updateMirror(shouldMirror) {
-    blendPass.updateMirror(shouldMirror);
-  }
   function cleanUp() {
     blendPass.cleanUp();
     blurPass.cleanUp();
@@ -33277,7 +33301,6 @@ function buildBackgroundBlurStage(gl, vertexShader, positionBuffer, texCoordBuff
     render: render,
     updateCoverage: updateCoverage,
     updateBlurRadius: updateBlurRadius,
-    updateMirror: updateMirror,
     cleanUp: cleanUp
   };
 }
@@ -33343,8 +33366,8 @@ function buildBlurPass(gl, vertexShader, positionBuffer, texCoordBuffer, personM
     cleanUp: cleanUp
   };
 }
-function buildBlendPass(gl, positionBuffer, texCoordBuffer, canvas, mirror) {
-  var vertexShaderSource = (0, _webglHelper.glsl)(_templateObject2 || (_templateObject2 = _taggedTemplateLiteral(["#version 300 es\n\n    uniform float u_mirror;\n\n    in vec2 a_position;\n    in vec2 a_texCoord;\n\n    out vec2 v_texCoord;\n\n    void main() {\n      // Flipping Y is required when rendering to canvas\n      gl_Position = vec4(a_position * vec2(1.0, -1.0), 0.0, 1.0);\n      v_texCoord = a_texCoord;\n      if (u_mirror > 0.5) {\n        v_texCoord.x = 1.0 - v_texCoord.x;\n      }\n    }\n  "])));
+function buildBlendPass(gl, positionBuffer, texCoordBuffer, canvas) {
+  var vertexShaderSource = (0, _webglHelper.glsl)(_templateObject2 || (_templateObject2 = _taggedTemplateLiteral(["#version 300 es\n\n\n    in vec2 a_position;\n    in vec2 a_texCoord;\n\n    out vec2 v_texCoord;\n\n    void main() {\n      // Flipping Y is required when rendering to canvas\n      gl_Position = vec4(a_position * vec2(1.0, -1.0), 0.0, 1.0);\n      v_texCoord = a_texCoord;\n    }\n  "])));
   var fragmentShaderSource = (0, _webglHelper.glsl)(_templateObject3 || (_templateObject3 = _taggedTemplateLiteral(["#version 300 es\n\n    precision highp float;\n\n    uniform sampler2D u_inputFrame;\n    uniform sampler2D u_personMask;\n    uniform sampler2D u_blurredInputFrame;\n    uniform vec2 u_coverage;\n\n    in vec2 v_texCoord;\n\n    out vec4 outColor;\n\n    void main() {\n      vec3 color = texture(u_inputFrame, v_texCoord).rgb;\n      vec3 blurredColor = texture(u_blurredInputFrame, v_texCoord).rgb;\n      float personMask = texture(u_personMask, v_texCoord).a;\n      personMask = smoothstep(u_coverage.x, u_coverage.y, personMask);\n      outColor = vec4(mix(blurredColor, color, personMask), 1.0);\n    }\n  "])));
   var outputWidth = canvas.width,
     outputHeight = canvas.height;
@@ -33355,13 +33378,11 @@ function buildBlendPass(gl, positionBuffer, texCoordBuffer, canvas, mirror) {
   var personMaskLocation = gl.getUniformLocation(program, 'u_personMask');
   var blurredInputFrame = gl.getUniformLocation(program, 'u_blurredInputFrame');
   var coverageLocation = gl.getUniformLocation(program, 'u_coverage');
-  var mirrorLocation = gl.getUniformLocation(program, 'u_mirror');
   gl.useProgram(program);
   gl.uniform1i(inputFrameLocation, 0);
   gl.uniform1i(personMaskLocation, 1);
   gl.uniform1i(blurredInputFrame, 2);
   gl.uniform2f(coverageLocation, 0, 1);
-  gl.uniform1f(mirrorLocation, mirror ? 1 : 0);
   function render() {
     gl.viewport(0, 0, outputWidth, outputHeight);
     gl.useProgram(program);
@@ -33372,10 +33393,6 @@ function buildBlendPass(gl, positionBuffer, texCoordBuffer, canvas, mirror) {
     gl.useProgram(program);
     gl.uniform2f(coverageLocation, coverage[0], coverage[1]);
   }
-  function updateMirror(shouldMirror) {
-    gl.useProgram(program);
-    gl.uniform1f(mirrorLocation, shouldMirror ? 1 : 0);
-  }
   function cleanUp() {
     gl.deleteProgram(program);
     gl.deleteShader(fragmentShader);
@@ -33384,7 +33401,6 @@ function buildBlendPass(gl, positionBuffer, texCoordBuffer, canvas, mirror) {
   return {
     render: render,
     updateCoverage: updateCoverage,
-    updateMirror: updateMirror,
     cleanUp: cleanUp
   };
 }
@@ -33398,8 +33414,8 @@ var _require = require('../helpers/webglHelper.js'),
   createPiplelineStageProgram = _require.createPiplelineStageProgram,
   createTexture = _require.createTexture,
   glsl = _require.glsl;
-exports.buildBackgroundImageStage = function (gl, positionBuffer, texCoordBuffer, personMaskTexture, backgroundImage, canvas, mirror) {
-  var vertexShaderSource = glsl(_templateObject || (_templateObject = _taggedTemplateLiteral(["#version 300 es\n\n    uniform vec2 u_backgroundScale;\n    uniform vec2 u_backgroundOffset;\n    uniform float u_mirror;\n\n    in vec2 a_position;\n    in vec2 a_texCoord;\n\n    out vec2 v_texCoord;\n    out vec2 v_backgroundCoord;\n\n    void main() {\n      // Flipping Y is required when rendering to canvas\n      gl_Position = vec4(a_position * vec2(1.0, -1.0), 0.0, 1.0);\n      vec2 texCoord = a_texCoord;\n      if (u_mirror > 0.5) {\n        texCoord.x = 1.0 - texCoord.x;\n      }\n      v_texCoord = texCoord;\n      v_backgroundCoord = texCoord * u_backgroundScale + u_backgroundOffset;\n    }\n  "])));
+exports.buildBackgroundImageStage = function (gl, positionBuffer, texCoordBuffer, personMaskTexture, backgroundImage, canvas) {
+  var vertexShaderSource = glsl(_templateObject || (_templateObject = _taggedTemplateLiteral(["#version 300 es\n\n    uniform vec2 u_backgroundScale;\n    uniform vec2 u_backgroundOffset;\n\n    in vec2 a_position;\n    in vec2 a_texCoord;\n\n    out vec2 v_texCoord;\n    out vec2 v_backgroundCoord;\n\n    void main() {\n      // Flipping Y is required when rendering to canvas\n      gl_Position = vec4(a_position * vec2(1.0, -1.0), 0.0, 1.0);\n      v_texCoord = a_texCoord;\n      v_backgroundCoord = a_texCoord * u_backgroundScale + u_backgroundOffset;\n    }\n  "])));
   var fragmentShaderSource = glsl(_templateObject2 || (_templateObject2 = _taggedTemplateLiteral(["#version 300 es\n\n    precision highp float;\n\n    uniform sampler2D u_inputFrame;\n    uniform sampler2D u_personMask;\n    uniform sampler2D u_background;\n    uniform vec2 u_coverage;\n    uniform float u_lightWrapping;\n    uniform float u_blendMode;\n\n    in vec2 v_texCoord;\n    in vec2 v_backgroundCoord;\n\n    out vec4 outColor;\n\n    vec3 screen(vec3 a, vec3 b) {\n      return 1.0 - (1.0 - a) * (1.0 - b);\n    }\n\n    vec3 linearDodge(vec3 a, vec3 b) {\n      return a + b;\n    }\n\n    void main() {\n      vec3 frameColor = texture(u_inputFrame, v_texCoord).rgb;\n      vec3 backgroundColor = texture(u_background, v_backgroundCoord).rgb;\n      float personMask = texture(u_personMask, v_texCoord).a;\n      float lightWrapMask = 1.0 - max(0.0, personMask - u_coverage.y) / (1.0 - u_coverage.y);\n      vec3 lightWrap = u_lightWrapping * lightWrapMask * backgroundColor;\n      frameColor = u_blendMode * linearDodge(frameColor, lightWrap) +\n        (1.0 - u_blendMode) * screen(frameColor, lightWrap);\n      personMask = smoothstep(u_coverage.x, u_coverage.y, personMask);\n      outColor = vec4(frameColor * personMask + backgroundColor * (1.0 - personMask), 1.0);\n    }\n  "])));
   var outputWidth = canvas.width,
     outputHeight = canvas.height;
@@ -33409,7 +33425,6 @@ exports.buildBackgroundImageStage = function (gl, positionBuffer, texCoordBuffer
   var program = createPiplelineStageProgram(gl, vertexShader, fragmentShader, positionBuffer, texCoordBuffer);
   var backgroundScaleLocation = gl.getUniformLocation(program, 'u_backgroundScale');
   var backgroundOffsetLocation = gl.getUniformLocation(program, 'u_backgroundOffset');
-  var mirrorLocation = gl.getUniformLocation(program, 'u_mirror');
   var inputFrameLocation = gl.getUniformLocation(program, 'u_inputFrame');
   var personMaskLocation = gl.getUniformLocation(program, 'u_personMask');
   var backgroundLocation = gl.getUniformLocation(program, 'u_background');
@@ -33419,7 +33434,6 @@ exports.buildBackgroundImageStage = function (gl, positionBuffer, texCoordBuffer
   gl.useProgram(program);
   gl.uniform2f(backgroundScaleLocation, 1, 1);
   gl.uniform2f(backgroundOffsetLocation, 0, 0);
-  gl.uniform1f(mirrorLocation, mirror ? 1 : 0);
   gl.uniform1i(inputFrameLocation, 0);
   gl.uniform1i(personMaskLocation, 1);
   gl.uniform2f(coverageLocation, 0, 1);
@@ -33487,10 +33501,6 @@ exports.buildBackgroundImageStage = function (gl, positionBuffer, texCoordBuffer
     gl.useProgram(program);
     gl.uniform1f(blendModeLocation, blendMode === 'screen' ? 0 : 1);
   }
-  function updateMirror(shouldMirror) {
-    gl.useProgram(program);
-    gl.uniform1f(mirrorLocation, shouldMirror ? 1 : 0);
-  }
   function cleanUp() {
     gl.deleteTexture(backgroundTexture);
     gl.deleteProgram(program);
@@ -33502,7 +33512,6 @@ exports.buildBackgroundImageStage = function (gl, positionBuffer, texCoordBuffer
     updateCoverage: updateCoverage,
     updateLightWrapping: updateLightWrapping,
     updateBlendMode: updateBlendMode,
-    updateMirror: updateMirror,
     cleanUp: cleanUp
   };
 };
@@ -33893,7 +33902,7 @@ exports.buildWebGL2Pipeline = function (sourcePlayback, backgroundImage, backgro
   var resizingStage = buildResizingStage(gl, vertexShader, positionBuffer, texCoordBuffer, segmentationConfig, tflite);
   var loadSegmentationStage = buildSoftmaxStage(gl, vertexShader, positionBuffer, texCoordBuffer, segmentationConfig, tflite, segmentationTexture);
   var jointBilateralFilterStage = buildJointBilateralFilterStage(gl, vertexShader, positionBuffer, texCoordBuffer, segmentationTexture, segmentationConfig, personMaskTexture, canvas);
-  var backgroundStage = backgroundConfig.type === 'blur' ? buildBackgroundBlurStage(gl, vertexShader, positionBuffer, texCoordBuffer, personMaskTexture, canvas, backgroundConfig.mirror) : buildBackgroundImageStage(gl, positionBuffer, texCoordBuffer, personMaskTexture, backgroundImage, canvas, backgroundConfig.mirror);
+  var backgroundStage = backgroundConfig.type === 'blur' ? buildBackgroundBlurStage(gl, vertexShader, positionBuffer, texCoordBuffer, personMaskTexture, canvas) : buildBackgroundImageStage(gl, positionBuffer, texCoordBuffer, personMaskTexture, backgroundImage, canvas);
 
   /**
    * 执行一帧的渲染处理
@@ -34050,18 +34059,6 @@ exports.buildWebGL2Pipeline = function (sourcePlayback, backgroundImage, backgro
   }
 
   /**
-   * 更新最终输出是否水平镜像。
-   * 分割和滤波阶段保持原始坐标，只在最终合成阶段翻转输出采样坐标。
-   *
-   * @param {boolean} mirror - true: 镜像输出，false: 原始方向输出
-   */
-  function updateMirror(mirror) {
-    if (backgroundStage.updateMirror) {
-      backgroundStage.updateMirror(mirror);
-    }
-  }
-
-  /**
    * 清理 WebGL 管道资源
    *
    * 当不再需要 WebGL2 虚拟背景管道时，调用此函数释放所有 GPU 资源。
@@ -34121,7 +34118,6 @@ exports.buildWebGL2Pipeline = function (sourcePlayback, backgroundImage, backgro
   return {
     render: render,
     updatePostProcessingConfig: updatePostProcessingConfig,
-    updateMirror: updateMirror,
     cleanUp: cleanUp
   };
 };

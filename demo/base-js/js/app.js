@@ -1894,7 +1894,7 @@ async function call(type, direction, mediaStream)
 
   if (type === 'callVB') 
   {
-    const engine = new CRTC.VirtualBackground({ video: Object.assign({}, videoConstraints, { mirror: false }) });
+    const engine = new CRTC.VirtualBackground({ video: Object.assign({}, { facingMode: videoConstraints.facingMode, width: videoConstraints.height, height: videoConstraints.width, frameRate: videoConstraints.frameRate }, { mirror: false }) });
 
     const inputStream = await navigator.mediaDevices.getUserMedia({
       video : videoConstraints
@@ -1913,12 +1913,16 @@ async function call(type, direction, mediaStream)
     {
       engine.setMirror(true);
       engine.setBackgroundImage('./virtual-background/backgrounds/sky.jpg');
+      // engine.setBackgroundImage('./virtual-background/bg/system5GVirtualBackground3.png');
       setTimeout(() => 
       {
-        // engine.setBlurBackground();
-        engine.setBackgroundImage('none');
+        engine.setBlurBackground();
+        setTimeout(() => 
+        {
+          engine.setBackgroundImage('none');          
+        }, 5000);
       }, 5000);
-    }, 10000);
+    }, 5000);
 
 
     // engine.setSolidColor();
