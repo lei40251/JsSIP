@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.6.20266241538
+ * CRTC v1.13.6.20266242129
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.6.405212483076 (Web)',
+  USER_AGENT: 'UA/1.13.6.405212484258 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.6.405212483076');
+debug('version %s', '1.13.6.405212484258');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,7 +16893,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.6.405212483076';
+    return '1.13.6.405212484258';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":71,"debug":76}],39:[function(require,module,exports){
@@ -22363,7 +22363,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 this.emit('upgradeToVideo', {
                   request: request,
                   accept: function accept(videoConstraints) {
-                    videoConstraints && (_this19._inviteMediaConstraints.video = videoConstraints);
+                    if (videoConstraints) {
+                      if (_this19._inviteMediaConstraints == null) {
+                        _this19._inviteMediaConstraints = {};
+                      }
+                      _this19._inviteMediaConstraints.video = videoConstraints;
+                    }
                     console.warn('tin: ', _this19._inviteMediaConstraints);
                     _this19._localToAudio = false;
                     nextS.call(_this19);
