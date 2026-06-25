@@ -314,6 +314,8 @@ export interface MediaEffectsComposerInstance {
 export interface AiVBVideoOptions {
   width?: number;
   height?: number;
+  targetFps?: number;
+  mirror?: boolean;
   processingScale?: number;
 }
 

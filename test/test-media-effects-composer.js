@@ -3,8 +3,8 @@ const assert = require('assert');
 const MediaEffectsComposer = require('../lib/MediaEffectsComposer/MediaEffectsComposer');
 const ComposerConfig = require('../lib/MediaEffectsComposer/ComposerConfig');
 const Watermark = require('../lib/MediaEffectsComposer/Watermark');
-const WorkerRenderer = require('../lib/MediaEffectsComposer/renderers/WorkerRenderer');
-const workerScript = require('../lib/MediaEffectsComposer/renderers/workerScript');
+const WorkerRenderer = require('../lib/MediaEffectsComposer/Renderers/WorkerRenderer');
+const workerScript = require('../lib/MediaEffectsComposer/Renderers/workerScript');
 const vm = require('vm');
 
 let nextTrackId = 1;
