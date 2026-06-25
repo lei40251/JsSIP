@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.3.20266241836
+ * CRTC v1.13.3.2026625130
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.3.405212483672 (Web)',
+  USER_AGENT: 'UA/1.13.3.405212502600 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.3.405212483672');
+debug('version %s', '1.13.3.405212502600');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,7 +16893,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.3.405212483672';
+    return '1.13.3.405212502600';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":71,"debug":76}],39:[function(require,module,exports){
@@ -19272,7 +19272,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return;
       }
       clearTimeout(this._timers.userNoAnswerTimer);
-      extraHeaders.unshift("Contact: ".concat(this._contact));
 
       // Determine incoming media from incoming SDP offer (if any).
       var sdp = request.parseSDP();
@@ -23486,7 +23485,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         // 新增reinvite时更新via_host
         options.changeViaHost && _this31._ua.set('via_host', "".concat(Utils.createRandomToken(12), ".invalid"));
-        extraHeaders.push("Contact: ".concat(_this31._ua.contact.toString()));
+        if (!(_this31._ua.sk[7] >= 3)) {
+          extraHeaders.push("Contact: ".concat(_this31._ua.contact.toString()));
+        }
         _this31.sendRequest(CRTC_C.INVITE, {
           extraHeaders: extraHeaders,
           body: sdp,
