@@ -4,6 +4,7 @@ const MediaEffectsComposer = require('../lib/MediaEffectsComposer/MediaEffectsCo
 const ComposerConfig = require('../lib/MediaEffectsComposer/ComposerConfig');
 const Watermark = require('../lib/MediaEffectsComposer/Watermark');
 const WorkerRenderer = require('../lib/MediaEffectsComposer/Renderers/WorkerRenderer');
+const MainCanvas2DRenderer = require('../lib/MediaEffectsComposer/Renderers/MainCanvas2DRenderer');
 const workerScript = require('../lib/MediaEffectsComposer/Renderers/workerScript');
 const vm = require('vm');
 
@@ -2153,6 +2154,47 @@ async function testOutputMirrorDoesNotPreloadAiVBBackgroundImage()
   }
 }
 
+async function testMainCanvas2DAiVirtualBackgroundUsesMaskFramePair()
+{
+  resetMockState();
+
+  const outputCanvas = new MockCanvasElement();
+  const source = { slot: 0 };
+  const liveVideo = new MockVideoElement();
+  const frozenFrame = new MockCanvasElement();
+  const mask = new MockCanvasElement();
+  const state = {};
+  const renderer = new MainCanvas2DRenderer({
+    aiVirtualBackgroundManager : {
+      getRenderableState()
+      {
+        return {
+          config          : { mode: 'color', backgroundColor: '#123456' },
+          latestMask      : mask,
+          latestFrame     : frozenFrame,
+          backgroundImage : null,
+          state           : state
+        };
+      },
+      noteFrameRendered() {}
+    }
+  });
+
+  renderer.init(outputCanvas);
+  renderer._drawAiVirtualBackgroundItem({
+    source              : source,
+    video               : liveVideo,
+    draw                : { x: 0, y: 0, width: 320, height: 180 },
+    mirrorX             : false,
+    aiVirtualBackground : { enabled: true, mode: 'color' }
+  }, false, 320);
+
+  const workDraws = state.workCanvas._context2d.operations.filter((operation) => operation.type === 'drawImage');
+
+  assert.strictEqual(workDraws[0].args[0], frozenFrame);
+  assert.strictEqual(workDraws[0].args[0] === liveVideo, false);
+}
+
 async function testMainWebGL2AiVirtualBackgroundUsesMainThreadManager()
 {
   resetMockState();
@@ -3300,6 +3342,7 @@ async function run()
     { name: 'testSetSourceAiVirtualBackgroundKeepsMainWebGL2Renderer', fn: testSetSourceAiVirtualBackgroundKeepsMainWebGL2Renderer },
     { name: 'testSetSourceAiVirtualBackgroundKeepsWorkerRenderer', fn: testSetSourceAiVirtualBackgroundKeepsWorkerRenderer },
     { name: 'testOutputMirrorDoesNotPreloadAiVBBackgroundImage', fn: testOutputMirrorDoesNotPreloadAiVBBackgroundImage },
+    { name: 'testMainCanvas2DAiVirtualBackgroundUsesMaskFramePair', fn: testMainCanvas2DAiVirtualBackgroundUsesMaskFramePair },
     { name: 'testMainWebGL2AiVirtualBackgroundUsesMainThreadManager', fn: testMainWebGL2AiVirtualBackgroundUsesMainThreadManager },
     { name: 'testInitialSourcesArrayMapsSourceOptionsByIndex', fn: testInitialSourcesArrayMapsSourceOptionsByIndex },
     { name: 'testEmptyInitialRenderDoesNotCreateRenderer', fn: testEmptyInitialRenderDoesNotCreateRenderer },

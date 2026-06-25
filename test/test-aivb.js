@@ -54,9 +54,9 @@ class Mock2DContext
     this.operations.push({ type: 'clearRect' });
   }
 
-  drawImage()
+  drawImage(...args)
   {
-    this.operations.push({ type: 'drawImage' });
+    this.operations.push({ type: 'drawImage', args });
   }
 
   fillRect()
@@ -872,6 +872,7 @@ async function testConfigNormalizesCdnUrlDefaultModelPath()
   assert.strictEqual(config.assetConfig.modelUrl, './assets/ai-vb/selfie_segmenter_landscape.tflite');
 }
 
+
 async function testConfigRejectsLegacySegmentationOptions()
 {
   assert.throws(
@@ -972,6 +973,57 @@ async function testSourceAiVBManagerUsesScaledCanvasForSegmentation()
   assert.strictEqual(calls[0].operations.some((item) => item.type === 'drawImage'), true);
 }
 
+async function testSourceAiVBManagerStoresFrameWithSegmentationMask()
+{
+  delete require.cache[require.resolve('../lib/MediaEffectsComposer/AIVirtualBackground/AiVBState')];
+  const SourceAiVBManager = require('../lib/MediaEffectsComposer/AIVirtualBackground/AiVBState');
+  const manager = new SourceAiVBManager();
+  const source = { slot: 0 };
+  const mask = new MockCanvas();
+
+  manager.setSourceConfig(source, {
+    enabled        : true,
+    mode           : 'image',
+    imageUrl       : 'background.png',
+    runtimeEnabled : true,
+    startupDelayMs : 0,
+    video          : { width: 640, height: 480, processingScale: 0.5 },
+    segmentation   : { delegate: 'CPU', frameSkip: 0 }
+  });
+
+  const state = manager._states.get(source);
+  const videoElement = {
+    readyState  : 2,
+    videoWidth  : 640,
+    videoHeight : 480
+  };
+
+  state.runtimeReady = true;
+  state.runtime = {
+    async segmentForVideo()
+    {
+      return { segmentationMask: mask };
+    }
+  };
+
+  manager.getRenderableState(source, videoElement);
+  await flushMicrotasks();
+
+  assert.strictEqual(state.latestMask, mask);
+  assert.ok(state.latestFrame);
+  assert.notStrictEqual(state.latestFrame, videoElement);
+  assert.strictEqual(state.latestFrame.width, 640);
+  assert.strictEqual(state.latestFrame.height, 480);
+  assert.strictEqual(
+    state.activeFrameContext.operations.some((item) => item.type === 'drawImage' && item.args[0] === videoElement),
+    true
+  );
+  assert.strictEqual(
+    state.latestFrameContext.operations.some((item) => item.type === 'drawImage' && item.args[0] === state.activeFrameCanvas),
+    true
+  );
+}
+
 async function testSourceAiVBManagerQueuesLatestFrameWhileSegmentationPending()
 {
   delete require.cache[require.resolve('../lib/MediaEffectsComposer/AIVirtualBackground/AiVBState')];
@@ -1043,7 +1095,7 @@ async function testSourceAiVBManagerQueuesLatestFrameWhileSegmentationPending()
   });
 
   assert.strictEqual(calls.length, 2);
-  assert.strictEqual(queuedUpdates.length, 0);
+  assert.strictEqual(queuedUpdates.length, 1);
   assert.strictEqual(state.pendingSegmentation, true);
   assert.strictEqual(state.activeSegPromise, pendingPromises[0]);
   assert.strictEqual(state.queuedSegPromise, pendingPromises[1]);
@@ -1379,8 +1431,8 @@ async function testSourceAiVBManagerDoesNotPileSegmentationWorkWhileQueued()
   manager.getRenderableState(source, videoElement);
 
   assert.strictEqual(calls.length, 2);
-  assert.strictEqual(queuedUpdates.length, 0);
-  assert.strictEqual(state.queuedSegContext.operations.length, operationsAfterQueued);
+  assert.strictEqual(queuedUpdates.length, 2);
+  assert.strictEqual(state.queuedSegContext.operations.length > operationsAfterQueued, true);
 }
 
 async function testSourceAiVBManagerKeepsPreviousBackgroundUntilNextImageLoads()
@@ -1468,6 +1520,7 @@ async function run()
     { name: 'testConfigRejectsLegacyPostProcessingOptions', fn: testConfigRejectsLegacyPostProcessingOptions },
     { name: 'testConfigClampsPostProcessingRanges', fn: testConfigClampsPostProcessingRanges },
     { name: 'testSourceAiVBManagerUsesScaledCanvasForSegmentation', fn: testSourceAiVBManagerUsesScaledCanvasForSegmentation },
+    { name: 'testSourceAiVBManagerStoresFrameWithSegmentationMask', fn: testSourceAiVBManagerStoresFrameWithSegmentationMask },
     { name: 'testSourceAiVBManagerQueuesLatestFrameWhileSegmentationPending', fn: testSourceAiVBManagerQueuesLatestFrameWhileSegmentationPending },
     { name: 'testSourceAiVBManagerDefersHeavyWorkUntilVideoReady', fn: testSourceAiVBManagerDefersHeavyWorkUntilVideoReady },
     { name: 'testSourceAiVBManagerStartsRuntimeByDefaultAfterStartupDelay', fn: testSourceAiVBManagerStartsRuntimeByDefaultAfterStartupDelay },
