@@ -23,9 +23,9 @@
 
 ### 快速理解路线
 
-1. 入口在 [lib/MediaEffectsComposer/Core/MediaEffectsComposer.js](../lib/MediaEffectsComposer/Core/MediaEffectsComposer.js)。
-2. 输入源由 `SourceRegistry` 管理。
-3. 源级虚拟背景由 `SourceAiVBManager` 调度，并复用 `AIVirtualBackground/` 下的配置、资源加载和 MediaPipe runtime。
+1. 入口在 [lib/MediaEffectsComposer/MediaEffectsComposer.js](../lib/MediaEffectsComposer/MediaEffectsComposer.js)；SDK 对外导出由 [lib/JsSIP.js](../lib/JsSIP.js) 暴露为 `CRTC.MediaEffectsComposer` / `CRTC.Mixer`。
+2. 输入源由 `Sources` 管理。
+3. 源级虚拟背景由 `AiVBState` 调度，并复用 `AIVirtualBackground/` 下的配置、资源加载和 MediaPipe runtime。
 4. 视频渲染由 `LayoutEngine -> RenderLoop -> createRenderer` 处理。
 5. 音频输出由 `AudioMixer` 处理。
 6. 输出流由 `OutputStream` 统一产出。
@@ -35,8 +35,8 @@
 
 ```
 MediaEffectsComposer 是总调度：
-  SourceRegistry 管输入源
-  SourceAiVBManager 管源级虚拟背景
+  Sources 管输入源
+  AiVBState 管源级虚拟背景
   LayoutEngine 计算布局和镜像后的绘制信息
   RenderLoop 负责何时渲染
   createRenderer/Renderer 负责怎么画
@@ -49,7 +49,7 @@ MediaEffectsComposer 是总调度：
 
 | 目标 | 推荐入口 | 对应内部链路 |
 |------|----------|--------------|
-| 看当前所有源 | `getState().sources` | `SourceRegistry.getSnapshot()` |
+| 看当前所有源 | `getState().sources` | `Sources.getSnapshot()` |
 | 看镜像/水印配置 | `getState().config` | `_getConfigStateSnapshot()` |
 | 看视频渲染状态 | `getState().render` | `RenderLoop.getRenderInfo()` |
 | 看音频混音状态 | `getState().audio` | `AudioMixer.getInfo()` |
@@ -73,25 +73,23 @@ MediaEffectsComposer 是总调度：
 
 ```
 lib/
-├── Mixer.js
+├── JsSIP.js
 │
 └── MediaEffectsComposer/
     ├── AIVirtualBackground/
     │   ├── AiVBConfig.js
     │   ├── AiVBAssetLoader.js
+    │   ├── AiVBSegmentationCommon.js
+    │   ├── AiVBState.js
     │   └── MediaPipeSegmenterRuntime.js
-    │
-    ├── Core/
-    │   ├── MediaEffectsComposer.js
-    │   ├── MixerConfig.js
-    │   ├── SourceRegistry.js
-    │   ├── SourceAiVBManager.js
-    │   ├── LayoutEngine.js
-    │   ├── MixerDomAdapter.js
-    │   ├── AudioMixer.js
-    │   ├── OutputStream.js
-    │   ├── RenderLoop.js
-    │   └── Watermark.js
+    ├── MediaEffectsComposer.js
+    ├── ComposerConfig.js
+    ├── Sources.js
+    ├── LayoutEngine.js
+    ├── AudioMixer.js
+    ├── OutputStream.js
+    ├── RenderLoop.js
+    └── Watermark.js
     │
     └── Renderers/
         ├── RenderLoop.js
@@ -109,7 +107,7 @@ lib/
 
 ## 中枢控制器
 
-### [lib/MediaEffectsComposer/Core/MediaEffectsComposer.js](../lib/MediaEffectsComposer/Core/MediaEffectsComposer.js)
+### [lib/MediaEffectsComposer/MediaEffectsComposer.js](../lib/MediaEffectsComposer/MediaEffectsComposer.js)
 
 `MediaEffectsComposer` 负责协调所有子模块，是整个系统的中介者。
 
@@ -118,29 +116,28 @@ lib/
 ```
 constructor(videos, options)
   │
-  ├─ MixerConfig.create(options) → 归一化配置
-  ├─ new MixerDomAdapter(...)
+  ├─ ComposerConfig.create(options) → 归一化配置
   ├─ new Watermark(...)
-  ├─ new SourceRegistry(...)
+  ├─ new Sources(...)
   ├─ new OutputStream(...)
   ├─ new RenderLoop(...)
   ├─ new AudioMixer(...)
   ├─ new LayoutEngine(...)
-  └─ appendStream(videos) / addSource(videos) → 添加初始源
+  └─ addSource(videos, normalizedSources) → 添加初始源
 ```
 
 说明：
-- 构造阶段仍然沿用旧初始化路径 `appendStream(videos)`，但该方法已经只是 `addSource()` 包装层。
+- 构造阶段直接调用 `addSource()` 添加初始源；`appendStream()` 只是类尾部保留的兼容别名。
 
 ### 当前公开 API 与内部链路
 
 | 新方法 | 功能 | 主要链路 |
 |--------|------|----------|
-| `addSource(videos, optionsOrSlot)` | 添加输入源 | `SourceRegistry.add() -> AudioMixer.scheduleRefresh() -> RenderLoop.start()` |
-| `removeSource(target)` | 移除一路源 | `_removeSourcesInternal(target) -> SourceRegistry.remove()` |
+| `addSource(videos, optionsOrSlot)` | 添加输入源 | `Sources.add() -> _scheduleAudioRefresh() -> RenderLoop.start()` |
+| `removeSource(target)` | 移除一路源 | `_removeSourcesInternal(target) -> Sources.remove()` |
 | `clearSources()` | 移除全部源 | `_removeSourcesInternal(undefined)` |
-| `setConfig(patch)` | 动态修改镜像/水印等配置 | 更新 `_config` / `_slotMirrorXOverrides` / `Watermark` / 强制重绘 |
-| `getState()` | 读取统一状态快照 | `SourceRegistry + _getConfigStateSnapshot() + RenderLoop + AudioMixer` |
+| `setConfig(patch)` | 动态修改镜像/水印等配置 | 更新 `_config` / `_slotMirrorOv` / `Watermark` / 强制重绘 |
+| `getState()` | 读取统一状态快照 | `Sources + _getConfigStateSnapshot() + RenderLoop + AudioMixer` |
 | `getOutput(options)` | 获取 `mixed` / `video` / `audio` 输出 | `_getVideoOutputSync()` / `_getMixedOutput()` / `AudioMixer` |
 | `releaseOutput(options)` | 释放音频子混音 | `AudioMixer.releaseSubmixAudioStream()` |
 | `stop()` | 销毁实例 | `RenderLoop.stop() -> clearSources() -> AudioMixer.stop() -> RenderLoop.destroy() -> OutputStream.stop()` |
@@ -172,7 +169,7 @@ async getMixedStream() {
 - `getVideoStream()` 仍保留同步行为，内部直接走 `_getVideoOutputSync()`
 - `getAudioStream({ slots })` 使用共享主 `AudioContext`，但每次调用默认创建新的子混音输出轨道
 - `getAudioStream({ slots, isolated: true })` 或 `audioContext: 'isolated'` 使用独立 `AudioContext`
-- `setMirror()` / `setSourceMirror()` 这类旧 setter 仍然同步返回，但内部调的是异步 `setConfig()`
+- `setMirror()` / `setSourceMirror()` 这类旧 setter 当前同样返回 `Promise<MediaEffectsComposerConfigState>`，本质上是 `setConfig()` 的薄包装
 
 ---
 
@@ -186,7 +183,7 @@ async getMixedStream() {
 2. 标准化单个源或数组源
 3. 限制最多 9 路
 4. 归一化 `slot/gain/sourceMirror/aiVirtualBackground`
-5. 交给 `SourceRegistry.add()`
+5. 交给 `Sources.add()`
 6. 若音频链路已经建立，则异步刷新音频连接
 7. 刷新镜像 / 效果渲染策略
 8. 启动 `RenderLoop`
@@ -196,9 +193,9 @@ async getMixedStream() {
 ```
 addSource()
   ├─ _normalizeSourceOptions()
-  ├─ SourceRegistry.add()
+  ├─ Sources.add()
   ├─ _scheduleAudioRefresh()   (按需)
-  ├─ _refreshRendererPolicyForEffects()
+  ├─ _refreshFxRenderPolicy()
   └─ RenderLoop.start()
 ```
 
@@ -223,7 +220,7 @@ appendStream(...)
 removeSource(target)
   └─ _removeSourcesInternal(target)
        ├─ _findSource(target)
-       ├─ SourceRegistry.remove()
+       ├─ Sources.remove()
        ├─ onBeforeRemove -> AudioMixer.disconnectSource()
        └─ onAfterRemove  -> RenderLoop.removeSource()
 
@@ -271,9 +268,9 @@ clearStreams()
 ```
 setConfig(patch)
   ├─ 更新 _config.outputMirrorX / mirrorX
-  ├─ 更新 _slotMirrorXOverrides
+  ├─ 更新 _slotMirrorOv
   ├─ Watermark.setWatermarks() / clearWatermarks()
-  ├─ _refreshRendererPolicyForMirror()
+  ├─ _refreshFxRenderPolicy()
   └─ _drawVideosToCanvas(undefined, true)
 ```
 
@@ -305,7 +302,7 @@ clearWatermarks(filter)
 
 | 字段 | 来源 |
 |------|------|
-| `sources` | `SourceRegistry.getSnapshot()` |
+| `sources` | `Sources.getSnapshot()` |
 | `config` | `_getConfigStateSnapshot()` |
 | `render` | `_collectRenderInfo(false)` |
 | `audio` | `_collectAudioInfo(false)` |
@@ -402,7 +399,7 @@ releaseSubmixAudioStream(...)
 
 ## 关键子模块
 
-### [lib/MediaEffectsComposer/Core/MixerConfig.js](../lib/MediaEffectsComposer/Core/MixerConfig.js)
+### [lib/MediaEffectsComposer/ComposerConfig.js](../lib/MediaEffectsComposer/ComposerConfig.js)
 
 配置归一化模块，主要负责：
 
@@ -413,7 +410,7 @@ releaseSubmixAudioStream(...)
 
 虽然对外已经推荐 `addSource()`，但 `addSource()` 内部仍会复用这里的 `normalizeSourceOptions()`，所以旧参数形式仍能兼容。
 
-### [lib/MediaEffectsComposer/Core/SourceRegistry.js](../lib/MediaEffectsComposer/Core/SourceRegistry.js)
+### [lib/MediaEffectsComposer/Sources.js](../lib/MediaEffectsComposer/Sources.js)
 
 输入源注册表，负责：
 
@@ -426,10 +423,10 @@ releaseSubmixAudioStream(...)
 
 ```
 addSource() / removeSource() / clearSources()
-  -> SourceRegistry.add() / remove() / getSnapshot()
+  -> Sources.add() / remove() / getSnapshot()
 ```
 
-### [lib/MediaEffectsComposer/Core/LayoutEngine.js](../lib/MediaEffectsComposer/Core/LayoutEngine.js)
+### [lib/MediaEffectsComposer/LayoutEngine.js](../lib/MediaEffectsComposer/LayoutEngine.js)
 
 负责布局和渲染输入数据生成：
 
@@ -438,7 +435,7 @@ addSource() / removeSource() / clearSources()
 - 组装 renderer 消费的 payload
 - 追加 source/output 水印绘制项
 
-### [lib/MediaEffectsComposer/Core/Watermark.js](../lib/MediaEffectsComposer/Core/Watermark.js)
+### [lib/MediaEffectsComposer/Watermark.js](../lib/MediaEffectsComposer/Watermark.js)
 
 新版本里水印管理被明确独立出来，职责包括：
 
@@ -447,7 +444,7 @@ addSource() / removeSource() / clearSources()
 - 输出带 `status/reason` 的水印快照
 - 响应 `setConfig({ watermarks })` 和 `setConfig({ clearWatermarks: true })`
 
-### [lib/MediaEffectsComposer/Core/AudioMixer.js](../lib/MediaEffectsComposer/Core/AudioMixer.js)
+### [lib/MediaEffectsComposer/AudioMixer.js](../lib/MediaEffectsComposer/AudioMixer.js)
 
 音频混音模块，负责：
 
@@ -459,16 +456,16 @@ addSource() / removeSource() / clearSources()
 
 这也是 `getOutput({ type: 'audio' })` / `releaseOutput()` 的实际执行者。
 
-### [lib/MediaEffectsComposer/Core/OutputStream.js](../lib/MediaEffectsComposer/Core/OutputStream.js)
+### [lib/MediaEffectsComposer/OutputStream.js](../lib/MediaEffectsComposer/OutputStream.js)
 
 输出流管理模块，负责：
 
-- `canvas.captureStream()` 产出视频流
+- 优先尝试 Insertable Streams，能力不足或初始化失败时回退到 `canvas.captureStream()`
 - 保存已返回的 mixed stream 引用
 - 在后续音频可用时把音轨补进 mixed stream
-- 停止所有 capture 出来的轨道
+- 停止所有 capture / Insertable 输出相关轨道与资源
 
-### [lib/MediaEffectsComposer/Core/RenderLoop.js](../lib/MediaEffectsComposer/Core/RenderLoop.js)
+### [lib/MediaEffectsComposer/RenderLoop.js](../lib/MediaEffectsComposer/RenderLoop.js)
 
 渲染循环负责：
 
@@ -488,7 +485,7 @@ addSource() / removeSource() / clearSources()
 
 ```
 addSource()
-  └─ SourceRegistry
+  └─ Sources
       ├─ LayoutEngine
       ├─ AudioMixer
       └─ RenderLoop.start()
@@ -505,7 +502,7 @@ getOutput()
   └─ audio -> AudioMixer
 
 getState()
-  └─ 汇总 SourceRegistry + config + RenderLoop + AudioMixer
+  └─ 汇总 Sources + config + RenderLoop + AudioMixer
 ```
 
 ### 一帧视频渲染流程
@@ -525,7 +522,7 @@ RenderLoop.renderFrame()
 getOutput({ type: 'mixed' })
   ├─ _getVideoOutputSync()
   │   ├─ OutputStream.getVideoStream(drawFirstFrame)
-  │   └─ canvas.captureStream(fps)
+  │   └─ 优先 Insertable，回退 captureStream
   │
   ├─ OutputStream.setMixedStream(videoStream)
   │
@@ -544,7 +541,7 @@ setConfig(patch)
   ├─ 解析 outputMirror / sourceMirror / overrides
   ├─ 解析 clearSourceMirrorOverrides
   ├─ Watermark.setWatermarks() / clearWatermarks()
-  ├─ _refreshRendererPolicyForMirror()
+  ├─ _refreshFxRenderPolicy()
   └─ _drawVideosToCanvas(undefined, true)
 ```
 
@@ -567,7 +564,7 @@ worker-webgl2 -> main-webgl2 -> worker-2d -> main-2d
 
 镜像相关的一个实现重点：
 
-- 当启用了源镜像或输出镜像时，`MediaEffectsComposer` 会通过 `_refreshRendererPolicyForMirror()` 更新 `forceMainThreadRenderer`
+- 当启用了源镜像、输出镜像或源级 AiVB 时，`MediaEffectsComposer` 会通过 `_refreshFxRenderPolicy()` 更新 `forceMainThreadRenderer` / `forceMain2DRenderer`
 - 如当前 renderer 是 Worker 路径，必要时会主动 fallback 到主线程渲染器
 
 这也是为什么镜像配置被统一纳入 `setConfig()` 之后，内部仍需要顺带改渲染策略。
@@ -578,10 +575,9 @@ worker-webgl2 -> main-webgl2 -> worker-2d -> main-2d
 
 ```
 MediaEffectsComposer.js
-  ├── MixerConfig
-  ├── MixerDomAdapter
+  ├── ComposerConfig
   ├── Watermark
-  ├── SourceRegistry
+  ├── Sources
   ├── LayoutEngine
   ├── AudioMixer
   ├── RenderLoop

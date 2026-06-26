@@ -126,7 +126,7 @@ graph TB
 | **一张固定的离屏 canvas**(默认 1280×720) | 不随源数量变化;坐标计算稳定;captureStream/Insertable 都认这一张 canvas |
 | **布局计算与绘制完全解耦** | LayoutEngine 只产 `{items:[{draw:{x,y,w,h}}]}`,四种渲染器(Canvas2D/WebGL2×主/Worker)共用同一份布局结果 |
 | **渲染后端"可插拔 + 自动降级"** | 浏览器能力差异巨大(OffscreenCanvas、WebGL2、Worker),需要运行时探测+故障降级链 |
-| **MediaEffectsComposer 是"薄编排者"** | 它只做组装和委派,真正干活的是子模块 |
+| **MediaEffectsComposer 是"总编排者"** | 它负责组装与对外 API 收口,真正的绘制/音频/水印/AiVB 细节下沉到子模块 |
 | **纯函数配置归一化(ComposerConfig)** | 所有 `normalize*` 都是纯函数,易于测试、防御性编程 |
 | **统一 Issue 上报通道** | 所有子模块通过注入的 `onIssue` 回调上报问题,汇聚到一处再冒泡到 RTCSession 事件 |
 
@@ -164,8 +164,7 @@ MediaEffectsComposer/
 
 | 模块 | 职责 |
 |---|---|
-| **MediaEffectsComposer** | 门面,把 `appendStream/removeStream/clearStreams` 别名到 Runtime 的方法(向后兼容旧 API) |
-| **MediaEffectsComposer** | 核心大脑。构造所有子模块、编排公开 API、提供"委派 get 属性"让旧代码访问子模块状态 |
+| **MediaEffectsComposer** | 核心大脑。构造所有子模块、编排公开 API,并在类尾部保留 `appendStream/removeStream/clearStreams` 等旧别名 |
 | **ComposerConfig** | 纯函数集:`create/normalize*`,把外部杂乱配置统一成内部规范对象 |
 | **Sources** | 输入源的"真相之源"。维护源列表、分配 slot、生成 ID、提供 `onBeforeRemove/onAfterRemove` 回调钩子 |
 | **LayoutEngine** | 按 slot + 画布比例算出网格(cols×rows),为每路视频算等比缩放的 draw rect;纯几何,不碰渲染 |
@@ -195,9 +194,8 @@ graph TD
     %% 外部
     EXT["RTCSession/MediaPipeline<br/>调用方"]
 
-    %% 门面
+    %% 主类
     MEC["MediaEffectsComposer"]
-    CRT["MediaEffectsComposer"]
     CFG["ComposerConfig"]
     ISS["MediaEffectsIssue<br/>问题上报工具"]
     LOG["Logger"]
@@ -225,17 +223,16 @@ graph TD
     SC["AiVBSegmentationCommon"]
 
     EXT -->|"new / getMixedStream"| MEC
-    MEC -->|"extends"| CRT
 
-    CRT --> SS
-    CRT --> LE
-    CRT --> RL
-    CRT --> AM
-    CRT --> OM
-    CRT --> WM
-    CRT --> AVB
-    CRT --> CFG
-    CRT --> ISS
+    MEC --> SS
+    MEC --> LE
+    MEC --> RL
+    MEC --> AM
+    MEC --> OM
+    MEC --> WM
+    MEC --> AVB
+    MEC --> CFG
+    MEC --> ISS
 
     RL --> RF
     RF --> M2D
@@ -406,17 +403,16 @@ sequenceDiagram
     participant AVB as AiVBState
 
     App->>MEC: new MediaEffectsComposer(streams, options)
-    MEC->>CRT: extends(构造)
-    Note over CRT: ① 参数安全守卫<br/>videos 统一为数组
-    CRT->>CRT: ComposerConfig.create(options)<br/>② 配置归一化
+    Note over MEC: ① 参数安全守卫<br/>videos 统一为数组
+    MEC->>MEC: ComposerConfig.create(options)<br/>② 配置归一化
     CRT->>AVB: new AiVBState
     CRT->>WM: new Watermark
     CRT->>CRT: document.createElement('canvas')<br/>③ 创建离屏 canvas
     CRT->>SS: new Sources(注入回调链)
     Note right of SS: onBeforeRemove=断音频<br/>onAfterRemove=清渲染+清画布
-    CRT->>OM: new OutputStream(canvas, config)
+    MEC->>OM: new OutputStream(canvas, config)
     CRT->>RL: new RenderLoop(注入 createRenderPayload)
-    CRT->>AM: new AudioMixer(sourceRegistry)
+    MEC->>AM: new AudioMixer(sourceRegistry)
     CRT->>LE: new LayoutEngine(sourceRegistry, canvas, config)
     CRT->>CRT: _prepareCanvas(设宽高)
     CRT->>WM: setWatermarks(异步加载)
@@ -635,12 +631,6 @@ config:
 ---
 classDiagram
     class MediaEffectsComposer {
-        +appendStream(videos, opts)
-        +removeStream(target)
-        +clearStreams()
-    }
-
-    class MediaEffectsComposer {
         -_config : Object
         -_sourceRegistry : Sources
         -_renderLoop : RenderLoop
@@ -677,7 +667,6 @@ classDiagram
         +getMaxSources() 9
     }
 
-    MediaEffectsComposer --|> MediaEffectsComposer : extends
     MediaEffectsComposer ..> ComposerConfig : 使用纯函数
 ```
 

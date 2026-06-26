@@ -129,9 +129,17 @@ class MockAudioWorkletNode extends MockAudioNode
     this.options = options;
     this.port = {
       messages    : [],
+      onmessage   : null,
       postMessage : (message) =>
       {
         this.port.messages.push(message);
+      },
+      emitMessage : (message) =>
+      {
+        if (typeof this.port.onmessage === 'function')
+        {
+          this.port.onmessage({ data: message });
+        }
       }
     };
   }
@@ -364,6 +372,9 @@ async function testProcessFailsWhenAssetFetchFails()
     assert.strictEqual(issues[0].stage, 'asset-fetch');
     assert.strictEqual(issues[0].fallbackApplied, true);
     assert.strictEqual(issues[0].degraded, true);
+    assert.strictEqual(engine.getIssues().length, 1);
+    assert.strictEqual(engine.getLastIssue().stage, 'asset-fetch');
+    assert.strictEqual(engine.getCapabilityReport().runtime.issueCount, 1);
   }
   finally
   {
@@ -394,6 +405,47 @@ async function testProcessFailsWhenWorkletRegistrationFails()
   }
 }
 
+async function testWorkletPortWarningIsRecordedInEngineIssueHistory()
+{
+  resetMockState();
+  const issues = [];
+  const restore = installBrowserMocks();
+
+  try
+  {
+    const Engine = loadEngine();
+    const engine = new Engine({
+      onIssue : (issue) =>
+      {
+        issues.push(issue);
+      }
+    });
+
+    await engine.process(createInputStream().stream);
+    engine.getProcessor().workletNode.port.emitMessage({
+      type    : 'AINS_UNSUPPORTED_CHANNEL_LAYOUT',
+      message : 'Bypassed AI noise suppression for unsupported multi-channel input',
+      details : {
+        inputChannelCount  : 2,
+        outputChannelCount : 2
+      }
+    });
+
+    assert.strictEqual(issues.length, 1);
+    assert.strictEqual(issues[0].stage, 'unsupported-channel-layout');
+    assert.strictEqual(issues[0].severity, 'warn');
+    assert.strictEqual(engine.getIssues().length, 1);
+    assert.strictEqual(engine.getLastIssue().stage, 'unsupported-channel-layout');
+    assert.strictEqual(engine.getLastIssue().details.inputChannelCount, 2);
+
+    await engine.destroy();
+  }
+  finally
+  {
+    restore();
+  }
+}
+
 async function run()
 {
   let passed = 0;
@@ -404,7 +456,8 @@ async function run()
     { name: 'testProcessBuildsProcessedStreamAndPreservesVideoTrack', fn: testProcessBuildsProcessedStreamAndPreservesVideoTrack },
     { name: 'testReplaceAudioTrackPreservesVideoTrack', fn: testReplaceAudioTrackPreservesVideoTrack },
     { name: 'testProcessFailsWhenAssetFetchFails', fn: testProcessFailsWhenAssetFetchFails },
-    { name: 'testProcessFailsWhenWorkletRegistrationFails', fn: testProcessFailsWhenWorkletRegistrationFails }
+    { name: 'testProcessFailsWhenWorkletRegistrationFails', fn: testProcessFailsWhenWorkletRegistrationFails },
+    { name: 'testWorkletPortWarningIsRecordedInEngineIssueHistory', fn: testWorkletPortWarningIsRecordedInEngineIssueHistory }
   ];
 
   for (const test of TESTS)

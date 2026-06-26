@@ -81,15 +81,15 @@
 <h3 id="快速理解路线">快速理解路线</h3>
 <p>如果只想先建立整体模型，不建议从所有文件逐个读起。建议按下面顺序阅读：</p>
 <ol>
-<li><strong>入口层</strong>: <code>lib/Mixer.js</code> 只做导出，实际实现入口是 <code>lib/MediaEffectsComposer/Core/MediaEffectsComposer.js</code>。</li>
-<li><strong>核心链路</strong>: 输入源由 <code>SourceRegistry</code> 管理；视频画面由 <code>LayoutEngine → RenderLoop → createRenderer</code> 处理；音频由 <code>AudioMixer → OutputStream</code> 处理。</li>
+<li><strong>入口层</strong>: 实际实现入口是 <code>lib/MediaEffectsComposer/MediaEffectsComposer.js</code>，SDK 对外由 <code>lib/JsSIP.js</code> 暴露为 <code>CRTC.MediaEffectsComposer</code> / <code>CRTC.Mixer</code>。</li>
+<li><strong>核心链路</strong>: 输入源由 <code>Sources</code> 管理；视频画面由 <code>LayoutEngine → RenderLoop → createRenderer</code> 处理；音频由 <code>AudioMixer → OutputStream</code> 处理。</li>
 <li><strong>渲染实现</strong>: <code>MainCanvas2DRenderer</code> 是兜底实现；<code>MainWebGL2Renderer</code> 和 <code>WorkerRenderer</code> 是性能优化实现。</li>
 <li><strong>运行状态</strong>: <code>getSources()</code> 查看输入源状态，<code>getRenderInfo()</code> 查看视频渲染状态，<code>getAudioInfo()</code> 查看音频混音状态。</li>
 <li><strong>生命周期</strong>: <code>appendStream()</code> 添加源，<code>getMixedStream()/getVideoStream()</code> 创建输出流，<code>stop()</code> 释放资源且实例不可复用。</li>
 </ol>
 <h3 id="模块职责总览">模块职责总览</h3>
 <pre><code>MediaEffectsComposer 是总调度：
-  SourceRegistry 管输入源
+  Sources 管输入源
   LayoutEngine 只算每路视频画在哪里
   RenderLoop 负责每一帧什么时候画
   createRenderer/Renderer 负责怎么画
@@ -99,14 +99,14 @@
 <div class="table-wrap"><table>
 <thead><tr><th>追踪目标</th><th>起点</th><th>继续查看</th></tr></thead>
 <tbody>
-<tr><td>构造 <code>CRTC.Mixer</code> 时初始化了哪些子模块</td><td><code>MediaEffectsComposer.constructor()</code></td><td><code>MixerConfig.create()</code>、各子模块构造函数</td></tr>
-<tr><td>添加输入源后的处理流程</td><td><code>MediaEffectsComposer.appendStream()</code></td><td><code>SourceRegistry.add()</code>、<code>AudioMixer.scheduleRefresh()</code>、<code>RenderLoop.start()</code></td></tr>
-<tr><td>slot 自动分配和同 slot 覆盖规则</td><td><code>SourceRegistry._getNextSlot()</code> / <code>SourceRegistry.add()</code></td><td><code>MixerConfig.normalizeSlot()</code>、<code>LayoutEngine._calcLayout()</code></td></tr>
+<tr><td>构造 <code>CRTC.Mixer</code> 时初始化了哪些子模块</td><td><code>MediaEffectsComposer.constructor()</code></td><td><code>ComposerConfig.create()</code>、各子模块构造函数</td></tr>
+<tr><td>添加输入源后的处理流程</td><td><code>MediaEffectsComposer.addSource()</code></td><td><code>Sources.add()</code>、<code>AudioMixer.scheduleRefresh()</code>、<code>RenderLoop.start()</code></td></tr>
+<tr><td>slot 自动分配和同 slot 覆盖规则</td><td><code>Sources._getNextSlot()</code> / <code>Sources.add()</code></td><td><code>ComposerConfig.normalizeSlot()</code>、<code>LayoutEngine._calcLayout()</code></td></tr>
 <tr><td>单帧视频渲染流程</td><td><code>RenderLoop.renderFrame()</code></td><td><code>LayoutEngine.createRenderPayload()</code>、当前 renderer 的 <code>render()</code></td></tr>
 <tr><td>渲染后端选择和降级规则</td><td><code>createRenderer()</code></td><td><code>WorkerRenderer.init()</code>、<code>MainWebGL2Renderer.init()</code>、<code>MainCanvas2DRenderer.init()</code></td></tr>
 <tr><td>输出 <code>MediaStream</code> 的创建流程</td><td><code>MediaEffectsComposer.getMixedStream()</code></td><td><code>OutputStream.getVideoStream()</code>、<code>AudioMixer.getAudioStream()</code></td></tr>
 <tr><td>后续添加的音频源如何补进已返回的 mixed stream</td><td><code>AudioMixer._connectSource()</code></td><td><code>OutputStream.ensureMixedStreamAudioTrack()</code></td></tr>
-<tr><td>移除输入源时的资源清理流程</td><td><code>MediaEffectsComposer.removeStream()</code></td><td><code>SourceRegistry.remove()</code>、<code>AudioMixer.disconnectSource()</code>、<code>RenderLoop.removeSource()</code></td></tr>
+<tr><td>移除输入源时的资源清理流程</td><td><code>MediaEffectsComposer.removeSource()</code></td><td><code>Sources.remove()</code>、<code>AudioMixer.disconnectSource()</code>、<code>RenderLoop.removeSource()</code></td></tr>
 <tr><td>停止混流器时释放的资源</td><td><code>MediaEffectsComposer.stop()</code></td><td><code>AudioMixer.stop()</code>、<code>RenderLoop.destroy()</code>、<code>OutputStream.stop()</code></td></tr>
 <tr><td>黑屏、无声、渲染降级的排查入口</td><td><code>getRenderInfo()</code> / <code>getAudioInfo()</code></td><td><code>RenderLoop._handleRendererInfo()</code>、<code>AudioMixer._updateAudioInfo()</code></td></tr>
 </tbody></table></div>
@@ -114,8 +114,8 @@
 <div class="table-wrap"><table>
 <thead><tr><th>状态/API</th><th>所属模块</th><th>用来确认</th></tr></thead>
 <tbody>
-<tr><td><code>source.id</code> / <code>source.slot</code> / <code>source.gain</code></td><td><code>SourceRegistry</code></td><td>标识输入源、布局位置和单路音量</td></tr>
-<tr><td><code>source.ownedVideo</code></td><td><code>SourceRegistry</code></td><td>区分内部创建的隐藏 video 和外部传入的 video</td></tr>
+<tr><td><code>source.id</code> / <code>source.slot</code> / <code>source.gain</code></td><td><code>Sources</code></td><td>标识输入源、布局位置和单路音量</td></tr>
+<tr><td><code>source.ownedVideo</code></td><td><code>Sources</code></td><td>区分内部创建的隐藏 video 和外部传入的 video</td></tr>
 <tr><td><code>render payload.items[].draw</code></td><td><code>LayoutEngine</code></td><td>renderer 实际消费的绘制矩形</td></tr>
 <tr><td><code>_animationId</code> / <code>_stopped</code></td><td><code>RenderLoop</code></td><td>rAF 是否仍在调度</td></tr>
 <tr><td><code>actualMode</code> / <code>isFallback</code> / <code>reason</code></td><td>renderer info</td><td>当前实际渲染后端、是否降级、降级原因</td></tr>
@@ -131,7 +131,7 @@
 <tr><td>有画面无声音</td><td><code>getAudioInfo()</code>、源的 <code>hasAudio</code></td><td>是否调用 <code>getMixedStream()</code>、AudioContext 是否 suspended、源是否有 live audio track</td></tr>
 <tr><td>Worker 渲染没有启用</td><td><code>getRenderInfo().actualMode/reason</code></td><td><code>auto</code> 在 Safari/WKWebView 是否走 main-webgl2、Worker 是否异步进入 <code>worker-failed</code></td></tr>
 <tr><td>新增源没有进入画面</td><td><code>getSources()</code> 的 <code>slot</code> 和 <code>hasVideo</code></td><td>slot 是否被覆盖、stream 是否 active、video 是否已有尺寸</td></tr>
-<tr><td>remove 后仍有残留</td><td><code>SourceRegistry.remove()</code> 回调链</td><td>音频节点是否断开、renderer 纹理是否释放、输出流是否仍持有旧 track</td></tr>
+<tr><td>remove 后仍有残留</td><td><code>Sources.remove()</code> 回调链</td><td>音频节点是否断开、renderer 纹理是否释放、输出流是否仍持有旧 track</td></tr>
 </tbody></table></div>
 <h3 id="目录结构">目录结构</h3>
 <pre><code>lib/
@@ -140,12 +140,15 @@
 ├── Core/                       # 核心逻辑层
 │   ├── MediaEffectsComposer.js            # 中枢控制器
 │   ├── MixerConfig.js                # 配置归一化（纯函数）
-│   ├── SourceRegistry.js             # 输入源注册表
-│   ├── LayoutEngine.js               # 布局引擎
-│   ├── MixerDomAdapter.js            # DOM 元素创建适配器
-│   ├── AudioMixer.js                 # WebAudio 混音
-│   ├── OutputStream.js        # 输出流管理
-│   └── RenderLoop.js                 # 渲染循环（rAF 驱动）
+├── MediaEffectsComposer.js          # 中枢控制器
+├── ComposerConfig.js                # 配置归一化（纯函数）
+├── Sources.js                       # 输入源注册表
+├── LayoutEngine.js                  # 布局引擎
+├── AudioMixer.js                    # WebAudio 混音
+├── OutputStream.js                  # 输出流管理
+├── RenderLoop.js                    # 渲染循环（rAF 驱动）
+├── Watermark.js                     # 水印管理
+└── AIVirtualBackground/             # AiVB 相关
 │
 └── Renderers/                   # 渲染后端层
     ├── RenderLoop.js            # 渲染器工厂（自动选择/降级）
@@ -160,7 +163,7 @@
 <h3 id="核心数据流">核心数据流</h3>
 <pre><code>输入源 (MediaStream / HTMLMediaElement)
       │
-      ├──▶ [SourceRegistry] ──▶ 源增删管理、video 元素创建
+      ├──▶ [Sources] ──▶ 源增删管理、video 元素创建
       │
       ├──▶ [AudioMixer] ──▶ WebAudio 混音 ──▶ MediaStreamAudioDestinationNode
       │                           │
@@ -190,51 +193,31 @@
 <hr>
 <h2 id="文件功能分析">文件功能分析</h2>
 <h3 id="入口">入口</h3>
-<h4 id="lib-mixer.js-—-模块入口-barrel"><a href="../lib/Mixer.js">lib/Mixer.js</a> — 模块入口（barrel）</h4>
-<pre><code class="language-javascript">module.exports = require('./Core/MediaEffectsComposer');</code></pre>
-<ul>
-<li><strong>职责</strong>: 向后兼容的 barrel 文件。旧代码 <code>require('./Mixer')</code> 仍能工作。</li>
-<li><strong>实际类名</strong>: <code>MediaEffectsComposer</code>（即 MediaEffectsComposer 中 <code>module.exports</code> 的 class）。</li>
-</ul>
-<hr>
-<h3 id="Core-层">Core 层</h3>
-<h4 id="lib-Core-mixercontroller.js-—-混流控制器-中枢"><a href="../lib/MediaEffectsComposer/Core/MediaEffectsComposer.js">lib/MediaEffectsComposer/Core/MediaEffectsComposer.js</a> — 混流控制器（中枢）</h4>
+<h4 id="lib-mediacontroller-js-—-混流控制器-中枢"><a href="../lib/MediaEffectsComposer/MediaEffectsComposer.js">lib/MediaEffectsComposer/MediaEffectsComposer.js</a> — 混流控制器（中枢）</h4>
 <p><strong>核心类</strong>: <code>MediaEffectsComposer</code></p>
 <h5 id="构造流程">构造流程</h5>
 <pre><code>constructor(videos, options)
   │
-  ├─ MixerConfig.create(options) → 归一化配置
+  ├─ ComposerConfig.create(options) → 归一化配置
   │
-  ├─ new MixerDomAdapter({ config, logger })
-  │   └─ adapter.createCanvas() → 离屏 canvas
-  │
-  ├─ new SourceRegistry({ logger, callbacks })
-  │   └─ 源增删、video 元素创建、音频/渲染器回调
-  │
+  ├─ ComposerConfig.create(options) → 归一化配置
+  ├─ new Sources({ logger, callbacks })
   ├─ new OutputStream({ canvas, config, logger })
-  │   └─ canvas.captureStream() 输出管理
-  │
   ├─ new RenderLoop({ canvas, config, callbacks })
-  │   └─ rAF 驱动、renderer 生命周期
-  │
   ├─ new AudioMixer({ sourceRegistry, callbacks })
-  │   └─ WebAudio 混音
-  │
   └─ new LayoutEngine({ sourceRegistry, canvas, config, callbacks })
-      └─ 布局计算
-      │
-      └─ appendStream(videos) → 添加初始源</code></pre>
+      └─ addSource(videos) → 添加初始源</code></pre>
 <h5 id="公开-api">公开 API</h5>
 <div class="table-wrap"><table>
 <thead><tr><th>方法</th><th>功能</th><th>调用链路</th></tr></thead>
 <tbody>
-<tr><td><code>appendStream(videos, options?)</code></td><td>添加输入源</td><td>→ SourceRegistry.add() → AudioMixer.scheduleRefresh() → RenderLoop.start()</td></tr>
-<tr><td><code>removeStream(streamOrId)</code></td><td>移除一路源</td><td>→ SourceRegistry.find() → SourceRegistry.remove()</td></tr>
-<tr><td><code>clearStreams()</code></td><td>移除所有源</td><td>→ 遍历 SourceRegistry.remove()</td></tr>
+<tr><td><code>addSource(videos, options?)</code></td><td>添加输入源</td><td>→ Sources.add() → _scheduleAudioRefresh() → RenderLoop.start()</td></tr>
+<tr><td><code>removeSource(streamOrId)</code></td><td>移除一路源</td><td>→ Sources.find() → Sources.remove()</td></tr>
+<tr><td><code>clearSources()</code></td><td>移除所有源</td><td>→ 遍历 Sources.remove()</td></tr>
 <tr><td><code>getMixedStream()</code></td><td>获取完整混合流（视频+音频）</td><td>→ getVideoStream() → setMixedStream() → getAudioStream() → addAudioTracksToStream()</td></tr>
 <tr><td><code>getVideoStream()</code></td><td>仅获取视频流</td><td>→ OutputStream.getVideoStream() → 启动 RenderLoop</td></tr>
 <tr><td><code>getAudioStream()</code></td><td>仅获取音频流</td><td>→ AudioMixer.getAudioStream()</td></tr>
-<tr><td><code>getSources()</code></td><td>获取源快照</td><td>→ SourceRegistry.getSnapshot()</td></tr>
+<tr><td><code>getSources()</code></td><td>获取源快照</td><td>→ Sources.getSnapshot()</td></tr>
 <tr><td><code>getRenderInfo()</code></td><td>获取渲染状态</td><td>→ RenderLoop.getRenderInfo() → renderer.getInfo()</td></tr>
 <tr><td><code>getAudioInfo()</code></td><td>获取音频状态</td><td>→ AudioMixer.getInfo()</td></tr>
 <tr><td><code>stop()</code></td><td>销毁混流器</td><td>→ RenderLoop.stop() → clearStreams() → AudioMixer.stop() → RenderLoop.destroy() → OutputStream.stop()</td></tr>
@@ -245,7 +228,7 @@
 <li><code>_destroyed</code>: 构造时为 false，stop() 后设为 true，AudioMixer 也通过 <code>getDestroyed</code> 回调检测此标记</li>
 </ul>
 <hr>
-<h4 id="lib-Core-mixerconfig.js-—-配置归一化"><a href="../lib/MediaEffectsComposer/Core/MixerConfig.js">lib/MediaEffectsComposer/Core/MixerConfig.js</a> — 配置归一化</h4>
+<h4 id="lib-composerconfig-js-—-配置归一化"><a href="../lib/MediaEffectsComposer/ComposerConfig.js">lib/MediaEffectsComposer/ComposerConfig.js</a> — 配置归一化</h4>
 <p><strong>纯函数工具模块</strong>，所有方法无副作用。</p>
 <div class="table-wrap"><table>
 <thead><tr><th>方法</th><th>功能</th><th>归一化规则</th></tr></thead>
@@ -259,7 +242,7 @@
 </tbody></table></div>
 <p><strong>默认配置</strong>: width=1280, height=720, fps=null, backgroundColor='#000', audioGain=0.8, renderMode='auto', dropFrameWhenBusy=true, maxFrameQueue=1, preserveDrawingBuffer=true</p>
 <hr>
-<h4 id="lib-Core-sourceregistry.js-—-输入源注册表"><a href="../lib/MediaEffectsComposer/Core/SourceRegistry.js">lib/MediaEffectsComposer/Core/SourceRegistry.js</a> — 输入源注册表</h4>
+<h4 id="lib-sources-js-—-输入源注册表"><a href="../lib/MediaEffectsComposer/Sources.js">lib/MediaEffectsComposer/Sources.js</a> — 输入源注册表</h4>
 <p><strong>职责</strong>: 管理所有参与混流的输入源生命周期。</p>
 <p><strong>source 对象结构</strong>:</p>
 <pre><code class="language-javascript">{
@@ -636,21 +619,20 @@ Worker 线程（workerScript）
         └─ canvas.stream = null</code></pre>
 <hr>
 <h2 id="分层依赖图">分层依赖图</h2>
-<pre><code>lib/Mixer.js (barrel)
+<pre><code>lib/JsSIP.js (SDK exports)
     │
-    └─ lib/MediaEffectsComposer/Core/MediaEffectsComposer.js (中枢控制器)
+    └─ lib/MediaEffectsComposer/MediaEffectsComposer.js (中枢控制器)
           │
           ├──▶ MixerConfig                     (纯函数, 无依赖)
-          ├──▶ MixerDomAdapter                 (DOM, 无依赖)
-          │
-          ├──▶ SourceRegistry                  ──依赖──▶ MixerDomAdapter.createVideoElement()
+          ├──▶           │
+          ├──▶ Sources                         ──依赖──▶ createVideoElement()
           │                                              MixerConfig (gain/slot 归一化)
           │                                              MediaEffectsComposer (onBefore/AfterRemove)
           │
-          ├──▶ AudioMixer                      ──依赖──▶ SourceRegistry (源遍历)
+          ├──▶ AudioMixer                      ──依赖──▶ Sources (源遍历)
           │                                              MediaEffectsComposer (getDestroyed/回调)
           │
-          ├──▶ LayoutEngine                    ──依赖──▶ SourceRegistry (源列表)
+          ├──▶ LayoutEngine                    ──依赖──▶ Sources (源列表)
           │                                              MediaEffectsComposer (prepare/resize 回调)
           │
           ├──▶ RenderLoop                      ──依赖──▶ createRenderer
@@ -687,13 +669,12 @@ lib/MediaEffectsComposer/Renderers/
 <div class="table-wrap"><table>
 <thead><tr><th>模式</th><th>使用位置</th><th>说明</th></tr></thead>
 <tbody>
-<tr><td><strong>Mediator（中介者）</strong></td><td>MediaEffectsComposer</td><td>协调 SourceRegistry, AudioMixer, RenderLoop, OutputStream, LayoutEngine 之间的交互</td></tr>
+<tr><td><strong>Mediator（中介者）</strong></td><td>MediaEffectsComposer</td><td>协调 Sources, AudioMixer, RenderLoop, OutputStream, LayoutEngine 之间的交互</td></tr>
 <tr><td><strong>Strategy（策略）</strong></td><td>createRenderer</td><td>可切换多种渲染后端（main-2d / main-webgl2 / worker-*）</td></tr>
 <tr><td><strong>Template Method（模板方法）</strong></td><td>rendererBase</td><td>定义 <code>init() → render() → destroy()</code> 标准接口，子类各自实现</td></tr>
-<tr><td><strong>Observer（观察者）</strong></td><td>SourceRegistry 回调链</td><td>onBeforeRemove → 断音频, onAfterRemove → 清理渲染器</td></tr>
-<tr><td><strong>Adapter（适配器）</strong></td><td>MixerDomAdapter</td><td>将 DOM 创建操作统一封装，便于测试和未来迁移</td></tr>
+<tr><td><strong>Observer（观察者）</strong></td><td>Sources 回调链</td><td>onBeforeRemove → 断音频, onAfterRemove → 清理渲染器</td></tr>
 <tr><td><strong>Value Object（值对象）</strong></td><td>MixerConfig</td><td>纯函数归一化配置参数，无副作用</td></tr>
-<tr><td><strong>Registry（注册表）</strong></td><td>SourceRegistry</td><td>统一管理源对象的增删查</td></tr>
+<tr><td><strong>Registry（注册表）</strong></td><td>Sources</td><td>统一管理源对象的增删查</td></tr>
 <tr><td><strong>Dependency Injection（依赖注入）</strong></td><td>所有模块的 constructor</td><td>每个模块通过构造参数接收依赖</td></tr>
 <tr><td><strong>Queue + Drop（队列+丢帧）</strong></td><td>WorkerRenderer</td><td>Worker 忙时基于 <code>dropFrameWhenBusy</code> 策略丢帧</td></tr>
 </tbody></table></div>

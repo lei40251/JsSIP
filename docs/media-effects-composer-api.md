@@ -67,7 +67,7 @@ const composer = new CRTC.MediaEffectsComposer(
     backgroundColor: '#000',
     sourceMirror: false,
     mirror: false,
-    mirrorWatermarksWithOutput: true,
+    mirrorWatermarksWithOutput: false,
     watermarks: []
   }
 );
@@ -110,9 +110,16 @@ const composer = new CRTC.MediaEffectsComposer(localStream, {
 | `height` | `number` | `720` | 输出视频高度（px） |
 | `fps` | `number` | `15` | 输出帧率 |
 | `backgroundColor` | `string` | `'#000'` | 画布底色 |
+| `audioGain` | `number` | `0.8` | 全局默认音量增益 |
+| `renderMode` | `string` | `'auto'` | 渲染后端：`auto` / `worker-webgl2` / `main-webgl2` / `worker-2d` / `main-2d` |
+| `workerUrl` | `string \| null` | `null` | 外部 Worker 脚本地址；不传时默认走 Blob Worker |
+| `dropFrameWhenBusy` | `boolean` | `true` | Worker 忙时是否丢弃当前帧，避免延迟累积 |
+| `maxFrameQueue` | `number` | `1` | 预留帧队列长度，当前默认只保留 1 帧 |
+| `enableInsertable` | `boolean` | `false` | 是否优先使用 Insertable Streams 导出视频 |
+| `manualCaptureFrameControl` | `boolean` | `true` | captureStream 路径下是否优先使用 `captureStream(0)+requestFrame` |
 | `sourceMirror` | `boolean` | `false` | 所有源默认镜像，属于源级处理，发生在布局进入最终输出前 |
 | `mirror` | `boolean` | `false` | 构造期整体输出镜像，影响最终合成输出流，不等同于本地预览 CSS 镜像 |
-| `mirrorWatermarksWithOutput` | `boolean` | `true` | 当整体输出镜像开启时，输出级水印是否跟随一起翻转 |
+| `mirrorWatermarksWithOutput` | `boolean` | `false` | 当整体输出镜像开启时，输出级水印是否跟随一起翻转 |
 | `watermarks` | `Array<Object>` | `[]` | 初始水印配置 |
 | `sources` | `Array<Object> \| null` | `null` | 初始源配置数组，按输入源顺序对应，如 `sourceMirror`、`aiVirtualBackground` |
 
@@ -351,7 +358,7 @@ console.log(state.audio);
     outputMirror: false,
     sourceMirror: false,
     sourceMirrorOverrides: {},
-    mirrorWatermarksWithOutput: true,
+    mirrorWatermarksWithOutput: false,
     watermarks: []
   },
   render: {
@@ -486,7 +493,7 @@ composer.stop();
 | `getRenderInfo()` | `getState().render` |
 | `getAudioInfo()` | `getState().audio` |
 | `getMixedStream()` | `await getOutput({ type: 'mixed' })` |
-| `getVideoStream()` | `await getOutput({ type: 'video' })` |
+| `getVideoStream()` | `getOutput({ type: 'video' })` |
 | `getAudioStream(options)` | `await getOutput({ type: 'audio', ...options })` |
 | `getIsolatedSubmixAudioStream(options)` | `await getOutput({ type: 'audio', isolated: true, ...options })` |
 | `releaseSubmixAudioStream(options)` | `releaseOutput({ type: 'audio', ...options })` |
@@ -538,7 +545,7 @@ console.log('audio', state.audio);
 ```js
 await composer.setConfig({
   outputMirror: true,
-  mirrorWatermarksWithOutput: true,
+  mirrorWatermarksWithOutput: false,
   sourceMirrorOverrides: {
     0: true
   },
@@ -613,3 +620,14 @@ composer.clearSourceAiVirtualBackground(0);
 延迟初始化。只有请求音频输出时才会创建音频链路，例如：
 - `await getOutput({ type: 'audio' })`
 - `await getOutput({ type: 'mixed' })`
+
+
+### Q: `RTCSession` 里传 `mediaEffectsComposer` 时，会把通话音频也一起混掉吗？
+
+不会。当前 `RTCSession` 集成路径里，`MediaPipeline.applyMediaEffectsComposerOnSdkGumStream()` 默认只取 composer 的视频输出，再把原始输入流的音轨拼回去。
+
+如果你需要多源音频混音或子混音，请直接使用独立的 `MediaEffectsComposer` 实例并显式调用 `getOutput({ type: 'mixed' })` / `getOutput({ type: 'audio' })`。
+
+### Q: `forceNoSwapWH` 是 composer 自身的构造参数吗？
+
+不是。它只在 `RTCSession` 集成路径里用于 `buildMediaEffectsComposerCtorOptions()` 的宽高推导，控制移动端是否跳过宽高交换；这个字段不会继续下传到 `new MediaEffectsComposer(..., options)`。

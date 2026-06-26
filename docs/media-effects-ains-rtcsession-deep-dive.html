@@ -493,7 +493,7 @@
 
       <h3>4.1 <code>lib/MediaEffectsComposer/MediaEffectsComposer.js</code></h3>
       <p>
-        这是一个很薄的兼容层。它继承 <code>MediaEffectsComposer</code>，只把旧名称映射到新名称：
+        这是当前真正的主实现文件，不是单独的“门面壳”。它在同一个类里同时承担：构造子模块、收口对外 API、以及在类尾部保留旧名称兼容别名。
       </p>
       <table>
         <thead>
@@ -507,19 +507,19 @@
         <tbody>
           <tr>
             <td><code>appendStream()</code></td>
-            <td>5-8</td>
+            <td>1914-1917</td>
             <td>转调 <code>addSource()</code></td>
             <td>兼容老调用</td>
           </tr>
           <tr>
             <td><code>removeStream()</code></td>
-            <td>10-13</td>
+            <td>1919-1922</td>
             <td>转调 <code>removeSource()</code></td>
             <td>兼容老调用</td>
           </tr>
           <tr>
             <td><code>clearStreams()</code></td>
-            <td>15-18</td>
+            <td>1924-1927</td>
             <td>转调 <code>clearSources()</code></td>
             <td>兼容老调用</td>
           </tr>

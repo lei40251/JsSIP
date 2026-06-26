@@ -570,7 +570,7 @@
       <span class="eyebrow">Overview</span>
       <h2>它不是“纯混音器”，而是一条媒体编排管线</h2>
       <p><strong>MediaEffectsComposer</strong> 的核心职责是把多路 <code>MediaStream</code> / <code>HTMLVideoElement</code> 编排成一个统一输出流。它不仅负责把视频画到一张画布上，还负责源注册、布局计算、音频子混音、输出流导出、水印、源级镜像，以及 AI 虚拟背景。</p>
-      <p>如果你是为了读源码，这个模块应该从 <code>Core/MediaEffectsComposer.js</code> 往下看；如果你是为了接 SDK，用法上要先分清 <strong>独立实例用法</strong> 和 <strong>RTCSession 内部接管用法</strong>。</p>
+      <p>如果你是为了读源码，这个模块应该从 <code>lib/MediaEffectsComposer/MediaEffectsComposer.js</code> 往下看；如果你是为了接 SDK，用法上要先分清 <strong>独立实例用法</strong> 和 <strong>RTCSession 内部接管用法</strong>。</p>
 
       <div class="hero-grid">
         <div class="hero-card">
@@ -660,7 +660,7 @@ await composer.setWatermarks({
             <li>看 RTCSession 集成时，它替换的是视频轨还是整条流。</li>
           </ul>
           <div class="roadmap-files">
-            <span>Core/MediaEffectsComposer.js</span>
+            <span>lib/MediaEffectsComposer/MediaEffectsComposer.js</span>
             <span>RTCSession/MediaPipeline.js</span>
           </div>
         </div>
@@ -673,9 +673,9 @@ await composer.setWatermarks({
             <li>看布局信息如何挂到 source 上，最终进入 render payload。</li>
           </ul>
           <div class="roadmap-files">
-            <span>Core/SourceRegistry.js</span>
-            <span>Core/LayoutEngine.js</span>
-            <span>Core/RenderLoop.js</span>
+            <span>lib/MediaEffectsComposer/Sources.js</span>
+            <span>lib/MediaEffectsComposer/LayoutEngine.js</span>
+            <span>lib/MediaEffectsComposer/RenderLoop.js</span>
           </div>
         </div>
 
@@ -687,8 +687,8 @@ await composer.setWatermarks({
             <li>再看 RenderLoop 里的故障降级。</li>
           </ul>
           <div class="roadmap-files">
-            <span>Renderers/RenderLoop.js</span>
-            <span>Core/RenderLoop.js</span>
+            <span>lib/MediaEffectsComposer/RenderLoop.js</span>
+            <span>lib/MediaEffectsComposer/RenderLoop.js</span>
             <span>Renderers/WorkerRenderer.js</span>
           </div>
         </div>
@@ -699,12 +699,12 @@ await composer.setWatermarks({
           <ul>
             <li>镜像主要看 config 和 slot override。</li>
             <li>水印看 Watermark。</li>
-            <li>虚拟背景看 SourceAiVBManager 和 AIVirtualBackground 目录。</li>
+            <li>虚拟背景看 AiVBState 和 AIVirtualBackground 目录。</li>
           </ul>
           <div class="roadmap-files">
-            <span>Core/ComposerConfig.js</span>
-            <span>Core/Watermark.js</span>
-            <span>Core/SourceAiVBManager.js</span>
+            <span>lib/MediaEffectsComposer/ComposerConfig.js</span>
+            <span>lib/MediaEffectsComposer/Watermark.js</span>
+            <span>lib/MediaEffectsComposer/AIVirtualBackground/AiVBState.js</span>
             <span>AIVirtualBackground/*</span>
           </div>
         </div>
@@ -753,22 +753,22 @@ mixedStream.addTrack(mixedVideoTrack);
         <div class="card span-7">
           <h3>推荐阅读顺序</h3>
           <ol>
-            <li><code>lib/MediaEffectsComposer/index.js</code>
-              <div class="path">入口，仅导出主类</div>
+            <li><code>lib/MediaEffectsComposer/MediaEffectsComposer.js</code>
+              <div class="path">主实现入口，公开 API 和内部编排都在这里</div>
             </li>
-            <li><code>lib/MediaEffectsComposer/Core/MediaEffectsComposer.js</code>
+            <li><code>lib/MediaEffectsComposer/MediaEffectsComposer.js</code>
               <div class="path">主控类，几乎所有公开 API 都在这里收口</div>
             </li>
-            <li><code>Core/ComposerConfig.js</code> 和 <code>Core/SourceRegistry.js</code>
+            <li><code>lib/MediaEffectsComposer/ComposerConfig.js</code> 和 <code>lib/MediaEffectsComposer/Sources.js</code>
               <div class="path">先理解配置和源结构，再看渲染</div>
             </li>
-            <li><code>Core/LayoutEngine.js</code> + <code>Core/RenderLoop.js</code>
+            <li><code>lib/MediaEffectsComposer/LayoutEngine.js</code> + <code>lib/MediaEffectsComposer/RenderLoop.js</code>
               <div class="path">知道帧是怎么组织、怎么驱动绘制的</div>
             </li>
-            <li><code>Renderers/RenderLoop.js</code> 和各 renderer
+            <li><code>lib/MediaEffectsComposer/RenderLoop.js</code> 和各 renderer
               <div class="path">看 auto 模式的真实降级策略</div>
             </li>
-            <li><code>Core/SourceAiVBManager.js</code> + <code>AIVirtualBackground/*</code>
+            <li><code>lib/MediaEffectsComposer/AIVirtualBackground/AiVBState.js</code> + <code>AIVirtualBackground/*</code>
               <div class="path">看虚拟背景配置、runtime 启停、背景图缓存</div>
             </li>
           </ol>
@@ -777,17 +777,14 @@ mixedStream.addTrack(mixedVideoTrack);
         <div class="card span-5">
           <h3>目录结构</h3>
 <pre><code>lib/MediaEffectsComposer/
-├── index.js
-├── Core/
-│   ├── MediaEffectsComposer.js
-│   ├── ComposerConfig.js
-│   ├── SourceRegistry.js
-│   ├── LayoutEngine.js
-│   ├── RenderLoop.js
-│   ├── OutputStream.js
-│   ├── AudioComposer.js
-│   ├── Watermark.js
-│   ├── SourceAiVBManager.js
+├── MediaEffectsComposer.js
+├── ComposerConfig.js
+├── Sources.js
+├── LayoutEngine.js
+├── RenderLoop.js
+├── OutputStream.js
+├── AudioMixer.js
+├── Watermark.js
 ├── Renderers/
 │   ├── RenderLoop.js
 │   ├── rendererBase.js
@@ -798,6 +795,7 @@ mixedStream.addTrack(mixedVideoTrack);
 └── AIVirtualBackground/
     ├── AiVBConfig.js
     ├── AiVBAssetLoader.js
+    ├── AiVBState.js
     └── MediaPipeSegmenterRuntime.js
 </code></pre>
         </div>
@@ -809,7 +807,7 @@ mixedStream.addTrack(mixedVideoTrack);
           <ul class="mini-list">
             <li><code>MediaEffectsComposer.js</code>：公开 API、模块编排。</li>
             <li><code>ComposerConfig.js</code>：构造参数归一化。</li>
-            <li><code>SourceRegistry.js</code>：每一路 source 的生命周期。</li>
+            <li><code>Sources.js</code>：每一路 source 的生命周期。</li>
           </ul>
         </div>
         <div class="card span-4">
@@ -824,8 +822,8 @@ mixedStream.addTrack(mixedVideoTrack);
           <h4>效果层</h4>
           <ul class="mini-list">
             <li><code>Watermark.js</code>：水印规范化、资源预加载。</li>
-            <li><code>SourceAiVBManager.js</code>：源级虚拟背景和 runtime 状态。</li>
-            <li><code>AudioComposer.js</code>：音频混流和子混音。</li>
+            <li><code>AiVBState.js</code>：源级虚拟背景和 runtime 状态。</li>
+            <li><code>AudioMixer.js</code>：音频混流和子混音。</li>
           </ul>
         </div>
       </div>
@@ -871,7 +869,7 @@ mixedStream.addTrack(mixedVideoTrack);
     <section id="render-path">
       <h2>渲染路径</h2>
       <p class="section-lead">读这一节时，建议你同时打开 <code>RenderLoop.js</code> 和 <code>RenderLoop.js</code>。前者决定“先选谁”，后者决定“出问题了怎么退”。</p>
-      <p>渲染器选择逻辑主要在 <code>Renderers/RenderLoop.js</code>，而运行时故障后的降级逻辑主要在 <code>Core/RenderLoop.js</code>。</p>
+      <p>渲染器选择逻辑主要在 <code>lib/MediaEffectsComposer/RenderLoop.js</code>，而运行时故障后的降级逻辑主要在 <code>lib/MediaEffectsComposer/RenderLoop.js</code>。</p>
 
       <div class="card">
         <h3><code>renderMode: 'auto'</code> 的真实策略</h3>
@@ -1346,7 +1344,7 @@ const publishStream = await composer.getOutput({ type: 'mixed' });
 
         <div class="card span-6">
           <h3>5. 忽略移动端宽高交换</h3>
-          <p><code>RTCSession</code> 集成里，<code>buildMediaEffectsComposerCtorOptions()</code> 在移动端默认会交换宽高，除非显式传 <code>forceNoSwapWH: true</code>。</p>
+          <p><code>RTCSession</code> 集成里，<code>buildMediaEffectsComposerCtorOptions()</code> 在移动端默认会交换宽高，除非显式传 <code>forceNoSwapWH: true</code>。这个字段只用于 RTCSession 侧推导，不会继续传给 composer 构造参数。</p>
         </div>
 
         <div class="card span-6">
@@ -1357,7 +1355,7 @@ const publishStream = await composer.getOutput({ type: 'mixed' });
     </section>
 
     <div class="footer">
-      文档依据当前仓库内这些实现整理：<code>lib/MediaEffectsComposer/Core/MediaEffectsComposer.js</code>、<code>lib/MediaEffectsComposer/Core/ComposerConfig.js</code>、<code>lib/RTCSession.d.ts</code>、<code>lib/RTCSession/MediaPipeline.js</code>、<code>samples/media-effects-composer</code>、<code>test/test-rtcsession-media-effects-composer.js</code>。
+      文档依据当前仓库内这些实现整理：<code>lib/MediaEffectsComposer/MediaEffectsComposer.js</code>、<code>lib/MediaEffectsComposer/ComposerConfig.js</code>、<code>lib/RTCSession.d.ts</code>、<code>lib/RTCSession/MediaPipeline.js</code>、<code>samples/media-effects-composer</code>、<code>test/test-rtcsession-media-effects-composer.js</code>。
     </div>
   </main>
 </div>
