@@ -779,6 +779,28 @@ async function testReplaceCanvasToVideoAppliesSessionMixerToSdkGum()
   assert.strictEqual(sender.replaced, MockMixer.instances[0].outputTrack);
   assert.strictEqual(session._localMediaStream.getVideoTracks()[0], MockMixer.instances[0].outputTrack);
 }
+async function testBuildMediaEffectsComposerCtorOptionsKeepsPortraitTrackOnAndroid()
+{
+  const session = new (require('../lib/RTCSession'))(createMockUA());
+  const previousUserAgent = global.navigator.userAgent;
+  const sourceVideo = new MockMediaStreamTrack('video', { width: 720, height: 1280, frameRate: 24 });
+  const sourceStream = new MockMediaStream([ sourceVideo ]);
+
+  global.navigator.userAgent = 'Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 Chrome/124.0.0.0 Mobile Safari/537.36';
+
+  try
+  {
+    const options = session._mediaPipeline.buildMediaEffectsComposerCtorOptions(sourceStream, { mirror: true });
+
+    assert.strictEqual(options.width, 720);
+    assert.strictEqual(options.height, 1280);
+    assert.strictEqual(options.fps, 24);
+  }
+  finally
+  {
+    global.navigator.userAgent = previousUserAgent;
+  }
+}
 
 async function testGetUserMediaPipelineAppliesSessionAiNoiseSuppression()
 {
@@ -1496,6 +1518,7 @@ async function run()
     { name: 'testSwitchDeviceCameraMixerBranchStopsOldInputBeforeGum', fn: testSwitchDeviceCameraMixerBranchStopsOldInputBeforeGum },
     { name: 'testSwitchDeviceCameraMixerBranchFallbackToDefault', fn: testSwitchDeviceCameraMixerBranchFallbackToDefault },
     { name: 'testReplaceCanvasToVideoAppliesSessionMixerToSdkGum', fn: testReplaceCanvasToVideoAppliesSessionMixerToSdkGum },
+    { name: 'testBuildMediaEffectsComposerCtorOptionsKeepsPortraitTrackOnAndroid', fn: testBuildMediaEffectsComposerCtorOptionsKeepsPortraitTrackOnAndroid },
     { name: 'testGetUserMediaPipelineAppliesSessionAiNoiseSuppression', fn: testGetUserMediaPipelineAppliesSessionAiNoiseSuppression },
     { name: 'testGetUserMediaPipelineAppliesSessionAiVirtualBackground', fn: testGetUserMediaPipelineAppliesSessionAiVirtualBackground },
     { name: 'testGetUserMediaPipelineAcceptsComposerSourcesArray', fn: testGetUserMediaPipelineAcceptsComposerSourcesArray },
@@ -1598,3 +1621,4 @@ if (require.main === module)
     });
   });
 }
+
