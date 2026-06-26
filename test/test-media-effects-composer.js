@@ -5,6 +5,7 @@ const ComposerConfig = require('../lib/MediaEffectsComposer/ComposerConfig');
 const Watermark = require('../lib/MediaEffectsComposer/Watermark');
 const WorkerRenderer = require('../lib/MediaEffectsComposer/Renderers/WorkerRenderer');
 const MainCanvas2DRenderer = require('../lib/MediaEffectsComposer/Renderers/MainCanvas2DRenderer');
+const MainWebGL2Renderer = require('../lib/MediaEffectsComposer/Renderers/MainWebGL2Renderer');
 const workerScript = require('../lib/MediaEffectsComposer/Renderers/workerScript');
 const vm = require('vm');
 
@@ -2203,6 +2204,70 @@ async function testMainCanvas2DAiVirtualBackgroundUsesMaskFramePair()
   assert.strictEqual(state.workCanvas._context2d.filter, 'none');
 }
 
+async function testMainWebGL2AiVirtualBackgroundComposesMaskAndSkipsFinalMirror()
+{
+  resetMockState();
+  MockCanvasElement.webgl2Supported = true;
+
+  const outputCanvas = new MockCanvasElement();
+  const source = { slot: 0 };
+  const liveVideo = new MockVideoElement();
+  const frozenFrame = new MockCanvasElement();
+  const mask = new MockCanvasElement();
+  const state = {};
+  const drawCalls = [];
+  const renderer = new MainWebGL2Renderer({
+    aiVirtualBackgroundManager : {
+      getRenderableState()
+      {
+        return {
+          config          : { mode: 'color', backgroundColor: '#123456' },
+          latestMask      : mask,
+          latestFrame     : frozenFrame,
+          backgroundImage : null,
+          state           : state
+        };
+      },
+      noteFrameRendered() {}
+    }
+  });
+
+  renderer.init(outputCanvas);
+  renderer._drawItem = function(item, canvasHeight, outputMirrorX, outputWidth)
+  {
+    drawCalls.push({ item, canvasHeight, outputMirrorX, outputWidth });
+  };
+
+  renderer.render({
+    width             : 320,
+    height            : 180,
+    outputMirrorX     : true,
+    backgroundColor   : '#000000',
+    items             : [ {
+      id                  : 'source-0',
+      source              : source,
+      video               : liveVideo,
+      draw                : { x: 20, y: 0, width: 100, height: 80 },
+      mirrorX             : false,
+      aiVirtualBackground : { enabled: true, mode: 'color' }
+    } ],
+    sourceWatermarks  : [],
+    outputWatermarks  : []
+  });
+
+  const operations = state.foregroundCanvas._context2d.operations;
+  const mirroredDraws = operations.filter((operation) => operation.type === 'scale' && operation.x === -1 && operation.y === 1);
+  const drawImages = operations.filter((operation) => operation.type === 'drawImage');
+
+  assert.strictEqual(mirroredDraws.length, 2);
+  assert.strictEqual(drawImages[0].args[0], frozenFrame);
+  assert.strictEqual(drawImages[1].args[0], mask);
+  assert.strictEqual(drawCalls.length, 1);
+  assert.strictEqual(drawCalls[0].outputMirrorX, false);
+  assert.strictEqual(drawCalls[0].item.draw.x, 200);
+  assert.strictEqual(drawCalls[0].item.mirrorX, false);
+}
+
 async function testMainWebGL2AiVirtualBackgroundUsesMainThreadManager()
 {
   resetMockState();
@@ -3351,6 +3416,7 @@ async function run()
     { name: 'testSetSourceAiVirtualBackgroundKeepsWorkerRenderer', fn: testSetSourceAiVirtualBackgroundKeepsWorkerRenderer },
     { name: 'testOutputMirrorDoesNotPreloadAiVBBackgroundImage', fn: testOutputMirrorDoesNotPreloadAiVBBackgroundImage },
     { name: 'testMainCanvas2DAiVirtualBackgroundUsesMaskFramePair', fn: testMainCanvas2DAiVirtualBackgroundUsesMaskFramePair },
+    { name: 'testMainWebGL2AiVirtualBackgroundComposesMaskAndSkipsFinalMirror', fn: testMainWebGL2AiVirtualBackgroundComposesMaskAndSkipsFinalMirror },
     { name: 'testMainWebGL2AiVirtualBackgroundUsesMainThreadManager', fn: testMainWebGL2AiVirtualBackgroundUsesMainThreadManager },
     { name: 'testInitialSourcesArrayMapsSourceOptionsByIndex', fn: testInitialSourcesArrayMapsSourceOptionsByIndex },
     { name: 'testEmptyInitialRenderDoesNotCreateRenderer', fn: testEmptyInitialRenderDoesNotCreateRenderer },

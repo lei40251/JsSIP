@@ -592,6 +592,44 @@ async function testRuntimeClosesSegmentationResultAfterMaskCopy()
   await runtime.destroy();
 }
 
+async function testRuntimeReturnsIndependentMaskCanvases()
+{
+  delete require.cache[require.resolve('../lib/MediaEffectsComposer/AIVirtualBackground/MediaPipeSegmenterRuntime')];
+  const Runtime = require('../lib/MediaEffectsComposer/AIVirtualBackground/MediaPipeSegmenterRuntime');
+  const runtime = new Runtime();
+  let maskValue = 0.25;
+
+  runtime.initialized = true;
+  runtime.segmenter = {
+    segmentForVideo(videoElement, timestampMs, callback)
+    {
+      callback({
+        confidenceMasks : [ {
+          width  : 1,
+          height : 1,
+          getAsFloat32Array()
+          {
+            return new Float32Array([ maskValue ]);
+          }
+        } ]
+      });
+    }
+  };
+
+  const first = await runtime.segmentForVideo({ id: 'first' });
+
+  maskValue = 0.75;
+  const second = await runtime.segmentForVideo({ id: 'second' });
+
+  assert.ok(first.segmentationMask);
+  assert.ok(second.segmentationMask);
+  assert.notStrictEqual(first.segmentationMask, second.segmentationMask);
+  assert.notStrictEqual(first.segmentationMask, runtime.featherCanvas);
+  assert.notStrictEqual(second.segmentationMask, runtime.featherCanvas);
+
+  await runtime.destroy();
+}
+
 async function testRuntimeRejectsMissingMask()
 {
   delete require.cache[require.resolve('../lib/MediaEffectsComposer/AIVirtualBackground/MediaPipeSegmenterRuntime')];
@@ -986,7 +1024,10 @@ async function testSourceAiVBManagerUsesScaledCanvasForSegmentation()
   assert.strictEqual(calls.length, 1);
   assert.strictEqual(calls[0].width, 320);
   assert.strictEqual(calls[0].height, 240);
-  assert.strictEqual(calls[0].operations.some((item) => item.type === 'drawImage'), true);
+  assert.strictEqual(
+    calls[0].operations.some((item) => item.type === 'drawImage' && item.args[0] === state.activeFrameCanvas),
+    true
+  );
 }
 
 async function testSourceAiVBManagerStoresFrameWithSegmentationMask()
@@ -1115,6 +1156,17 @@ async function testSourceAiVBManagerQueuesLatestFrameWhileSegmentationPending()
   assert.strictEqual(state.pendingSegmentation, true);
   assert.strictEqual(state.activeSegPromise, pendingPromises[0]);
   assert.strictEqual(state.queuedSegPromise, pendingPromises[1]);
+  assert.strictEqual(calls[0], state.activeSegCanvas);
+  assert.strictEqual(calls[1], state.queuedSegCanvas);
+  assert.strictEqual(queuedUpdates[0], state.queuedSegCanvas);
+  assert.strictEqual(
+    state.activeSegContext.operations.some((item) => item.type === 'drawImage' && item.args[0] === state.activeFrameCanvas),
+    true
+  );
+  assert.strictEqual(
+    state.queuedSegContext.operations.some((item) => item.type === 'drawImage' && item.args[0] === state.queuedFrameCanvas),
+    true
+  );
 
   resolvers[0]({
     segmentationMask : new MockCanvas()
@@ -1525,6 +1577,7 @@ async function run()
 
   const TESTS = [
     { name: 'testRuntimeClosesSegmentationResultAfterMaskCopy', fn: testRuntimeClosesSegmentationResultAfterMaskCopy },
+    { name: 'testRuntimeReturnsIndependentMaskCanvases', fn: testRuntimeReturnsIndependentMaskCanvases },
     { name: 'testRuntimeRejectsMissingMask', fn: testRuntimeRejectsMissingMask },
     { name: 'testRuntimeProcessesLatestQueuedFrame', fn: testRuntimeProcessesLatestQueuedFrame },
     { name: 'testRuntimeRejectsWhenGpuInitFails', fn: testRuntimeRejectsWhenGpuInitFails },
