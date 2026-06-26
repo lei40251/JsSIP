@@ -21,7 +21,6 @@ const colors = require('ansi-colors');
 const zip = require('gulp-zip');
 const del = require('del');
 const terser = require('gulp-terser');
-const obfuscator = require('gulp-javascript-obfuscator');
 const replace = require('gulp-replace');
 
 const PKG = require('./package.json');
@@ -114,24 +113,6 @@ function createTerserOptions(propertyRegex)
 
 const TERSER_OPTIONS = createTerserOptions(TERSER_MEDIA_PROPERTY_MANGLE_REGEX);
 const TERSER_PRIVATE_OPTIONS = createTerserOptions(TERSER_PRIVATE_PROPERTY_MANGLE_REGEX);
-
-// 轻量变量名混淆 —— 在 Terser 之后再做一层标识符 hex 化。
-// 只开启 identifierNamesGenerator，不引入字符串加密、控制流平坦化等重型选项，
-// 在反编译难度和体积/构建速度之间取得平衡。
-const OBFUSCATOR_OPTIONS = {
-  compact                  : true,
-  identifierNamesGenerator : 'mangled',
-  stringArray              : false,
-  simplify                 : true,
-  renameGlobals            : false,
-  controlFlowFlattening    : false,
-  deadCodeInjection        : false,
-  debugProtection          : false,
-  selfDefending            : false,
-  splitStrings             : false,
-  transformObjectKeys      : false,
-  unicodeEscapeSequence    : false
-}; 
 
 // 构建时间参与版本号替换，历史逻辑是把本地时间戳乘 2。
 // 这里保留现状，避免影响现有版本串依赖。
@@ -355,9 +336,8 @@ function createUglifyTask(taskName, terserOptions, outputFileName)
     return gulp.src(src, { sourcemaps: true })
       .pipe(expect(EXPECT_OPTIONS, src))
       .pipe(terser(terserOptions))
-      // 在 Terser 压缩之后再对变量名做一层 hex 混淆，
-      // 提高人工逆向的阅读成本，同时保持体积可控。
-      .pipe(obfuscator(OBFUSCATOR_OPTIONS))
+      // 通过 Terser 的变量名/属性名压缩来提高人工逆向的阅读成本，
+      // 同时避免额外混淆步骤带来的构建噪音和维护成本。
       // banner 在压缩产物里同样保留。
       .pipe(header(BANNER, BANNER_OPTIONS))
       .pipe(rename(outputFileName))
@@ -387,7 +367,6 @@ gulp.task('esm', function()
     .pipe(expect(EXPECT_OPTIONS, src))
     .pipe(transformUMDToESM())
     .pipe(terser(TERSER_OPTIONS))
-    .pipe(obfuscator(OBFUSCATOR_OPTIONS))
     .pipe(header(BANNER, BANNER_OPTIONS))
     .pipe(rename(`${PKG.title}.esm.min.js`))
     .pipe(gulp.dest('dist/'));
@@ -658,11 +637,11 @@ gulp.task('del-crtc-js', function(done)
  
 gulp.task('dist-del', function(done)
 {
-  // Windows 下 dist 目录偶发会被占用。
-  // 这里对 EPERM / EBUSY 做软处理，避免一次占用直接让默认构建失败。
+  // 只清空 dist 目录内容，保留 dist 目录本身，避免外部依赖目录存在性。
+  // Windows 下 dist 目录偶发会被占用，这里对 EPERM / EBUSY 做软处理。
   try
   {
-    del.sync('./dist/');
+    del.sync([ './dist/**', './dist/.!*' ]);
   }
   catch (error)
   {
@@ -687,17 +666,17 @@ gulp.task('dist-del', function(done)
 gulp.task('devel', gulp.series('grammar'));
 
 // 默认构建链路：
-// lint -> babel -> test -> browserify -> 先出标准版，再出激进版 -> ESM -> 清理临时目录
-gulp.task('dist', gulp.series('lint', 'babel', 'test', 'browserify', 'uglify-standard', 'uglify-private-props', 'esm', 'tmp-del', 'lib-es5-del'));
+// 先清 dist，再 lint -> babel -> test -> browserify -> 先出标准版，再出激进版 -> ESM -> 清理临时目录
+gulp.task('dist', gulp.series('dist-del', 'lint', 'babel', 'test', 'browserify', 'uglify-standard', 'uglify-private-props', 'esm', 'tmp-del', 'lib-es5-del'));
 // 仅输出激进版最小产物 + ESM。
-gulp.task('dist-private-props', gulp.series('lint', 'babel', 'test', 'browserify', 'uglify-private-props', 'esm', 'tmp-del', 'lib-es5-del'));
+gulp.task('dist-private-props', gulp.series('dist-del', 'lint', 'babel', 'test', 'browserify', 'uglify-private-props', 'esm', 'tmp-del', 'lib-es5-del'));
 // 仅输出标准保守版最小产物 + ESM。
-gulp.task('dist-standard', gulp.series('lint', 'babel', 'test', 'browserify', 'uglify-standard', 'esm', 'tmp-del', 'lib-es5-del'));
-// 仅输出 CRTC.min.js，跳过其他产物。
-gulp.task('dist-min-only', gulp.series('lint', 'babel', 'test', 'browserify', 'uglify-private-props', 'tmp-del', 'lib-es5-del', 'del-crtc-js'));
+gulp.task('dist-standard', gulp.series('dist-del', 'lint', 'babel', 'test', 'browserify', 'uglify-standard', 'esm', 'tmp-del', 'lib-es5-del'));
+// 仅输出 CRTC.min.js，跳过其他产物；任务开始前同样先清 dist。
+gulp.task('dist-min-only', gulp.series('dist-del', 'lint', 'babel', 'test', 'browserify', 'uglify-private-props', 'tmp-del', 'lib-es5-del', 'del-crtc-js'));
 
 gulp.task('zip', gulp.series('zip-del-zip', 'zip-demo', 'zip-dist', 'zip-changelog', 'zip-doc', 'zip-zip', 'zip-del'));
 
-// 默认先清 dist，再执行标准构建。
-gulp.task('default', gulp.series('dist-del', 'dist-min-only'));
+// 默认入口走最小构建；`dist-min-only` 内部会先清 dist。
+gulp.task('default', gulp.series('dist-min-only'));
  
