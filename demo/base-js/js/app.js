@@ -199,7 +199,7 @@ if (extSet.has('BP720P'))
     facingMode : 'user',
     width      : 1280,
     height     : 720,
-    frameRate  : 30
+    frameRate  : 15
   };
 }
 
