@@ -327,6 +327,9 @@ export interface AiVBSegmentationOptions {
 export interface AiVBPostProcessingOptions {
   blurRadius?: number;
   maxBlurRadius?: number;
+  foregroundBrightness?: number;
+  foregroundContrast?: number;
+  foregroundSaturate?: number;
 }
 
 export interface AiVBAssetOptions {

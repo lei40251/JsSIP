@@ -1958,9 +1958,14 @@ async function testSourceAiVBOptionsAppearInSourceSnapshot()
   mixer.appendStream(createStream(), {
     slot                : 0,
     aiVirtualBackground : {
-      enabled : true,
-      mode    : 'color',
-      color   : '#123456'
+      enabled        : true,
+      mode           : 'color',
+      color          : '#123456',
+      postProcessing : {
+        foregroundBrightness : 1.2,
+        foregroundContrast   : 1.1,
+        foregroundSaturate   : 1.08
+      }
     }
   });
 
@@ -1969,6 +1974,8 @@ async function testSourceAiVBOptionsAppearInSourceSnapshot()
   assert.ok(source);
   assert.strictEqual(source.aiVirtualBackground.mode, 'color');
   assert.strictEqual(source.aiVirtualBackground.backgroundColor, '#123456');
+  assert.strictEqual(source.aiVirtualBackground.postProcessing.foregroundBrightness, 1.2);
+  assert.strictEqual(source.aiVirtualBackground.foregroundFilter, undefined);
   assert.strictEqual(mixer._config.hasSourceAiVirtualBackground, true);
   assert.strictEqual(mixer._config.forceMainThreadRenderer, false);
   assert.strictEqual(mixer._config.forceMain2DRenderer, false);
@@ -2193,6 +2200,7 @@ async function testMainCanvas2DAiVirtualBackgroundUsesMaskFramePair()
 
   assert.strictEqual(workDraws[0].args[0], frozenFrame);
   assert.strictEqual(workDraws[0].args[0] === liveVideo, false);
+  assert.strictEqual(state.workCanvas._context2d.filter, 'none');
 }
 
 async function testMainWebGL2AiVirtualBackgroundUsesMainThreadManager()

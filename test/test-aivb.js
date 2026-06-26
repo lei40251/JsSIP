@@ -873,6 +873,16 @@ async function testConfigNormalizesCdnUrlDefaultModelPath()
 }
 
 
+async function testConfigUsesUpdatedVideoDefaults()
+{
+  const config = Config.create();
+
+  assert.strictEqual(config.video.processingScale, 0.5);
+  assert.strictEqual(config.postProcessing.foregroundBrightness, 1.12);
+  assert.strictEqual(config.postProcessing.foregroundContrast, 1.10);
+  assert.strictEqual(config.postProcessing.foregroundSaturate, 1.08);
+}
+
 async function testConfigRejectsLegacySegmentationOptions()
 {
   assert.throws(
@@ -901,8 +911,11 @@ async function testConfigClampsPostProcessingRanges()
 {
   const config = Config.create({
     postProcessing : {
-      blurRadius    : 999,
-      maxBlurRadius : 12
+      blurRadius           : 999,
+      maxBlurRadius        : 12,
+      foregroundBrightness : 9,
+      foregroundContrast   : 0.1,
+      foregroundSaturate   : 3
     },
     video : {
       processingScale : 9,
@@ -915,6 +928,9 @@ async function testConfigClampsPostProcessingRanges()
 
   assert.strictEqual(config.postProcessing.blurRadius, 12);
   assert.strictEqual(config.postProcessing.maxBlurRadius, 12);
+  assert.strictEqual(config.postProcessing.foregroundBrightness, 2);
+  assert.strictEqual(config.postProcessing.foregroundContrast, 0.5);
+  assert.strictEqual(config.postProcessing.foregroundSaturate, 2);
   assert.strictEqual(config.video.processingScale, 1);
   assert.strictEqual(config.video.targetFps, 60);
   assert.strictEqual(config.segmentation.frameSkip, 120);
@@ -1516,6 +1532,7 @@ async function run()
     { name: 'testRuntimeReportsTasksLoadFailureWithoutRetry', fn: testRuntimeReportsTasksLoadFailureWithoutRetry },
     { name: 'testConfigNormalizesCdnUrlAndSegmentationOptions', fn: testConfigNormalizesCdnUrlAndSegmentationOptions },
     { name: 'testConfigNormalizesCdnUrlDefaultModelPath', fn: testConfigNormalizesCdnUrlDefaultModelPath },
+    { name: 'testConfigUsesUpdatedVideoDefaults', fn: testConfigUsesUpdatedVideoDefaults },
     { name: 'testConfigRejectsLegacySegmentationOptions', fn: testConfigRejectsLegacySegmentationOptions },
     { name: 'testConfigRejectsLegacyPostProcessingOptions', fn: testConfigRejectsLegacyPostProcessingOptions },
     { name: 'testConfigClampsPostProcessingRanges', fn: testConfigClampsPostProcessingRanges },
