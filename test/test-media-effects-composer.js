@@ -2237,13 +2237,13 @@ async function testMainWebGL2AiVirtualBackgroundComposesMaskAndSkipsFinalMirror(
   {
     drawCalls.push({ item, canvasHeight, outputMirrorX, outputWidth });
   };
-
+ 
   renderer.render({
-    width             : 320,
-    height            : 180,
-    outputMirrorX     : true,
-    backgroundColor   : '#000000',
-    items             : [ {
+    width           : 320,
+    height          : 180,
+    outputMirrorX   : true,
+    backgroundColor : '#000000',
+    items           : [ {
       id                  : 'source-0',
       source              : source,
       video               : liveVideo,
@@ -2251,8 +2251,8 @@ async function testMainWebGL2AiVirtualBackgroundComposesMaskAndSkipsFinalMirror(
       mirrorX             : false,
       aiVirtualBackground : { enabled: true, mode: 'color' }
     } ],
-    sourceWatermarks  : [],
-    outputWatermarks  : []
+    sourceWatermarks : [],
+    outputWatermarks : []
   });
 
   const operations = state.foregroundCanvas._context2d.operations;
@@ -2390,7 +2390,7 @@ async function testWorkerShaderUsesRuntimeNewlines()
   mixer.stop();
 }
 
-async function testAutoRendererFallbackPrefersMainWebGL2()
+async function testAutoRendererWithWorkerSupportStartsWorkerWebGL2()
 {
   resetMockState();
   MockCanvasElement.webgl2Supported = true;
@@ -2419,6 +2419,37 @@ async function testAutoRendererFallbackPrefersMainWebGL2()
   assert.strictEqual(info.reason, 'Worker WebGL2 unavailable');
 
   mixer.stop();
+}
+
+async function testAutoRendererWithoutWorkerSupportStartsMainWebGL2()
+{
+  resetMockState();
+  MockCanvasElement.webgl2Supported = true;
+
+  const originalWorker = global.Worker;
+
+  delete global.Worker;
+
+  const mixer = new MediaEffectsComposer([], { width: 320, height: 180, fps: 15, renderMode: 'auto' });
+
+  try
+  {
+    mixer.appendStream(createStream(), 0);
+    mixer.getVideoStream();
+    mixer._drawVideosToCanvas(undefined, true);
+
+    const info = mixer.getRenderInfo();
+
+    assert.strictEqual(info.requestedMode, 'auto');
+    assert.strictEqual(info.actualMode, 'main-webgl2');
+    assert.strictEqual(info.isWorker, false);
+    assert.strictEqual(MockWorker.instances.length, 0);
+  }
+  finally
+  {
+    global.Worker = originalWorker;
+    mixer.stop();
+  }
 }
 
 async function testAutoRendererFallbackTriesWorker2DBeforeMain2D()
@@ -3421,7 +3452,8 @@ async function run()
     { name: 'testInitialSourcesArrayMapsSourceOptionsByIndex', fn: testInitialSourcesArrayMapsSourceOptionsByIndex },
     { name: 'testEmptyInitialRenderDoesNotCreateRenderer', fn: testEmptyInitialRenderDoesNotCreateRenderer },
     { name: 'testWorkerShaderUsesRuntimeNewlines', fn: testWorkerShaderUsesRuntimeNewlines },
-    { name: 'testAutoRendererFallbackPrefersMainWebGL2', fn: testAutoRendererFallbackPrefersMainWebGL2 },
+    { name: 'testAutoRendererWithWorkerSupportStartsWorkerWebGL2', fn: testAutoRendererWithWorkerSupportStartsWorkerWebGL2 },
+    { name: 'testAutoRendererWithoutWorkerSupportStartsMainWebGL2', fn: testAutoRendererWithoutWorkerSupportStartsMainWebGL2 },
     { name: 'testAutoRendererFallbackTriesWorker2DBeforeMain2D', fn: testAutoRendererFallbackTriesWorker2DBeforeMain2D },
     { name: 'testAutoRendererFallbackEndsAtMain2D', fn: testAutoRendererFallbackEndsAtMain2D },
     { name: 'testWatermarkPresetAndCoordinatePositions', fn: testWatermarkPresetAndCoordinatePositions },
