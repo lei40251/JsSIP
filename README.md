@@ -1,113 +1,113 @@
-<p align="center"><a href="https://jssip.net"><img src="https://jssip.net/images/jssip-banner-new.png"/></a></p>
+# CRTC
 
-[![Build Status](https://api.travis-ci.com/versatica/JsSIP.png)](https://travis-ci.com/versatica/JsSIP)
-[![Code Quality: Javascript](https://img.shields.io/lgtm/grade/javascript/g/versatica/JsSIP.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/versatica/JsSIP/context:javascript)
-[![Total Alerts](https://img.shields.io/lgtm/alerts/g/versatica/JsSIP.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/versatica/JsSIP/alerts)
+CRTC is a browser-side SIP + WebRTC SDK focused on clear call flows, direct API usage, and runnable demo integration. This repository contains the core SDK, demo pages, build pipeline, and media-effects samples used to verify real runtime behavior.
 
-## Overview
+## What This Repository Provides
 
-* Runs in the browser and Node.js.
-* SIP over [WebSocket](https://jssip.net/documentation/misc/sip_websocket/) (use real SIP in your web apps)
-* Audio/video calls ([WebRTC](https://jssip.net/documentation/misc/webrtc)) and instant messaging
-* Lightweight!
-* Easy to use and powerful user API
-* Works with OverSIP, Kamailio, Asterisk. Mobicents and repro (reSIProcate) servers ([more info](https://jssip.net/documentation/misc/interoperability))
-* Written by the authors of [RFC 7118 "The WebSocket Protocol as a Transport for SIP"](https://tools.ietf.org/html/rfc7118) and [OverSIP](http://oversip.net)
+- SIP signaling over WebSocket via `CRTC.WebSocketInterface`
+- Browser call control via `CRTC.UA` and `RTCSession`
+- Audio/video calling and session lifecycle events
+- Media effects capabilities such as AI noise suppression, virtual background, watermarks, and media composition
+- Plain-script demos that show the SDK's real browser integration path
 
+## Quick Start
 
-## NOTE
+1. Install dependencies:
 
-Starting from 3.0.0, JsSIP no longer includes the [rtcninja](https://github.com/eface2face/rtcninja.js/) module. However, the [jssip-rtcninja](https://www.npmjs.com/package/jssip-rtcninja) package is based on the `2.0.x` branch, which does include `rtcninja`.
-
-
-## Support
-
-* For questions or usage problems please use the **jssip** [public Google Group](https://groups.google.com/forum/#!forum/jssip).
-
-* For bug reports or feature requests open an [Github issue](https://github.com/versatica/JsSIP/issues).
-
-
-## Getting Started
-
-The following simple JavaScript code creates a JsSIP User Agent instance and makes a SIP call:
-
-```javascript
-// Create our JsSIP instance and run it:
-
-var socket = new JsSIP.WebSocketInterface('wss://sip.myhost.com');
-var configuration = {
-  sockets  : [ socket ],
-  uri      : 'sip:alice@example.com',
-  password : 'superpassword'
-};
-
-var ua = new JsSIP.UA(configuration);
-
-ua.start();
-
-// Register callbacks to desired call events
-var eventHandlers = {
-  'progress': function(e) {
-    console.log('call is in progress');
-  },
-  'failed': function(e) {
-    console.log('call failed with cause: '+ e.data.cause);
-  },
-  'ended': function(e) {
-    console.log('call ended with cause: '+ e.data.cause);
-  },
-  'confirmed': function(e) {
-    console.log('call confirmed');
-  }
-};
-
-var options = {
-  'eventHandlers'    : eventHandlers,
-  'mediaConstraints' : { 'audio': true, 'video': true }
-};
-
-var session = ua.call('sip:bob@example.com', options);
+```bash
+npm install
 ```
 
-Want to see more? Check the full documentation at https://jssip.net/documentation/.
+2. Build the browser bundle used by demos:
 
+```bash
+npm run build:min
+```
 
-## Online Demo
+3. Open the recommended sample entry:
 
-Check our **Tryit JsSIP** online demo:
+- Main SDK demo: `demo/base-js/index.html`
+- Media effects sample: `samples/media-effects-composer/index.html`
 
-* [tryit.jssip.net](https://tryit.jssip.net)
+Both pages load the built `dist/CRTC.min.js`. If you change SDK source under `lib/`, rebuild before expecting demo behavior to change.
 
+## Minimal Integration Example
 
-## Website and Documentation
+```html
+<script src="./dist/CRTC.min.js"></script>
+<script>
+  const socket = new CRTC.WebSocketInterface('wss://sip.example.com');
+  const ua = new CRTC.UA({
+    sockets: socket,
+    uri: 'sip:alice@example.com',
+    password: 'superpassword'
+  });
 
-* [jssip.net](https://jssip.net/)
+  ua.on('newRTCSession', function(data)
+  {
+    const session = data.session;
 
+    session.on('progress', function()
+    {
+      console.log('call is in progress');
+    });
 
-## Download
+    session.on('failed', function(event)
+    {
+      console.log('call failed:', event.cause);
+    });
 
-* As Node module: `$ npm install jssip`
-* Manually: [jssip.net/download](https://jssip.net/download/)
+    session.on('ended', function(event)
+    {
+      console.log('call ended:', event.cause);
+    });
+  });
 
+  ua.start();
+</script>
+```
 
-## Authors
+For a fuller flow including dialing, answering, device switching, and media-effects controls, use `demo/base-js` as the primary reference.
 
-#### José Luis Millán
+## Documentation
 
-* Main author. Core Designer and Developer.
-* <jmillan@aliax.net> (Github [@jmillan](https://github.com/jmillan))
+- Quick start: [docs/start.md](docs/start.md)
+- Build instructions: [BUILDING.md](BUILDING.md)
+- API reference: [docs/API.md](docs/API.md)
+- Media effects issue messages: [docs/mediaeffectsissue-messages.md](docs/mediaeffectsissue-messages.md)
+- Media effects composer API: [docs/media-effects-composer-api.md](docs/media-effects-composer-api.md)
 
-#### Iñaki Baz Castillo
+## Sample Entry Points
 
-* Core Designer and Developer.
-* <ibc@aliax.net> (Github [@ibc](https://github.com/ibc))
+- `demo/base-js`
+  - Recommended first stop for SDK integration.
+  - Shows `CRTC.UA`, `newRTCSession`, session event binding, and page-level call controls.
+- `samples/media-effects-composer`
+  - Focused reference for composer, AiNS, AiVB, mirror, and watermark behavior.
+- `samples/base-js-harmony`
+  - Variant sample for Harmony/browser-specific validation.
 
-#### Saúl Ibarra Corretgé
+## Build and Test Commands
 
-* Core Designer.
-* <saghul@gmail.com> (Github [@saghul](https://github.com/saghul))
+Recommended commands:
 
+```bash
+npm run lint
+npm run test
+npm run build
+npm run build:min
+npm run build:standard
+npm run release
+```
+
+`npm run release` first clears the previous local zip output in `release/`, then builds the distribution artifacts, and finally creates a local SDK zip package there. The zip includes `demo/**`, `dist/CRTC.min.js`, `CHANGELOG.md`, and the generated PDF documents under `docs/*.pdf`.
+
+Legacy entrypoints such as `node npm-scripts.js test` and `npm run prepublish` remain available for compatibility, but the commands above are the current recommended interface.
+
+## Upstream Note
+
+This repository evolved from earlier JsSIP-based code and still contains historical artifacts, changelogs, and compatibility context from that lineage. When documentation or naming differs between old JsSIP material and this repository, treat the public API and docs in this CRTC repository as the source of truth.
 
 ## License
 
-JsSIP is released under the [MIT license](https://jssip.net/license).
+This repository keeps the upstream MIT licensing model. See [LICENSE](LICENSE).

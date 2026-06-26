@@ -23,8 +23,30 @@ switch (task)
     break;
   }
 
+  case 'build':
+  {
+    execute('gulp dist');
+
+    break;
+  }
+
+  case 'build:min':
+  {
+    execute('gulp dist-min-only');
+
+    break;
+  }
+
+  case 'build:standard':
+  {
+    execute('gulp dist-standard');
+
+    break;
+  }
+
   case 'prepublish':
   {
+    // 兼容旧入口：历史上这里只做 babel 预处理。
     execute('gulp babel');
 
     break;
@@ -32,14 +54,12 @@ switch (task)
 
   case 'release':
   {
-    execute('gulp');
-    execute(`git commit -am '${version}'`);
-    execute(`git tag -a ${version} -m '${version}'`);
-    execute('git push origin master && git push origin --tags');
-    execute('npm publish');
-
     // eslint-disable-next-line no-console
-    console.log('update tryit-jssip and JsSIP website');
+    console.log(
+      `npm-scripts.js [INFO] release will build distribution artifacts and create the local SDK zip for ${version}.`
+    );
+    execute('gulp dist');
+    execute('gulp zip');
 
     break;
   }

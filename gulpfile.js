@@ -405,7 +405,15 @@ gulp.task('test-files', function()
     'test/test-digestAuthentication.js',
     'test/test-ains.js',
     'test/test-aivb.js',
+    'test/test-media-effects-composer-audio.js',
+    'test/test-media-effects-composer-watermark-mirror.js',
+    'test/test-media-effects-composer-aivb.js',
+    'test/test-media-effects-composer-renderer.js',
     'test/test-media-effects-composer.js',
+    'test/test-rtcsession-media-effects-pipeline.js',
+    'test/test-rtcsession-media-effects-switch-device.js',
+    'test/test-rtcsession-media-effects-sdp.js',
+    'test/test-rtcsession-media-effects-runtime-update.js',
     'test/test-rtcsession-media-effects-composer.js',
     'test/test-bfcp.js'
   ];
@@ -424,11 +432,35 @@ gulp.task('media-effects-composer-test', function(done)
     })
     .then(function()
     {
-      return require('./test/test-media-effects-composer').run();
+      return require('./test/test-media-effects-composer-audio').run();
     })
     .then(function()
     {
-      return require('./test/test-rtcsession-media-effects-composer').run();
+      return require('./test/test-media-effects-composer-watermark-mirror').run();
+    })
+    .then(function()
+    {
+      return require('./test/test-media-effects-composer-aivb').run();
+    })
+    .then(function()
+    {
+      return require('./test/test-media-effects-composer-renderer').run();
+    })
+    .then(function()
+    {
+      return require('./test/test-rtcsession-media-effects-pipeline').run();
+    })
+    .then(function()
+    {
+      return require('./test/test-rtcsession-media-effects-switch-device').run();
+    })
+    .then(function()
+    {
+      return require('./test/test-rtcsession-media-effects-sdp').run();
+    })
+    .then(function()
+    {
+      return require('./test/test-rtcsession-media-effects-runtime-update').run();
     })
     .then(function()
     {
@@ -517,17 +549,18 @@ gulp.task('grammar', function(cb)
   );
 });
 
-// 以下 zip 相关任务用于生成交付包，不参与普通 dist 构建。
+// 以下 zip 相关任务用于生成交付包。
+// release 入口会先完成 dist 构建，再收集 demo / dist/CRTC.min.js / changelog / docs PDF 进入 zip。
 gulp.task('zip-demo', gulp.series(
   copyFiles,
   renameConfig,
-  deleteBackup // 新增删除步骤
+  deleteBackup
 ));
 
 gulp.task('zip-dist', function()
 {
   return gulp
-    .src('dist/*.min.js')
+    .src('dist/CRTC.min.js')
     .pipe(gulp.dest('zip/dist/'));
 });
 
@@ -541,8 +574,8 @@ gulp.task('zip-changelog', function()
 gulp.task('zip-doc', function()
 {
   return gulp
-    .src('doc/*.pdf')
-    .pipe(gulp.dest('zip/doc/'));
+    .src('docs/*.pdf')
+    .pipe(gulp.dest('zip/docs/'));
 });
 
 gulp.task('zip-zip', function()
@@ -550,17 +583,59 @@ gulp.task('zip-zip', function()
   return gulp
     .src('zip/**')
     .pipe(zip(`CRTC_SDK_Web_Release_${ PKG.version }.${today.getFullYear()}${today.getMonth()+1}${today.getDate()}${today.getHours()}.zip`))
-    .pipe(gulp.dest('./SDK_zip/'));
+    .pipe(gulp.dest('./release/'));
 });
 
 gulp.task('zip-del-zip', function(done)
 {
-  del.sync('./SDK_zip/**', done());
+  try
+  {
+    del.sync('./release/**');
+  }
+  catch (error)
+  {
+    const code = error && error.code;
+
+    if (code === 'EPERM' || code === 'EBUSY')
+    {
+      log(colors.yellow(`zip-del-zip skipped: ${error.message || String(error)}`));
+      done();
+
+      return;
+    }
+
+    done(error);
+
+    return;
+  }
+
+  done();
 });
 
 gulp.task('zip-del', function(done)
 {
-  del.sync('./zip', done());
+  try
+  {
+    del.sync('./zip');
+  }
+  catch (error)
+  {
+    const code = error && error.code;
+
+    if (code === 'EPERM' || code === 'EBUSY')
+    {
+      log(colors.yellow(`zip-del skipped: ${error.message || String(error)}`));
+      done();
+
+      return;
+    }
+
+    done(error);
+
+    return;
+  }
+
+  done();
 });
 
 gulp.task('tmp-del', function(done)

@@ -1,87 +1,129 @@
 # 快速上手
 
-### 注意：浏览器权限限制，仅支持https访问获取媒体设备
+> 浏览器采集本地媒体时，页面通常需要通过 HTTPS 或 localhost 提供。
 
-> CRTC User Agent 代表与SIP帐户关联的SIP客户端。CRTC User Agent 在 `CRTC.UA` 中定义。
+CRTC 的核心接入对象是 `CRTC.UA`。如果你拿到的是 release 压缩包，请把它当成交付包使用：核心 SDK 文件是 `dist/CRTC.min.js`，同时还会附带 Demo、变更说明和 PDF 文档。
 
-## 第一个例子
+## 1. 引入浏览器依赖
 
-创建文件及目录，结构见 base-js 目录：
+建议同时引入浏览器兼容层和构建后的 SDK bundle：
 
-> *建议使用 webrtc-adapter 以实现更好的浏览器兼容*
-
-*开启debug模式查看控制台输出调试信息*
-
-```
-CRTC.debug.enable('CRTC:*')
+```html
+<script src="./js/adapter-latest.js"></script>
+<script src="./dist/CRTC.min.js"></script>
 ```
 
-*关闭调试*
+release 压缩包会提供 `dist/CRTC.min.js`、`demo/**`、`CHANGELOG.md` 和 `docs/*.pdf`，但不会包含仓库里的源码。
 
-```
-CRTC.debug.disable('CRTC:*')
-```
+## 2. 初始化 UA
 
-### 初始化
-
-1. 引入 SDK 文件
-
-```
-<script src="./js/CRTC.min.js"></script>
-```
-
-2. UA 配置参数
-
-```
-const socket = new CRTC.WebSocketInterface('你的 WSS 信令地址');
+```javascript
+const socket = new CRTC.WebSocketInterface('wss://sip.example.com');
 const configuration = {
   sockets    : socket,
-  uri        : 'sip:account@sipDomain',
-  password   : 'password',
+  uri        : 'sip:alice@example.com',
+  password   : 'superpassword',
   secret_key : '授权码'
 };
+
+const ua = new CRTC.UA(configuration);
 ```
 
-3. UA 实例化
+调试时可打开日志：
 
+```javascript
+CRTC.debug.enable('CRTC:*');
 ```
-const UA = new CRTC.UA(configuration);
+
+关闭日志：
+
+```javascript
+CRTC.debug.disable('CRTC:*');
 ```
-4. UA 事件回调
-```
+
+## 3. 监听核心事件
+
+`newRTCSession` 是最关键的会话入口。无论呼入还是呼出，都从这里拿到 `RTCSession` 并继续挂接会话级事件。
+
+```javascript
 ua.on('newRTCSession', function(data)
 {
-  // 呼入或呼出通话时触发
+  const session = data.session;
 
-  ... 此处代码见 demo ...
-  
-  // session 事件回调
-  data.session.on('progress', function(d) 
+  session.on('progress', function(event)
   {
-    ... 此处代码见 demo ...
+    console.log('call is in progress', event.originator);
+  });
+
+  session.on('failed', function(event)
+  {
+    console.log('call failed', event.cause);
+  });
+
+  session.on('ended', function(event)
+  {
+    console.log('call ended', event.cause);
+  });
+
+  session.on('confirmed', function()
+  {
+    console.log('call confirmed');
   });
 });
 ```
 
-5. 启动 UA
+## 4. 启动 UA
 
+```javascript
+ua.start();
 ```
-UA.start();
-```
 
-### 发起呼叫
+## 5. 发起呼叫
 
-1. 呼叫参数
-
-```
+```javascript
 const options = {
-  'mediaConstraints' : { 'audio': true, 'video': { width : { ideal: 640 }, height : { ideal: 480 }, frameRate : 15 } },
-  'extraHeaders'     : [ 'X-Data: dGVzdCB4LWRhdGE=' ]
+  mediaConstraints : {
+    audio : true,
+    video : {
+      width     : { ideal: 640 },
+      height    : { ideal: 480 },
+      frameRate : 15
+    }
+  },
+  extraHeaders : [ 'X-Data: dGVzdCB4LWRhdGE=' ]
 };
+
+const session = ua.call('sip:bob@example.com', options);
 ```
 
-2. 发起呼叫
+## 6. 接听来电
 
+在 `newRTCSession` 的回调中，如果 `data.originator === 'remote'`，通常表示当前页面收到呼入。此时可以调用：
+
+```javascript
+session.answer({
+  mediaConstraints : {
+    audio : true,
+    video : true
+  }
+});
 ```
-const session = UA.call('sip:bob@example.com', options);
+
+实际项目里可以按你的页面交互延迟调用 `answer()`。
+
+## 7. 挂断通话
+
+```javascript
+session.terminate();
 ```
+
+## 8. Release 包说明
+
+当前 release 压缩包包含这些内容：
+
+- `dist/CRTC.min.js`
+- `demo/**`
+- `CHANGELOG.md`
+- `docs/*.pdf`
+
+

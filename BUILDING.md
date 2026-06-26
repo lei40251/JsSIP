@@ -1,66 +1,122 @@
-## What you need to build JsSIP
+## What you need to build CRTC
 
-You just need to have [Node.js](https://nodejs.org/) and [Git](https://git-scm.com/).
+You need a local Node.js environment and the repository dependencies installed.
 
-
-### Node.js
-
-* [Install Node.js](https://nodejs.org/en/download/)
-
-### Git
-
-* [Install Git](https://git-scm.com/book/en/Getting-Started-Installing-Git)
-
-
-## How to build JsSIP
-
-Clone a copy of the main JsSIP git repository by running:
+### Install dependencies
 
 ```bash
-$ git clone https://github.com/versatica/JsSIP.git JsSIP
-$ cd JsSIP
+npm install
 ```
 
-Install `gulp-cli` (>= 1.2.2) globally (which provides the `gulp` command):
+The repository uses gulp under the hood, but the recommended entrypoints are the npm scripts exposed in `package.json`.
+
+## Recommended Commands
+
+### Daily validation
 
 ```bash
-$ npm install -g gulp-cli
+npm run lint
+npm run test
 ```
 
-(you can also use the local `gulp` executable located in `node_modules/.bin/gulp`).
-
-Install the Node.js dependencies:
+### Build outputs
 
 ```bash
-$ npm install
+npm run build
+npm run build:min
+npm run build:standard
+npm run release
 ```
 
-Finally, run `gulp dist` (or just `gulp`) to get:
+Command meaning:
 
-* `dist/jssip.js`: uncompressed version of JsSIP.
-* `dist/jssip.min.js`: compressed version of JsSIP.
+- `npm run build`
+  - Full distribution build with lint, babel, tests, browserify, standard minification, private-property minification, and ESM output.
+- `npm run build:min`
+  - Builds the minified browser bundle used by most demos.
+- `npm run build:standard`
+  - Builds the standard minified variant without the aggressive private-property mangle pass.
+- `npm run release`
+  - Clears the previous local zip output in `release/`, runs the full distribution build, and then creates the local SDK zip package there.
+
+## Which task produces `dist/CRTC.min.js`
+
+The primary browser demo bundle is produced by the minified build path:
 
 ```bash
-$ gulp dist
+npm run build:min
 ```
 
-npm --no-git-tag-version version 1.6.8-beta.221030
+This ultimately runs the gulp task chain that emits `dist/CRTC.min.js`.
 
-## Test units
+## Why demo pages may not reflect source edits immediately
+
+Many pages in this repository, including `demo/base-js` and `samples/media-effects-composer`, load `dist/CRTC.min.js` or other built artifacts rather than reading `lib/` source files directly.
+
+That means:
+
+1. You change code in `lib/`
+2. The demo still loads the old `dist/CRTC.min.js`
+3. The page appears unchanged until you rebuild
+
+When runtime behavior matters, rebuild first:
 
 ```bash
-$ gulp test
+npm run build:min
 ```
 
+## Test layout
 
-## Development
-
-### Changes in JsSIP Grammar
-
-If you modify `lib/Grammar.pegjs` then you need to recompile it:
+Recommended top-level test command:
 
 ```bash
-$ gulp devel
-$ gulp dist
+npm run test
 ```
 
+This keeps the existing gulp-based test organization and runs:
+
+- SDK general tests
+- Media-effects related tests
+- BFCP tests
+
+If you want the media-effects subset only, use gulp directly:
+
+```bash
+gulp media-effects-composer-test
+```
+
+## Release zip contents
+
+`npm run release` creates a local zip package in `release/`.
+
+The zip currently contains only these release files:
+
+- `demo/**`
+- `dist/CRTC.min.js`
+- `CHANGELOG.md`
+- `docs/*.pdf`
+
+Release documentation should describe only the files that are actually included in the zip.
+
+## Legacy entrypoints
+
+Older commands are still kept for compatibility, including:
+
+```bash
+node npm-scripts.js lint
+node npm-scripts.js test
+npm run prepublish
+```
+
+They remain usable, but the npm script commands documented above are the current recommended interface.
+
+## Grammar development
+
+If you modify `lib/Grammar.pegjs`, regenerate the derived grammar output before rebuilding:
+
+```bash
+gulp devel
+npm run build
+```
+
+`gulp devel` updates `lib/Grammar.js`, so only run it when you intentionally changed the grammar source.
