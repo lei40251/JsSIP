@@ -105,7 +105,7 @@ AiNoiseSuppression / AiNSWorkletRuntime
             <tr><td><code>Failed to load image: ...</code></td><td><code>Watermark</code></td><td>图片水印加载失败。</td><td>检查 URL、跨域和资源。</td></tr>
             <tr><td><code>Missing image</code></td><td><code>Watermark</code></td><td>图片水印缺资源。</td><td>修正水印配置。</td></tr>
             <tr><td><code>Failed to load background image</code></td><td><code>AiVBState</code> / worker</td><td>虚拟背景图加载失败。</td><td>回退 blur 或关闭 AiVB。</td></tr>
-            <tr><td><code>AIVirtualBackground requires browser environment</code></td><td><code>AiVBAssetLoader</code></td><td>非浏览器环境启用 AiVB。</td><td>关闭 AiVB。</td></tr>
+            <tr><td><code>AiVirtualBackground requires browser environment</code></td><td><code>AiVBAssetLoader</code></td><td>非浏览器环境启用 AiVB。</td><td>关闭 AiVB。</td></tr>
             <tr><td><code>Failed to load MediaPipe Tasks runtime: ...</code></td><td><code>AiVBAssetLoader</code></td><td>MediaPipe runtime 加载失败。</td><td>关闭 AiVB，检查资源路径。</td></tr>
             <tr><td><code>Timed out waiting for MediaPipe Tasks runtime: ...</code></td><td><code>AiVBAssetLoader</code></td><td>等待 runtime 超时。</td><td>关闭 AiVB，检查脚本是否可达。</td></tr>
             <tr><td><code>MediaPipe segmenter destroyed</code></td><td><code>MediaPipeSegmenterRuntime</code></td><td>销毁后仍被调用。</td><td>重新创建实例。</td></tr>
@@ -144,9 +144,9 @@ AiNoiseSuppression / AiNSWorkletRuntime
   lib/MediaEffectsComposer/OutputStream.js
   lib/MediaEffectsComposer/AudioMixer.js
   lib/MediaEffectsComposer/Watermark.js
-  lib/MediaEffectsComposer/AIVirtualBackground/*
+  lib/MediaEffectsComposer/AiVirtualBackground/*
   lib/MediaEffectsComposer/Renderers/*
-  lib/AINoiseSuppression/*
+  lib/AiNoiseSuppression/*
   lib/RTCSession/MediaPipeline.js
   lib/RTCSession.js</code></pre>
       <div class="table-wrap"><table class="table-stack table-wrap-target">

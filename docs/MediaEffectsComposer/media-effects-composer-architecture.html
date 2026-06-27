@@ -108,15 +108,15 @@
 ├── OutputStream.js                  # 输出流管理
 ├── RenderLoop.js                    # 渲染循环（rAF 驱动）
 ├── Watermark.js                     # 水印管理
-└── AIVirtualBackground/             # AiVB 相关
+└── AiVirtualBackground/             # AiVB 相关
 │
 └── Renderers/                   # 渲染后端层
     ├── RenderLoop.js            # 渲染器工厂（自动选择/降级）
-    ├── rendererBase.js               # 渲染器基类（抽象接口）
+    ├── RendererBase.js               # 渲染器基类（抽象接口）
     ├── MainCanvas2DRenderer.js       # 主线程 Canvas2D（最兼容，最终兜底）
     ├── MainWebGL2Renderer.js         # 主线程 WebGL2（GPU 加速）
     ├── WorkerRenderer.js             # Worker 线程渲染器（OffscreenCanvas）
-    ├── workerScript.js               # Worker 内联脚本生成器
+    ├── WorkerScript.js               # Worker 内联脚本生成器
     └── helpers/
         ├── gl.js                     # WebGL 工具（shader 编译、纹理创建）
         └── color.js                  # CSS 颜色解析（用于 WebGL clearColor）</code></pre>
@@ -282,7 +282,7 @@ renderFrame(timestamp, forceRender)
     ├─ ensureRenderer()             ← 按需创建渲染器（createRenderer）
     │     └─ createRenderer(canvas, config)
     │           │
-    │           └─ 返回 rendererBase 子类实例
+    │           └─ 返回 RendererBase 子类实例
     │
     ├─ renderer.render(payload)     ← 实际绘制到 canvas
     │     │
@@ -306,7 +306,7 @@ fallbackRenderer(reason)
 <p><strong>无源暂停</strong>: 源列表为空时不调度 rAF，<code>addSource()</code> 后显式 <code>RenderLoop.start()</code> 恢复。</p>
 <hr>
 <h3 id="Renderers-层">Renderers 层</h3>
-<h4 id="lib-Renderers-baserenderer.js-—-渲染器基类"><a href="../../lib/MediaEffectsComposer/Renderers/rendererBase.js">lib/MediaEffectsComposer/Renderers/rendererBase.js</a> — 渲染器基类</h4>
+<h4 id="lib-Renderers-baserenderer.js-—-渲染器基类"><a href="../../lib/MediaEffectsComposer/Renderers/RendererBase.js">lib/MediaEffectsComposer/Renderers/RendererBase.js</a> — 渲染器基类</h4>
 <p><strong>渲染器抽象接口</strong>，子类必须实现 <code>init(canvas)</code> 和 <code>render(payload)</code>。</p>
 <p><strong>元信息 <code>_info</code></strong>:</p>
 <pre><code class="language-javascript">{
@@ -383,7 +383,7 @@ Worker 线程（workerScript）
 <li><code>maxFrameQueue&lt;=0</code>: 不排队，直接计为 dropped frame</li>
 </ul>
 <hr>
-<h4 id="lib-Renderers-workerscript.js-—-worker-内联脚本生成器"><a href="../../lib/MediaEffectsComposer/Renderers/workerScript.js">lib/MediaEffectsComposer/Renderers/workerScript.js</a> — Worker 内联脚本生成器</h4>
+<h4 id="lib-Renderers-workerscript.js-—-worker-内联脚本生成器"><a href="../../lib/MediaEffectsComposer/Renderers/WorkerScript.js">lib/MediaEffectsComposer/Renderers/WorkerScript.js</a> — Worker 内联脚本生成器</h4>
 <p><strong>职责</strong>: 生成自包含的 Worker 渲染脚本源码字符串，通过 Blob URL 创建 Worker，无需额外部署脚本文件。</p>
 <p><strong>Worker 内部行为</strong>（与主线程对应渲染器代码同构）:</p>
 <ul>
@@ -411,7 +411,7 @@ Worker 线程（workerScript）
 <tbody>
 <tr><td data-label="实现位置"><code>MainWebGL2Renderer.js</code></td><td data-label="方法"><code>compileShader()</code>、<code>createProgram()</code>、<code>createVideoTexture()</code></td><td data-label="说明">主线程 WebGL2 shader、program、纹理创建。</td></tr>
 <tr><td data-label="实现位置"><code>MainWebGL2Renderer.js</code></td><td data-label="方法"><code>parseColor()</code>、<code>parseHexColor()</code>、<code>parseRgbColor()</code></td><td data-label="说明">主线程 WebGL2 clearColor / RGBA 解析。</td></tr>
-<tr><td data-label="实现位置"><code>workerScript.js</code></td><td data-label="方法"><code>compileShader()</code>、<code>createProgram()</code>、<code>parseColor()</code></td><td data-label="说明">Worker WebGL2 内部使用的同类实现，不能通过 import 主线程文件复用。</td></tr>
+<tr><td data-label="实现位置"><code>WorkerScript.js</code></td><td data-label="方法"><code>compileShader()</code>、<code>createProgram()</code>、<code>parseColor()</code></td><td data-label="说明">Worker WebGL2 内部使用的同类实现，不能通过 import 主线程文件复用。</td></tr>
 </tbody></table></div>
 <hr>
 <h2 id="渲染后端选型链路">渲染后端选型链路</h2>
@@ -599,18 +599,18 @@ lib/MediaEffectsComposer/Renderers/
     │                                              ├──▶ MainWebGL2Renderer
     │                                              └──▶ WorkerRenderer
     │
-    ├──▶ rendererBase                          (基类, 无依赖)
+    ├──▶ RendererBase                          (基类, 无依赖)
     │
-    ├──▶ MainCanvas2DRenderer                  ──extends── rendererBase
+    ├──▶ MainCanvas2DRenderer                  ──extends── RendererBase
     │
-    ├──▶ MainWebGL2Renderer                    ──extends── rendererBase
+    ├──▶ MainWebGL2Renderer                    ──extends── RendererBase
     │                                              ──依赖──▶ gl.js
     │                                              ──依赖──▶ color.js
     │
-    ├──▶ WorkerRenderer                        ──extends── rendererBase
-    │                                              ──依赖──▶ workerScript.js
+    ├──▶ WorkerRenderer                        ──extends── RendererBase
+    │                                              ──依赖──▶ WorkerScript.js
     │
-    └─── workerScript.js                       (无依赖, 自包含字符串)
+    └─── WorkerScript.js                       (无依赖, 自包含字符串)
          helpers/
          ├── gl.js                             (无依赖)
          └── color.js                          (无依赖)</code></pre>
@@ -621,7 +621,7 @@ lib/MediaEffectsComposer/Renderers/
 <tbody>
 <tr><td data-label="模式"><strong>Mediator（中介者）</strong></td><td data-label="使用位置">MediaEffectsComposer</td><td data-label="说明">协调 Sources, AudioMixer, RenderLoop, OutputStream, LayoutEngine 之间的交互</td></tr>
 <tr><td data-label="模式"><strong>Strategy（策略）</strong></td><td data-label="使用位置">createRenderer</td><td data-label="说明">可切换多种渲染后端（main-2d / main-webgl2 / worker-*）</td></tr>
-<tr><td data-label="模式"><strong>Template Method（模板方法）</strong></td><td data-label="使用位置">rendererBase</td><td data-label="说明">定义 <code>init() → render() → destroy()</code> 标准接口，子类各自实现</td></tr>
+<tr><td data-label="模式"><strong>Template Method（模板方法）</strong></td><td data-label="使用位置">RendererBase</td><td data-label="说明">定义 <code>init() → render() → destroy()</code> 标准接口，子类各自实现</td></tr>
 <tr><td data-label="模式"><strong>Observer（观察者）</strong></td><td data-label="使用位置">Sources 回调链</td><td data-label="说明">onBeforeRemove → 断音频, onAfterRemove → 清理渲染器</td></tr>
 <tr><td data-label="模式"><strong>Value Object（值对象）</strong></td><td data-label="使用位置">ComposerConfig</td><td data-label="说明">纯函数归一化配置参数，无副作用</td></tr>
 <tr><td data-label="模式"><strong>Registry（注册表）</strong></td><td data-label="使用位置">Sources</td><td data-label="说明">统一管理源对象的增删查</td></tr>

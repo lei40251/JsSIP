@@ -6,7 +6,7 @@
 
 镜像语义上，这个模块只处理“源级镜像”“合成输出镜像”“输出级水印是否跟随镜像”三件事，不负责页面层本地预览的 CSS 镜像。
 
-命名约定：目录名优先使用完整能力名并统一写成 `AI`（如 `AIVirtualBackground/`、`AINoiseSuppression/`）；文件名和标识符优先使用缩写形式 `Ai` / `ai`（如 `AiVBConfig.js`、`AiNSCore.js`、`AiNSEngine`、`aiVirtualBackground`）。
+命名约定：目录名优先使用完整能力名并统一写成 `AI`（如 `AiVirtualBackground/`、`AiNoiseSuppression/`）；文件名和标识符优先使用缩写形式 `Ai` / `ai`（如 `AiVBConfig.js`、`AiNSCore.js`、`AiNSEngine`、`aiVirtualBackground`）。
 
 这一版对外 API 已经收敛为 8 个主方法：
 
@@ -25,7 +25,7 @@
 
 1. 入口在 [lib/MediaEffectsComposer/MediaEffectsComposer.js](../lib/MediaEffectsComposer/MediaEffectsComposer.js)；SDK 对外导出由 [lib/JsSIP.js](../lib/JsSIP.js) 暴露为 `CRTC.MediaEffectsComposer` / `CRTC.Mixer`。
 2. 输入源由 `Sources` 管理。
-3. 源级虚拟背景由 `AiVBState` 调度，并复用 `AIVirtualBackground/` 下的配置、资源加载和 MediaPipe runtime。
+3. 源级虚拟背景由 `AiVBState` 调度，并复用 `AiVirtualBackground/` 下的配置、资源加载和 MediaPipe runtime。
 4. 视频渲染由 `LayoutEngine -> RenderLoop -> createRenderer` 处理。
 5. 音频输出由 `AudioMixer` 处理。
 6. 输出流由 `OutputStream` 统一产出。
@@ -76,7 +76,7 @@ lib/
 ├── JsSIP.js
 │
 └── MediaEffectsComposer/
-    ├── AIVirtualBackground/
+    ├── AiVirtualBackground/
     │   ├── AiVBConfig.js
     │   ├── AiVBAssetLoader.js
     │   ├── AiVBSegmentationCommon.js
@@ -91,11 +91,11 @@ lib/
     ├── RenderLoop.js
     ├── Watermark.js
     └── Renderers/
-        ├── rendererBase.js
+        ├── RendererBase.js
         ├── MainCanvas2DRenderer.js
         ├── MainWebGL2Renderer.js
         ├── WorkerRenderer.js
-        └── workerScript.js
+        └── WorkerScript.js
 ```
 
 ---

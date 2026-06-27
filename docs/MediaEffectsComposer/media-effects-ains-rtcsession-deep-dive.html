@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MediaEffectsComposer + AINoiseSuppression + RTCSession Deep Dive</title>
+<title>MediaEffectsComposer + AiNoiseSuppression + RTCSession Deep Dive</title>
 <link rel="stylesheet" href="./style.css">
 </head>
 <body>
@@ -29,7 +29,7 @@
           <li><a href="#architecture">2. 总体架构</a></li>
           <li><a href="#composer-overview">3. MediaEffectsComposer 总览</a></li>
           <li><a href="#composer-files">4. Composer 文件级详解</a></li>
-          <li><a href="#ains-overview">5. AINoiseSuppression 总览</a></li>
+          <li><a href="#ains-overview">5. AiNoiseSuppression 总览</a></li>
           <li><a href="#ains-files">6. AiNS 文件级详解</a></li>
           <li><a href="#rtcsession">7. RTCSession / MediaPipeline 接入</a></li>
           <li><a href="#demos">8. Demo 调用对照</a></li>
@@ -43,17 +43,17 @@
     <main class="content">
       <section class="hero" id="scope">
         <p class="eyebrow">Deep Dive</p>
-        <h1>MediaEffectsComposer + AINoiseSuppression + RTCSession 深入说明</h1>
+        <h1>MediaEffectsComposer + AiNoiseSuppression + RTCSession 深入说明</h1>
         <p class="lead">
           这份文档的目标不是“告诉你有哪些 API”，而是让你在读完以后，能真正理解
-          <code>MediaEffectsComposer</code>、<code>AINoiseSuppression</code>、
+          <code>MediaEffectsComposer</code>、<code>AiNoiseSuppression</code>、
           <code>RTCSession / MediaPipeline</code> 三者怎么配合、为什么这样设计、通话里什么时候重建、什么时候热更新、切设备时为什么这么处理。
         </p>
 
         <div class="meta">
           <div class="badge-row">
             <span class="badge">Scope: MediaEffectsComposer</span>
-            <span class="badge">Scope: AINoiseSuppression</span>
+            <span class="badge">Scope: AiNoiseSuppression</span>
             <span class="badge">Scope: RTCSession Integration</span>
             <span class="badge">Demo: base-js</span>
             <span class="badge">Demo: media-effects-composer</span>
@@ -61,7 +61,7 @@
           <p>
             主要依据的源码文件：
             <span class="path">lib/MediaEffectsComposer/*</span>、
-            <span class="path">lib/AINoiseSuppression/*</span>、
+            <span class="path">lib/AiNoiseSuppression/*</span>、
             <span class="path">lib/RTCSession.js</span>、
             <span class="path">lib/RTCSession/MediaPipeline.js</span>、
             <span class="path">demo/base-js/js/app-media-effects.js</span>、
@@ -84,7 +84,7 @@
         <p>
           当前产品边界下，<code>MediaEffectsComposer</code> 在 <code>RTCSession</code> 里承担的是
           <span class="em">“会话启动时先服务单源，通话中允许扩展成多源”</span> 的角色；
-          <code>AINoiseSuppression</code> 则承担
+          <code>AiNoiseSuppression</code> 则承担
           <span class="em">“音频输入轨级别的 AI 处理器”</span> 的角色。
         </p>
         <p>
@@ -788,8 +788,8 @@
           <tr><td data-label="文件"><code>MainCanvas2DRenderer.js</code></td><td data-label="角色">主线程 2D 渲染</td><td data-label="关键点">最兼容的最终兜底。</td></tr>
           <tr><td data-label="文件"><code>MainWebGL2Renderer.js</code></td><td data-label="角色">主线程 WebGL2 渲染</td><td data-label="关键点">GPU 路径，更高性能，支持纹理和 AiVB 合成。</td></tr>
           <tr><td data-label="文件"><code>WorkerRenderer.js</code></td><td data-label="角色">Worker 代理层</td><td data-label="关键点">负责把帧和水印打包给 workerScript。</td></tr>
-          <tr><td data-label="文件"><code>workerScript.js</code></td><td data-label="角色">Worker 内真正绘制逻辑</td><td data-label="关键点">包含 Canvas2D / WebGL2 绘制与 Worker 侧 AiVB 流程。</td></tr>
-          <tr><td data-label="文件"><code>rendererBase.js</code></td><td data-label="角色">共享 info/state</td><td data-label="关键点">给各 renderer 暴露统一 <code>getInfo()</code> 结构。</td></tr>
+          <tr><td data-label="文件"><code>WorkerScript.js</code></td><td data-label="角色">Worker 内真正绘制逻辑</td><td data-label="关键点">包含 Canvas2D / WebGL2 绘制与 Worker 侧 AiVB 流程。</td></tr>
+          <tr><td data-label="文件"><code>RendererBase.js</code></td><td data-label="角色">共享 info/state</td><td data-label="关键点">给各 renderer 暴露统一 <code>getInfo()</code> 结构。</td></tr>
         </tbody>
       </table></div>
 
@@ -810,9 +810,9 @@
         <code>createRenderItems(payload)</code> 则是每帧把水印实例化为 renderer 能直接消费的 draw item。
       </p>
 
-      <h2 id="ains-overview">5. AINoiseSuppression 总览</h2>
+      <h2 id="ains-overview">5. AiNoiseSuppression 总览</h2>
       <p>
-        AINoiseSuppression 的对外入口只有一个：<code>AiNoiseSuppression</code>。
+        AiNoiseSuppression 的对外入口只有一个：<code>AiNoiseSuppression</code>。
         但它内部是三层：
       </p>
       <pre>AiNoiseSuppression
@@ -831,13 +831,13 @@
 
       <h2 id="ains-files">6. AiNS 文件级详解</h2>
 
-      <h3>6.1 <code>lib/AINoiseSuppression/AiNoiseSuppression.js</code> 是当前导出入口</h3>
+      <h3>6.1 <code>lib/AiNoiseSuppression/AiNSEngine.js</code> 是当前导出入口</h3>
       <p>
         当前目录没有单独的 <code>index.js</code>。调用方通过模块导出拿到 <code>AiNoiseSuppression</code> 引擎时，实际进入的是
-        <code>AiNoiseSuppression.js</code>，再由它持有 <code>AiNSConfig</code> 和 <code>AiNSWorkletRuntime</code>。
+        <code>AiNSEngine.js</code>，再由它持有 <code>AiNSConfig</code> 和 <code>AiNSWorkletRuntime</code>。
       </p>
 
-      <h3>6.2 <code>lib/AINoiseSuppression/AiNSConfig.js</code></h3>
+      <h3>6.2 <code>lib/AiNoiseSuppression/AiNSConfig.js</code></h3>
       <p>
         这是 AiNS 的配置归一化模块，和 ComposerConfig 的角色完全类似。
       </p>
@@ -862,7 +862,7 @@
         </tbody>
       </table></div>
 
-      <h3>6.3 <code>lib/AINoiseSuppression/AiNoiseSuppression.js</code></h3>
+      <h3>6.3 <code>lib/AiNoiseSuppression/AiNSEngine.js</code></h3>
       <p>
         这是 AiNS 对外门面。它的工作不是“处理音频样本”，而是把内部 Processor 包成更适合业务用的接口。
       </p>
@@ -902,7 +902,7 @@
         <li>当前是否启用，当前 suppression level 是多少。</li>
       </ul>
 
-      <h3>6.4 <code>lib/AINoiseSuppression/AiNoiseSuppression.js</code></h3>
+      <h3>6.4 <code>lib/AiNoiseSuppression/AiNSEngine.js</code></h3>
       <p>
         这是 AiNS 真正的“媒体图编排层”。它的本质是：
       </p>
@@ -981,7 +981,7 @@
         </tbody>
       </table></div>
 
-      <h3>6.5 <code>lib/AINoiseSuppression/AiNSWorkletRuntime.js</code></h3>
+      <h3>6.5 <code>lib/AiNoiseSuppression/AiNSWorkletRuntime.js</code></h3>
       <p>
         这是最底层的运行时壳。它不管理 MediaStream，不管理会话，也不直接处理 UI；
         它只做“资源”和“WorkletNode”。
@@ -1015,7 +1015,7 @@
         这里把“关闭降噪”实现为 <code>SET_BYPASS</code> 消息，本质上是让 worklet 直接透传输入。
       </p>
 
-      <h3>6.6 <code>lib/AINoiseSuppression/AiNSWorkletSource.js</code></h3>
+      <h3>6.6 <code>lib/AiNoiseSuppression/AiNSWorkletSource.js</code></h3>
       <p>
         这个文件体积大，是因为它内嵌了 worklet 里跑的 wasm glue code。
         你可以把它理解成“WorkletRuntime 的源码供应器”。
@@ -1483,8 +1483,8 @@ composer.addSource(screenStream, { slot: 2 });</pre>
         <li><code>lib/MediaEffectsComposer/MediaEffectsComposer.js</code></li>
         <li><code>lib/MediaEffectsComposer/AudioMixer.js</code></li>
         <li><code>lib/MediaEffectsComposer/OutputStream.js</code></li>
-        <li><code>lib/AINoiseSuppression/AiNoiseSuppression.js</code></li>
-        <li><code>lib/AINoiseSuppression/AiNSWorkletRuntime.js</code></li>
+        <li><code>lib/AiNoiseSuppression/AiNSEngine.js</code></li>
+        <li><code>lib/AiNoiseSuppression/AiNSWorkletRuntime.js</code></li>
       </ol>
 
       <h3>11.2 建议的阅读顺序</h3>
@@ -1499,7 +1499,7 @@ composer.addSource(screenStream, { slot: 2 });</pre>
       <h3>11.3 一句话记忆版</h3>
       <div class="callout">
         <p><strong>MediaEffectsComposer：</strong> 一个以视频合成为中心、顺带提供混音和效果控制的多子系统运行时。</p>
-        <p><strong>AINoiseSuppression：</strong> 一个以输入音轨处理为中心、通过 Worklet + WASM 完成 AI 降噪的音频处理器。</p>
+        <p><strong>AiNoiseSuppression：</strong> 一个以输入音轨处理为中心、通过 Worklet + WASM 完成 AI 降噪的音频处理器。</p>
         <p><strong>RTCSession/MediaPipeline：</strong> 一个把“采集、预处理、AiNS、Composer、替轨、切设备、销毁”统一编排起来的会话媒体管线。</p>
       </div>
     <section id="current-code-calibration">
@@ -1514,9 +1514,9 @@ composer.addSource(screenStream, { slot: 2 });</pre>
   lib/MediaEffectsComposer/OutputStream.js
   lib/MediaEffectsComposer/AudioMixer.js
   lib/MediaEffectsComposer/Watermark.js
-  lib/MediaEffectsComposer/AIVirtualBackground/*
+  lib/MediaEffectsComposer/AiVirtualBackground/*
   lib/MediaEffectsComposer/Renderers/*
-  lib/AINoiseSuppression/*
+  lib/AiNoiseSuppression/*
   lib/RTCSession/MediaPipeline.js
   lib/RTCSession.js</code></pre>
       <div class="table-wrap"><table class="table-stack table-wrap-target">

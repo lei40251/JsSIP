@@ -235,16 +235,16 @@ function installBrowserMocks(options = {})
 function loadEngine()
 {
   [
-    '../lib/AINoiseSuppression/AiNoiseSuppression',
-    '../lib/AINoiseSuppression/AiNSWorkletRuntime',
-    '../lib/AINoiseSuppression/AiNSWorkletSource',
-    '../lib/AINoiseSuppression/AiNSConfig'
+    '../lib/AiNoiseSuppression/AiNSEngine',
+    '../lib/AiNoiseSuppression/AiNSWorkletRuntime',
+    '../lib/AiNoiseSuppression/AiNSWorkletSource',
+    '../lib/AiNoiseSuppression/AiNSConfig'
   ].forEach((id) =>
   {
     delete require.cache[require.resolve(id)];
   });
 
-  return require('../lib/AINoiseSuppression/AiNoiseSuppression');
+  return require('../lib/AiNoiseSuppression/AiNSEngine');
 }
 
 function createInputStream()

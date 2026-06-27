@@ -75,20 +75,20 @@
           <tr><td><code>lib/MediaEffectsComposer/OutputStream.js</code></td><td>985</td><td>视频输出封装，优先 Insertable Streams，失败或未启用时使用 canvas.captureStream，并负责 mixed stream 音轨注入。</td><td>29</td></tr>
           <tr><td><code>lib/MediaEffectsComposer/AudioMixer.js</code></td><td>1969</td><td>WebAudio 混音中心，负责主混音、slots 子混音、独立 AudioContext 子混音、音频刷新和节点释放。</td><td>56</td></tr>
           <tr><td><code>lib/MediaEffectsComposer/Watermark.js</code></td><td>680</td><td>水印配置、资源准备、文字水印 surface、图片加载、source/output 水印绘制项生成。</td><td>25</td></tr>
-          <tr><td><code>lib/MediaEffectsComposer/AIVirtualBackground/AiVBState.js</code></td><td>1446</td><td>source 级 AI 虚拟背景状态机，负责配置归一化、背景图加载、分割调度、mask 缓存和渲染态输出。</td><td>34</td></tr>
-          <tr><td><code>lib/MediaEffectsComposer/AIVirtualBackground/AiVBConfig.js</code></td><td>331</td><td>AiVB 的 video/segmentation/postProcessing/asset 配置归一化与默认值。</td><td>8</td></tr>
-          <tr><td><code>lib/MediaEffectsComposer/AIVirtualBackground/AiVBAssetLoader.js</code></td><td>276</td><td>MediaPipe tasks-vision 脚本加载器，处理 CDN/模块加载、重复加载去重和超时。</td><td>5</td></tr>
-          <tr><td><code>lib/MediaEffectsComposer/AIVirtualBackground/AiVBSegmentationCommon.js</code></td><td>180</td><td>主线程和 Worker 共用的分割 mask 辅助函数工厂。</td><td>2</td></tr>
-          <tr><td><code>lib/MediaEffectsComposer/AIVirtualBackground/MediaPipeSegmenterRuntime.js</code></td><td>686</td><td>MediaPipe ImageSegmenter 运行时封装，负责初始化、GPU/CPU delegate、排队分割和 mask 生成。</td><td>17</td></tr>
-          <tr><td><code>lib/MediaEffectsComposer/Renderers/rendererBase.js</code></td><td>48</td><td>渲染器最小共享基类，提供 getInfo、frame presented 回调和信息更新。</td><td>3</td></tr>
+          <tr><td><code>lib/MediaEffectsComposer/AiVirtualBackground/AiVBState.js</code></td><td>1446</td><td>source 级 AI 虚拟背景状态机，负责配置归一化、背景图加载、分割调度、mask 缓存和渲染态输出。</td><td>34</td></tr>
+          <tr><td><code>lib/MediaEffectsComposer/AiVirtualBackground/AiVBConfig.js</code></td><td>331</td><td>AiVB 的 video/segmentation/postProcessing/asset 配置归一化与默认值。</td><td>8</td></tr>
+          <tr><td><code>lib/MediaEffectsComposer/AiVirtualBackground/AiVBAssetLoader.js</code></td><td>276</td><td>MediaPipe tasks-vision 脚本加载器，处理 CDN/模块加载、重复加载去重和超时。</td><td>5</td></tr>
+          <tr><td><code>lib/MediaEffectsComposer/AiVirtualBackground/AiVBSegmentationCommon.js</code></td><td>180</td><td>主线程和 Worker 共用的分割 mask 辅助函数工厂。</td><td>2</td></tr>
+          <tr><td><code>lib/MediaEffectsComposer/AiVirtualBackground/MediaPipeSegmenterRuntime.js</code></td><td>686</td><td>MediaPipe ImageSegmenter 运行时封装，负责初始化、GPU/CPU delegate、排队分割和 mask 生成。</td><td>17</td></tr>
+          <tr><td><code>lib/MediaEffectsComposer/Renderers/RendererBase.js</code></td><td>48</td><td>渲染器最小共享基类，提供 getInfo、frame presented 回调和信息更新。</td><td>3</td></tr>
           <tr><td><code>lib/MediaEffectsComposer/Renderers/MainCanvas2DRenderer.js</code></td><td>435</td><td>主线程 Canvas2D 渲染器，最兼容路径，直接 drawImage/source/watermark/AiVB surface。</td><td>14</td></tr>
           <tr><td><code>lib/MediaEffectsComposer/Renderers/MainWebGL2Renderer.js</code></td><td>852</td><td>主线程 WebGL2 渲染器，使用纹理和 shader 绘制视频、水印，并在需要时组合 AiVB surface。</td><td>28</td></tr>
           <tr><td><code>lib/MediaEffectsComposer/Renderers/WorkerRenderer.js</code></td><td>852</td><td>主线程侧 Worker 渲染代理，负责 Worker 生命周期、payload 转换、VideoFrame/ImageBitmap 传输和 fatal fallback。</td><td>20</td></tr>
-          <tr><td><code>lib/MediaEffectsComposer/Renderers/workerScript.js</code></td><td>1421</td><td>Worker 内渲染实现，包含 worker-webgl2/worker-2d 两条路径和 Worker 内 AiVB 分割/背景合成逻辑。</td><td>40</td></tr>
-          <tr><td><code>lib/AINoiseSuppression/AiNoiseSuppression.js</code></td><td>522</td><td>AI 降噪公开引擎，管理输入音轨、AudioContext、Worklet runtime、输出流、开关和销毁。</td><td>27</td></tr>
-          <tr><td><code>lib/AINoiseSuppression/AiNSConfig.js</code></td><td>210</td><td>AiNS 配置默认值和归一化。</td><td>5</td></tr>
-          <tr><td><code>lib/AINoiseSuppression/AiNSWorkletRuntime.js</code></td><td>436</td><td>AiNS Worklet 运行时，负责拉取/初始化 WASM 和 model，创建 AudioWorkletNode，转发开关和降噪等级。</td><td>11</td></tr>
-          <tr><td><code>lib/AINoiseSuppression/AiNSWorkletSource.js</code></td><td>631</td><td>注入 AudioWorklet 的处理器源码，真正执行 DeepFilter 音频帧处理。</td><td>39</td></tr>
+          <tr><td><code>lib/MediaEffectsComposer/Renderers/WorkerScript.js</code></td><td>1421</td><td>Worker 内渲染实现，包含 worker-webgl2/worker-2d 两条路径和 Worker 内 AiVB 分割/背景合成逻辑。</td><td>40</td></tr>
+          <tr><td><code>lib/AiNoiseSuppression/AiNSEngine.js</code></td><td>522</td><td>AI 降噪公开引擎，管理输入音轨、AudioContext、Worklet runtime、输出流、开关和销毁。</td><td>27</td></tr>
+          <tr><td><code>lib/AiNoiseSuppression/AiNSConfig.js</code></td><td>210</td><td>AiNS 配置默认值和归一化。</td><td>5</td></tr>
+          <tr><td><code>lib/AiNoiseSuppression/AiNSWorkletRuntime.js</code></td><td>436</td><td>AiNS Worklet 运行时，负责拉取/初始化 WASM 和 model，创建 AudioWorkletNode，转发开关和降噪等级。</td><td>11</td></tr>
+          <tr><td><code>lib/AiNoiseSuppression/AiNSWorkletSource.js</code></td><td>631</td><td>注入 AudioWorklet 的处理器源码，真正执行 DeepFilter 音频帧处理。</td><td>39</td></tr>
           <tr><td><code>lib/RTCSession/MediaPipeline.js</code></td><td>1027</td><td>RTCSession 媒体处理管线，串联 getUserMedia、外部处理器、AiNS、MediaEffectsComposer、热更新和失败回退。</td><td>28</td></tr>
           <tr><td><code>lib/RTCSession.js</code></td><td>8556</td><td>会话级 API 入口和发送轨替换入口，暴露 update/get MediaEffectsComposer/AiNS，并把 issue 事件向外抛。</td><td>120</td></tr>
         </tbody>

@@ -10,20 +10,20 @@
 <a href="#lib-MediaEffectsComposer-OutputStream-js">OutputStream.js</a>
 <a href="#lib-MediaEffectsComposer-AudioMixer-js">AudioMixer.js</a>
 <a href="#lib-MediaEffectsComposer-Watermark-js">Watermark.js</a>
-<a href="#lib-MediaEffectsComposer-AIVirtualBackground-AiVBState-js">AIVirtualBackground/AiVBState.js</a>
-<a href="#lib-MediaEffectsComposer-AIVirtualBackground-AiVBConfig-js">AIVirtualBackground/AiVBConfig.js</a>
-<a href="#lib-MediaEffectsComposer-AIVirtualBackground-AiVBAssetLoader-js">AIVirtualBackground/AiVBAssetLoader.js</a>
-<a href="#lib-MediaEffectsComposer-AIVirtualBackground-AiVBSegmentationCommon-js">AIVirtualBackground/AiVBSegmentationCommon.js</a>
-<a href="#lib-MediaEffectsComposer-AIVirtualBackground-MediaPipeSegmenterRuntime-js">AIVirtualBackground/MediaPipeSegmenterRuntime.js</a>
-<a href="#lib-MediaEffectsComposer-Renderers-rendererBase-js">Renderers/rendererBase.js</a>
+<a href="#lib-MediaEffectsComposer-AiVirtualBackground-AiVBState-js">AiVirtualBackground/AiVBState.js</a>
+<a href="#lib-MediaEffectsComposer-AiVirtualBackground-AiVBConfig-js">AiVirtualBackground/AiVBConfig.js</a>
+<a href="#lib-MediaEffectsComposer-AiVirtualBackground-AiVBAssetLoader-js">AiVirtualBackground/AiVBAssetLoader.js</a>
+<a href="#lib-MediaEffectsComposer-AiVirtualBackground-AiVBSegmentationCommon-js">AiVirtualBackground/AiVBSegmentationCommon.js</a>
+<a href="#lib-MediaEffectsComposer-AiVirtualBackground-MediaPipeSegmenterRuntime-js">AiVirtualBackground/MediaPipeSegmenterRuntime.js</a>
+<a href="#lib-MediaEffectsComposer-Renderers-RendererBase-js">Renderers/RendererBase.js</a>
 <a href="#lib-MediaEffectsComposer-Renderers-MainCanvas2DRenderer-js">Renderers/MainCanvas2DRenderer.js</a>
 <a href="#lib-MediaEffectsComposer-Renderers-MainWebGL2Renderer-js">Renderers/MainWebGL2Renderer.js</a>
 <a href="#lib-MediaEffectsComposer-Renderers-WorkerRenderer-js">Renderers/WorkerRenderer.js</a>
-<a href="#lib-MediaEffectsComposer-Renderers-workerScript-js">Renderers/workerScript.js</a>
-<a href="#lib-AINoiseSuppression-AiNoiseSuppression-js">AiNS/AiNoiseSuppression.js</a>
-<a href="#lib-AINoiseSuppression-AiNSConfig-js">AiNS/AiNSConfig.js</a>
-<a href="#lib-AINoiseSuppression-AiNSWorkletRuntime-js">AiNS/AiNSWorkletRuntime.js</a>
-<a href="#lib-AINoiseSuppression-AiNSWorkletSource-js">AiNS/AiNSWorkletSource.js</a>
+<a href="#lib-MediaEffectsComposer-Renderers-workerScript-js">Renderers/WorkerScript.js</a>
+<a href="#lib-AiNoiseSuppression-AiNoiseSuppression-js">AiNS/AiNSEngine.js</a>
+<a href="#lib-AiNoiseSuppression-AiNSConfig-js">AiNS/AiNSConfig.js</a>
+<a href="#lib-AiNoiseSuppression-AiNSWorkletRuntime-js">AiNS/AiNSWorkletRuntime.js</a>
+<a href="#lib-AiNoiseSuppression-AiNSWorkletSource-js">AiNS/AiNSWorkletSource.js</a>
 <a href="#lib-RTCSession-MediaPipeline-js">RTC/MediaPipeline.js</a>
 <a href="#lib-RTCSession-js">RTCSession.js</a></nav></aside><main class="content"><section class="hero"><p class="eyebrow">Source Reference</p><h1>源码逐文件阅读索引</h1><p class="lead">这份文档只对应当前源码。目标不是替代源码，而是告诉你每个文件、每个方法从哪里进、参数大概是什么、会改哪些状态、下一步通常调用谁。</p></section><section><h2 id="main-chains">先看这几条主链路</h2><div class="grid"><div class="card span-6"><h3>直接使用 Composer</h3><pre><code>new MediaEffectsComposer(videos, options)
   -> MediaEffectsComposerConfig.create(options)
@@ -45,7 +45,7 @@
   -> MediaPipeline.resolveMediaEffectsComposerOptions()
   -> resolveMediaEffectsComposerPatch() or rebuild
   -> composer.setConfig(patch)
-  -> replace track when rebuild is needed</code></pre></div></div></section><section><h2>文件目录</h2><div class="toc-columns"><a href="#lib-MediaEffectsComposer-MediaEffectsComposer-js">lib/MediaEffectsComposer/MediaEffectsComposer.js</a><a href="#lib-MediaEffectsComposer-ComposerConfig-js">lib/MediaEffectsComposer/ComposerConfig.js</a><a href="#lib-MediaEffectsComposer-Sources-js">lib/MediaEffectsComposer/Sources.js</a><a href="#lib-MediaEffectsComposer-LayoutEngine-js">lib/MediaEffectsComposer/LayoutEngine.js</a><a href="#lib-MediaEffectsComposer-RenderLoop-js">lib/MediaEffectsComposer/RenderLoop.js</a><a href="#lib-MediaEffectsComposer-OutputStream-js">lib/MediaEffectsComposer/OutputStream.js</a><a href="#lib-MediaEffectsComposer-AudioMixer-js">lib/MediaEffectsComposer/AudioMixer.js</a><a href="#lib-MediaEffectsComposer-Watermark-js">lib/MediaEffectsComposer/Watermark.js</a><a href="#lib-MediaEffectsComposer-AIVirtualBackground-AiVBState-js">lib/MediaEffectsComposer/AIVirtualBackground/AiVBState.js</a><a href="#lib-MediaEffectsComposer-AIVirtualBackground-AiVBConfig-js">lib/MediaEffectsComposer/AIVirtualBackground/AiVBConfig.js</a><a href="#lib-MediaEffectsComposer-AIVirtualBackground-AiVBAssetLoader-js">lib/MediaEffectsComposer/AIVirtualBackground/AiVBAssetLoader.js</a><a href="#lib-MediaEffectsComposer-AIVirtualBackground-AiVBSegmentationCommon-js">lib/MediaEffectsComposer/AIVirtualBackground/AiVBSegmentationCommon.js</a><a href="#lib-MediaEffectsComposer-AIVirtualBackground-MediaPipeSegmenterRuntime-js">lib/MediaEffectsComposer/AIVirtualBackground/MediaPipeSegmenterRuntime.js</a><a href="#lib-MediaEffectsComposer-Renderers-rendererBase-js">lib/MediaEffectsComposer/Renderers/rendererBase.js</a><a href="#lib-MediaEffectsComposer-Renderers-MainCanvas2DRenderer-js">lib/MediaEffectsComposer/Renderers/MainCanvas2DRenderer.js</a><a href="#lib-MediaEffectsComposer-Renderers-MainWebGL2Renderer-js">lib/MediaEffectsComposer/Renderers/MainWebGL2Renderer.js</a><a href="#lib-MediaEffectsComposer-Renderers-WorkerRenderer-js">lib/MediaEffectsComposer/Renderers/WorkerRenderer.js</a><a href="#lib-MediaEffectsComposer-Renderers-workerScript-js">lib/MediaEffectsComposer/Renderers/workerScript.js</a><a href="#lib-AINoiseSuppression-AiNoiseSuppression-js">lib/AINoiseSuppression/AiNoiseSuppression.js</a><a href="#lib-AINoiseSuppression-AiNSConfig-js">lib/AINoiseSuppression/AiNSConfig.js</a><a href="#lib-AINoiseSuppression-AiNSWorkletRuntime-js">lib/AINoiseSuppression/AiNSWorkletRuntime.js</a><a href="#lib-AINoiseSuppression-AiNSWorkletSource-js">lib/AINoiseSuppression/AiNSWorkletSource.js</a><a href="#lib-RTCSession-MediaPipeline-js">lib/RTCSession/MediaPipeline.js</a><a href="#lib-RTCSession-js">lib/RTCSession.js</a></div></section><section id="lib-MediaEffectsComposer-MediaEffectsComposer-js" class="file-block">
+  -> replace track when rebuild is needed</code></pre></div></div></section><section><h2>文件目录</h2><div class="toc-columns"><a href="#lib-MediaEffectsComposer-MediaEffectsComposer-js">lib/MediaEffectsComposer/MediaEffectsComposer.js</a><a href="#lib-MediaEffectsComposer-ComposerConfig-js">lib/MediaEffectsComposer/ComposerConfig.js</a><a href="#lib-MediaEffectsComposer-Sources-js">lib/MediaEffectsComposer/Sources.js</a><a href="#lib-MediaEffectsComposer-LayoutEngine-js">lib/MediaEffectsComposer/LayoutEngine.js</a><a href="#lib-MediaEffectsComposer-RenderLoop-js">lib/MediaEffectsComposer/RenderLoop.js</a><a href="#lib-MediaEffectsComposer-OutputStream-js">lib/MediaEffectsComposer/OutputStream.js</a><a href="#lib-MediaEffectsComposer-AudioMixer-js">lib/MediaEffectsComposer/AudioMixer.js</a><a href="#lib-MediaEffectsComposer-Watermark-js">lib/MediaEffectsComposer/Watermark.js</a><a href="#lib-MediaEffectsComposer-AiVirtualBackground-AiVBState-js">lib/MediaEffectsComposer/AiVirtualBackground/AiVBState.js</a><a href="#lib-MediaEffectsComposer-AiVirtualBackground-AiVBConfig-js">lib/MediaEffectsComposer/AiVirtualBackground/AiVBConfig.js</a><a href="#lib-MediaEffectsComposer-AiVirtualBackground-AiVBAssetLoader-js">lib/MediaEffectsComposer/AiVirtualBackground/AiVBAssetLoader.js</a><a href="#lib-MediaEffectsComposer-AiVirtualBackground-AiVBSegmentationCommon-js">lib/MediaEffectsComposer/AiVirtualBackground/AiVBSegmentationCommon.js</a><a href="#lib-MediaEffectsComposer-AiVirtualBackground-MediaPipeSegmenterRuntime-js">lib/MediaEffectsComposer/AiVirtualBackground/MediaPipeSegmenterRuntime.js</a><a href="#lib-MediaEffectsComposer-Renderers-RendererBase-js">lib/MediaEffectsComposer/Renderers/RendererBase.js</a><a href="#lib-MediaEffectsComposer-Renderers-MainCanvas2DRenderer-js">lib/MediaEffectsComposer/Renderers/MainCanvas2DRenderer.js</a><a href="#lib-MediaEffectsComposer-Renderers-MainWebGL2Renderer-js">lib/MediaEffectsComposer/Renderers/MainWebGL2Renderer.js</a><a href="#lib-MediaEffectsComposer-Renderers-WorkerRenderer-js">lib/MediaEffectsComposer/Renderers/WorkerRenderer.js</a><a href="#lib-MediaEffectsComposer-Renderers-workerScript-js">lib/MediaEffectsComposer/Renderers/WorkerScript.js</a><a href="#lib-AiNoiseSuppression-AiNoiseSuppression-js">lib/AiNoiseSuppression/AiNSEngine.js</a><a href="#lib-AiNoiseSuppression-AiNSConfig-js">lib/AiNoiseSuppression/AiNSConfig.js</a><a href="#lib-AiNoiseSuppression-AiNSWorkletRuntime-js">lib/AiNoiseSuppression/AiNSWorkletRuntime.js</a><a href="#lib-AiNoiseSuppression-AiNSWorkletSource-js">lib/AiNoiseSuppression/AiNSWorkletSource.js</a><a href="#lib-RTCSession-MediaPipeline-js">lib/RTCSession/MediaPipeline.js</a><a href="#lib-RTCSession-js">lib/RTCSession.js</a></div></section><section id="lib-MediaEffectsComposer-MediaEffectsComposer-js" class="file-block">
 <h2><code>lib/MediaEffectsComposer/MediaEffectsComposer.js</code></h2>
 <p class="file-meta">1931 行，77 个 class/function/method/export 入口。</p>
 <p>总编排入口，负责公开 API、源管理、配置热更新、输出分派、issue 汇聚，以及把 Sources/LayoutEngine/RenderLoop/OutputStream/AudioMixer/Watermark/AiVBState 串成一条管线。</p>
@@ -205,7 +205,7 @@
 <tr><td>351</td><td><code>removeSource(sourceId)</code><br><span class="pill">method</span></td><td>移除一个源（按 stream 对象、stream id 或 source id 查找）。。参数：`target`（MediaStream|string|HTMLVideoElement，要移除的目标 *）。返回 `boolean`：true=成功移除 */</td><td>公开调用或模块入口</td></tr>
 <tr><td>364</td><td><code>getRenderInfo()</code><br><span class="pill">method</span></td><td>无参数。内部聚合 RenderLoop 的渲染器信息（`actualMode`/`isFallback`/`reason`/`droppedFrames`/`renderedFrames`/`fps`）和 OutputStream 的输出路径信息（`outputRoute`/`insertableEnabled`）。适合调试面板展示，不建议作为业务逻辑分支条件。</td><td>公开调用或模块入口</td></tr>
 <tr><td>400</td><td><code>renderFrame(timestamp, forceRender)</code><br><span class="pill">method</span></td><td>渲染一帧（requestAnimationFrame 回调）。 流程： 1. 检查停止标记，已停止则直接返回 2. 检查 fps 节流（是否已达到目标帧间隔），未到时跳过绘制 3. 同步外部音频源状态（检测 HTMLVideoElement 换源） 4. 构建渲染 payload 并交给 renderer 绘制 5. 检查渲染器健康状态（Worker 故障检测、错误计数） 6. 调度下一帧 rAF。参数：`[timestamp]`（number，rAF 传入的高精度时间戳 *）、`[forceRender=false]`（boolean，是否强制渲染（忽略 fps 节流） */）</td><td>公开调用或模块入口</td></tr>
-<tr><td>457</td><td><code>destroy()</code><br><span class="pill">method</span></td><td>方法详情见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>457</td><td><code>destroy()</code><br><span class="pill">method</span></td><td>方法详情见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
 <tr><td>485</td><td><code>fallbackRenderer(reason)</code><br><span class="pill">method</span></td><td>运行时降级到下一个可用渲染器。 auto 模式按 worker-webgl2 -> main-webgl2 -> worker-2d -> main-2d 继续尝试。 只在以下条件满足时降级： - 当前渲染器不是 main-2d - 当前是 Worker 渲染器或已标记为 worker-failed。参数：`reason`（string，降级原因描述 *）。返回 `boolean`：true=降级成功 */</td><td>公开调用或模块入口</td></tr>
 <tr><td>536</td><td><code>fallbackRendererToMain2D(reason, info)</code><br><span class="pill">method</span></td><td>公开方法。。接收参数：`reason, info`</td><td>公开调用或模块入口</td></tr>
 <tr><td>575</td><td><code>fallbackRendererToMainThread(reason, info)</code><br><span class="pill">method</span></td><td>公开方法。。接收参数：`reason, info`</td><td>公开调用或模块入口</td></tr>
@@ -352,8 +352,8 @@
 <tr><td>510</td><td><code>_matchesSource(watermark, item)</code><br><span class="pill">method</span></td><td>内部辅助方法。。接收参数：`watermark, item`</td><td>内部状态/子模块调用</td></tr>
 <tr><td>535</td><td><code>_matchesFilter(watermark, filter)</code><br><span class="pill">method</span></td><td>内部辅助方法。。接收参数：`watermark, filter`</td><td>内部状态/子模块调用</td></tr></tbody></table></div>
 </section>
-<section id="lib-MediaEffectsComposer-AIVirtualBackground-AiVBState-js" class="file-block">
-<h2><code>lib/MediaEffectsComposer/AIVirtualBackground/AiVBState.js</code></h2>
+<section id="lib-MediaEffectsComposer-AiVirtualBackground-AiVBState-js" class="file-block">
+<h2><code>lib/MediaEffectsComposer/AiVirtualBackground/AiVBState.js</code></h2>
 <p class="file-meta">1446 行，34 个 class/function/method/export 入口。</p>
 <p>source 级 AI 虚拟背景状态机，负责配置归一化、背景图加载、分割调度、mask 缓存和渲染态输出。</p>
 <h3 class="table-group-title">公开方法</h3>
@@ -393,8 +393,8 @@
 <tr><td>1420</td><td><code>_isVideoReadyForSeg(videoElement)</code><br><span class="pill">method</span></td><td>内部辅助方法；读它时看调用方、状态字段读写和异常回退。</td><td>内部状态/子模块调用</td></tr>
 <tr><td>1439</td><td><code>_now()</code><br><span class="pill">method</span></td><td>内部辅助方法；读它时看调用方、状态字段读写和异常回退。</td><td>内部状态/子模块调用</td></tr></tbody></table></div>
 </section>
-<section id="lib-MediaEffectsComposer-AIVirtualBackground-AiVBConfig-js" class="file-block">
-<h2><code>lib/MediaEffectsComposer/AIVirtualBackground/AiVBConfig.js</code></h2>
+<section id="lib-MediaEffectsComposer-AiVirtualBackground-AiVBConfig-js" class="file-block">
+<h2><code>lib/MediaEffectsComposer/AiVirtualBackground/AiVBConfig.js</code></h2>
 <p class="file-meta">331 行，8 个 class/function/method/export 入口。</p>
 <p>AiVB 的 video/segmentation/postProcessing/asset 配置归一化与默认值。</p>
 <h3 class="table-group-title">公开方法</h3>
@@ -407,8 +407,8 @@
 <tr><td>297</td><td><code>clampNumber(value, min, max, fallback)</code><br><span class="pill">function</span></td><td>将数值钳位到 [min, max] 范围，非有限数返回 fallback。。参数：`value`（*，输入值）、`min`（number，下限）、`max`（number，上限）。返回 `number`</td><td>公开调用或模块入口</td></tr>
 <tr><td>319</td><td><code>assertKnownKeys(sectionName, value, allowedKeys)</code><br><span class="pill">function</span></td><td>验证选项对象仅包含已识别的 key，若发现未知 key 则抛出错误。 此函数充当拼写错误的早期预警（例如使用了 `blur_radius` 而非 `blurRadius`）。。参数：`sectionName`（string，— 人类可读的配置段名称（用于错误消息））、`value`（Object，— 原始选项对象）、`allowedKeys`（string[]，— 已识别 key 的白名单）</td><td>公开调用或模块入口</td></tr></tbody></table></div>
 </section>
-<section id="lib-MediaEffectsComposer-AIVirtualBackground-AiVBAssetLoader-js" class="file-block">
-<h2><code>lib/MediaEffectsComposer/AIVirtualBackground/AiVBAssetLoader.js</code></h2>
+<section id="lib-MediaEffectsComposer-AiVirtualBackground-AiVBAssetLoader-js" class="file-block">
+<h2><code>lib/MediaEffectsComposer/AiVirtualBackground/AiVBAssetLoader.js</code></h2>
 <p class="file-meta">276 行，5 个 class/function/method/export 入口。</p>
 <p>MediaPipe tasks-vision 脚本加载器，处理 CDN/模块加载、重复加载去重和超时。</p>
 <h3 class="table-group-title">公开方法</h3>
@@ -418,16 +418,16 @@
 <tr><td>127</td><td><code>loadTasksRuntime(moduleUrl)</code><br><span class="pill">method</span></td><td>公开方法。参数：`Array`，由调用方传入</td><td>公开调用或模块入口</td></tr>
 <tr><td>208</td><td><code>waitForExistingScript(script, moduleUrl)</code><br><span class="pill">method</span></td><td>对外或模块内方法；读它时看参数进入后调用了哪些子模块、返回值是否异步。</td><td>公开调用或模块入口</td></tr></tbody></table></div>
 </section>
-<section id="lib-MediaEffectsComposer-AIVirtualBackground-AiVBSegmentationCommon-js" class="file-block">
-<h2><code>lib/MediaEffectsComposer/AIVirtualBackground/AiVBSegmentationCommon.js</code></h2>
+<section id="lib-MediaEffectsComposer-AiVirtualBackground-AiVBSegmentationCommon-js" class="file-block">
+<h2><code>lib/MediaEffectsComposer/AiVirtualBackground/AiVBSegmentationCommon.js</code></h2>
 <p class="file-meta">180 行，2 个 class/function/method/export 入口。</p>
 <p>主线程和 Worker 共用的分割 mask 辅助函数工厂。</p>
 <h3 class="table-group-title">公开方法</h3>
 <div class="table-wrap"><table class="method-table table-src table-scroll table-wrap-target"><thead><tr><th>行号</th><th>入口</th><th>读代码重点</th><th>性质</th></tr></thead><tbody><tr><td>19</td><td><code>createSegmentationHelpers()</code><br><span class="pill">function</span></td><td>AiVBSegmentationCommon —— 主线程 / Worker 共用的纯分割辅助逻辑。 这里刻意只放与宿主环境无关的代码： - segmenter 初始化参数 - 从 MediaPipe 结果里选择人物遮罩 - 读取遮罩数值 - 释放分割结果资源 - 将置信度写入 alpha 通道 不放这里的内容： - DOM / script 注入 - Worker 动态 import - canvas / OffscreenCanvas 的创建与生命周期 这样主线程和 Worker 能共享同一套业务规则，同时保留各自的宿主实现。</td><td>公开调用或模块入口</td></tr>
 <tr><td>176</td><td><code>getWorkerSegmentationHelpersFactorySource()</code><br><span class="pill">export</span></td><td>公开方法。参数：`!`，由调用方传入</td><td>公开调用或模块入口</td></tr></tbody></table></div>
 </section>
-<section id="lib-MediaEffectsComposer-AIVirtualBackground-MediaPipeSegmenterRuntime-js" class="file-block">
-<h2><code>lib/MediaEffectsComposer/AIVirtualBackground/MediaPipeSegmenterRuntime.js</code></h2>
+<section id="lib-MediaEffectsComposer-AiVirtualBackground-MediaPipeSegmenterRuntime-js" class="file-block">
+<h2><code>lib/MediaEffectsComposer/AiVirtualBackground/MediaPipeSegmenterRuntime.js</code></h2>
 <p class="file-meta">686 行，17 个 class/function/method/export 入口。</p>
 <p>MediaPipe ImageSegmenter 运行时封装，负责初始化、GPU/CPU delegate、排队分割和 mask 生成。</p>
 <h3 class="table-group-title">公开方法</h3>
@@ -437,7 +437,7 @@
 <tr><td>240</td><td><code>createGpuSegmenter(ImageSegmenter, vision, requestedDelegate)</code><br><span class="pill">method</span></td><td>对外或模块内方法；读它时看参数进入后调用了哪些子模块、返回值是否异步。</td><td>公开调用或模块入口</td></tr>
 <tr><td>275</td><td><code>segmentForVideo(videoElement)</code><br><span class="pill">method</span></td><td>对外或模块内方法；读它时看参数进入后调用了哪些子模块、返回值是否异步。</td><td>公开调用或模块入口</td></tr>
 <tr><td>316</td><td><code>updateQueuedFrame(videoElement)</code><br><span class="pill">method</span></td><td>公开方法。参数：`error`，由调用方传入</td><td>公开调用或模块入口</td></tr>
-<tr><td>337</td><td><code>runSegmentation(videoElement)</code><br><span class="pill">method</span></td><td>接收参数 `sourceState, runtimeState, input`。详见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>337</td><td><code>runSegmentation(videoElement)</code><br><span class="pill">method</span></td><td>接收参数 `sourceState, runtimeState, input`。详见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
 <tr><td>408</td><td><code>processQueuedRequest()</code><br><span class="pill">method</span></td><td>公开方法。参数：`this.sources.some((source`，由调用方传入</td><td>公开调用或模块入口</td></tr>
 <tr><td>438</td><td><code>resolvePersonMaskIndex(maskCount)</code><br><span class="pill">method</span></td><td>接收参数 `labels, maskCount`。详见 `AiVBSegmentationCommon.js` 源码。</td><td>公开调用或模块入口</td></tr>
 <tr><td>457</td><td><code>createSegmentationMask(result)</code><br><span class="pill">method</span></td><td>公开方法。参数：`this._logger`，由调用方传入</td><td>公开调用或模块入口</td></tr>
@@ -446,12 +446,12 @@
 <tr><td>583</td><td><code>resolveOutputMask(result)</code><br><span class="pill">method</span></td><td>接收参数 `result, labels`。详见 `AiVBSegmentationCommon.js` 源码。</td><td>公开调用或模块入口</td></tr>
 <tr><td>603</td><td><code>readMaskValues(mask)</code><br><span class="pill">method</span></td><td>内部方法 — 为所有启用了 AiVB 的 source 预加载渲染资源（背景图等）。 在 mirror 等配置变更时调用，避免首帧白屏。</td><td>公开调用或模块入口</td></tr>
 <tr><td>617</td><td><code>closeSegmentationResult(result)</code><br><span class="pill">method</span></td><td>接收参数 `result`。详见 `AiVBSegmentationCommon.js` 源码。</td><td>公开调用或模块入口</td></tr>
-<tr><td>633</td><td><code>destroy()</code><br><span class="pill">method</span></td><td>方法详情见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr></tbody></table></div>
+<tr><td>633</td><td><code>destroy()</code><br><span class="pill">method</span></td><td>方法详情见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr></tbody></table></div>
 <h3 class="table-group-title">内部方法</h3>
 <div class="table-wrap"><table class="method-table table-src table-scroll table-wrap-target"><thead><tr><th>行号</th><th>入口</th><th>读代码重点</th><th>性质</th></tr></thead><tbody><tr><td>90</td><td><code>_reportIssue(issue)</code><br><span class="pill">method</span></td><td>内部异常报告方法。 上报渲染循环中的各类问题，包括： - renderer-fallback-requested: 当前渲染后端不满足需求，触发降级链 - renderer-fallback-main-webgl2: 降级到主线程 WebGL2 成功 - renderer-fallback-main-webgl2-failed: 降级到主线程 WebGL2 失败 - renderer-fallback-worker-2d: 降级到 Worker 2D 成功 - renderer-fallback-worker-2d-failed: 降级到 Worker 2D 失败 - renderer-render-frame: 渲染帧失败（增加错误计数） 渲染降级链优先级顺序： Worker WebGL2 → 主线程 WebGL2 → Worker 2D 每一级降级失败都会上报，方便排查为何最底层的 2D 模式也被触发。 降级尝试失败时 fallbackApplied 设为 false，成功时设为 true。。参数：`[issue]`（Object，问题描述对象 */）</td><td>内部状态/子模块调用</td></tr></tbody></table></div>
 </section>
-<section id="lib-MediaEffectsComposer-Renderers-rendererBase-js" class="file-block">
-<h2><code>lib/MediaEffectsComposer/Renderers/rendererBase.js</code></h2>
+<section id="lib-MediaEffectsComposer-Renderers-RendererBase-js" class="file-block">
+<h2><code>lib/MediaEffectsComposer/Renderers/RendererBase.js</code></h2>
 <p class="file-meta">48 行，3 个 class/function/method/export 入口。</p>
 <p>渲染器最小共享基类，提供 getInfo、frame presented 回调和信息更新。</p>
 <h3 class="table-group-title">公开方法</h3>
@@ -469,8 +469,8 @@
 <tr><td>32</td><td><code>constructor(config, info)</code><br><span class="pill">method</span></td><td>Worker 尚未渲染完上一帧时是否丢弃当前帧，避免排队导致延迟不断累积。 预留队列配置。当前实现默认只保留 1 帧，后续可扩展为更长队列。 是否默认对所有槽位应用水平镜像。 是否对最终合成输出整体做水平镜像。 输出镜像时，输出级水印是否跟着一起翻转。 是否优先使用 Insertable Streams 导出视频；能力不足时回退到 captureStream。 captureStream 路径下是否优先使用 captureStream(0)+requestFrame 手动出帧。 初始水印配置列表。 与初始输入源逐项对应的 source 级配置数组，如 `sourceMirror`、 `aiVirtualBackground` 等。。参数：`[options.dropFrameWhenBusy=true]`（boolean，* Worker 尚未渲染完上一帧时是否丢弃当前帧，避免排队导致延迟不断累积。 *）、`[options.maxFrameQueue=1]`（number，* 预留队列配置。当前实现默认只保留 1 帧，后续可扩展为更长队列。 *）、`[options.sourceMirror=false]`（boolean，* 是否默认对所有槽位应用水平镜像。 *）、`[options.mirror=false]`（boolean，* 是否对最终合成输出整体做水平镜像。 *）</td><td>公开调用或模块入口</td></tr>
 <tr><td>55</td><td><code>init(canvas)</code><br><span class="pill">method</span></td><td>公开方法 — 添加一个新的输入源。 如果新源的 slot 已被占用，旧源会被替换（先移除旧源再添加新源）。。参数：`input``options`，由调用方传入。来源：`input`(MediaStream|HTMLVideoElement|Object)=输入源。返回 `Object`</td><td>公开调用或模块入口</td></tr>
 <tr><td>77</td><td><code>resize(width, height)</code><br><span class="pill">method</span></td><td>对外或模块内方法；读它时看参数进入后调用了哪些子模块、返回值是否异步。</td><td>公开调用或模块入口</td></tr>
-<tr><td>108</td><td><code>render(payload)</code><br><span class="pill">method</span></td><td>接收参数 `payload`。详见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
-<tr><td>424</td><td><code>destroy()</code><br><span class="pill">method</span></td><td>方法详情见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr></tbody></table></div>
+<tr><td>108</td><td><code>render(payload)</code><br><span class="pill">method</span></td><td>接收参数 `payload`。详见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>424</td><td><code>destroy()</code><br><span class="pill">method</span></td><td>方法详情见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr></tbody></table></div>
 <h3 class="table-group-title">内部方法</h3>
 <div class="table-wrap"><table class="method-table table-src table-scroll table-wrap-target"><thead><tr><th>行号</th><th>入口</th><th>读代码重点</th><th>性质</th></tr></thead><tbody><tr><td>157</td><td><code>_drawWatermarks(watermarks, outputMirrorX, canvasWidth)</code><br><span class="pill">method</span></td><td>内部辅助方法；读它时看调用方、状态字段读写和异常回退。</td><td>内部状态/子模块调用</td></tr>
 <tr><td>180</td><td><code>_drawItem(item, outputMirrorX, canvasWidth)</code><br><span class="pill">method</span></td><td>公开方法。参数：`runtime.createImageBitmap`，由调用方传入</td><td>内部状态/子模块调用</td></tr>
@@ -495,11 +495,11 @@
 <tr><td>128</td><td><code>clamp(value, min, max)</code><br><span class="pill">function</span></td><td>接收参数 `value, min, max`。详见 `MainWebGL2Renderer.js` 源码。</td><td>公开调用或模块入口</td></tr>
 <tr><td>130</td><td><code>buildForegroundEnhancementFilter(postProcessing)</code><br><span class="pill">function</span></td><td>接收参数 `postProcessing`。详见 `MainCanvas2DRenderer.js` 源码。</td><td>公开调用或模块入口</td></tr>
 <tr><td>146</td><td><code>constructor(config, info)</code><br><span class="pill">method</span></td><td>Worker 尚未渲染完上一帧时是否丢弃当前帧，避免排队导致延迟不断累积。 预留队列配置。当前实现默认只保留 1 帧，后续可扩展为更长队列。 是否默认对所有槽位应用水平镜像。 是否对最终合成输出整体做水平镜像。 输出镜像时，输出级水印是否跟着一起翻转。 是否优先使用 Insertable Streams 导出视频；能力不足时回退到 captureStream。 captureStream 路径下是否优先使用 captureStream(0)+requestFrame 手动出帧。 初始水印配置列表。 与初始输入源逐项对应的 source 级配置数组，如 `sourceMirror`、 `aiVirtualBackground` 等。。参数：`[options.dropFrameWhenBusy=true]`（boolean，* Worker 尚未渲染完上一帧时是否丢弃当前帧，避免排队导致延迟不断累积。 *）、`[options.maxFrameQueue=1]`（number，* 预留队列配置。当前实现默认只保留 1 帧，后续可扩展为更长队列。 *）、`[options.sourceMirror=false]`（boolean，* 是否默认对所有槽位应用水平镜像。 *）、`[options.mirror=false]`（boolean，* 是否对最终合成输出整体做水平镜像。 *）</td><td>公开调用或模块入口</td></tr>
-<tr><td>193</td><td><code>init(canvas)</code><br><span class="pill">method</span></td><td>接收参数 `message`。详见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>193</td><td><code>init(canvas)</code><br><span class="pill">method</span></td><td>接收参数 `message`。详见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
 <tr><td>286</td><td><code>resize(width, height)</code><br><span class="pill">method</span></td><td>对外或模块内方法；读它时看参数进入后调用了哪些子模块、返回值是否异步。</td><td>公开调用或模块入口</td></tr>
-<tr><td>320</td><td><code>render(payload)</code><br><span class="pill">method</span></td><td>接收参数 `payload`。详见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>320</td><td><code>render(payload)</code><br><span class="pill">method</span></td><td>接收参数 `payload`。详见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
 <tr><td>776</td><td><code>removeSource(id)</code><br><span class="pill">method</span></td><td>移除一个源（按 stream 对象、stream id 或 source id 查找）。。参数：`target`（MediaStream|string|HTMLVideoElement，要移除的目标 *）。返回 `boolean`：true=成功移除 */</td><td>公开调用或模块入口</td></tr>
-<tr><td>797</td><td><code>destroy()</code><br><span class="pill">method</span></td><td>方法详情见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr></tbody></table></div>
+<tr><td>797</td><td><code>destroy()</code><br><span class="pill">method</span></td><td>方法详情见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr></tbody></table></div>
 <h3 class="table-group-title">内部方法</h3>
 <div class="table-wrap"><table class="method-table table-src table-scroll table-wrap-target"><thead><tr><th>行号</th><th>入口</th><th>读代码重点</th><th>性质</th></tr></thead><tbody><tr><td>218</td><td><code>_setupProgram()</code><br><span class="pill">method</span></td><td>内部辅助方法；读它时看调用方、状态字段读写和异常回退。</td><td>内部状态/子模块调用</td></tr>
 <tr><td>270</td><td><code>_enableAttribute(name, buffer)</code><br><span class="pill">method</span></td><td>内部辅助方法；读它时看调用方、状态字段读写和异常回退。</td><td>内部状态/子模块调用</td></tr>
@@ -522,11 +522,11 @@
 <p>主线程侧 Worker 渲染代理，负责 Worker 生命周期、payload 转换、VideoFrame/ImageBitmap 传输和 fatal fallback。</p>
 <h3 class="table-group-title">公开方法</h3>
 <div class="table-wrap"><table class="method-table table-src table-scroll table-wrap-target"><thead><tr><th>行号</th><th>入口</th><th>读代码重点</th><th>性质</th></tr></thead><tbody><tr><td>31</td><td><code>constructor(config, info)</code><br><span class="pill">method</span></td><td>Worker 尚未渲染完上一帧时是否丢弃当前帧，避免排队导致延迟不断累积。 预留队列配置。当前实现默认只保留 1 帧，后续可扩展为更长队列。 是否默认对所有槽位应用水平镜像。 是否对最终合成输出整体做水平镜像。 输出镜像时，输出级水印是否跟着一起翻转。 是否优先使用 Insertable Streams 导出视频；能力不足时回退到 captureStream。 captureStream 路径下是否优先使用 captureStream(0)+requestFrame 手动出帧。 初始水印配置列表。 与初始输入源逐项对应的 source 级配置数组，如 `sourceMirror`、 `aiVirtualBackground` 等。。参数：`[options.dropFrameWhenBusy=true]`（boolean，* Worker 尚未渲染完上一帧时是否丢弃当前帧，避免排队导致延迟不断累积。 *）、`[options.maxFrameQueue=1]`（number，* 预留队列配置。当前实现默认只保留 1 帧，后续可扩展为更长队列。 *）、`[options.sourceMirror=false]`（boolean，* 是否默认对所有槽位应用水平镜像。 *）、`[options.mirror=false]`（boolean，* 是否对最终合成输出整体做水平镜像。 *）</td><td>公开调用或模块入口</td></tr>
-<tr><td>100</td><td><code>init(canvas)</code><br><span class="pill">method</span></td><td>接收参数 `message`。详见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>100</td><td><code>init(canvas)</code><br><span class="pill">method</span></td><td>接收参数 `message`。详见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
 <tr><td>400</td><td><code>resize(width, height)</code><br><span class="pill">method</span></td><td>公开方法 — 渲染一帧（requestAnimationFrame 回调）。 流程：。参数：`timestamp``forceRender`，由调用方传入</td><td>公开调用或模块入口</td></tr>
-<tr><td>417</td><td><code>render(payload)</code><br><span class="pill">method</span></td><td>接收参数 `payload`。详见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>417</td><td><code>render(payload)</code><br><span class="pill">method</span></td><td>接收参数 `payload`。详见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
 <tr><td>797</td><td><code>removeSource(id)</code><br><span class="pill">method</span></td><td>移除一个源（按 stream 对象、stream id 或 source id 查找）。。参数：`target`（MediaStream|string|HTMLVideoElement，要移除的目标 *）。返回 `boolean`：true=成功移除 */</td><td>公开调用或模块入口</td></tr>
-<tr><td>814</td><td><code>destroy()</code><br><span class="pill">method</span></td><td>方法详情见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr></tbody></table></div>
+<tr><td>814</td><td><code>destroy()</code><br><span class="pill">method</span></td><td>方法详情见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr></tbody></table></div>
 <h3 class="table-group-title">内部方法</h3>
 <div class="table-wrap"><table class="method-table table-src table-scroll table-wrap-target"><thead><tr><th>行号</th><th>入口</th><th>读代码重点</th><th>性质</th></tr></thead><tbody><tr><td>155</td><td><code>_canUseWorker(canvas)</code><br><span class="pill">method</span></td><td>公开方法。参数：`this._logger`，由调用方传入</td><td>内部状态/子模块调用</td></tr>
 <tr><td>171</td><td><code>_createWorker()</code><br><span class="pill">method</span></td><td>内部辅助方法；读它时看调用方、状态字段读写和异常回退。</td><td>内部状态/子模块调用</td></tr>
@@ -544,64 +544,64 @@
 <tr><td>830</td><td><code>_destroyWorker()</code><br><span class="pill">method</span></td><td>公开方法。参数：`forceRender`，由调用方传入</td><td>内部状态/子模块调用</td></tr></tbody></table></div>
 </section>
 <section id="lib-MediaEffectsComposer-Renderers-workerScript-js" class="file-block">
-<h2><code>lib/MediaEffectsComposer/Renderers/workerScript.js</code></h2>
+<h2><code>lib/MediaEffectsComposer/Renderers/WorkerScript.js</code></h2>
 <p class="file-meta">1421 行，40 个 class/function/method/export 入口。</p>
 <p>Worker 内渲染实现，包含 worker-webgl2/worker-2d 两条路径和 Worker 内 AiVB 分割/背景合成逻辑。</p>
 <h3 class="table-group-title">公开方法</h3>
 <div class="table-wrap"><table class="method-table table-src table-scroll table-wrap-target"><thead><tr><th>行号</th><th>入口</th><th>读代码重点</th><th>性质</th></tr></thead><tbody><tr><td>10</td><td><code>workerMain()</code><br><span class="pill">function</span></td><td>workerScript - Worker inline script generator. Keep the worker implementation as executable JS so the SDK minifier can compress and mangle it before we serialize it with Function#toString().</td><td>公开调用或模块入口</td></tr>
-<tr><td>99</td><td><code>now()</code><br><span class="pill">function</span></td><td>方法详情见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>99</td><td><code>now()</code><br><span class="pill">function</span></td><td>方法详情见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
 <tr><td>107</td><td><code>clamp(value, min, max)</code><br><span class="pill">function</span></td><td>接收参数 `value, min, max`。详见 `MainWebGL2Renderer.js` 源码。</td><td>公开调用或模块入口</td></tr>
 <tr><td>112</td><td><code>buildForegroundEnhancementFilter(postProcessing)</code><br><span class="pill">function</span></td><td>公开方法 — 按 MediaStream 对象、stream.id 或内部 source.id 查找源。。参数：`streamOrId`，由调用方传入。来源：`streamOrId`(MediaStream|string|HTMLVideoElement)=查找依据。返回 `Object|null`</td><td>公开调用或模块入口</td></tr>
-<tr><td>123</td><td><code>hasAiVirtualBackground(item)</code><br><span class="pill">function</span></td><td>接收参数 `item`。详见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
-<tr><td>134</td><td><code>getFrameWidth(frame)</code><br><span class="pill">function</span></td><td>接收参数 `frame`。详见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
-<tr><td>139</td><td><code>getFrameHeight(frame)</code><br><span class="pill">function</span></td><td>接收参数 `frame`。详见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
-<tr><td>146</td><td><code>ensureCanvasSize(surface, targetWidth, targetHeight)</code><br><span class="pill">function</span></td><td>接收参数 `surface, targetWidth, targetHeight`。详见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>123</td><td><code>hasAiVirtualBackground(item)</code><br><span class="pill">function</span></td><td>接收参数 `item`。详见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>134</td><td><code>getFrameWidth(frame)</code><br><span class="pill">function</span></td><td>接收参数 `frame`。详见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>139</td><td><code>getFrameHeight(frame)</code><br><span class="pill">function</span></td><td>接收参数 `frame`。详见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>146</td><td><code>ensureCanvasSize(surface, targetWidth, targetHeight)</code><br><span class="pill">function</span></td><td>接收参数 `surface, targetWidth, targetHeight`。详见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
 <tr><td>187</td><td><code>getSourceState(id)</code><br><span class="pill">function</span></td><td>公开方法 — 获取子混音音频流。 使用独立 AudioContext 创建子混音。。参数：`options`，由调用方传入。来源：`options`(Object|Array<number>)={ slots: number[] } 或 slots 数组。返回 `Promise<MediaStream|null>`</td><td>公开调用或模块入口</td></tr>
 <tr><td>214</td><td><code>createRuntimeConfigKey(config)</code><br><span class="pill">function</span></td><td>生成分割器运行时的唯一配置 key。 用于检测配置是否发生实质性变化（需重新创建 segmenter）。。参数：`config`（Object|null，归一化配置）。返回 `string`</td><td>公开调用或模块入口</td></tr>
 <tr><td>226</td><td><code>resetSourceState(state, config)</code><br><span class="pill">function</span></td><td>公开方法。参数：`Object.prototype.hasOwnProperty.call(optionsOrSlot``'aiVirtualBackground'`，由调用方传入</td><td>公开调用或模块入口</td></tr>
-<tr><td>235</td><td><code>resolveAiVBState(id, config)</code><br><span class="pill">function</span></td><td>接收参数 `id, config`。详见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
-<tr><td>297</td><td><code>getRuntimeKey(config)</code><br><span class="pill">function</span></td><td>接收参数 `config`。详见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
-<tr><td>367</td><td><code>createMaskCanvas(sourceState, runtimeState, result)</code><br><span class="pill">function</span></td><td>接收参数 `sourceState, runtimeState, result`。详见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
-<tr><td>437</td><td><code>drawSurface(targetContext, surface, x, y, drawWidth, drawHeight, mirrorX, flipY)</code><br><span class="pill">function</span></td><td>接收参数 `targetContext, surface, x, y, drawWidth, drawHeight, mirrorX, flipY`。详见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
-<tr><td>460</td><td><code>drawCoverSurface(targetContext, surface, drawWidth, drawHeight)</code><br><span class="pill">function</span></td><td>接收参数 `targetContext, surface, drawWidth, drawHeight`。详见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
-<tr><td>503</td><td><code>resolveDrawRect(draw, applyMirror)</code><br><span class="pill">function</span></td><td>接收参数 `draw, applyMirror`。详见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
-<tr><td>583</td><td><code>canRunSegmentation(sourceState, config)</code><br><span class="pill">function</span></td><td>接收参数 `sourceState, config`。详见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
-<tr><td>596</td><td><code>shouldUpdateMask(sourceState, config)</code><br><span class="pill">function</span></td><td>接收参数 `sourceState, config`。详见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
-<tr><td>613</td><td><code>copyFrameToSurface(surface, frame)</code><br><span class="pill">function</span></td><td>接收参数 `surface, frame`。详见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
-<tr><td>630</td><td><code>buildSegmentationInput(sourceState, frame, config)</code><br><span class="pill">function</span></td><td>接收参数 `sourceState, frame, config`。详见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
-<tr><td>851</td><td><code>initWebGL2()</code><br><span class="pill">function</span></td><td>方法详情见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
-<tr><td>892</td><td><code>initCanvas2D()</code><br><span class="pill">function</span></td><td>方法详情见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
-<tr><td>1002</td><td><code>drawWatermarksWebGL2(watermarks, applyMirror)</code><br><span class="pill">function</span></td><td>接收参数 `watermarks, applyMirror`。详见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
-<tr><td>1031</td><td><code>drawRect(draw, mirrorX)</code><br><span class="pill">function</span></td><td>接收参数 `draw, mirrorX`。详见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
-<tr><td>1074</td><td><code>drawWatermarksCanvas2D(watermarks, applyMirror)</code><br><span class="pill">function</span></td><td>接收参数 `watermarks, applyMirror`。详见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>235</td><td><code>resolveAiVBState(id, config)</code><br><span class="pill">function</span></td><td>接收参数 `id, config`。详见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>297</td><td><code>getRuntimeKey(config)</code><br><span class="pill">function</span></td><td>接收参数 `config`。详见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>367</td><td><code>createMaskCanvas(sourceState, runtimeState, result)</code><br><span class="pill">function</span></td><td>接收参数 `sourceState, runtimeState, result`。详见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>437</td><td><code>drawSurface(targetContext, surface, x, y, drawWidth, drawHeight, mirrorX, flipY)</code><br><span class="pill">function</span></td><td>接收参数 `targetContext, surface, x, y, drawWidth, drawHeight, mirrorX, flipY`。详见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>460</td><td><code>drawCoverSurface(targetContext, surface, drawWidth, drawHeight)</code><br><span class="pill">function</span></td><td>接收参数 `targetContext, surface, drawWidth, drawHeight`。详见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>503</td><td><code>resolveDrawRect(draw, applyMirror)</code><br><span class="pill">function</span></td><td>接收参数 `draw, applyMirror`。详见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>583</td><td><code>canRunSegmentation(sourceState, config)</code><br><span class="pill">function</span></td><td>接收参数 `sourceState, config`。详见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>596</td><td><code>shouldUpdateMask(sourceState, config)</code><br><span class="pill">function</span></td><td>接收参数 `sourceState, config`。详见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>613</td><td><code>copyFrameToSurface(surface, frame)</code><br><span class="pill">function</span></td><td>接收参数 `surface, frame`。详见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>630</td><td><code>buildSegmentationInput(sourceState, frame, config)</code><br><span class="pill">function</span></td><td>接收参数 `sourceState, frame, config`。详见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>851</td><td><code>initWebGL2()</code><br><span class="pill">function</span></td><td>方法详情见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>892</td><td><code>initCanvas2D()</code><br><span class="pill">function</span></td><td>方法详情见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>1002</td><td><code>drawWatermarksWebGL2(watermarks, applyMirror)</code><br><span class="pill">function</span></td><td>接收参数 `watermarks, applyMirror`。详见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>1031</td><td><code>drawRect(draw, mirrorX)</code><br><span class="pill">function</span></td><td>接收参数 `draw, mirrorX`。详见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>1074</td><td><code>drawWatermarksCanvas2D(watermarks, applyMirror)</code><br><span class="pill">function</span></td><td>接收参数 `watermarks, applyMirror`。详见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
 <tr><td>1093</td><td><code>compileShader(type, source)</code><br><span class="pill">function</span></td><td>接收参数 `gl, shaderType, shaderSource`。详见 `MainWebGL2Renderer.js` 源码。</td><td>公开调用或模块入口</td></tr>
 <tr><td>1111</td><td><code>createProgram(vertexShader, fragmentShader)</code><br><span class="pill">function</span></td><td>接收参数 `gl, vertexShader, fragmentShader`。详见 `MainWebGL2Renderer.js` 源码。</td><td>公开调用或模块入口</td></tr>
-<tr><td>1130</td><td><code>enableAttribute(name, buffer)</code><br><span class="pill">function</span></td><td>接收参数 `name, buffer`。详见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
-<tr><td>1139</td><td><code>getTexture(id)</code><br><span class="pill">function</span></td><td>接收参数 `id`。详见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
-<tr><td>1154</td><td><code>getWatermarkTexture(id)</code><br><span class="pill">function</span></td><td>接收参数 `id`。详见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>1130</td><td><code>enableAttribute(name, buffer)</code><br><span class="pill">function</span></td><td>接收参数 `name, buffer`。详见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>1139</td><td><code>getTexture(id)</code><br><span class="pill">function</span></td><td>接收参数 `id`。详见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>1154</td><td><code>getWatermarkTexture(id)</code><br><span class="pill">function</span></td><td>接收参数 `id`。详见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
 <tr><td>1169</td><td><code>removeSource(id)</code><br><span class="pill">function</span></td><td>移除一个源（按 stream 对象、stream id 或 source id 查找）。。参数：`target`（MediaStream|string|HTMLVideoElement，要移除的目标 *）。返回 `boolean`：true=成功移除 */</td><td>公开调用或模块入口</td></tr>
-<tr><td>1180</td><td><code>closeFrames(items)</code><br><span class="pill">function</span></td><td>接收参数 `items`。详见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
-<tr><td>1191</td><td><code>closeBackgroundBitmaps()</code><br><span class="pill">function</span></td><td>方法详情见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
-<tr><td>1234</td><td><code>destroyWebGL2()</code><br><span class="pill">function</span></td><td>方法详情见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>1180</td><td><code>closeFrames(items)</code><br><span class="pill">function</span></td><td>接收参数 `items`。详见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>1191</td><td><code>closeBackgroundBitmaps()</code><br><span class="pill">function</span></td><td>方法详情见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>1234</td><td><code>destroyWebGL2()</code><br><span class="pill">function</span></td><td>方法详情见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
 <tr><td>1288</td><td><code>parseColor(value)</code><br><span class="pill">function</span></td><td>接收参数 `color`。详见 `MainWebGL2Renderer.js` 源码。</td><td>公开调用或模块入口</td></tr>
 <tr><td>1310</td><td><code>parseHexColor(value)</code><br><span class="pill">function</span></td><td>接收参数 `value`。详见 `MainWebGL2Renderer.js` 源码。</td><td>公开调用或模块入口</td></tr>
 <tr><td>1342</td><td><code>parseRgbColor(value)</code><br><span class="pill">function</span></td><td>接收参数 `value`。详见 `MainWebGL2Renderer.js` 源码。</td><td>公开调用或模块入口</td></tr>
 <tr><td>1368</td><td><code>clamp(parts.length &gt; 3 ? parts[3] : 1, 0, 1)</code><br><span class="pill">method</span></td><td>接收参数 `value, min, max`。详见 `MainWebGL2Renderer.js` 源码。</td><td>公开调用或模块入口</td></tr>
 <tr><td>1410</td><td><code>createWorkerScript()</code><br><span class="pill">export</span></td><td>对外或模块内方法；读它时看参数进入后调用了哪些子模块、返回值是否异步。</td><td>公开调用或模块入口</td></tr></tbody></table></div>
 </section>
-<section id="lib-AINoiseSuppression-AiNoiseSuppression-js" class="file-block">
-<h2><code>lib/AINoiseSuppression/AiNoiseSuppression.js</code></h2>
+<section id="lib-AiNoiseSuppression-AiNoiseSuppression-js" class="file-block">
+<h2><code>lib/AiNoiseSuppression/AiNSEngine.js</code></h2>
 <p class="file-meta">522 行，27 个 class/function/method/export 入口。</p>
 <p>AI 降噪公开引擎，管理输入音轨、AudioContext、Worklet runtime、输出流、开关和销毁。</p>
 <h3 class="table-group-title">公开方法</h3>
 <div class="table-wrap"><table class="method-table table-src table-scroll table-wrap-target"><thead><tr><th>行号</th><th>入口</th><th>读代码重点</th><th>性质</th></tr></thead><tbody><tr><td>9</td><td><code>cloneIssue(issue)</code><br><span class="pill">function</span></td><td>纯函数。参数 `issue` 来源于 `_recordIssue()` 或 `forwardIssue()`——即子模块通过 `onIssue` 回调上报的原始 issue 对象。深拷贝后存入 `this._issues[]` FIFO 队列（最多50条），防止外部引用篡改内部状态。</td><td>公开调用或模块入口</td></tr>
-<tr><td>14</td><td><code>isAiNSSupported()</code><br><span class="pill">function</span></td><td>方法详情见 `AiNoiseSuppression.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>14</td><td><code>isAiNSSupported()</code><br><span class="pill">function</span></td><td>方法详情见 `AiNSEngine.js` 源码。</td><td>公开调用或模块入口</td></tr>
 <tr><td>27</td><td><code>collectCapabilityReport(engine)</code><br><span class="pill">function</span></td><td>汇总浏览器能力与当前引擎运行态快照。。参数：`engine`（AiNoiseSuppressionEngine|null，*）。返回 `Object`</td><td>公开调用或模块入口</td></tr>
 <tr><td>60</td><td><code>AiNoiseSuppressionEngine()</code><br><span class="pill">class</span></td><td>公开方法。参数：`source.slot`，由调用方传入</td><td>公开调用或模块入口</td></tr>
 <tr><td>70</td><td><code>constructor(options = {})</code><br><span class="pill">method</span></td><td>Worker 尚未渲染完上一帧时是否丢弃当前帧，避免排队导致延迟不断累积。 预留队列配置。当前实现默认只保留 1 帧，后续可扩展为更长队列。 是否默认对所有槽位应用水平镜像。 是否对最终合成输出整体做水平镜像。 输出镜像时，输出级水印是否跟着一起翻转。 是否优先使用 Insertable Streams 导出视频；能力不足时回退到 captureStream。 captureStream 路径下是否优先使用 captureStream(0)+requestFrame 手动出帧。 初始水印配置列表。 与初始输入源逐项对应的 source 级配置数组，如 `sourceMirror`、 `aiVirtualBackground` 等。。参数：`[options.dropFrameWhenBusy=true]`（boolean，* Worker 尚未渲染完上一帧时是否丢弃当前帧，避免排队导致延迟不断累积。 *）、`[options.maxFrameQueue=1]`（number，* 预留队列配置。当前实现默认只保留 1 帧，后续可扩展为更长队列。 *）、`[options.sourceMirror=false]`（boolean，* 是否默认对所有槽位应用水平镜像。 *）、`[options.mirror=false]`（boolean，* 是否对最终合成输出整体做水平镜像。 *）</td><td>公开调用或模块入口</td></tr>
 <tr><td>125</td><td><code>getIssues()</code><br><span class="pill">method</span></td><td>无参数。返回 `this._issues[]`（最多 50 条 FIFO）的深拷贝副本。每条 issue 来自子模块通过 `onIssue`→`_recordIssue()` 上报，含 `module`/`component`/`stage`/`message`/`details` 字段。</td><td>公开调用或模块入口</td></tr>
 <tr><td>131</td><td><code>getLastIssue()</code><br><span class="pill">method</span></td><td>公开方法。参数：`this._logger`，由调用方传入</td><td>公开调用或模块入口</td></tr>
-<tr><td>145</td><td><code>init(params = {})</code><br><span class="pill">method</span></td><td>接收参数 `message`。详见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>145</td><td><code>init(params = {})</code><br><span class="pill">method</span></td><td>接收参数 `message`。详见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
 <tr><td>170</td><td><code>getOutputStream()</code><br><span class="pill">method</span></td><td>对外或模块内方法；读它时看参数进入后调用了哪些子模块、返回值是否异步。</td><td>公开调用或模块入口</td></tr>
 <tr><td>180</td><td><code>process(inputStream)</code><br><span class="pill">method</span></td><td>公开方法。参数：`runtime.createImageBitmap`，由调用方传入</td><td>公开调用或模块入口</td></tr>
 <tr><td>192</td><td><code>replaceAudioTrack(input)</code><br><span class="pill">method</span></td><td>复用 AiNS 引擎替换输入音轨。</td><td>公开调用或模块入口</td></tr>
@@ -612,7 +612,7 @@
 <tr><td>266</td><td><code>suspend()</code><br><span class="pill">method</span></td><td>对外或模块内方法；读它时看参数进入后调用了哪些子模块、返回值是否异步。</td><td>公开调用或模块入口</td></tr>
 <tr><td>276</td><td><code>resume()</code><br><span class="pill">method</span></td><td>恢复渲染循环（清除停止标记）。</td><td>公开调用或模块入口</td></tr>
 <tr><td>289</td><td><code>getCapabilityReport()</code><br><span class="pill">method</span></td><td>无参数。探测当前浏览器能力：`OffscreenCanvas`/`WebGL2`/`VideoFrame`/`MediaStreamTrackGenerator`/`AudioContext`/`Insertable Streams` 等是否可用。返回能力位图对象，用于判断哪些渲染/输出路径可选。</td><td>公开调用或模块入口</td></tr>
-<tr><td>321</td><td><code>destroy()</code><br><span class="pill">method</span></td><td>方法详情见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>321</td><td><code>destroy()</code><br><span class="pill">method</span></td><td>方法详情见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
 <tr><td>336</td><td><code>setInput(input)</code><br><span class="pill">method</span></td><td>对外或模块内方法；读它时看参数进入后调用了哪些子模块、返回值是否异步。</td><td>公开调用或模块入口</td></tr>
 <tr><td>409</td><td><code>ensureGraph()</code><br><span class="pill">method</span></td><td>建立 AiNS WebAudio 图。</td><td>公开调用或模块入口</td></tr>
 <tr><td>467</td><td><code>rebuildProcessedStream()</code><br><span class="pill">method</span></td><td>公开方法。参数：`this._renderer`，由调用方传入</td><td>公开调用或模块入口</td></tr>
@@ -623,8 +623,8 @@
 <tr><td>380</td><td><code>_getInputType(input)</code><br><span class="pill">method</span></td><td>公开方法。参数：`source.slot`，由调用方传入</td><td>内部状态/子模块调用</td></tr>
 <tr><td>388</td><td><code>_buildReplacedAudioStream(audioTrack)</code><br><span class="pill">method</span></td><td>公开方法。参数：`!this._sameTrackSig(previousSignature``currentSignature`，由调用方传入</td><td>内部状态/子模块调用</td></tr></tbody></table></div>
 </section>
-<section id="lib-AINoiseSuppression-AiNSConfig-js" class="file-block">
-<h2><code>lib/AINoiseSuppression/AiNSConfig.js</code></h2>
+<section id="lib-AiNoiseSuppression-AiNSConfig-js" class="file-block">
+<h2><code>lib/AiNoiseSuppression/AiNSConfig.js</code></h2>
 <p class="file-meta">210 行，5 个 class/function/method/export 入口。</p>
 <p>AiNS 配置默认值和归一化。</p>
 <h3 class="table-group-title">公开方法</h3>
@@ -634,8 +634,8 @@
 <tr><td>156</td><td><code>normalizeSuppressionLevel(value, fallback)</code><br><span class="pill">export</span></td><td>对外或模块内方法；读它时看参数进入后调用了哪些子模块、返回值是否异步。</td><td>公开调用或模块入口</td></tr>
 <tr><td>185</td><td><code>normalizeAssetConfig(assetConfig)</code><br><span class="pill">export</span></td><td>对外或模块内方法；读它时看参数进入后调用了哪些子模块、返回值是否异步。</td><td>公开调用或模块入口</td></tr></tbody></table></div>
 </section>
-<section id="lib-AINoiseSuppression-AiNSWorkletRuntime-js" class="file-block">
-<h2><code>lib/AINoiseSuppression/AiNSWorkletRuntime.js</code></h2>
+<section id="lib-AiNoiseSuppression-AiNSWorkletRuntime-js" class="file-block">
+<h2><code>lib/AiNoiseSuppression/AiNSWorkletRuntime.js</code></h2>
 <p class="file-meta">436 行，11 个 class/function/method/export 入口。</p>
 <p>AiNS Worklet 运行时，负责拉取/初始化 WASM 和 model，创建 AudioWorkletNode，转发开关和降噪等级。</p>
 <h3 class="table-group-title">公开方法</h3>
@@ -647,17 +647,17 @@
 <tr><td>344</td><td><code>setSuppressionLevel(level)</code><br><span class="pill">method</span></td><td>对外或模块内方法；读它时看参数进入后调用了哪些子模块、返回值是否异步。</td><td>公开调用或模块入口</td></tr>
 <tr><td>373</td><td><code>setNsEnabled(enabled)</code><br><span class="pill">method</span></td><td>对外或模块内方法；读它时看参数进入后调用了哪些子模块、返回值是否异步。</td><td>公开调用或模块入口</td></tr>
 <tr><td>398</td><td><code>isNoiseSuppressionEnabled()</code><br><span class="pill">method</span></td><td>内部方法。参数：`watermark``area``sourceItem`，由调用方传入</td><td>公开调用或模块入口</td></tr>
-<tr><td>408</td><td><code>destroy()</code><br><span class="pill">method</span></td><td>方法详情见 `workerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
+<tr><td>408</td><td><code>destroy()</code><br><span class="pill">method</span></td><td>方法详情见 `WorkerScript.js` 源码。</td><td>公开调用或模块入口</td></tr>
 <tr><td>427</td><td><code>ensureInitialized()</code><br><span class="pill">method</span></td><td>对外或模块内方法；读它时看参数进入后调用了哪些子模块、返回值是否异步。</td><td>公开调用或模块入口</td></tr></tbody></table></div>
 <h3 class="table-group-title">内部方法</h3>
 <div class="table-wrap"><table class="method-table table-src table-scroll table-wrap-target"><thead><tr><th>行号</th><th>入口</th><th>读代码重点</th><th>性质</th></tr></thead><tbody><tr><td>163</td><td><code>_reportIssue(issue)</code><br><span class="pill">method</span></td><td>内部异常报告方法。 上报渲染循环中的各类问题，包括： - renderer-fallback-requested: 当前渲染后端不满足需求，触发降级链 - renderer-fallback-main-webgl2: 降级到主线程 WebGL2 成功 - renderer-fallback-main-webgl2-failed: 降级到主线程 WebGL2 失败 - renderer-fallback-worker-2d: 降级到 Worker 2D 成功 - renderer-fallback-worker-2d-failed: 降级到 Worker 2D 失败 - renderer-render-frame: 渲染帧失败（增加错误计数） 渲染降级链优先级顺序： Worker WebGL2 → 主线程 WebGL2 → Worker 2D 每一级降级失败都会上报，方便排查为何最底层的 2D 模式也被触发。 降级尝试失败时 fallbackApplied 设为 false，成功时设为 true。。参数：`[issue]`（Object，问题描述对象 */）</td><td>内部状态/子模块调用</td></tr></tbody></table></div>
 </section>
-<section id="lib-AINoiseSuppression-AiNSWorkletSource-js" class="file-block">
-<h2><code>lib/AINoiseSuppression/AiNSWorkletSource.js</code></h2>
+<section id="lib-AiNoiseSuppression-AiNSWorkletSource-js" class="file-block">
+<h2><code>lib/AiNoiseSuppression/AiNSWorkletSource.js</code></h2>
 <p class="file-meta">631 行，39 个 class/function/method/export 入口。</p>
 <p>注入 AudioWorklet 的处理器源码，真正执行 DeepFilter 音频帧处理。</p>
 <h3 class="table-group-title">公开方法</h3>
-<div class="table-wrap"><table class="method-table table-src table-scroll table-wrap-target"><thead><tr><th>行号</th><th>入口</th><th>读代码重点</th><th>性质</th></tr></thead><tbody><tr><td>8</td><td><code>workletMain()</code><br><span class="pill">function</span></td><td>AINoiseSuppression AudioWorklet inline source. Keep the worklet body as executable JS so the minifier can compress it before we serialize it back to a string for addModule().</td><td>公开调用或模块入口</td></tr>
+<div class="table-wrap"><table class="method-table table-src table-scroll table-wrap-target"><thead><tr><th>行号</th><th>入口</th><th>读代码重点</th><th>性质</th></tr></thead><tbody><tr><td>8</td><td><code>workletMain()</code><br><span class="pill">function</span></td><td>AiNoiseSuppression AudioWorklet inline source. Keep the worklet body as executable JS so the minifier can compress it before we serialize it back to a string for addModule().</td><td>公开调用或模块入口</td></tr>
 <tr><td>383</td><td><code>constructor(options)</code><br><span class="pill">method</span></td><td>Worker 尚未渲染完上一帧时是否丢弃当前帧，避免排队导致延迟不断累积。 预留队列配置。当前实现默认只保留 1 帧，后续可扩展为更长队列。 是否默认对所有槽位应用水平镜像。 是否对最终合成输出整体做水平镜像。 输出镜像时，输出级水印是否跟着一起翻转。 是否优先使用 Insertable Streams 导出视频；能力不足时回退到 captureStream。 captureStream 路径下是否优先使用 captureStream(0)+requestFrame 手动出帧。 初始水印配置列表。 与初始输入源逐项对应的 source 级配置数组，如 `sourceMirror`、 `aiVirtualBackground` 等。。参数：`[options.dropFrameWhenBusy=true]`（boolean，* Worker 尚未渲染完上一帧时是否丢弃当前帧，避免排队导致延迟不断累积。 *）、`[options.maxFrameQueue=1]`（number，* 预留队列配置。当前实现默认只保留 1 帧，后续可扩展为更长队列。 *）、`[options.sourceMirror=false]`（boolean，* 是否默认对所有槽位应用水平镜像。 *）、`[options.mirror=false]`（boolean，* 是否对最终合成输出整体做水平镜像。 *）</td><td>公开调用或模块入口</td></tr>
 <tr><td>443</td><td><code>passthroughInputChannels(inputChannels, outputList, sourceLimit)</code><br><span class="pill">method</span></td><td>公开方法。参数：`source.gainNode`，由调用方传入</td><td>公开调用或模块入口</td></tr>
 <tr><td>472</td><td><code>reportUnsupportedChannelLayout(inputChannels, outputList)</code><br><span class="pill">method</span></td><td>对外或模块内方法；读它时看参数进入后调用了哪些子模块、返回值是否异步。</td><td>公开调用或模块入口</td></tr>

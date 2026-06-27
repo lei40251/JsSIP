@@ -6,7 +6,7 @@ const Watermark = require('../../lib/MediaEffectsComposer/Watermark');
 const WorkerRenderer = require('../../lib/MediaEffectsComposer/Renderers/WorkerRenderer');
 const MainCanvas2DRenderer = require('../../lib/MediaEffectsComposer/Renderers/MainCanvas2DRenderer');
 const MainWebGL2Renderer = require('../../lib/MediaEffectsComposer/Renderers/MainWebGL2Renderer');
-const workerScript = require('../../lib/MediaEffectsComposer/Renderers/workerScript');
+const workerScript = require('../../lib/MediaEffectsComposer/Renderers/WorkerScript');
 const vm = require('vm');
 
 let nextTrackId = 1;

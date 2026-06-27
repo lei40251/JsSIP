@@ -97,7 +97,7 @@ graph TB
     end
 
     subgraph L3["③ 渲染后端层"]
-        BR["rendererBase<br/>共享基础方法"]
+        BR["RendererBase<br/>共享基础方法"]
         M2D["MainCanvas2DRenderer"]
         MWG["MainWebGL2Renderer"]
         WR["WorkerRenderer"]
@@ -147,12 +147,12 @@ MediaEffectsComposer/
 ├── AudioMixer.js              1968 行   WebAudio 混音(最大模块)
 ├── Watermark.js         679 行   水印配置/加载/布局
 ├── Renderers/
-│   ├── rendererBase.js          49 行   渲染器共享基础方法(工厂函数)
+│   ├── RendererBase.js          49 行   渲染器共享基础方法(工厂函数)
 │   ├── MainCanvas2DRenderer.js 420 行   主线程 Canvas2D(最终兜底)
 │   ├── MainWebGL2Renderer.js   959 行   主线程 WebGL2(含原 gl.js+color.js)
 │   ├── WorkerRenderer.js       850 行   Worker 渲染代理
-│   └── workerScript.js        1360 行   Worker 内实际渲染脚本
-└── AIVirtualBackground/
+│   └── WorkerScript.js        1360 行   Worker 内实际渲染脚本
+└── AiVirtualBackground/
     ├── AiVBState.js 1281 行  源级 AiVB 生命周期控制
     ├── MediaPipeSegmenterRuntime.js 655 行  MediaPipe 分割器封装
     ├── AiVBAssetLoader.js      275 行   MediaPipe 运行时懒加载
@@ -211,7 +211,7 @@ graph TD
 
     %% 渲染
     RF["RendererFactory（已内联）"]
-    BR["rendererBase"]
+    BR["RendererBase"]
     M2D["MainCanvas2DRenderer"]
     MWG["MainWebGL2Renderer"]
     WR["WorkerRenderer"]
@@ -676,7 +676,7 @@ config:
     fontSize: 12px
 ---
 classDiagram
-    class rendererBase {
+    class RendererBase {
         <<abstract>>
         #_config : Object
         #_info : Object
@@ -717,13 +717,13 @@ classDiagram
 
     RendererFactory（已内联到 RenderLoop） {
         <<module>>
-        +createRenderer(canvas, config, hooks) rendererBase
+        +createRenderer(canvas, config, hooks) RendererBase
         -shouldPreferMainWebGL2() bool
     }
 
-    rendererBase <|-- MainCanvas2DRenderer
-    rendererBase <|-- MainWebGL2Renderer
-    rendererBase <|-- WorkerRenderer
+    RendererBase <|-- MainCanvas2DRenderer
+    RendererBase <|-- MainWebGL2Renderer
+    RendererBase <|-- WorkerRenderer
     RendererFactory（已内联） ..> MainCanvas2DRenderer : creates
     RendererFactory（已内联） ..> MainWebGL2Renderer : creates
     RendererFactory（已内联） ..> WorkerRenderer : creates
@@ -871,7 +871,7 @@ graph TB
     subgraph 行为型
         OBS["Observer 观察者<br/>onIssue / 帧回调"]
         CHN["Chain of Resp. 职责链<br/>渲染降级链"]
-        TMP["Template Method<br/>rendererBase.init/render"]
+        TMP["Template Method<br/>RendererBase.init/render"]
     end
 
     subgraph 创建型
@@ -887,10 +887,10 @@ graph TB
 
 #### ② 策略 + 工厂 + 模板方法 — 渲染器三件套
 这是整个模块最精彩的设计:
-- **`rendererBase`** 定义抽象接口(`init/render/resize/removeSource/destroy`)——**模板方法**。
+- **`RendererBase`** 定义抽象接口(`init/render/resize/removeSource/destroy`)——**模板方法**。
 - **4 个具体策略**(`MainCanvas2DRenderer`/`MainWebGL2DRenderer`/`WorkerRenderer`)——**策略**。
 - **`createRenderer`** 根据配置+能力探测选择策略——**工厂**。
-- 上层(`RenderLoop`)只面向 `rendererBase` 编程,完全不关心具体是哪种后端——**桥接**。
+- 上层(`RenderLoop`)只面向 `RendererBase` 编程,完全不关心具体是哪种后端——**桥接**。
 
 > 这套设计让"在 Worker 里画 WebGL2"和"在主线程画 Canvas2D"对上层完全透明,布局结果(payload)可以原样复用。
 
@@ -1013,12 +1013,12 @@ MediaPipe 运行时通过 `<script type=module>` 注入,挂在 `window.CRTCAiVBV
 | 2 | `ComposerConfig.js` | 理解配置归一化的防御式编程风格 | 10 分钟 |
 | 3 | `Sources.js` | 理解"源"的数据模型和生命周期 | 20 分钟 |
 | 4 | `LayoutEngine.js` | 理解布局如何与渲染解耦 | 15 分钟 |
-| 5 | `rendererBase.js` + `RenderLoop.js` | 理解策略+工厂+降级链 | 15 分钟 |
+| 5 | `RendererBase.js` + `RenderLoop.js` | 理解策略+工厂+降级链 | 15 分钟 |
 | 6 | `RenderLoop.js` | 理解 rAF 循环和健康检查 | 25 分钟 |
 | 7 | `MediaEffectsComposer.js` | 串起所有子模块(核心,最难) | 60 分钟 |
 | 8 | `OutputStream.js` | 理解 Insertable vs captureStream | 30 分钟 |
 | 9 | `AudioMixer.js` | 理解 WebAudio 混音(按需) | 40 分钟 |
-| 10 | `AIVirtualBackground/*` | 理解 AI 虚拟背景(按需) | 40 分钟 |
+| 10 | `AiVirtualBackground/*` | 理解 AI 虚拟背景(按需) | 40 分钟 |
 
 ### 12.2 调试时的常用入口
 

@@ -79,7 +79,7 @@
 | `Failed to load image: ${url}` | `Watermark` | 图片水印资源加载失败。 | 去掉该图片水印继续通话。 | 检查图片 URL、跨域、文件是否存在。 |
 | `Missing image` | `Watermark` | 水印配置要求图片，但没有提供图片对象或地址。 | 直接忽略该水印配置，并提示配置错误。 | 检查 `watermarks[].image` 是否为空。 |
 | `Failed to load background image` | `AiVBState` 或 worker | 虚拟背景背景图加载失败。 | 关闭该背景图模式，可回退为 blur 或关闭 AiVB。 | 检查背景图 URL、跨域、文件存在性。 |
-| `AIVirtualBackground requires browser environment` | `AiVBAssetLoader` | 在非浏览器环境初始化 AiVB。 | 直接关闭 AiVB，不应重试。 | 属于运行环境不支持。 |
+| `AiVirtualBackground requires browser environment` | `AiVBAssetLoader` | 在非浏览器环境初始化 AiVB。 | 直接关闭 AiVB，不应重试。 | 属于运行环境不支持。 |
 | `Failed to load MediaPipe Tasks runtime: ${moduleUrl}` | `AiVBAssetLoader` | MediaPipe runtime 脚本加载失败。通常是 URL 错、网络失败或脚本不可访问。 | 关闭 AiVB，允许普通视频继续。 | 核对 `cdnUrl/moduleUrl`、网络、部署内容。 |
 | `Timed out waiting for MediaPipe Tasks runtime: ${moduleUrl}` | `AiVBAssetLoader` | 等待 MediaPipe runtime 挂载全局对象超时。 | 关闭 AiVB。 | 看脚本是否被拦截、执行过慢、版本不匹配。 |
 | `MediaPipe Tasks runtime loaded but global not found: ${moduleUrl}` | `AiVBAssetLoader` | 脚本已加载，但没有暴露预期全局对象，通常是版本或包内容不匹配。 | 关闭 AiVB。 | 核对 runtime 文件版本和导出格式。 |

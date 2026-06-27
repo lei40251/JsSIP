@@ -8,31 +8,31 @@ const assert = require('assert');
 // =============================================================================
 
 // --- Load all BFCP modules ------------------------------------------------
-const Primitive = require('../lib/BFCP/lib/messages/primitive.js');
-const RequestStatusValue = require('../lib/BFCP/lib/messages/requestStatusValue.js');
-const PayloadLength = require('../lib/BFCP/lib/messages/payloadLength.js');
-const CommonHeader = require('../lib/BFCP/lib/messages/commonHeader.js');
-const Message = require('../lib/BFCP/lib/messages/message.js');
-const Hello = require('../lib/BFCP/lib/messages/hello.js');
-const HelloAck = require('../lib/BFCP/lib/messages/helloAck.js');
-const FloorRequest = require('../lib/BFCP/lib/messages/floorRequest.js');
-const FloorRelease = require('../lib/BFCP/lib/messages/floorRelease.js');
-const FloorRequestStatusMsg = require('../lib/BFCP/lib/messages/floorRequestStatus.js');
-const FloorRequestStatusAck = require('../lib/BFCP/lib/messages/floorRequestStatusAck.js');
-const FloorStatus = require('../lib/BFCP/lib/messages/floorStatus.js');
-const FloorStatusAck = require('../lib/BFCP/lib/messages/floorStatusAck.js');
-const FloorQuery = require('../lib/BFCP/lib/messages/floorQuery.js');
+const Primitive = require('../lib/BFCP/src/messages/Primitive.js');
+const RequestStatusValue = require('../lib/BFCP/src/messages/RequestStatusValue.js');
+const PayloadLength = require('../lib/BFCP/src/messages/PayloadLength.js');
+const CommonHeader = require('../lib/BFCP/src/messages/CommonHeader.js');
+const Message = require('../lib/BFCP/src/messages/Message.js');
+const Hello = require('../lib/BFCP/src/messages/Hello.js');
+const HelloAck = require('../lib/BFCP/src/messages/HelloAck.js');
+const FloorRequest = require('../lib/BFCP/src/messages/FloorRequest.js');
+const FloorRelease = require('../lib/BFCP/src/messages/FloorRelease.js');
+const FloorRequestStatusMsg = require('../lib/BFCP/src/messages/FloorRequestStatus.js');
+const FloorRequestStatusAck = require('../lib/BFCP/src/messages/FloorRequestStatusAck.js');
+const FloorStatus = require('../lib/BFCP/src/messages/FloorStatus.js');
+const FloorStatusAck = require('../lib/BFCP/src/messages/FloorStatusAck.js');
+const FloorQuery = require('../lib/BFCP/src/messages/FloorQuery.js');
 
-const Attribute = require('../lib/BFCP/lib/attributes/attribute.js');
-const Type = require('../lib/BFCP/lib/attributes/type.js');
-const Format = require('../lib/BFCP/lib/attributes/format.js');
-const Length = require('../lib/BFCP/lib/attributes/length.js');
-const Name = require('../lib/BFCP/lib/attributeName.js');
-const { FloorId, FloorRequestId, BeneficiaryId, RequestStatus, FloorRequestStatus: FloorRequestStatusAtr, FloorRequestInformation, SupportedAttributes, SupportedPrimitives } = require('../lib/BFCP/lib/attributeClasses.js');
+const Attribute = require('../lib/BFCP/src/attributes/Attribute.js');
+const Type = require('../lib/BFCP/src/attributes/Type.js');
+const Format = require('../lib/BFCP/src/attributes/Format.js');
+const Length = require('../lib/BFCP/src/attributes/Length.js');
+const Name = require('../lib/BFCP/src/AttributeName.js');
+const { FloorId, FloorRequestId, BeneficiaryId, RequestStatus, FloorRequestStatus: FloorRequestStatusAtr, FloorRequestInformation, SupportedAttributes, SupportedPrimitives } = require('../lib/BFCP/src/AttributeClasses.js');
 
-const Complements = require('../lib/BFCP/lib/parser/complements.js');
-const Parser = require('../lib/BFCP/lib/parser/parser.js');
-const User = require('../lib/BFCP/lib/user/user.js');
+const Complements = require('../lib/BFCP/src/parser/Complements.js');
+const Parser = require('../lib/BFCP/src/parser/Parser.js');
+const User = require('../lib/BFCP/src/user/User.js');
 const BFCPLib = require('../lib/BFCP/index.js');
 
 // =============================================================================

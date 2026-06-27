@@ -172,13 +172,13 @@ await composer.setWatermarks({
           <ul>
             <li>镜像主要看 config 和 slot override。</li>
             <li>水印看 Watermark。</li>
-            <li>虚拟背景看 AiVBState 和 AIVirtualBackground 目录。</li>
+            <li>虚拟背景看 AiVBState 和 AiVirtualBackground 目录。</li>
           </ul>
           <div class="roadmap-files">
             <span>lib/MediaEffectsComposer/ComposerConfig.js</span>
             <span>lib/MediaEffectsComposer/Watermark.js</span>
-            <span>lib/MediaEffectsComposer/AIVirtualBackground/AiVBState.js</span>
-            <span>AIVirtualBackground/*</span>
+            <span>lib/MediaEffectsComposer/AiVirtualBackground/AiVBState.js</span>
+            <span>AiVirtualBackground/*</span>
           </div>
         </div>
       </div>
@@ -243,7 +243,7 @@ mixedStream.addTrack(mixedVideoTrack);
             <li><code>lib/MediaEffectsComposer/RenderLoop.js</code> 和各 renderer
               <div class="path">看 auto 模式的真实降级策略</div>
             </li>
-            <li><code>lib/MediaEffectsComposer/AIVirtualBackground/AiVBState.js</code> + <code>AIVirtualBackground/*</code>
+            <li><code>lib/MediaEffectsComposer/AiVirtualBackground/AiVBState.js</code> + <code>AiVirtualBackground/*</code>
               <div class="path">看虚拟背景配置、runtime 启停、背景图缓存</div>
             </li>
           </ol>
@@ -262,12 +262,12 @@ mixedStream.addTrack(mixedVideoTrack);
 ├── Watermark.js
 ├── Renderers/
 │   ├── RenderLoop.js
-│   ├── rendererBase.js
+│   ├── RendererBase.js
 │   ├── MainCanvas2DRenderer.js
 │   ├── MainWebGL2Renderer.js
 │   ├── WorkerRenderer.js
-│   └── workerScript.js
-└── AIVirtualBackground/
+│   └── WorkerScript.js
+└── AiVirtualBackground/
     ├── AiVBConfig.js
     ├── AiVBAssetLoader.js
     ├── AiVBState.js
@@ -709,7 +709,7 @@ console.log(info.actualMode);
           </tr>
           <tr>
             <td data-label="字段"><code>video / segmentation / postProcessing / assetConfig</code></td>
-            <td data-label="说明">更细的分割和资源配置，归一化逻辑在 <code>AIVirtualBackground/AiVBConfig.js</code>。</td>
+            <td data-label="说明">更细的分割和资源配置，归一化逻辑在 <code>AiVirtualBackground/AiVBConfig.js</code>。</td>
           </tr>
         </tbody>
       </table></div>
@@ -841,9 +841,9 @@ const publishStream = await composer.getOutput({ type: 'mixed' });
   lib/MediaEffectsComposer/OutputStream.js
   lib/MediaEffectsComposer/AudioMixer.js
   lib/MediaEffectsComposer/Watermark.js
-  lib/MediaEffectsComposer/AIVirtualBackground/*
+  lib/MediaEffectsComposer/AiVirtualBackground/*
   lib/MediaEffectsComposer/Renderers/*
-  lib/AINoiseSuppression/*
+  lib/AiNoiseSuppression/*
   lib/RTCSession/MediaPipeline.js
   lib/RTCSession.js</code></pre>
       <div class="table-wrap"><table class="table-stack table-wrap-target">

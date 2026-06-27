@@ -87,7 +87,7 @@ graph TB
     end
 
     subgraph L3[&quot;③ 渲染后端层&quot;]
-        BR[&quot;rendererBase&lt;br/&gt;共享基础方法&quot;]
+        BR[&quot;RendererBase&lt;br/&gt;共享基础方法&quot;]
         M2D[&quot;MainCanvas2DRenderer&quot;]
         MWG[&quot;MainWebGL2Renderer&quot;]
         WR[&quot;WorkerRenderer&quot;]
@@ -132,12 +132,12 @@ graph TB
 ├── AudioMixer.js              1968 行   WebAudio 混音(最大模块)
 ├── Watermark.js         679 行   水印配置/加载/布局
 ├── Renderers/
-│   ├── rendererBase.js          49 行   渲染器共享基础方法(工厂函数)
+│   ├── RendererBase.js          49 行   渲染器共享基础方法(工厂函数)
 │   ├── MainCanvas2DRenderer.js 420 行   主线程 Canvas2D(最终兜底)
 │   ├── MainWebGL2Renderer.js   959 行   主线程 WebGL2(含原 gl.js+color.js)
 │   ├── WorkerRenderer.js       850 行   Worker 渲染代理
-│   └── workerScript.js        1360 行   Worker 内实际渲染脚本
-└── AIVirtualBackground/
+│   └── WorkerScript.js        1360 行   Worker 内实际渲染脚本
+└── AiVirtualBackground/
     ├── AiVBState.js 1281 行  源级 AiVB 生命周期控制
     ├── MediaPipeSegmenterRuntime.js 655 行  MediaPipe 分割器封装
     ├── AiVBAssetLoader.js      275 行   MediaPipe 运行时懒加载
@@ -191,7 +191,7 @@ graph TD
 
     %% 渲染
     RF[&quot;RendererFactory（已内联）&quot;]
-    BR[&quot;rendererBase&quot;]
+    BR[&quot;RendererBase&quot;]
     M2D[&quot;MainCanvas2DRenderer&quot;]
     MWG[&quot;MainWebGL2Renderer&quot;]
     WR[&quot;WorkerRenderer&quot;]
@@ -599,7 +599,7 @@ config:
     fontSize: 11px
 ---
 classDiagram
-    class rendererBase {
+    class RendererBase {
         &lt;&lt;abstract&gt;&gt;
         #_config : Object
         #_info : Object
@@ -640,13 +640,13 @@ classDiagram
 
     class RendererFactory {
         &lt;&lt;module / RenderLoop 内联工厂&gt;&gt;
-        +createRenderer(canvas, config, hooks) rendererBase
+        +createRenderer(canvas, config, hooks) RendererBase
         -shouldPreferMainWebGL2() bool
     }
 
-    rendererBase &lt;|-- MainCanvas2DRenderer
-    rendererBase &lt;|-- MainWebGL2Renderer
-    rendererBase &lt;|-- WorkerRenderer
+    RendererBase &lt;|-- MainCanvas2DRenderer
+    RendererBase &lt;|-- MainWebGL2Renderer
+    RendererBase &lt;|-- WorkerRenderer
     RendererFactory ..&gt; MainCanvas2DRenderer : creates
     RendererFactory ..&gt; MainWebGL2Renderer : creates
     RendererFactory ..&gt; WorkerRenderer : creates</pre>
@@ -774,7 +774,7 @@ classDiagram
     subgraph 行为型
         OBS[&quot;Observer 观察者&lt;br/&gt;onIssue / 帧回调&quot;]
         CHN[&quot;Chain of Resp. 职责链&lt;br/&gt;渲染降级链&quot;]
-        TMP[&quot;Template Method&lt;br/&gt;rendererBase.init/render&quot;]
+        TMP[&quot;Template Method&lt;br/&gt;RendererBase.init/render&quot;]
     end
 
     subgraph 创建型
@@ -787,10 +787,10 @@ classDiagram
 <h4>② 策略 + 工厂 + 模板方法 — 渲染器三件套</h4>
 <p>这是整个模块最精彩的设计:</p>
 <ul>
-  <li><strong>`rendererBase`</strong> 定义抽象接口(`init/render/resize/removeSource/destroy`)——<strong>模板方法</strong>。</li>
+  <li><strong>`RendererBase`</strong> 定义抽象接口(`init/render/resize/removeSource/destroy`)——<strong>模板方法</strong>。</li>
   <li><strong>4 个具体策略</strong>(`MainCanvas2DRenderer`/`MainWebGL2DRenderer`/`WorkerRenderer`)——<strong>策略</strong>。</li>
   <li><strong>`createRenderer`</strong> 根据配置+能力探测选择策略——<strong>工厂</strong>。</li>
-  <li>上层(`RenderLoop`)只面向 `rendererBase` 编程,完全不关心具体是哪种后端——<strong>桥接</strong>。</li>
+  <li>上层(`RenderLoop`)只面向 `RendererBase` 编程,完全不关心具体是哪种后端——<strong>桥接</strong>。</li>
 </ul>
 <div class="note">这套设计让&quot;在 Worker 里画 WebGL2&quot;和&quot;在主线程画 Canvas2D&quot;对上层完全透明,布局结果(payload)可以原样复用。</div>
 <h4>③ 职责链(Chain of Responsibility)— 渲染降级链</h4>
@@ -887,12 +887,12 @@ classDiagram
 <tr><td>2</td><td><code>ComposerConfig.js</code></td><td>理解配置归一化的防御式编程风格</td><td>10 分钟</td></tr>
 <tr><td>3</td><td><code>Sources.js</code></td><td>理解"源"的数据模型和生命周期</td><td>20 分钟</td></tr>
 <tr><td>4</td><td><code>LayoutEngine.js</code></td><td>理解布局如何与渲染解耦</td><td>15 分钟</td></tr>
-<tr><td>5</td><td><code>rendererBase.js</code> + <code>RenderLoop.js</code></td><td>理解策略+工厂+降级链</td><td>15 分钟</td></tr>
+<tr><td>5</td><td><code>RendererBase.js</code> + <code>RenderLoop.js</code></td><td>理解策略+工厂+降级链</td><td>15 分钟</td></tr>
 <tr><td>6</td><td><code>RenderLoop.js</code></td><td>理解 rAF 循环和健康检查</td><td>25 分钟</td></tr>
 <tr><td>7</td><td><code>MediaEffectsComposer.js</code></td><td>串起所有子模块(核心,最难)</td><td>60 分钟</td></tr>
 <tr><td>8</td><td><code>OutputStream.js</code></td><td>理解 Insertable vs captureStream</td><td>30 分钟</td></tr>
 <tr><td>9</td><td><code>AudioMixer.js</code></td><td>理解 WebAudio 混音(按需)</td><td>40 分钟</td></tr>
-<tr><td>10</td><td><code>AIVirtualBackground/*</code></td><td>理解 AI 虚拟背景(按需)</td><td>40 分钟</td></tr>
+<tr><td>10</td><td><code>AiVirtualBackground/*</code></td><td>理解 AI 虚拟背景(按需)</td><td>40 分钟</td></tr>
 </tbody>
 </table></div>
 <h3>12.2 调试时的常用入口</h3>
@@ -938,4 +938,4 @@ classDiagram
 <p>MediaEffectsComposer 位于<strong>媒体管线的最后一站</strong>:接收前序处理(降噪)后的流,完成视频合成/特效/水印,产出最终的发送流。理解这一点,就能明白为什么它的健壮性(降级链)如此重要——它失败了,通话视频就断了。</p>
 <hr>
 <p>*本手册基于源码分析生成,涵盖 MediaEffectsComposer 模块约 1.4 万行代码。如有疑问,优先对照源码注释(本项目注释质量很高,几乎每个方法都有详细 JSDoc)。*</p>
-</section><section><h2>当前代码校准</h2><p>当前源码目录为 <code>lib/MediaEffectsComposer</code>、<code>lib/AINoiseSuppression</code>、<code>lib/RTCSession/MediaPipeline.js</code> 和 <code>lib/RTCSession.js</code>。新增 API、热更新、AiVB、AiNS、输出路径的逐文件方法入口见 <a href="./source-code-reference.html">源码逐文件索引</a>。</p></section></main></div></body></html>
+</section><section><h2>当前代码校准</h2><p>当前源码目录为 <code>lib/MediaEffectsComposer</code>、<code>lib/AiNoiseSuppression</code>、<code>lib/RTCSession/MediaPipeline.js</code> 和 <code>lib/RTCSession.js</code>。新增 API、热更新、AiVB、AiNS、输出路径的逐文件方法入口见 <a href="./source-code-reference.html">源码逐文件索引</a>。</p></section></main></div></body></html>
