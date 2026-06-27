@@ -108,10 +108,10 @@ const composer = new CRTC.MediaEffectsComposer(localStream, {
 |------|------|--------|------|
 | `width` | `number` | `1280` | 输出视频宽度（px） |
 | `height` | `number` | `720` | 输出视频高度（px） |
-| `fps` | `number` | `15` | 输出帧率 |
+| `fps` | `number` | `15`（安卓微信/鸿蒙下默认 `60`） | 输出帧率 |
 | `backgroundColor` | `string` | `'#000'` | 画布底色 |
 | `audioGain` | `number` | `0.8` | 全局默认音量增益 |
-| `renderMode` | `string` | `'auto'` | 渲染后端：`auto` / `worker-webgl2` / `main-webgl2` / `worker-2d` / `main-2d` |
+| `renderMode` | `string` | `'auto'` | 渲染后端。`auto` 创建期按 `worker-webgl2 → main-webgl2 → main-2d` 尝试，运行期降级链为 `worker-webgl2 → main-webgl2 → worker-2d → main-2d` |
 | `workerUrl` | `string \| null` | `null` | 外部 Worker 脚本地址；不传时默认走 Blob Worker |
 | `dropFrameWhenBusy` | `boolean` | `true` | Worker 忙时是否丢弃当前帧，避免延迟累积 |
 | `maxFrameQueue` | `number` | `1` | 预留帧队列长度，当前默认只保留 1 帧 |
@@ -121,6 +121,7 @@ const composer = new CRTC.MediaEffectsComposer(localStream, {
 | `mirror` | `boolean` | `false` | 构造期整体输出镜像，影响最终合成输出流，不等同于本地预览 CSS 镜像 |
 | `mirrorWatermarksWithOutput` | `boolean` | `false` | 当整体输出镜像开启时，输出级水印是否跟随一起翻转 |
 | `watermarks` | `Array<Object>` | `[]` | 初始水印配置 |
+| `preserveDrawingBuffer` | `boolean` | `true` | 是否保留 WebGL 绘图缓冲，用于 `toDataURL` 截图等场景 |
 | `sources` | `Array<Object> \| null` | `null` | 初始源配置数组，按输入源顺序对应，如 `sourceMirror`、`aiVirtualBackground` |
 
 镜像语义建议按这 4 层理解：
@@ -311,6 +312,7 @@ await composer.setConfig({
 | `opacity` | `number` | `1` | 透明度 |
 | `padding` | `number` | `3` | 内边距 |
 | `margin` | `number` | `16` | 外边距 |
+| `backgroundRadius` | `number` | `3` | 文本水印背景圆角半径 |
 
 预设位置：
 `'top-left'`, `'top-center'`, `'top-right'`, `'center'`, `'bottom-left'`, `'bottom-center'`, `'bottom-right'`
@@ -350,6 +352,7 @@ console.log(state.audio);
       slot: 0,
       gain: 0.8,
       sourceMirror: false,
+      aiVirtualBackground: null,   // 该源的 AiVB 配置，无则为 null
       hasAudio: true,
       hasVideo: true
     }
@@ -364,13 +367,34 @@ console.log(state.audio);
   render: {
     requestedMode: 'auto',
     actualMode: 'worker-webgl2',
-    droppedFrames: 0
+    isWorker: true,
+    isWebGL2: true,
+    isFallback: false,
+    reason: '',
+    droppedFrames: 0,
+    renderedFrames: 0,
+    fps: 15,
+    width: 1280,
+    height: 720,
+    outputMode: 'insertable',
+    insertableActive: true
+    // ...更多字段由具体 renderer 和 OutputStream 提供
   },
   audio: {
-    status: 'idle',
+    requested: false,
+    status: 'not-requested',
+    contextState: null,
+    sourceCount: 0,
+    liveSourceCount: 0,
     connectedSources: 0,
-    liveSourceCount: 0
-  }
+    outputTracks: 0,
+    reason: '',
+    lastError: ''
+    // ...更多字段由 AudioMixer 提供
+  },
+  issues: [
+    // getIssues() 返回的问题列表（深拷贝），最多 50 条 FIFO
+  ]
 }
 ```
 
@@ -624,7 +648,7 @@ composer.clearSourceAiVirtualBackground(0);
 
 ### Q: `RTCSession` 里传 `mediaEffectsComposer` 时，会把通话音频也一起混掉吗？
 
-不会。当前 `RTCSession` 集成路径里，`MediaPipeline.applyMediaEffectsComposerOnSdkGumStream()` 默认只取 composer 的视频输出，再把原始输入流的音轨拼回去。
+当原始输入流有音频轨时（`hasSourceAudio`），`MediaPipeline` 使用 `getOutput({ type: 'mixed' })` 获取 composer 的完整音视频输出（包含 composer 内部的音频混音结果）。当原始输入流无音频轨时，仅使用 `getOutput({ type: 'video' })` 获取视频输出。
 
 如果你需要多源音频混音或子混音，请直接使用独立的 `MediaEffectsComposer` 实例并显式调用 `getOutput({ type: 'mixed' })` / `getOutput({ type: 'audio' })`。
 

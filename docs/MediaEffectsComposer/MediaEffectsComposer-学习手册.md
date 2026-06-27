@@ -138,14 +138,14 @@ graph TB
 
 ```
 MediaEffectsComposer/
-├── MediaEffectsComposer.js         1870 行   ★ 核心:初始化、编排、公开 API
-├── ComposerConfig.js           232 行   纯函数配置归一化
+├── MediaEffectsComposer.js         1930 行   ★ 核心:初始化、编排、公开 API
+├── ComposerConfig.js           235 行   纯函数配置归一化
 ├── Sources.js              464 行   源注册表(增删查改、slot 分配)
 ├── LayoutEngine.js             447 行   网格布局 + draw rect 计算
-├── RenderLoop.js               807 行   rAF 帧循环 + 渲染降级调度（含原 RendererFactory 逻辑）
-├── OutputStream.js      991 行   canvas→MediaStream 输出封装
-├── AudioMixer.js              1976 行   WebAudio 混音(最大模块)
-├── Watermark.js         688 行   水印配置/加载/布局
+├── RenderLoop.js               935 行   rAF 帧循环 + 渲染降级调度（含原 RendererFactory 逻辑）
+├── OutputStream.js      984 行   canvas→MediaStream 输出封装
+├── AudioMixer.js              1968 行   WebAudio 混音(最大模块)
+├── Watermark.js         679 行   水印配置/加载/布局
 ├── Renderers/
 │   ├── rendererBase.js          49 行   渲染器共享基础方法(工厂函数)
 │   ├── MainCanvas2DRenderer.js 420 行   主线程 Canvas2D(最终兜底)
@@ -427,7 +427,7 @@ sequenceDiagram
 
 1. **配置归一化前置**:任何非法值在 `ComposerConfig.create` 阶段就被拍成默认值,后续代码可以信任 config 的类型(`ComposerConfig.js:46`)。
 2. **Sources 的回调链设计**:`onBeforeRemove`(断音频)→ `onAfterRemove`(清渲染/清画布)。这个顺序很关键:先断音频避免残留噪声,再清视频资源(`MediaEffectsComposer.js:360`)。
-3. **Renderer 延迟创建**:构造时不创建 Renderer,第一次真正 `renderFrame` 时才 `ensureRenderer()`。好处是空源时不浪费 GPU 资源(`RenderLoop.js:182`)。
+3. **Renderer 延迟创建**:构造时不创建 Renderer,第一次真正 `renderFrame` 时才 `ensureRenderer()`。好处是空源时不浪费 GPU 资源(`RenderLoop.js:310`)。
 4. **水印异步加载不阻塞构造**:`setWatermarks` 返回 Promise,构造函数里只 `then` 后画一帧,失败也只上报不中断。
 5. **AudioContext 延迟到首次 `getAudioStream`**:浏览器要求用户交互后才能创建/启动 AudioContext,所以构造时绝不碰它(`AudioMixer.js:57`)。
 
@@ -504,8 +504,8 @@ sequenceDiagram
 ```
 
 **节流与健康检查**:
-- `_renderFrameInterval = 1000/fps`,不到间隔直接跳过绘制但继续 rAF(`RenderLoop.js:287`)。
-- `_handleRendererInfo` 检测 Worker 渲染器是否报告 `worker-failed`,连续 2 次触发降级(`RenderLoop.js:642`)。
+- `_renderFrameInterval = 1000/fps`,不到间隔直接跳过绘制但继续 rAF(`RenderLoop.js:400`)。
+- `_handleRendererInfo` 检测 Worker 渲染器是否报告 `worker-failed`,连续 2 次触发降级(`RenderLoop.js:759`)。
 
 ### 7.3 流程③:动态增删源
 
@@ -518,7 +518,7 @@ sequenceDiagram
     participant AM as AudioMixer
 
     Note over App,CRT: ➕ 添加源
-    App->>CRT: appendStream(stream, {slot, gain})
+    App->>CRT: addSource(stream, {slot, gain})
     CRT->>SS: add(stream, options)
     SS->>SS: slot 冲突?替换旧源
     SS->>SS: 创建/复用 video 元素
@@ -555,21 +555,17 @@ config:
 graph LR
     AUTO["renderMode='auto'<br/>默认"]
 
-    subgraph S_INIT["创建期(同步)"]
-        T1["Safari/WKWebView?<br/>→ MainWebGL2"]
-        T2["Worker WebGL2"]
-        T3["Main WebGL2"]
-        T4["Worker 2D"]
-        T5["Main 2D<br/>绝对兜底"]
+    subgraph S_INIT["创建期（同步）"]
+        T1["Worker WebGL2"]
+        T2["Main WebGL2"]
+        T3["Main 2D<br/>绝对兜底"]
     end
 
     AUTO --> T1
     T1 -->|"失败"| T2
-    T2 -->|"异步失败"| T3
-    T3 -->|"不可用"| T4
-    T4 -->|"不可用"| T5
+    T2 -->|"不可用"| T3
 
-    subgraph S_RUNTIME["运行期(异步)"]
+    subgraph S_RUNTIME["运行期（异步）"]
         R1["Worker WebGL2 失败<br/>连续2次"]
         R2["→ Main WebGL2"]
         R3["→ Worker 2D"]
@@ -579,9 +575,9 @@ graph LR
     R1 --> R2 --> R3 --> R4
 ```
 
-**两个层次的降级**:
-1. **创建期(同步)**:`createRenderer` 按顺序 try-catch,任何一个抛错就尝试下一个(`RenderLoop.js:32`)。
-2. **运行期(异步)**:`RenderLoop.fallbackRenderer` 在 Worker 运行中报告 fatal 时触发,链是 `worker-webgl2 → main-webgl2 → worker-2d → main-2d`(`RenderLoop.js:357`)。
+**两个层次的降级**：
+1. **创建期（同步）**：`createRenderer` 按 `worker-webgl2 → main-webgl2 → main-2d` 顺序 try-catch，任何一个抛错就尝试下一个（`RenderLoop.js:25`）。创建期不尝试 worker-2d，因为如果 Worker/OffscreenCanvas 不可用，worker-2d 同样会失败。
+2. **运行期（异步）**：`RenderLoop.fallbackRenderer` 在 Worker 运行中报告 fatal 时触发，完整链是 `worker-webgl2 → main-webgl2 → worker-2d → main-2d`（`RenderLoop.js:485`）。运行期会尝试 worker-2d，因为此时 Worker 线程已确认可用，只是 WebGL 上下文出了问题。
 
 ### 7.5 流程⑤:输出路径选择(Insertable vs captureStream)
 
@@ -799,7 +795,7 @@ sequenceDiagram
     MEC-->>App: mixedStream
 
     Note over App,MEC: 🔵 阶段3:运行期动态调整
-    App->>MEC: appendStream(remoteStream)
+    App->>MEC: addSource(remoteStream)
     App->>MEC: setSourceAiVirtualBackground(0, {mode:'blur'})
     Note over MEC: 切到主线程渲染器
     App->>MEC: setConfig({outputMirror:true})
@@ -899,11 +895,11 @@ graph TB
 > 这套设计让"在 Worker 里画 WebGL2"和"在主线程画 Canvas2D"对上层完全透明,布局结果(payload)可以原样复用。
 
 #### ③ 职责链(Chain of Responsibility)— 渲染降级链
-`RenderLoop.fallbackRenderer` 实现了一条明确的降级链:
+`RenderLoop.fallbackRenderer` 实现了一条明确的降级链（运行期）:
 ```
 worker-webgl2 → main-webgl2 → worker-2d → main-2d
 ```
-每一级失败就把请求传给下一级,直到 `main-2d` 这个"绝对兜底"(Canvas2D 几乎所有浏览器都支持)。这是职责链的典型应用:**保证最终一定有人能处理**。
+创建期 `createRenderer` 的链则缩短为 `worker-webgl2 → main-webgl2 → main-2d`（跳过 worker-2d）。每一级失败就把请求传给下一级,直到 `main-2d` 这个"绝对兜底"(Canvas2D 几乎所有浏览器都支持)。这是职责链的典型应用:**保证最终一定有人能处理**。
 
 #### ④ 观察者(Observer)— Issue 上报 + 帧回调
 两个方向的事件流都用观察者:

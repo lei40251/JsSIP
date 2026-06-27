@@ -3,79 +3,39 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MediaEffectsComposer 混流器模块架构分析</title>
-  <style>
-    :root { --bg:#f6f7f9; --paper:#fff; --ink:#20242d; --muted:#667085; --line:#d8dee8; --soft-line:#e8ecf2; --brand:#1f5f8f; --brand-2:#267c66; --accent:#a1482f; --code-bg:#101820; --code-ink:#e8eef6; --shadow:0 20px 48px rgba(35,44,57,.10); --radius:8px; }
-    * { box-sizing:border-box; }
-    html { scroll-behavior:smooth; }
-    body { margin:0; color:var(--ink); background:linear-gradient(180deg,#edf2f5 0,rgba(237,242,245,0) 340px),var(--bg); font:15px/1.72 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","PingFang SC","Microsoft YaHei",Arial,sans-serif; letter-spacing:0; }
-    a { color:var(--brand); text-decoration:none; } a:hover { text-decoration:underline; }
-    .topbar { height:4px; background:linear-gradient(90deg,var(--brand),var(--brand-2),var(--accent)); }
-    .shell { width:min(1440px,100%); margin:0 auto; display:grid; grid-template-columns:292px minmax(0,1fr); gap:30px; padding:32px 28px 56px; }
-    .sidebar { position:sticky; top:18px; align-self:start; max-height:calc(100vh - 36px); overflow:auto; padding:20px 18px 18px; background:rgba(255,255,255,.86); border:1px solid var(--soft-line); border-radius:var(--radius); box-shadow:0 10px 28px rgba(35,44,57,.07); backdrop-filter:blur(14px); }
-    .toc-title { margin:0 0 12px; font-size:13px; color:var(--muted); font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
-    .toc a { display:block; color:#394454; border-left:2px solid transparent; padding:4px 0 4px 10px; margin:1px 0; line-height:1.35; font-size:13px; }
-    .toc a:hover { color:var(--brand); border-left-color:var(--brand); text-decoration:none; background:#f2f7f8; }
-    .toc .toc-h2 { margin-top:8px; font-weight:700; color:#1f2937; }
-    .toc .toc-h3 { padding-left:22px; font-size:12.5px; }
-    .content { min-width:0; background:var(--paper); border:1px solid var(--soft-line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; }
-    .hero { padding:42px 52px 34px; border-bottom:1px solid var(--soft-line); background:linear-gradient(135deg,rgba(31,95,143,.09),rgba(38,124,102,.08)),#fff; }
-    .eyebrow { margin:0 0 10px; color:var(--brand-2); font-size:13px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
-    h1 { margin:0; max-width:980px; font-size:clamp(30px,4vw,48px); line-height:1.15; color:#182230; letter-spacing:0; }
-    .summary { margin:16px 0 0; max-width:820px; color:#4b5563; font-size:16px; }
-    .meta { display:flex; flex-wrap:wrap; gap:10px; margin-top:22px; }
-    .pill { display:inline-flex; align-items:center; height:28px; padding:0 10px; border:1px solid var(--line); border-radius:999px; background:rgba(255,255,255,.75); color:#445062; font-size:12px; font-weight:600; }
-    main.doc { padding:18px 52px 56px; }
-    h1[id] { display:none; } h2,h3,h4 { scroll-margin-top:22px; letter-spacing:0; }
-    h2 { margin:46px 0 18px; padding-top:4px; color:#172033; font-size:25px; line-height:1.3; border-top:1px solid var(--soft-line); }
-    h2:first-child { border-top:0; margin-top:22px; }
-    h2::before { content:""; display:block; width:42px; height:4px; margin:-5px 0 18px; background:linear-gradient(90deg,var(--brand),var(--brand-2)); border-radius:999px; }
-    h3 { margin:30px 0 12px; color:#1f5f8f; font-size:19px; line-height:1.35; }
-    h4 { margin:22px 0 8px; color:#30435c; font-size:16px; line-height:1.42; }
-    p { margin:10px 0; } strong { color:#131a24; } hr { border:0; border-top:1px solid var(--soft-line); margin:38px 0; }
-    ul,ol { margin:10px 0 18px 24px; padding:0; } li { margin:5px 0; padding-left:2px; }
-    code { padding:2px 5px; border-radius:5px; background:#eef3f7; color:#8a3a22; font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace; font-size:.92em; overflow-wrap:anywhere; }
-    pre { margin:16px 0 22px; padding:18px 20px; overflow:auto; color:var(--code-ink); background:var(--code-bg); border:1px solid #25313d; border-radius:var(--radius); box-shadow:inset 0 1px 0 rgba(255,255,255,.06); }
-    pre code { padding:0; background:transparent; color:inherit; border-radius:0; font-size:13px; line-height:1.62; white-space:pre; overflow-wrap:normal; }
-    .table-wrap { margin:16px 0 24px; overflow:auto; border:1px solid var(--line); border-radius:var(--radius); }
-    table { width:100%; border-collapse:collapse; min-width:680px; background:#fff; }
-    th,td { padding:11px 13px; border-bottom:1px solid var(--soft-line); text-align:left; vertical-align:top; }
-    th { position:sticky; top:0; z-index:1; color:#1f2937; background:#f3f6f8; font-size:13px; font-weight:800; white-space:nowrap; }
-    tr:last-child td { border-bottom:0; } tr:nth-child(even) td { background:#fbfcfd; }
-    blockquote { margin:18px 0; padding:12px 16px; border-left:4px solid var(--brand); background:#f3f8fa; color:#475467; border-radius:0 var(--radius) var(--radius) 0; }
-    @media (max-width:980px) { .shell{display:block;padding:18px 14px 34px;} .sidebar{position:relative;top:0;max-height:none;margin-bottom:16px;} .toc{columns:2;column-gap:22px;} .toc a{break-inside:avoid;} .hero{padding:32px 24px 28px;} main.doc{padding:12px 24px 40px;} }
-    @media (max-width:640px) { body{font-size:14px;} .toc{columns:1;} .hero{padding:28px 18px 22px;} main.doc{padding:8px 18px 34px;} h2{font-size:22px;} h3{font-size:17px;} pre{padding:14px;} table{min-width:560px;} }
-    @media print { body{background:#fff;} .topbar,.sidebar{display:none;} .shell{display:block;padding:0;width:100%;} .content{border:0;box-shadow:none;} .hero,main.doc{padding-left:0;padding-right:0;} a{color:inherit;} pre,.table-wrap{break-inside:avoid;} }
-  </style>
+<title>MediaEffectsComposer 混流器模块架构分析</title>
+<link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <div class="topbar"></div>
   <div class="shell">
-    <aside class="sidebar" aria-label="文档目录"><p class="toc-title">目录</p><nav class="toc"><a class="toc-h2" href="#模块总览">模块总览</a>
-<a class="toc-h3" href="#快速理解路线">快速理解路线</a>
-<a class="toc-h3" href="#模块职责总览">模块职责总览</a>
-<a class="toc-h3" href="#代码追踪入口">代码追踪入口</a>
-<a class="toc-h3" href="#关键状态速查">关键状态速查</a>
-<a class="toc-h3" href="#常见调试入口">常见调试入口</a>
-<a class="toc-h3" href="#目录结构">目录结构</a>
-<a class="toc-h3" href="#核心数据流">核心数据流</a>
-<a class="toc-h2" href="#文件功能分析">文件功能分析</a>
-<a class="toc-h3" href="#入口">入口</a>
-<a class="toc-h3" href="#Core-层">Core 层</a>
-<a class="toc-h3" href="#Renderers-层">Renderers 层</a>
-<a class="toc-h2" href="#渲染后端选型链路">渲染后端选型链路</a>
-<a class="toc-h2" href="#跨文件调用链">跨文件调用链</a>
-<a class="toc-h3" href="#完整的一帧渲染流程">完整的一帧渲染流程</a>
-<a class="toc-h3" href="#getmixedstream--完整流程">getMixedStream() 完整流程</a>
-<a class="toc-h3" href="#appendstream--完整流程">appendStream() 完整流程</a>
-<a class="toc-h3" href="#stop--完整流程">stop() 完整流程</a>
-<a class="toc-h2" href="#分层依赖图">分层依赖图</a>
-<a class="toc-h2" href="#设计模式总结">设计模式总结</a>
-<a class="toc-h2" href="#注意事项">注意事项</a></nav></aside>
-    <article class="content">
+    <aside class="sidebar">
+      <div class="brand">MediaEffectsComposer</div>
+      <nav>
+        <div class="nav-group-label">文档导航</div>
+        <ul>
+          <li><a href="./index.html">阅读入口</a></li>
+          <li><a href="./MediaEffectsComposer-学习手册.html">学习手册</a></li>
+          <li><a href="./MediaEffectsComposer-API-Docs.html">API 文档</a></li>
+          <li><a class="active" href="./media-effects-composer-architecture.html">架构文档</a></li>
+          <li><a href="./media-effects-ains-rtcsession-deep-dive.html">AiNS / RTCSession</a></li>
+          <li><a href="./mediaeffectsissue-messages.html">Issue 消息</a></li>
+          <li><a href="./source-code-reference.html">源码逐文件索引</a></li>
+        </ul>
+      </nav>
+      <div class="nav-group-label">本页目录</div>
+      <nav class="toc">
+        <a href="#模块总览">模块总览</a>
+        <a href="#文件功能分析">文件功能分析</a>
+        <a href="#渲染后端选型链路">渲染后端选型链路</a>
+        <a href="#跨文件调用链">跨文件调用链</a>
+        <a href="#分层依赖图">分层依赖图</a>
+        <a href="#设计模式总结">设计模式总结</a>
+        <a href="#注意事项">注意事项</a>
+      </nav>
+    </aside>
+    <main class="content">
       <header class="hero"><p class="eyebrow">CRTC MediaEffectsComposer Architecture</p><h1>MediaEffectsComposer 混流器模块架构分析</h1><p class="summary">多路音视频混流器的模块分层、核心调用链、渲染后端和生命周期说明。</p><div class="meta"><span class="pill">Source: media-effects-composer-architecture.md</span><span class="pill">Standalone HTML</span><span class="pill">Updated 2026-05-21</span></div></header>
-      <main class="doc">
-<h1 id="mediastreammixer-混流器模块架构分析">MediaEffectsComposer 混流器模块架构分析</h1>
+      <div class="doc">
 <h2 id="模块总览">模块总览</h2>
 <p>MediaEffectsComposer 是一个<strong>多路音视频混流器</strong>，将多个 <code>MediaStream</code> / <code>HTMLMediaElement</code>（常见为 <code>HTMLVideoElement</code>）合并为一个包含视频轨和音频轨的 <code>MediaStream</code>，可直接传递给 <code>RTCPeerConnection</code> 用于 WebRTC 推流。</p>
 <h3 id="快速理解路线">快速理解路线</h3>
@@ -85,7 +45,7 @@
 <li><strong>核心链路</strong>: 输入源由 <code>Sources</code> 管理；视频画面由 <code>LayoutEngine → RenderLoop → createRenderer</code> 处理；音频由 <code>AudioMixer → OutputStream</code> 处理。</li>
 <li><strong>渲染实现</strong>: <code>MainCanvas2DRenderer</code> 是兜底实现；<code>MainWebGL2Renderer</code> 和 <code>WorkerRenderer</code> 是性能优化实现。</li>
 <li><strong>运行状态</strong>: <code>getSources()</code> 查看输入源状态，<code>getRenderInfo()</code> 查看视频渲染状态，<code>getAudioInfo()</code> 查看音频混音状态。</li>
-<li><strong>生命周期</strong>: <code>appendStream()</code> 添加源，<code>getMixedStream()/getVideoStream()</code> 创建输出流，<code>stop()</code> 释放资源且实例不可复用。</li>
+<li><strong>生命周期</strong>: <code>addSource()</code> 添加源，<code>getMixedStream()/getVideoStream()</code> 创建输出流，<code>stop()</code> 释放资源且实例不可复用。</li>
 </ol>
 <h3 id="模块职责总览">模块职责总览</h3>
 <pre><code>MediaEffectsComposer 是总调度：
@@ -96,42 +56,42 @@
   AudioMixer 负责把所有音轨混到一起
   OutputStream 负责把 canvas/audio 变成最终 MediaStream</code></pre>
 <h3 id="代码追踪入口">代码追踪入口</h3>
-<div class="table-wrap"><table>
+<div class="table-wrap"><table class="table-stack table-wrap-target">
 <thead><tr><th>追踪目标</th><th>起点</th><th>继续查看</th></tr></thead>
 <tbody>
-<tr><td>构造 <code>CRTC.Mixer</code> 时初始化了哪些子模块</td><td><code>MediaEffectsComposer.constructor()</code></td><td><code>ComposerConfig.create()</code>、各子模块构造函数</td></tr>
-<tr><td>添加输入源后的处理流程</td><td><code>MediaEffectsComposer.addSource()</code></td><td><code>Sources.add()</code>、<code>AudioMixer.scheduleRefresh()</code>、<code>RenderLoop.start()</code></td></tr>
-<tr><td>slot 自动分配和同 slot 覆盖规则</td><td><code>Sources._getNextSlot()</code> / <code>Sources.add()</code></td><td><code>ComposerConfig.normalizeSlot()</code>、<code>LayoutEngine._calcLayout()</code></td></tr>
-<tr><td>单帧视频渲染流程</td><td><code>RenderLoop.renderFrame()</code></td><td><code>LayoutEngine.createRenderPayload()</code>、当前 renderer 的 <code>render()</code></td></tr>
-<tr><td>渲染后端选择和降级规则</td><td><code>createRenderer()</code></td><td><code>WorkerRenderer.init()</code>、<code>MainWebGL2Renderer.init()</code>、<code>MainCanvas2DRenderer.init()</code></td></tr>
-<tr><td>输出 <code>MediaStream</code> 的创建流程</td><td><code>MediaEffectsComposer.getMixedStream()</code></td><td><code>OutputStream.getVideoStream()</code>、<code>AudioMixer.getAudioStream()</code></td></tr>
-<tr><td>后续添加的音频源如何补进已返回的 mixed stream</td><td><code>AudioMixer._connectSource()</code></td><td><code>OutputStream.ensureMixedStreamAudioTrack()</code></td></tr>
-<tr><td>移除输入源时的资源清理流程</td><td><code>MediaEffectsComposer.removeSource()</code></td><td><code>Sources.remove()</code>、<code>AudioMixer.disconnectSource()</code>、<code>RenderLoop.removeSource()</code></td></tr>
-<tr><td>停止混流器时释放的资源</td><td><code>MediaEffectsComposer.stop()</code></td><td><code>AudioMixer.stop()</code>、<code>RenderLoop.destroy()</code>、<code>OutputStream.stop()</code></td></tr>
-<tr><td>黑屏、无声、渲染降级的排查入口</td><td><code>getRenderInfo()</code> / <code>getAudioInfo()</code></td><td><code>RenderLoop._handleRendererInfo()</code>、<code>AudioMixer._updateAudioInfo()</code></td></tr>
+<tr><td data-label="追踪目标">构造 <code>CRTC.Mixer</code> 时初始化了哪些子模块</td><td data-label="起点"><code>MediaEffectsComposer.constructor()</code></td><td data-label="继续查看"><code>ComposerConfig.create()</code>、各子模块构造函数</td></tr>
+<tr><td data-label="追踪目标">添加输入源后的处理流程</td><td data-label="起点"><code>MediaEffectsComposer.addSource()</code></td><td data-label="继续查看"><code>Sources.add()</code>、<code>AudioMixer.scheduleRefresh()</code>、<code>RenderLoop.start()</code></td></tr>
+<tr><td data-label="追踪目标">slot 自动分配和同 slot 覆盖规则</td><td data-label="起点"><code>Sources._getNextSlot()</code> / <code>Sources.add()</code></td><td data-label="继续查看"><code>ComposerConfig.normalizeSlot()</code>、<code>LayoutEngine._calcLayout()</code></td></tr>
+<tr><td data-label="追踪目标">单帧视频渲染流程</td><td data-label="起点"><code>RenderLoop.renderFrame()</code></td><td data-label="继续查看"><code>LayoutEngine.createRenderPayload()</code>、当前 renderer 的 <code>render()</code></td></tr>
+<tr><td data-label="追踪目标">渲染后端选择和降级规则</td><td data-label="起点"><code>createRenderer()</code></td><td data-label="继续查看"><code>WorkerRenderer.init()</code>、<code>MainWebGL2Renderer.init()</code>、<code>MainCanvas2DRenderer.init()</code></td></tr>
+<tr><td data-label="追踪目标">输出 <code>MediaStream</code> 的创建流程</td><td data-label="起点"><code>MediaEffectsComposer.getMixedStream()</code></td><td data-label="继续查看"><code>OutputStream.getVideoStream()</code>、<code>AudioMixer.getAudioStream()</code></td></tr>
+<tr><td data-label="追踪目标">后续添加的音频源如何补进已返回的 mixed stream</td><td data-label="起点"><code>AudioMixer._connectSource()</code></td><td data-label="继续查看"><code>OutputStream.ensureMixedStreamAudioTrack()</code></td></tr>
+<tr><td data-label="追踪目标">移除输入源时的资源清理流程</td><td data-label="起点"><code>MediaEffectsComposer.removeSource()</code></td><td data-label="继续查看"><code>Sources.remove()</code>、<code>AudioMixer.disconnectSource()</code>、<code>RenderLoop.removeSource()</code></td></tr>
+<tr><td data-label="追踪目标">停止混流器时释放的资源</td><td data-label="起点"><code>MediaEffectsComposer.stop()</code></td><td data-label="继续查看"><code>AudioMixer.stop()</code>、<code>RenderLoop.destroy()</code>、<code>OutputStream.stop()</code></td></tr>
+<tr><td data-label="追踪目标">黑屏、无声、渲染降级的排查入口</td><td data-label="起点"><code>getRenderInfo()</code> / <code>getAudioInfo()</code></td><td data-label="继续查看"><code>RenderLoop._handleRendererInfo()</code>、<code>AudioMixer._updateAudioInfo()</code></td></tr>
 </tbody></table></div>
 <h3 id="关键状态速查">关键状态速查</h3>
-<div class="table-wrap"><table>
+<div class="table-wrap"><table class="table-stack table-wrap-target">
 <thead><tr><th>状态/API</th><th>所属模块</th><th>用来确认</th></tr></thead>
 <tbody>
-<tr><td><code>source.id</code> / <code>source.slot</code> / <code>source.gain</code></td><td><code>Sources</code></td><td>标识输入源、布局位置和单路音量</td></tr>
-<tr><td><code>source.ownedVideo</code></td><td><code>Sources</code></td><td>区分内部创建的隐藏 video 和外部传入的 video</td></tr>
-<tr><td><code>render payload.items[].draw</code></td><td><code>LayoutEngine</code></td><td>renderer 实际消费的绘制矩形</td></tr>
-<tr><td><code>_animationId</code> / <code>_stopped</code></td><td><code>RenderLoop</code></td><td>rAF 是否仍在调度</td></tr>
-<tr><td><code>actualMode</code> / <code>isFallback</code> / <code>reason</code></td><td>renderer info</td><td>当前实际渲染后端、是否降级、降级原因</td></tr>
-<tr><td><code>droppedFrames</code> / <code>renderedFrames</code></td><td>renderer info</td><td>Worker 是否繁忙、是否发生丢帧</td></tr>
-<tr><td><code>status</code> / <code>contextState</code> / <code>connectedSources</code></td><td>audio info</td><td>音频是否已请求、AudioContext 状态、已连接源数量</td></tr>
-<tr><td><code>_mixedStream</code> / <code>_videoStream</code></td><td><code>OutputStream</code></td><td>输出流是否已创建、音频是否会补进已返回流</td></tr>
+<tr><td data-label="状态/API"><code>source.id</code> / <code>source.slot</code> / <code>source.gain</code></td><td data-label="所属模块"><code>Sources</code></td><td data-label="用来确认">标识输入源、布局位置和单路音量</td></tr>
+<tr><td data-label="状态/API"><code>source.ownedVideo</code></td><td data-label="所属模块"><code>Sources</code></td><td data-label="用来确认">区分内部创建的隐藏 video 和外部传入的 video</td></tr>
+<tr><td data-label="状态/API"><code>render payload.items[].draw</code></td><td data-label="所属模块"><code>LayoutEngine</code></td><td data-label="用来确认">renderer 实际消费的绘制矩形</td></tr>
+<tr><td data-label="状态/API"><code>_animationId</code> / <code>_stopped</code></td><td data-label="所属模块"><code>RenderLoop</code></td><td data-label="用来确认">rAF 是否仍在调度</td></tr>
+<tr><td data-label="状态/API"><code>actualMode</code> / <code>isFallback</code> / <code>reason</code></td><td data-label="所属模块">renderer info</td><td data-label="用来确认">当前实际渲染后端、是否降级、降级原因</td></tr>
+<tr><td data-label="状态/API"><code>droppedFrames</code> / <code>renderedFrames</code></td><td data-label="所属模块">renderer info</td><td data-label="用来确认">Worker 是否繁忙、是否发生丢帧</td></tr>
+<tr><td data-label="状态/API"><code>status</code> / <code>contextState</code> / <code>connectedSources</code></td><td data-label="所属模块">audio info</td><td data-label="用来确认">音频是否已请求、AudioContext 状态、已连接源数量</td></tr>
+<tr><td data-label="状态/API"><code>_mixedStream</code> / <code>_videoStream</code></td><td data-label="所属模块"><code>OutputStream</code></td><td data-label="用来确认">输出流是否已创建、音频是否会补进已返回流</td></tr>
 </tbody></table></div>
 <h3 id="常见调试入口">常见调试入口</h3>
-<div class="table-wrap"><table>
+<div class="table-wrap"><table class="table-stack table-wrap-target">
 <thead><tr><th>现象</th><th>优先检查</th><th>重点确认</th></tr></thead>
 <tbody>
-<tr><td>输出黑屏</td><td><code>getRenderInfo().actualMode</code>、<code>getSources()</code>、video <code>readyState</code></td><td>renderer 是否启动、源是否可渲染、Worker 是否降级、canvas capture 是否创建</td></tr>
-<tr><td>有画面无声音</td><td><code>getAudioInfo()</code>、源的 <code>hasAudio</code></td><td>是否调用 <code>getMixedStream()</code>、AudioContext 是否 suspended、源是否有 live audio track</td></tr>
-<tr><td>Worker 渲染没有启用</td><td><code>getRenderInfo().actualMode/reason</code></td><td><code>auto</code> 在 Safari/WKWebView 是否走 main-webgl2、Worker 是否异步进入 <code>worker-failed</code></td></tr>
-<tr><td>新增源没有进入画面</td><td><code>getSources()</code> 的 <code>slot</code> 和 <code>hasVideo</code></td><td>slot 是否被覆盖、stream 是否 active、video 是否已有尺寸</td></tr>
-<tr><td>remove 后仍有残留</td><td><code>Sources.remove()</code> 回调链</td><td>音频节点是否断开、renderer 纹理是否释放、输出流是否仍持有旧 track</td></tr>
+<tr><td data-label="现象">输出黑屏</td><td data-label="优先检查"><code>getRenderInfo().actualMode</code>、<code>getSources()</code>、video <code>readyState</code></td><td data-label="重点确认">renderer 是否启动、源是否可渲染、Worker 是否降级、canvas capture 是否创建</td></tr>
+<tr><td data-label="现象">有画面无声音</td><td data-label="优先检查"><code>getAudioInfo()</code>、源的 <code>hasAudio</code></td><td data-label="重点确认">是否调用 <code>getMixedStream()</code>、AudioContext 是否 suspended、源是否有 live audio track</td></tr>
+<tr><td data-label="现象">Worker 渲染没有启用</td><td data-label="优先检查"><code>getRenderInfo().actualMode/reason</code></td><td data-label="重点确认">Worker/OffscreenCanvas 能力是否满足、Worker 是否异步进入 <code>worker-failed</code></td></tr>
+<tr><td data-label="现象">新增源没有进入画面</td><td data-label="优先检查"><code>getSources()</code> 的 <code>slot</code> 和 <code>hasVideo</code></td><td data-label="重点确认">slot 是否被覆盖、stream 是否 active、video 是否已有尺寸</td></tr>
+<tr><td data-label="现象">remove 后仍有残留</td><td data-label="优先检查"><code>Sources.remove()</code> 回调链</td><td data-label="重点确认">音频节点是否断开、renderer 纹理是否释放、输出流是否仍持有旧 track</td></tr>
 </tbody></table></div>
 <h3 id="目录结构">目录结构</h3>
 <pre><code>lib/
@@ -139,7 +99,7 @@
 │
 ├── Core/                       # 核心逻辑层
 │   ├── MediaEffectsComposer.js            # 中枢控制器
-│   ├── MixerConfig.js                # 配置归一化（纯函数）
+│   ├── ComposerConfig.js                # 配置归一化（纯函数）
 ├── MediaEffectsComposer.js          # 中枢控制器
 ├── ComposerConfig.js                # 配置归一化（纯函数）
 ├── Sources.js                       # 输入源注册表
@@ -193,7 +153,7 @@
 <hr>
 <h2 id="文件功能分析">文件功能分析</h2>
 <h3 id="入口">入口</h3>
-<h4 id="lib-mediacontroller-js-—-混流控制器-中枢"><a href="../lib/MediaEffectsComposer/MediaEffectsComposer.js">lib/MediaEffectsComposer/MediaEffectsComposer.js</a> — 混流控制器（中枢）</h4>
+<h4 id="lib-mediacontroller-js-—-混流控制器-中枢"><a href="../../lib/MediaEffectsComposer/MediaEffectsComposer.js">lib/MediaEffectsComposer/MediaEffectsComposer.js</a> — 混流控制器（中枢）</h4>
 <p><strong>核心类</strong>: <code>MediaEffectsComposer</code></p>
 <h5 id="构造流程">构造流程</h5>
 <pre><code>constructor(videos, options)
@@ -208,19 +168,19 @@
   └─ new LayoutEngine({ sourceRegistry, canvas, config, callbacks })
       └─ addSource(videos) → 添加初始源</code></pre>
 <h5 id="公开-api">公开 API</h5>
-<div class="table-wrap"><table>
+<div class="table-wrap"><table class="table-stack table-wrap-target">
 <thead><tr><th>方法</th><th>功能</th><th>调用链路</th></tr></thead>
 <tbody>
-<tr><td><code>addSource(videos, options?)</code></td><td>添加输入源</td><td>→ Sources.add() → _scheduleAudioRefresh() → RenderLoop.start()</td></tr>
-<tr><td><code>removeSource(streamOrId)</code></td><td>移除一路源</td><td>→ Sources.find() → Sources.remove()</td></tr>
-<tr><td><code>clearSources()</code></td><td>移除所有源</td><td>→ 遍历 Sources.remove()</td></tr>
-<tr><td><code>getMixedStream()</code></td><td>获取完整混合流（视频+音频）</td><td>→ getVideoStream() → setMixedStream() → getAudioStream() → addAudioTracksToStream()</td></tr>
-<tr><td><code>getVideoStream()</code></td><td>仅获取视频流</td><td>→ OutputStream.getVideoStream() → 启动 RenderLoop</td></tr>
-<tr><td><code>getAudioStream()</code></td><td>仅获取音频流</td><td>→ AudioMixer.getAudioStream()</td></tr>
-<tr><td><code>getSources()</code></td><td>获取源快照</td><td>→ Sources.getSnapshot()</td></tr>
-<tr><td><code>getRenderInfo()</code></td><td>获取渲染状态</td><td>→ RenderLoop.getRenderInfo() → renderer.getInfo()</td></tr>
-<tr><td><code>getAudioInfo()</code></td><td>获取音频状态</td><td>→ AudioMixer.getInfo()</td></tr>
-<tr><td><code>stop()</code></td><td>销毁混流器</td><td>→ RenderLoop.stop() → clearStreams() → AudioMixer.stop() → RenderLoop.destroy() → OutputStream.stop()</td></tr>
+<tr><td data-label="方法"><code>addSource(videos, options?)</code></td><td data-label="功能">添加输入源</td><td data-label="调用链路">→ Sources.add() → _scheduleAudioRefresh() → RenderLoop.start()</td></tr>
+<tr><td data-label="方法"><code>removeSource(streamOrId)</code></td><td data-label="功能">移除一路源</td><td data-label="调用链路">→ Sources.find() → Sources.remove()</td></tr>
+<tr><td data-label="方法"><code>clearSources()</code></td><td data-label="功能">移除所有源</td><td data-label="调用链路">→ 遍历 Sources.remove()</td></tr>
+<tr><td data-label="方法"><code>getMixedStream()</code></td><td data-label="功能">获取完整混合流（视频+音频）</td><td data-label="调用链路">→ getVideoStream() → setMixedStream() → getStableAudioStream() → addAudioTracksToStream()</td></tr>
+<tr><td data-label="方法"><code>getVideoStream()</code></td><td data-label="功能">仅获取视频流</td><td data-label="调用链路">→ OutputStream.getVideoStream() → 启动 RenderLoop</td></tr>
+<tr><td data-label="方法"><code>getAudioStream()</code></td><td data-label="功能">仅获取音频流</td><td data-label="调用链路">→ AudioMixer.getAudioStream()</td></tr>
+<tr><td data-label="方法"><code>getSources()</code></td><td data-label="功能">获取源快照</td><td data-label="调用链路">→ Sources.getSnapshot()</td></tr>
+<tr><td data-label="方法"><code>getRenderInfo()</code></td><td data-label="功能">获取渲染状态</td><td data-label="调用链路">→ RenderLoop.getRenderInfo() → renderer.getInfo()</td></tr>
+<tr><td data-label="方法"><code>getAudioInfo()</code></td><td data-label="功能">获取音频状态</td><td data-label="调用链路">→ AudioMixer.getInfo()</td></tr>
+<tr><td data-label="方法"><code>stop()</code></td><td data-label="功能">销毁混流器</td><td data-label="调用链路">→ RenderLoop.stop() → clearStreams() → AudioMixer.stop() → RenderLoop.destroy() → OutputStream.stop()</td></tr>
 </tbody></table></div>
 <h5 id="安全守卫">安全守卫</h5>
 <ul>
@@ -228,21 +188,21 @@
 <li><code>_destroyed</code>: 构造时为 false，stop() 后设为 true，AudioMixer 也通过 <code>getDestroyed</code> 回调检测此标记</li>
 </ul>
 <hr>
-<h4 id="lib-composerconfig-js-—-配置归一化"><a href="../lib/MediaEffectsComposer/ComposerConfig.js">lib/MediaEffectsComposer/ComposerConfig.js</a> — 配置归一化</h4>
+<h4 id="lib-composerconfig-js-—-配置归一化"><a href="../../lib/MediaEffectsComposer/ComposerConfig.js">lib/MediaEffectsComposer/ComposerConfig.js</a> — 配置归一化</h4>
 <p><strong>纯函数工具模块</strong>，所有方法无副作用。</p>
-<div class="table-wrap"><table>
+<div class="table-wrap"><table class="table-stack table-wrap-target">
 <thead><tr><th>方法</th><th>功能</th><th>归一化规则</th></tr></thead>
 <tbody>
-<tr><td><code>create(options)</code></td><td>创建完整配置对象</td><td>将所有字段归一化后合并为对象</td></tr>
-<tr><td><code>normalizeRenderMode(value, fallback)</code></td><td>渲染模式合法化</td><td>仅在 <code>VALID_RENDER_MODES</code> 集合中的值有效</td></tr>
-<tr><td><code>normalizePositiveInteger(value, fallback)</code></td><td>正整数归一化</td><td>&gt;0 且有限 → floor，否则 fallback</td></tr>
-<tr><td><code>normalizeSlot(value, index)</code></td><td>slot 编号归一化</td><td>≥0 整数 + index 偏移</td></tr>
-<tr><td><code>normalizeGain(value, fallback)</code></td><td>音量增益归一化</td><td>≥0，允许放大（&gt;1）</td></tr>
-<tr><td><code>normalizeSourceOptions(optionsOrSlot, index, defaultGain)</code></td><td>appendStream 参数归一化</td><td>支持 <code>(stream, 3)</code> 和 <code>(stream, {slot, gain})</code> 两种调用形式</td></tr>
+<tr><td data-label="方法"><code>create(options)</code></td><td data-label="功能">创建完整配置对象</td><td data-label="归一化规则">将所有字段归一化后合并为对象</td></tr>
+<tr><td data-label="方法"><code>normalizeRenderMode(value, fallback)</code></td><td data-label="功能">渲染模式合法化</td><td data-label="归一化规则">仅在 <code>VALID_RENDER_MODES</code> 集合中的值有效</td></tr>
+<tr><td data-label="方法"><code>normalizePositiveInteger(value, fallback)</code></td><td data-label="功能">正整数归一化</td><td data-label="归一化规则">&gt;0 且有限 → floor，否则 fallback</td></tr>
+<tr><td data-label="方法"><code>normalizeSlot(value, index)</code></td><td data-label="功能">slot 编号归一化</td><td data-label="归一化规则">≥0 整数 + index 偏移</td></tr>
+<tr><td data-label="方法"><code>normalizeGain(value, fallback)</code></td><td data-label="功能">音量增益归一化</td><td data-label="归一化规则">≥0，允许放大（&gt;1）</td></tr>
+<tr><td data-label="方法"><code>normalizeSourceOptions(optionsOrSlot, index, defaultGain)</code></td><td data-label="功能">appendStream 参数归一化</td><td data-label="归一化规则">支持 <code>(stream, 3)</code> 和 <code>(stream, {slot, gain})</code> 两种调用形式</td></tr>
 </tbody></table></div>
-<p><strong>默认配置</strong>: width=1280, height=720, fps=null, backgroundColor='#000', audioGain=0.8, renderMode='auto', dropFrameWhenBusy=true, maxFrameQueue=1, preserveDrawingBuffer=true</p>
+<p><strong>默认配置</strong>: width=1280, height=720, fps=15, backgroundColor='#000', audioGain=0.8, renderMode='auto', dropFrameWhenBusy=true, maxFrameQueue=1, preserveDrawingBuffer=true</p>
 <hr>
-<h4 id="lib-sources-js-—-输入源注册表"><a href="../lib/MediaEffectsComposer/Sources.js">lib/MediaEffectsComposer/Sources.js</a> — 输入源注册表</h4>
+<h4 id="lib-sources-js-—-输入源注册表"><a href="../../lib/MediaEffectsComposer/Sources.js">lib/MediaEffectsComposer/Sources.js</a> — 输入源注册表</h4>
 <p><strong>职责</strong>: 管理所有参与混流的输入源生命周期。</p>
 <p><strong>source 对象结构</strong>:</p>
 <pre><code class="language-javascript">{
@@ -265,7 +225,7 @@ onAfterRemove(source)
   → RenderLoop.removeSource(source.id)    // 通知渲染器释放该源资源
   → 如果全部源已清空且仍在输出 → 绘制黑帧</code></pre>
 <hr>
-<h4 id="lib-Core-layoutengine.js-—-布局引擎"><a href="../lib/MediaEffectsComposer/Core/LayoutEngine.js">lib/MediaEffectsComposer/Core/LayoutEngine.js</a> — 布局引擎</h4>
+<h4 id="lib-layoutengine-js-布局引擎"><a href="../../lib/MediaEffectsComposer/LayoutEngine.js">lib/MediaEffectsComposer/LayoutEngine.js</a> — 布局引擎</h4>
 <p><strong>职责</strong>: 根据输入源数量和 slot 分配，计算每路视频在固定画布上的绘制位置。</p>
 <p><strong>网格布局</strong>（3~4路→2x2，5~6路按比例，7~9→3x3，10+→接近正方形）</p>
 <p><strong>缩放策略</strong>: <strong>contain 模式</strong>：等比缩放使视频完整显示在目标区域内，剩余空间居中留边（更接近 CSS <code>object-fit: contain</code>）。如果后续希望铺满并裁剪，需要调整 <code>LayoutEngine._scaleVideo()</code>。</p>
@@ -277,14 +237,15 @@ onAfterRemove(source)
   items: [{ id, slot, video: HTMLMediaElement, draw: { x, y, width, height } }]
 }</code></pre>
 <hr>
-<h4 id="lib-Core-mixerdomadapter.js-—-dom-适配器"><a href="../lib/MediaEffectsComposer/Core/MixerDomAdapter.js">lib/MediaEffectsComposer/Core/MixerDomAdapter.js</a> — DOM 适配器</h4>
+<h4 id="source-video-and-canvas-creation">当前 DOM / Canvas 创建位置</h4>
 <ul>
-<li><code>createCanvas()</code>: 创建 <code>display:none</code> 离屏 canvas</li>
-<li><code>prepareCanvas(canvas)</code>: 设置 canvas 尺寸（仅变化时写入，避免清空画布）</li>
-<li><code>createVideoElement(mediaStream)</code>: 创建隐藏 video 元素（display:none, muted, autoplay, playsinline）</li>
+<li><code>MediaEffectsComposer.constructor()</code>: 直接创建 <code>display:none</code> 的离屏 canvas。</li>
+<li><code>_prepareCanvas()</code>: 根据 <code>_config.width/height</code> 同步 canvas 尺寸，并通知 renderer resize。</li>
+<li><code>MediaEffectsComposer._mediaStreamToVideoElement()</code>: 将 <code>MediaStream</code> 包装成隐藏 video 元素。</li>
+<li><code>Sources._createSource()</code>: 负责识别 MediaStream / HTMLMediaElement / SDK 包装对象，并生成内部 source。</li>
 </ul>
 <hr>
-<h4 id="lib-Core-audiomixer.js-—-webaudio-混音"><a href="../lib/MediaEffectsComposer/Core/AudioMixer.js">lib/MediaEffectsComposer/Core/AudioMixer.js</a> — WebAudio 混音</h4>
+<h4 id="lib-audiomixer-js-webaudio-混音"><a href="../../lib/MediaEffectsComposer/AudioMixer.js">lib/MediaEffectsComposer/AudioMixer.js</a> — WebAudio 混音</h4>
 <p><strong>架构</strong>: 每路源独立 <code>MediaStreamAudioSourceNode → GainNode</code>，全部汇总到 <code>MediaStreamAudioDestinationNode</code>。</p>
 <p><strong>关键特性</strong>:</p>
 <ul>
@@ -295,7 +256,7 @@ onAfterRemove(source)
 </ul>
 <p><strong>音频轨注入到视频流</strong>: <code>_connectSource()</code> 成功后调用 <code>onAudioTrackAvailable</code> → <code>OutputStream.ensureMixedStreamAudioTrack()</code>。</p>
 <hr>
-<h4 id="lib-Core-outputstreammanager.js-—-输出流管理"><a href="../lib/MediaEffectsComposer/Core/OutputStream.js">lib/MediaEffectsComposer/Core/OutputStream.js</a> — 输出流管理</h4>
+<h4 id="lib-outputstream-js-输出流管理"><a href="../../lib/MediaEffectsComposer/OutputStream.js">lib/MediaEffectsComposer/OutputStream.js</a> — 输出流管理</h4>
 <ul>
 <li><code>getVideoStream(drawFirstFrame)</code>: 先绘制首帧，再通过 <code>canvas.captureStream(fps)</code> 获取视频轨，并返回只含视频轨的新 <code>MediaStream</code></li>
 <li><code>setMixedStream(stream)</code>: 保存混合流引用，供后续音频补充</li>
@@ -305,7 +266,7 @@ onAfterRemove(source)
 <li><code>stop()</code>: 停止所有 captured tracks</li>
 </ul>
 <hr>
-<h4 id="lib-Core-renderloop.js-—-渲染循环"><a href="../lib/MediaEffectsComposer/Core/RenderLoop.js">lib/MediaEffectsComposer/Core/RenderLoop.js</a> — 渲染循环</h4>
+<h4 id="lib-Core-renderloop.js-—-渲染循环"><a href="../../lib/MediaEffectsComposer/Core/RenderLoop.js">lib/MediaEffectsComposer/Core/RenderLoop.js</a> — 渲染循环</h4>
 <p><strong>rAF 驱动，控制渲染节奏 + 管理渲染后端生命周期</strong>。</p>
 <pre><code>requestAnimationFrame
     │
@@ -342,10 +303,10 @@ fallbackRenderer(reason)
     ├─ auto: main-webgl2 → worker-2d → main-2d
     └─ explicit worker mode: main-webgl2/main-2d fallback</code></pre>
 <p><strong>fps 节流</strong>: 非调整 rAF 间隔，而是在 rAF 回调内跳过未到间隔的帧。<code>forceRender=true</code> 跳过节流。</p>
-<p><strong>无源暂停</strong>: 源列表为空时不调度 rAF，<code>appendStream()</code> 后显式 <code>RenderLoop.start()</code> 恢复。</p>
+<p><strong>无源暂停</strong>: 源列表为空时不调度 rAF，<code>addSource()</code> 后显式 <code>RenderLoop.start()</code> 恢复。</p>
 <hr>
 <h3 id="Renderers-层">Renderers 层</h3>
-<h4 id="lib-Renderers-baserenderer.js-—-渲染器基类"><a href="../lib/MediaEffectsComposer/Renderers/rendererBase.js">lib/MediaEffectsComposer/Renderers/rendererBase.js</a> — 渲染器基类</h4>
+<h4 id="lib-Renderers-baserenderer.js-—-渲染器基类"><a href="../../lib/MediaEffectsComposer/Renderers/rendererBase.js">lib/MediaEffectsComposer/Renderers/rendererBase.js</a> — 渲染器基类</h4>
 <p><strong>渲染器抽象接口</strong>，子类必须实现 <code>init(canvas)</code> 和 <code>render(payload)</code>。</p>
 <p><strong>元信息 <code>_info</code></strong>:</p>
 <pre><code class="language-javascript">{
@@ -357,7 +318,7 @@ fallbackRenderer(reason)
 }</code></pre>
 <p>方法: <code>init()</code> / <code>render()</code> / <code>resize()</code> / <code>removeSource()</code> / <code>destroy()</code> / <code>getInfo()</code> / <code>_updateInfo()</code></p>
 <hr>
-<h4 id="lib-Renderers-maincanvas2drenderer.js-—-主线程-canvas2d-渲染器"><a href="../lib/MediaEffectsComposer/Renderers/MainCanvas2DRenderer.js">lib/MediaEffectsComposer/Renderers/MainCanvas2DRenderer.js</a> — 主线程 Canvas2D 渲染器</h4>
+<h4 id="lib-Renderers-maincanvas2drenderer.js-—-主线程-canvas2d-渲染器"><a href="../../lib/MediaEffectsComposer/Renderers/MainCanvas2DRenderer.js">lib/MediaEffectsComposer/Renderers/MainCanvas2DRenderer.js</a> — 主线程 Canvas2D 渲染器</h4>
 <p><strong>最终的兜底路径</strong>，兼容性最好。</p>
 <pre><code class="language-javascript">render(payload)
   // 1. 填背景色（覆盖上一帧残留和 contain 留边区域）
@@ -370,7 +331,7 @@ fallbackRenderer(reason)
   });</code></pre>
 <p><strong>注意</strong>: <code>canvas.getContext('2d', { alpha: false })</code> — 禁用 alpha 通道，提升性能。</p>
 <hr>
-<h4 id="lib-Renderers-mainwebgl2renderer.js-—-主线程-webgl2-渲染器"><a href="../lib/MediaEffectsComposer/Renderers/MainWebGL2Renderer.js">lib/MediaEffectsComposer/Renderers/MainWebGL2Renderer.js</a> — 主线程 WebGL2 渲染器</h4>
+<h4 id="lib-Renderers-mainwebgl2renderer.js-—-主线程-webgl2-渲染器"><a href="../../lib/MediaEffectsComposer/Renderers/MainWebGL2Renderer.js">lib/MediaEffectsComposer/Renderers/MainWebGL2Renderer.js</a> — 主线程 WebGL2 渲染器</h4>
 <p><strong>GPU 加速路径</strong>，适用于 Safari/WKWebView 等无法使用 Worker WebGL2 的环境。</p>
 <p><strong>架构</strong>:</p>
 <ul>
@@ -390,7 +351,7 @@ fallbackRenderer(reason)
 <p><strong>Y 坐标翻转</strong>: WebGL 原点在左下角，canvas 原点在左上角，<code>viewportY = canvasHeight - draw.y - draw.height</code>。</p>
 <p><strong>销毁</strong>: 删除所有纹理 + buffer + program，通过 <code>WEBGL_lose_context</code> 扩展释放 GPU 上下文。</p>
 <hr>
-<h4 id="lib-Renderers-workerrenderer.js-—-worker-线程渲染器"><a href="../lib/MediaEffectsComposer/Renderers/WorkerRenderer.js">lib/MediaEffectsComposer/Renderers/WorkerRenderer.js</a> — Worker 线程渲染器</h4>
+<h4 id="lib-Renderers-workerrenderer.js-—-worker-线程渲染器"><a href="../../lib/MediaEffectsComposer/Renderers/WorkerRenderer.js">lib/MediaEffectsComposer/Renderers/WorkerRenderer.js</a> — Worker 线程渲染器</h4>
 <p><strong>将渲染卸载到 WebWorker</strong>，通过 <code>OffscreenCanvas</code> 避免阻塞主线程。</p>
 <p><strong>架构</strong>（注意：这里 transfer 的是新建的 <code>OffscreenCanvas</code>，不是输出 canvas 本身）:</p>
 <pre><code>WorkerRenderer（主线程）
@@ -422,7 +383,7 @@ Worker 线程（workerScript）
 <li><code>maxFrameQueue&lt;=0</code>: 不排队，直接计为 dropped frame</li>
 </ul>
 <hr>
-<h4 id="lib-Renderers-workerscript.js-—-worker-内联脚本生成器"><a href="../lib/MediaEffectsComposer/Renderers/workerScript.js">lib/MediaEffectsComposer/Renderers/workerScript.js</a> — Worker 内联脚本生成器</h4>
+<h4 id="lib-Renderers-workerscript.js-—-worker-内联脚本生成器"><a href="../../lib/MediaEffectsComposer/Renderers/workerScript.js">lib/MediaEffectsComposer/Renderers/workerScript.js</a> — Worker 内联脚本生成器</h4>
 <p><strong>职责</strong>: 生成自包含的 Worker 渲染脚本源码字符串，通过 Blob URL 创建 Worker，无需额外部署脚本文件。</p>
 <p><strong>Worker 内部行为</strong>（与主线程对应渲染器代码同构）:</p>
 <ul>
@@ -430,77 +391,59 @@ Worker 线程（workerScript）
 <li><strong>worker-2d</strong>: 在 <code>OffscreenCanvas</code> 上获取 <code>2d</code> context，<code>drawImage()</code> 绘制</li>
 </ul>
 <p><strong>消息协议</strong>:</p>
-<div class="table-wrap"><table>
+<div class="table-wrap"><table class="table-stack table-wrap-target">
 <thead><tr><th>消息类型</th><th>方向</th><th>说明</th></tr></thead>
 <tbody>
-<tr><td><code>init(canvas, requestedMode, ...)</code></td><td>主线程 → Worker</td><td>初始化渲染上下文</td></tr>
-<tr><td><code>ready(actualMode, isWebGL2)</code></td><td>Worker → 主线程</td><td>初始化完成</td></tr>
-<tr><td><code>failed(reason)</code></td><td>Worker → 主线程</td><td>初始化失败</td></tr>
-<tr><td><code>render(payload)</code></td><td>主线程 → Worker</td><td>提交一帧布局数据</td></tr>
-<tr><td><code>rendered(bitmap)</code></td><td>Worker → 主线程</td><td>渲染完成，返回 ImageBitmap</td></tr>
-<tr><td><code>renderError(reason)</code></td><td>Worker → 主线程</td><td>渲染失败</td></tr>
-<tr><td><code>removeSource(id)</code></td><td>主线程 → Worker</td><td>释放纹理缓存</td></tr>
-<tr><td><code>destroy()</code></td><td>主线程 → Worker</td><td>销毁渲染资源</td></tr>
+<tr><td data-label="消息类型"><code>init(canvas, requestedMode, ...)</code></td><td data-label="方向">主线程 → Worker</td><td data-label="说明">初始化渲染上下文</td></tr>
+<tr><td data-label="消息类型"><code>ready(actualMode, isWebGL2)</code></td><td data-label="方向">Worker → 主线程</td><td data-label="说明">初始化完成</td></tr>
+<tr><td data-label="消息类型"><code>failed(reason)</code></td><td data-label="方向">Worker → 主线程</td><td data-label="说明">初始化失败</td></tr>
+<tr><td data-label="消息类型"><code>render(payload)</code></td><td data-label="方向">主线程 → Worker</td><td data-label="说明">提交一帧布局数据</td></tr>
+<tr><td data-label="消息类型"><code>rendered(bitmap)</code></td><td data-label="方向">Worker → 主线程</td><td data-label="说明">渲染完成，返回 ImageBitmap</td></tr>
+<tr><td data-label="消息类型"><code>renderError(reason)</code></td><td data-label="方向">Worker → 主线程</td><td data-label="说明">渲染失败</td></tr>
+<tr><td data-label="消息类型"><code>removeSource(id)</code></td><td data-label="方向">主线程 → Worker</td><td data-label="说明">释放纹理缓存</td></tr>
+<tr><td data-label="消息类型"><code>destroy()</code></td><td data-label="方向">主线程 → Worker</td><td data-label="说明">销毁渲染资源</td></tr>
 </tbody></table></div>
 <hr>
-<h4 id="lib-Renderers-helpers-gl.js-—-webgl-工具"><a href="../lib/MediaEffectsComposer/Renderers/helpers/gl.js">lib/MediaEffectsComposer/Renderers/helpers/gl.js</a> — WebGL 工具</h4>
-<div class="table-wrap"><table>
-<thead><tr><th>方法</th><th>功能</th></tr></thead>
+<h4 id="webgl-and-color-inline-helpers">当前 WebGL / 颜色工具实现位置</h4>
+<p>当前源码已经没有 <code>Renderers/helpers/gl.js</code> 和 <code>Renderers/helpers/color.js</code> 两个文件。对应逻辑直接放在渲染器文件内：</p>
+<div class="table-wrap"><table class="table-stack table-wrap-target">
+<thead><tr><th>实现位置</th><th>方法</th><th>说明</th></tr></thead>
 <tbody>
-<tr><td><code>compileShader(gl, type, source)</code></td><td>编译 WebGL shader，失败抛出编译日志</td></tr>
-<tr><td><code>createProgram(gl, vertexShader, fragmentShader)</code></td><td>链接 WebGL program，失败抛出链接日志</td></tr>
-<tr><td><code>createVideoTexture(gl)</code></td><td>创建 2D 纹理（CLAMP_TO_EDGE + LINEAR 滤波）</td></tr>
+<tr><td data-label="实现位置"><code>MainWebGL2Renderer.js</code></td><td data-label="方法"><code>compileShader()</code>、<code>createProgram()</code>、<code>createVideoTexture()</code></td><td data-label="说明">主线程 WebGL2 shader、program、纹理创建。</td></tr>
+<tr><td data-label="实现位置"><code>MainWebGL2Renderer.js</code></td><td data-label="方法"><code>parseColor()</code>、<code>parseHexColor()</code>、<code>parseRgbColor()</code></td><td data-label="说明">主线程 WebGL2 clearColor / RGBA 解析。</td></tr>
+<tr><td data-label="实现位置"><code>workerScript.js</code></td><td data-label="方法"><code>compileShader()</code>、<code>createProgram()</code>、<code>parseColor()</code></td><td data-label="说明">Worker WebGL2 内部使用的同类实现，不能通过 import 主线程文件复用。</td></tr>
 </tbody></table></div>
-<p><strong>MainWebGL2Renderer 直接使用该 helper；Worker 内联脚本不 import 此文件，而是在生成的 worker 源码中包含同构实现。</strong></p>
-<hr>
-<h4 id="lib-Renderers-helpers-color.js-—-css-颜色解析"><a href="../lib/MediaEffectsComposer/Renderers/helpers/color.js">lib/MediaEffectsComposer/Renderers/helpers/color.js</a> — CSS 颜色解析</h4>
-<p><strong>只 WebGL 渲染路径使用</strong>（Canvas2D 原生支持 CSS 颜色字符串）。</p>
-<p>将 CSS 颜色解析为归一化 RGBA 数组：</p>
-<div class="table-wrap"><table>
-<thead><tr><th>输入格式</th><th>示例</th></tr></thead>
-<tbody>
-<tr><td><code>#rgb</code></td><td><code>#fff</code> → <code>[1, 1, 1, 1]</code></td></tr>
-<tr><td><code>#rrggbb</code></td><td><code>#ff0000</code> → <code>[1, 0, 0, 1]</code></td></tr>
-<tr><td><code>rgb(r,g,b)</code></td><td><code>rgb(255,0,0)</code> → <code>[1, 0, 0, 1]</code></td></tr>
-<tr><td><code>rgba(r,g,b,a)</code></td><td><code>rgba(0,0,0,0.5)</code> → <code>[0, 0, 0, 0.5]</code></td></tr>
-</tbody></table></div>
-<p>不支持的格式（如 hsl、named colors）回退到纯黑 <code>[0, 0, 0, 1]</code>。</p>
 <hr>
 <h2 id="渲染后端选型链路">渲染后端选型链路</h2>
 <pre><code>createRenderer(canvas, config)
     │
-    ├─ mode === 'main-2d'
+    ├─ forceMain2D || mode === 'main-2d'
     │   └─ ▶ new MainCanvas2DRenderer() → init(canvas)     ✔
     │
-    ├─ mode === 'auto' &amp;&amp; Safari/WKWebView
-    │   └─ 先尝试 MainWebGL2Renderer
-    │         ├─ 同步成功 ✔
-    │         └─ 同步失败 → 继续走 auto 的后续 Worker / main fallback 尝试
+    ├─ forceMainThread &amp;&amp; (worker 模式)
+    │   └─ createMainFallback()
+    │         ├─ 尝试 MainWebGL2Renderer → 成功 ✔ 或失败
+    │         └─ → MainCanvas2DRenderer ✔
     │
-    ├─ mode === 'auto' &amp;&amp; 非 Safari
+    ├─ !forceMainThread &amp;&amp; canUseWorker &amp;&amp; (worker 模式 || auto)
     │   └─ ▶ new WorkerRenderer() → init(canvas)
-    │         ├─ 同步成功 ✔（actualMode 先是 worker-init，ready 后变为 worker-webgl2 或 worker-2d）
-    │         └─ 失败 → new MainWebGL2Renderer()
-    │               ├─ 成功 ✔
-    │               └─ 失败 → new MainCanvas2DRenderer() ✔
+    │         ├─ auto → 尝试 worker-webgl2
+    │         ├─ 同步成功 ✔（actualMode 先是 worker-init）
+    │         └─ 失败 → auto 模式继续下一步；显式 worker 模式 → createMainFallback
     │
-    ├─ mode === 'worker-webgl2' / 'worker-2d'
-    │   └─ ▶ new WorkerRenderer() → init(canvas)
-    │         ├─ 同步成功 ✔（Worker 内部仍可能异步 failed）
-    │         └─ 失败 → createMainFallback()
-    │               ├─ (非 worker-2d) → MainWebGL2Renderer()
-    │               └─ → MainCanvas2DRenderer() ✔
+    ├─ mode === 'main-webgl2' || mode === 'auto'
+    │   └─ ▶ new MainWebGL2Renderer() → init(canvas)
+    │         ├─ 成功 ✔
+    │         └─ 失败 → 继续
     │
-    └─ mode === 'main-webgl2'
-        └─ ▶ new MainWebGL2Renderer() → init(canvas)
-              ├─ 成功 ✔
-              └─ 失败 → new MainCanvas2DRenderer() ✔</code></pre>
+    └─ 最终兜底
+        └─ ▶ new MainCanvas2DRenderer() → init(canvas)   ✔</code></pre>
 <p><strong>运行期降级</strong>（Worker 已创建后异步失败，或渲染连续异常）:</p>
 <pre><code>WorkerRenderer 故障 × 2
     → destroy 当前 renderer
     → auto: main-webgl2 → worker-2d → main-2d
     → explicit worker mode: main-webgl2/main-2d fallback</code></pre>
-<p>auto 的运行期降级顺序与初始化顺序保持一致：<code>worker-webgl2</code> 失败后先尝试 <code>main-webgl2</code>，再尝试 <code>worker-2d</code>，最后回到 <code>main-2d</code>。</p>
+<p>auto 的创建期降级顺序：<code>worker-webgl2 → main-webgl2 → main-2d</code>（创建期不尝试 worker-2d，因为 Worker/OffscreenCanvas 不可用时 worker-2d 同样会失败）。运行期降级顺序：<code>worker-webgl2 → main-webgl2 → worker-2d → main-2d</code>（运行期会尝试 worker-2d，因为此时 Worker 线程已确认可用）。</p>
 <hr>
 <h2 id="跨文件调用链">跨文件调用链</h2>
 <h3 id="完整的一帧渲染流程">完整的一帧渲染流程</h3>
@@ -522,7 +465,7 @@ Worker 线程（workerScript）
     ├─ [AudioMixer] syncExternalSourceAudio()  ← 检测外部换源
     │
     ├─ [LayoutEngine] createRenderPayload()
-    │     └─ 遍历 SourceRegistry.sources → 计算网格 → render payload
+    │     └─ 遍历 Sources.sources → 计算网格 → render payload
     │
     ├─ [createRenderer] ensureRenderer()  (首次创建)
     │     └─ new WorkerRenderer() / MainWebGL2Renderer() / MainCanvas2DRenderer()
@@ -558,35 +501,42 @@ Worker 线程（workerScript）
   ├─▶ OutputStream.setMixedStream(videoStream)
   │     └─ 保存引用，供后续音频轨补充
   │
-  ├─▶ AudioMixer.getAudioStream()
-  │     ├─ 无 live 音频源 → 返回 null
-  │     ├─ 有 live 音频源 → _ensureAudioSystem() → new AudioContext()
-  │     ├─ _refreshAudioConnections()
-  │     │   ├─ SourceRegistry.hasAnyLiveAudioTrack()
+  ├─▶ AudioMixer.getStableAudioStream()
+      │     ├─ 即使无源也创建静音轨
+      │     ├─ _ensureAudioSystem() → new AudioContext()
+      │     ├─ _refreshAudioConnections()
+  │     │   ├─ Sources.hasAnyLiveAudioTrack()
   │     │   ├─ _connectSource() → createMediaStreamSource → GainNode → Destination
   │     │   └─ 返回 audioDestination.stream
   │     └─ 返回仅含音频轨的 MediaStream
   │
   └─▶ OutputStream.addAudioTracksToStream(videoStream, audioStream)
         └─ 将音频轨去重添加到视频流</code></pre>
-<h3 id="appendstream--完整流程">appendStream() 完整流程</h3>
-<pre><code>MediaEffectsComposer.appendStream(videos, options)
+<h3 id="addsource--完整流程">addSource() 完整流程</h3>
+<pre><code>MediaEffectsComposer.addSource(videos, optionsOrSlot)
   │
-  ├─ MixerConfig.normalizeSourceOptions(options, index)
+  ├─ _assertNotDestroyed('addSource()')
   │
-  ├─▶ SourceRegistry.add(video, normalizedSourceOptions)
-  │     ├─ _createSource() → MixerDomAdapter.createVideoElement()
+  ├─ 统一单源/多源输入，并按 ComposerConfig.getMaxSources() 限制最多 9 路
+  │
+  ├─▶ _normalizeSourceOptions(optionsOrSlot, index)
+  │     └─ ComposerConfig.normalizeSourceOptions() 处理 slot / gain / sourceMirror / aiVirtualBackground
+  │
+  ├─▶ Sources.add(video, normalizedSourceOptions)
+  │     ├─ _createSource() 创建内部 source / videoElement
   │     ├─ slot 冲突检测 → 冲突则 remove(oldSource)
   │     │     ├─ AudioMixer.disconnectSource()  (onBeforeRemove)
-  │     │     └─ RenderLoop.removeSource()       (onAfterRemove)
+  │     │     └─ RenderLoop.removeSource() + AiVBState.removeSource() (onAfterRemove)
   │     └─ push → _syncVideos()
   │
   ├─▶ AudioMixer.scheduleRefresh()（如果音频已请求或 AudioContext 已初始化）
-  │     └─ _refreshAudioConnections() → 为新源建立 WebAudio 管线
-  │         └─ onAudioTrackAvailable → OutputStream.ensureMixedStreamAudioTrack()
+  │     └─ 后续刷新 WebAudio 连接，并按需补 mixed stream 音轨
+  │
+  ├─▶ _refreshFxRenderPolicy()
   │
   └─▶ RenderLoop.start()
         └─ _scheduleNextFrame() → requestAnimationFrame</code></pre>
+<p><code>addSource()</code> 当前只是 <code>addSource()</code> 的兼容别名，读代码时按 <code>addSource()</code> 追链路即可。</p>
 <h3 id="stop--完整流程">stop() 完整流程</h3>
 <pre><code>MediaEffectsComposer.stop()
   │
@@ -596,7 +546,7 @@ Worker 线程（workerScript）
   │     └─ cancelAnimationFrame + _stopped = true
   │
   ├─▶ clearStreams()
-  │     └─ 遍历 SourceRegistry.remove()
+  │     └─ 遍历 Sources.remove()
   │         ├─ AudioMixer.disconnectSource() → 断开 WebAudio
   │         ├─ video.pause() + srcObject=null + remove()（仅 ownedVideo）
   │         └─ RenderLoop.removeSource(source.id)
@@ -623,10 +573,10 @@ Worker 线程（workerScript）
     │
     └─ lib/MediaEffectsComposer/MediaEffectsComposer.js (中枢控制器)
           │
-          ├──▶ MixerConfig                     (纯函数, 无依赖)
+          ├──▶ ComposerConfig                     (纯函数, 无依赖)
           ├──▶           │
           ├──▶ Sources                         ──依赖──▶ createVideoElement()
-          │                                              MixerConfig (gain/slot 归一化)
+          │                                              ComposerConfig (gain/slot 归一化)
           │                                              MediaEffectsComposer (onBefore/AfterRemove)
           │
           ├──▶ AudioMixer                      ──依赖──▶ Sources (源遍历)
@@ -666,17 +616,17 @@ lib/MediaEffectsComposer/Renderers/
          └── color.js                          (无依赖)</code></pre>
 <hr>
 <h2 id="设计模式总结">设计模式总结</h2>
-<div class="table-wrap"><table>
+<div class="table-wrap"><table class="table-stack table-wrap-target">
 <thead><tr><th>模式</th><th>使用位置</th><th>说明</th></tr></thead>
 <tbody>
-<tr><td><strong>Mediator（中介者）</strong></td><td>MediaEffectsComposer</td><td>协调 Sources, AudioMixer, RenderLoop, OutputStream, LayoutEngine 之间的交互</td></tr>
-<tr><td><strong>Strategy（策略）</strong></td><td>createRenderer</td><td>可切换多种渲染后端（main-2d / main-webgl2 / worker-*）</td></tr>
-<tr><td><strong>Template Method（模板方法）</strong></td><td>rendererBase</td><td>定义 <code>init() → render() → destroy()</code> 标准接口，子类各自实现</td></tr>
-<tr><td><strong>Observer（观察者）</strong></td><td>Sources 回调链</td><td>onBeforeRemove → 断音频, onAfterRemove → 清理渲染器</td></tr>
-<tr><td><strong>Value Object（值对象）</strong></td><td>MixerConfig</td><td>纯函数归一化配置参数，无副作用</td></tr>
-<tr><td><strong>Registry（注册表）</strong></td><td>Sources</td><td>统一管理源对象的增删查</td></tr>
-<tr><td><strong>Dependency Injection（依赖注入）</strong></td><td>所有模块的 constructor</td><td>每个模块通过构造参数接收依赖</td></tr>
-<tr><td><strong>Queue + Drop（队列+丢帧）</strong></td><td>WorkerRenderer</td><td>Worker 忙时基于 <code>dropFrameWhenBusy</code> 策略丢帧</td></tr>
+<tr><td data-label="模式"><strong>Mediator（中介者）</strong></td><td data-label="使用位置">MediaEffectsComposer</td><td data-label="说明">协调 Sources, AudioMixer, RenderLoop, OutputStream, LayoutEngine 之间的交互</td></tr>
+<tr><td data-label="模式"><strong>Strategy（策略）</strong></td><td data-label="使用位置">createRenderer</td><td data-label="说明">可切换多种渲染后端（main-2d / main-webgl2 / worker-*）</td></tr>
+<tr><td data-label="模式"><strong>Template Method（模板方法）</strong></td><td data-label="使用位置">rendererBase</td><td data-label="说明">定义 <code>init() → render() → destroy()</code> 标准接口，子类各自实现</td></tr>
+<tr><td data-label="模式"><strong>Observer（观察者）</strong></td><td data-label="使用位置">Sources 回调链</td><td data-label="说明">onBeforeRemove → 断音频, onAfterRemove → 清理渲染器</td></tr>
+<tr><td data-label="模式"><strong>Value Object（值对象）</strong></td><td data-label="使用位置">ComposerConfig</td><td data-label="说明">纯函数归一化配置参数，无副作用</td></tr>
+<tr><td data-label="模式"><strong>Registry（注册表）</strong></td><td data-label="使用位置">Sources</td><td data-label="说明">统一管理源对象的增删查</td></tr>
+<tr><td data-label="模式"><strong>Dependency Injection（依赖注入）</strong></td><td data-label="使用位置">所有模块的 constructor</td><td data-label="说明">每个模块通过构造参数接收依赖</td></tr>
+<tr><td data-label="模式"><strong>Queue + Drop（队列+丢帧）</strong></td><td data-label="使用位置">WorkerRenderer</td><td data-label="说明">Worker 忙时基于 <code>dropFrameWhenBusy</code> 策略丢帧</td></tr>
 </tbody></table></div>
 <hr>
 <h2 id="注意事项">注意事项</h2>
@@ -685,14 +635,14 @@ lib/MediaEffectsComposer/Renderers/
 <li><strong>Canvas Context 抢占</strong>: canvas 同一时间只能有一个 context（2D 或 WebGL2），createRenderer 是唯一允许初始化 canvas context 的地方。</li>
 <li><strong>Worker 输出 canvas 不 transfer</strong>: WorkerRenderer 不将输出 canvas transfer 到 Worker，而是主线程持有 canvas，Worker 返回 ImageBitmap 后通过 <code>drawImage()</code> 写入。这是为了确保 <code>captureStream()</code> 始终绑定主线程 canvas，避免部分浏览器黑屏。</li>
 <li><strong>AudioContext 延迟创建</strong>: 符合浏览器 autoplay 政策，需用户交互后才能恢复。</li>
-<li><strong>Worker 故障降级</strong>: auto 模式按 <code>worker-webgl2 → main-webgl2 → worker-2d → main-2d</code> 自动降级。</li>
+<li><strong>Worker 故障降级</strong>: auto 模式创建期按 <code>worker-webgl2 → main-webgl2 → main-2d</code> 降级，运行期按 <code>worker-webgl2 → main-webgl2 → worker-2d → main-2d</code> 降级。</li>
 <li><strong>去重保护</strong>: 多处通过 <code>track.id</code> 进行去重（音频轨注入、WebAudio 连接）。</li>
 <li><strong>fps 节流</strong>: 不调整 rAF 间隔，在 rAF 回调内按时间戳跳过未到间隔的帧。</li>
 <li><strong>WebGL Y 坐标</strong>: 主线程和 Worker 的 WebGL 路径都通过 <code>UNPACK_FLIP_Y_WEBGL</code> 翻转纹理，确保视频方向正确。</li>
 <li><strong>color.js 仅 WebGL 使用</strong>: Canvas2D 原生支持 CSS 颜色字符串，<code>color.js</code> 只服务于 WebGL 的 <code>gl.clearColor()</code>。</li>
 </ol>
-      </main>
-    </article>
+      </div>
+    </main>
   </div>
 </body>
 </html>

@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediaEffectsComposer API Docs</title>
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">MediaEffectsComposer</div>
+    <nav>
+      <div class="nav-group-label">文档导航</div>
+      <ul>
+        <li><a href="./index.html">阅读入口</a></li>
+        <li><a href="./MediaEffectsComposer-学习手册.html">学习手册</a></li>
+        <li><a class="active" href="./MediaEffectsComposer-API-Docs.html">API 文档</a></li>
+        <li><a href="./media-effects-composer-architecture.html">架构文档</a></li>
+        <li><a href="./media-effects-ains-rtcsession-deep-dive.html">AiNS / RTCSession</a></li>
+        <li><a href="./mediaeffectsissue-messages.html">Issue 消息</a></li>
+        <li><a href="./source-code-reference.html">源码逐文件索引</a></li>
+      </ul>
+    </nav>
+    <div class="nav-group-label">本页目录</div>
+    <nav class="toc">
+      <a href="#overview">模块定位</a>
+      <a href="#quick-start">快速上手</a>
+      <a href="#learning-path">学习路线</a>
+      <a href="#integration">RTCSession 集成</a>
+      <a href="#source-map">源码地图</a>
+      <a href="#runtime-flow">运行机制</a>
+      <a href="#render-path">渲染路径</a>
+      <a href="#api">主 API</a>
+      <a href="#params">参数速查</a>
+      <a href="#examples">常见用法</a>
+      <a href="#pitfalls">易错点</a>
+    </nav>
+  </aside>
+
+  <main class="content">
+    <section class="hero" id="overview">
+      <span class="eyebrow">Overview</span>
+      <h1>它不是"纯混音器"，而是一条媒体编排管线</h1>
+      <p><strong>MediaEffectsComposer</strong> 的核心职责是把多路 <code>MediaStream</code> / <code>HTMLVideoElement</code> 编排成一个统一输出流。它不仅负责把视频画到一张画布上，还负责源注册、布局计算、音频子混音、输出流导出、水印、源级镜像，以及 AI 虚拟背景。</p>
+      <p>如果你是为了读源码，这个模块应该从 <code>lib/MediaEffectsComposer/MediaEffectsComposer.js</code> 往下看；如果你是为了接 SDK，用法上要先分清 <strong>独立实例用法</strong> 和 <strong>RTCSession 内部接管用法</strong>。</p>
+
+      <div class="hero-grid">
+        <div class="hero-card">
+          <strong>输入</strong>
+          <span>支持 <code>MediaStream</code>、<code>HTMLVideoElement</code>、以及批量源列表。</span>
+        </div>
+        <div class="hero-card">
+          <strong>输出</strong>
+          <span>支持 <code>video</code> / <code>audio</code> / <code>mixed</code> 三类输出，还支持子混音。</span>
+        </div>
+        <div class="hero-card">
+          <strong>渲染</strong>
+          <span><code>auto</code> 创建期按 <code>worker-webgl2 → main-webgl2 → main-2d</code> 尝试；运行期降级链为 <code>worker-webgl2 → main-webgl2 → worker-2d → main-2d</code>。</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="quick-start">
+      <h2>快速上手</h2>
+      <p class="section-lead">如果你的目标是快速接入，先看这一节；如果你的目标是读懂源码，不要急着往下扫 API，先看下面的"学习路线"。</p>
+
+      <div class="grid">
+        <div class="card span-6">
+          <h3>1. 独立创建一个 composer</h3>
+<pre><code>const MediaEffectsComposer = require('./lib/MediaEffectsComposer');
+
+const composer = new MediaEffectsComposer([localStream, remoteStream], {
+  width: 1280,
+  height: 720,
+  fps: 15,
+  renderMode: 'auto',
+  mirror: false,
+  sourceMirror: false,
+  watermarks: [
+    {
+      target: 'output',
+      type: 'text',
+      text: 'CRTC Demo',
+      position: 'bottom-right',
+      fontSize: 28,
+      color: '#ffffff',
+      backgroundColor: 'rgba(0,0,0,0.45)'
+    }
+  ]
+});
+
+const mixedStream = await composer.getOutput({ type: 'mixed' });
+</code></pre>
+          <div class="tip">优先记住：<code>getOutput({ type: 'video' })</code> 只拿视频，<code>mixed</code> 才是音视频一起返回。</div>
+        </div>
+
+        <div class="card span-6">
+          <h3>2. 运行时更新配置</h3>
+<pre><code>await composer.setConfig({
+  outputMirror: true,
+  mirrorWatermarksWithOutput: true,
+  sourceMirrorOverrides: {
+    0: true,
+    1: false
+  }
+});
+
+await composer.setWatermarks({
+  target: 'output',
+  type: 'image',
+  image: 'https://example.com/logo.png',
+  position: 'top-right',
+  width: 96,
+  height: 96
+});
+</code></pre>
+          <div class="note">适合热更新的内容主要是镜像、水印、源级 AiVB。输出宽高和渲染模式本质上是构造期主参数，文档上不要把它理解成"随便热切换"。</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="learning-path">
+      <h2>学习路线</h2>
+      <p class="section-lead">这部分不按"模块列表"组织，而是按你真正会问的问题来组织。建议不要从 API 表开始看，先顺着下面 4 个问题把主链路过一遍。</p>
+
+      <div class="roadmap">
+        <div class="roadmap-card">
+          <h3>1. 这个类到底管什么，不管什么？</h3>
+          <p>先建立边界感，避免把它误当成单纯混音器，或者误以为它会接管整个 RTCSession 媒体生命周期。</p>
+          <ul>
+            <li>看主类的构造参数和成员初始化。</li>
+            <li>看 RTCSession 集成时，它替换的是视频轨还是整条流。</li>
+          </ul>
+          <div class="roadmap-files">
+            <span>lib/MediaEffectsComposer/MediaEffectsComposer.js</span>
+            <span>RTCSession/MediaPipeline.js</span>
+          </div>
+        </div>
+
+        <div class="roadmap-card">
+          <h3>2. 一路源是怎么进来、存起来、被画出去的？</h3>
+          <p>这一步主要理解内部数据结构和帧路径，先知道 source 长什么样，再看渲染器会轻松很多。</p>
+          <ul>
+            <li>看 source 如何注册、规范化、移除。</li>
+            <li>看布局信息如何挂到 source 上，最终进入 render payload。</li>
+          </ul>
+          <div class="roadmap-files">
+            <span>lib/MediaEffectsComposer/Sources.js</span>
+            <span>lib/MediaEffectsComposer/LayoutEngine.js</span>
+            <span>lib/MediaEffectsComposer/RenderLoop.js</span>
+          </div>
+        </div>
+
+        <div class="roadmap-card">
+          <h3>3. 为什么有这么多渲染模式？</h3>
+          <p>这一步解决"什么时候走 worker、什么时候退到主线程、为什么又变成 2D 了"这类问题。</p>
+          <ul>
+            <li>先看 createRenderer 的选择逻辑。</li>
+            <li>再看 RenderLoop 里的故障降级。</li>
+          </ul>
+          <div class="roadmap-files">
+            <span>lib/MediaEffectsComposer/RenderLoop.js</span>
+            <span>lib/MediaEffectsComposer/RenderLoop.js</span>
+            <span>Renderers/WorkerRenderer.js</span>
+          </div>
+        </div>
+
+        <div class="roadmap-card">
+          <h3>4. 水印、镜像、AiVB 是在哪里插进去的？</h3>
+          <p>这一步专门看效果链，不要和主渲染链混着读。源码里这几类能力是分开的。</p>
+          <ul>
+            <li>镜像主要看 config 和 slot override。</li>
+            <li>水印看 Watermark。</li>
+            <li>虚拟背景看 AiVBState 和 AIVirtualBackground 目录。</li>
+          </ul>
+          <div class="roadmap-files">
+            <span>lib/MediaEffectsComposer/ComposerConfig.js</span>
+            <span>lib/MediaEffectsComposer/Watermark.js</span>
+            <span>lib/MediaEffectsComposer/AIVirtualBackground/AiVBState.js</span>
+            <span>AIVirtualBackground/*</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="integration">
+      <h2>RTCSession 集成路径</h2>
+      <p class="section-lead">这一节建议在看完"学习路线"第 1 个问题后再读。它解决的是：这个模块在会话里到底承担哪一段职责。</p>
+      <p>这个模块不仅能单独用，也会被 <code>RTCSession</code> 通过 <code>MediaPipeline</code> 自动调用。集成路径在 <code>lib/RTCSession/MediaPipeline.js</code>。</p>
+
+      <div class="card">
+        <h3>会话内的调用链</h3>
+        <div class="flow">getUserMedia 原始流
+  → processMediaStream()
+  → applyAiNoiseSuppressionOnSdkGumStream()
+  → applyMediaEffectsComposerOnSdkGumStream()
+  → 最终发送流</div>
+      </div>
+
+      <div class="warn">
+        <strong>集成行为：</strong> 在 <code>RTCSession</code> 这条链路里，<strong>当输入流有音频轨时使用 <code>getOutput({ type: 'mixed' })</code> 获取 composer 的完整音视频输出；当输入流无音频轨时使用 <code>getOutput({ type: 'video' })</code> 仅取视频输出</strong>。<br>
+        也就是 <code>applyMediaEffectsComposerOnSdkGumStream()</code> 会根据输入流是否含音轨来自动选择输出类型，composer 自身的混音输出直接被纳入最终发送流。
+      </div>
+
+<pre><code>const composerOutputStream = await composer.getOutput({
+  type : hasSourceAudio ? 'mixed' : 'video'
+});
+const mixedVideoTrack = composerOutputStream.getVideoTracks()[0];
+
+const mixedStream = new MediaStream();
+composerOutputStream.getAudioTracks().forEach((track) =&gt; mixedStream.addTrack(track));
+mixedStream.addTrack(mixedVideoTrack);
+</code></pre>
+
+      <p>所以如果你是在会话里配 <code>mediaEffectsComposer</code>，应该把它理解成：</p>
+      <ul>
+        <li>视频层：合成、多路布局、镜像、水印、AiVB。</li>
+        <li>音频层：当使用 <code>type:'mixed'</code> 时，composer 自身的音频混音结果会被纳入输出流。</li>
+      </ul>
+    </section>
+
+    <section id="source-map">
+      <h2>源码阅读地图</h2>
+      <p class="section-lead">如果你已经知道自己要解决的问题，可以按文件跳读；如果你还没有地图感，先按下面的推荐顺序走一遍。</p>
+
+      <div class="grid">
+        <div class="card span-7">
+          <h3>推荐阅读顺序</h3>
+          <ol>
+            <li><code>lib/MediaEffectsComposer/MediaEffectsComposer.js</code>
+              <div class="path">主实现入口，公开 API 和内部编排都在这里</div>
+            </li>
+            <li><code>lib/MediaEffectsComposer/MediaEffectsComposer.js</code>
+              <div class="path">主控类，几乎所有公开 API 都在这里收口</div>
+            </li>
+            <li><code>lib/MediaEffectsComposer/ComposerConfig.js</code> 和 <code>lib/MediaEffectsComposer/Sources.js</code>
+              <div class="path">先理解配置和源结构，再看渲染</div>
+            </li>
+            <li><code>lib/MediaEffectsComposer/LayoutEngine.js</code> + <code>lib/MediaEffectsComposer/RenderLoop.js</code>
+              <div class="path">知道帧是怎么组织、怎么驱动绘制的</div>
+            </li>
+            <li><code>lib/MediaEffectsComposer/RenderLoop.js</code> 和各 renderer
+              <div class="path">看 auto 模式的真实降级策略</div>
+            </li>
+            <li><code>lib/MediaEffectsComposer/AIVirtualBackground/AiVBState.js</code> + <code>AIVirtualBackground/*</code>
+              <div class="path">看虚拟背景配置、runtime 启停、背景图缓存</div>
+            </li>
+          </ol>
+        </div>
+
+        <div class="card span-5">
+          <h3>目录结构</h3>
+<pre><code>lib/MediaEffectsComposer/
+├── MediaEffectsComposer.js
+├── ComposerConfig.js
+├── Sources.js
+├── LayoutEngine.js
+├── RenderLoop.js
+├── OutputStream.js
+├── AudioMixer.js
+├── Watermark.js
+├── Renderers/
+│   ├── RenderLoop.js
+│   ├── rendererBase.js
+│   ├── MainCanvas2DRenderer.js
+│   ├── MainWebGL2Renderer.js
+│   ├── WorkerRenderer.js
+│   └── workerScript.js
+└── AIVirtualBackground/
+    ├── AiVBConfig.js
+    ├── AiVBAssetLoader.js
+    ├── AiVBState.js
+    └── MediaPipeSegmenterRuntime.js
+</code></pre>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card span-4">
+          <h4>主控层</h4>
+          <ul class="mini-list">
+            <li><code>MediaEffectsComposer.js</code>：公开 API、模块编排。</li>
+            <li><code>ComposerConfig.js</code>：构造参数归一化。</li>
+            <li><code>Sources.js</code>：每一路 source 的生命周期。</li>
+          </ul>
+        </div>
+        <div class="card span-4">
+          <h4>执行层</h4>
+          <ul class="mini-list">
+            <li><code>LayoutEngine.js</code>：计算每路源的展示区域。</li>
+            <li><code>RenderLoop.js</code>：rAF 驱动、重绘、降级。</li>
+            <li><code>OutputStream.js</code>：把 canvas 导出成真实流。</li>
+          </ul>
+        </div>
+        <div class="card span-4">
+          <h4>效果层</h4>
+          <ul class="mini-list">
+            <li><code>Watermark.js</code>：水印规范化、资源预加载。</li>
+            <li><code>AiVBState.js</code>：源级虚拟背景和 runtime 状态。</li>
+            <li><code>AudioMixer.js</code>：音频混流和子混音。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="runtime-flow">
+      <h2>生命周期与运行机制</h2>
+      <p class="section-lead">这一节的重点不是背调用名，而是把"构造期"和"运行期"分开。很多误解都来自把这两类行为混在一起。</p>
+
+      <div class="grid">
+        <div class="card span-4">
+          <h3>构造阶段</h3>
+          <ul>
+            <li>参数归一化，生成内部 <code>_config</code>。</li>
+            <li>创建 canvas、源注册表、音频模块、输出模块、布局模块、渲染循环。</li>
+            <li>预加载初始水印。</li>
+            <li>调用 <code>addSource(videos, ...)</code> 把初始源接入；<code>appendStream()</code> 只是兼容别名。</li>
+          </ul>
+        </div>
+        <div class="card span-4">
+          <h3>出流阶段</h3>
+          <ul>
+            <li><code>getVideoStream()</code> 会确保首帧可绘制并启动输出视频流。</li>
+            <li><code>getAudioStream()</code> 会懒初始化 <code>AudioContext</code>。</li>
+            <li><code>getMixedStream()</code> 本质是先拿视频，再把音频轨补进混合流。</li>
+          </ul>
+        </div>
+        <div class="card span-4">
+          <h3>停止阶段</h3>
+          <ul>
+            <li>打上 <code>_destroyed</code> 标记。</li>
+            <li>停止渲染循环并清空所有源。</li>
+            <li>停止音频合成、AiVB 状态、输出流和 capture tracks。</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="note">
+        <strong>实例不可复用：</strong> <code>stop()</code> 之后，主类会拒绝再次调用大部分公开方法。源码里用 <code>_assertNotDestroyed()</code> 保护，报错文案会明确提示"Create a new composer"。
+      </div>
+    </section>
+
+    <section id="render-path">
+      <h2>渲染路径</h2>
+      <p class="section-lead">读这一节时，建议你同时打开 <code>RenderLoop.js</code> 和 <code>RenderLoop.js</code>。前者决定"先选谁"，后者决定"出问题了怎么退"。</p>
+      <p>渲染器选择逻辑主要在 <code>lib/MediaEffectsComposer/RenderLoop.js</code>，而运行时故障后的降级逻辑主要在 <code>lib/MediaEffectsComposer/RenderLoop.js</code>。</p>
+
+      <div class="card">
+        <h3><code>renderMode: 'auto'</code> 的真实策略</h3>
+        <div class="flow">创建期（同步）:
+  → worker-webgl2
+  → main-webgl2
+  → main-2d（绝对兜底）
+
+运行期降级（异步，仅 Worker 故障时触发）:
+  → main-webgl2
+  → worker-2d
+  → main-2d</div>
+      </div>
+
+      <div class="grid">
+        <div class="card span-6">
+          <h3>为什么会强制主线程或 main-2d</h3>
+          <ul>
+            <li>源级 AiVB / 特定镜像策略可能要求主线程 renderer。</li>
+            <li>如果 Worker 后端初始化失败，代码会继续尝试主线程路径。</li>
+            <li>明确指定 <code>main-2d</code> 时，不会再尝试更激进的渲染后端。</li>
+          </ul>
+        </div>
+        <div class="card span-6">
+          <h3>怎么观察当前实际渲染器</h3>
+<pre><code>const info = composer.getRenderInfo();
+
+console.log(info.actualMode);
+// worker-webgl2 | main-webgl2 | worker-2d | main-2d | worker-init | worker-failed | not-started
+</code></pre>
+          <p><code>getRenderInfo()</code> 适合做 demo 面板和线上排障，不建议把它当业务逻辑分支条件。</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="api">
+      <h2>主 API 参考</h2>
+      <p class="section-lead">API 表适合查，不适合学。建议在已经理解主链路以后，再把这里当速查表使用。</p>
+
+      <h3>构造函数</h3>
+<pre><code>new MediaEffectsComposer(
+  videos: MediaStream | HTMLVideoElement | Array&lt;MediaStream | HTMLVideoElement&gt;,
+  options?: MediaEffectsComposerOptions
+)</code></pre>
+
+      <div class="table-wrap"><table class="method-table table-stack table-wrap-target">
+        <thead>
+          <tr>
+            <th>方法</th>
+            <th>返回</th>
+            <th>说明</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="方法"><code>addSource(videos, optionsOrSlot)</code></td>
+            <td data-label="返回"><code>boolean</code></td>
+            <td data-label="说明">添加一路或多路源。当前源码通过 <code>ComposerConfig.getMaxSources()</code> 将总源数限制为 <code>9</code>。公开别名是 <code>appendStream()</code>。</td>
+          </tr>
+          <tr>
+            <td data-label="方法"><code>removeSource(target)</code></td>
+            <td data-label="返回"><code>boolean</code></td>
+            <td data-label="说明">按源对象、流对象或字符串 ID 移除。</td>
+          </tr>
+          <tr>
+            <td data-label="方法"><code>clearSources()</code></td>
+            <td data-label="返回"><code>void</code></td>
+            <td data-label="说明">清空所有输入源。公开别名是 <code>clearStreams()</code>。</td>
+          </tr>
+          <tr>
+            <td data-label="方法"><code>getSources()</code></td>
+            <td data-label="返回"><code>MediaEffectsComposerSourceState[]</code></td>
+            <td data-label="说明">返回源快照，不是内部引用。</td>
+          </tr>
+          <tr>
+            <td data-label="方法"><code>getState()</code></td>
+            <td data-label="返回"><code>MediaEffectsComposerState</code></td>
+            <td data-label="说明">汇总 <code>sources / config / render / audio</code> 四类状态。</td>
+          </tr>
+          <tr>
+            <td data-label="方法"><code>getOutput(options)</code></td>
+            <td data-label="返回"><code>Promise&lt;MediaStream | null&gt;</code></td>
+            <td data-label="说明">统一输出入口。<code>type</code> 支持 <code>video</code> / <code>audio</code> / <code>mixed</code>。</td>
+          </tr>
+          <tr>
+            <td data-label="方法"><code>getMixedStream()</code></td>
+            <td data-label="返回"><code>Promise&lt;MediaStream&gt;</code></td>
+            <td data-label="说明"><code>getOutput({ type: 'mixed' })</code> 的语义化封装。</td>
+          </tr>
+          <tr>
+            <td data-label="方法"><code>getVideoStream()</code></td>
+            <td data-label="返回"><code>MediaStream</code></td>
+            <td data-label="说明">同步获取视频流，只含视频轨。</td>
+          </tr>
+          <tr>
+            <td data-label="方法"><code>getAudioStream(options)</code></td>
+            <td data-label="返回"><code>Promise&lt;MediaStream | null&gt;</code></td>
+            <td data-label="说明">获取全量音频流或指定 <code>slots</code> 的子混音。支持 <code>isolated / audioContext / recreate</code> 选项。</td>
+          </tr>
+          <tr>
+            <td data-label="方法"><code>getIsolatedSubmixAudioStream(options)</code></td>
+            <td data-label="返回"><code>Promise&lt;MediaStream | null&gt;</code></td>
+            <td data-label="说明">独立 <code>AudioContext</code> 的子混音输出。</td>
+          </tr>
+          <tr>
+            <td data-label="方法"><code>releaseOutput(options)</code></td>
+            <td data-label="返回"><code>boolean</code></td>
+            <td data-label="说明">目前主要用于释放 <code>audio</code> 类型的子混音资源。</td>
+          </tr>
+          <tr>
+            <td data-label="方法"><code>stop()</code></td>
+            <td data-label="返回"><code>void</code></td>
+            <td data-label="说明">释放实例。停止后不可继续使用。</td>
+          </tr>
+        </tbody>
+      </table></div>
+
+      <h3>镜像 / 水印 / AiVB 相关 API</h3>
+      <div class="table-wrap"><table class="method-table table-stack table-wrap-target">
+        <thead>
+          <tr>
+            <th>方法</th>
+            <th>返回</th>
+            <th>说明</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="方法"><code>setMirror(enabled)</code> / <code>getMirror()</code></td>
+            <td data-label="返回"><code>void / boolean</code></td>
+            <td data-label="说明">控制最终输出整体镜像。影响实际输出流，不只是本地预览。</td>
+          </tr>
+          <tr>
+            <td data-label="方法"><code>setSourceMirror(slotOrEnabled, enabled?)</code></td>
+            <td data-label="返回"><code>void</code></td>
+            <td data-label="说明">布尔单参表示设置全局源默认镜像；双参表示设置某个 slot 覆盖值。</td>
+          </tr>
+          <tr>
+            <td data-label="方法"><code>getSourceMirror(slot?)</code></td>
+            <td data-label="返回"><code>MediaEffectsComposerMirrorState</code></td>
+            <td data-label="说明">无参返回全局和 overrides；有参返回该 slot 的生效状态。</td>
+          </tr>
+          <tr>
+            <td data-label="方法"><code>clearSourceMirror(slot?)</code></td>
+            <td data-label="返回"><code>void</code></td>
+            <td data-label="说明">清理某个 slot 的覆盖值，或清空全部覆盖值。</td>
+          </tr>
+          <tr>
+            <td data-label="方法"><code>setWatermarks(watermarks)</code></td>
+            <td data-label="返回"><code>Promise&lt;WatermarkState[]&gt;</code></td>
+            <td data-label="说明">替换全部水印配置，内部走 <code>setConfig({ watermarks })</code>。</td>
+          </tr>
+          <tr>
+            <td data-label="方法"><code>clearWatermarks(filter?)</code></td>
+            <td data-label="返回"><code>void</code></td>
+            <td data-label="说明">支持按 <code>id / target / slot / sourceId / streamId</code> 过滤清理。</td>
+          </tr>
+          <tr>
+            <td data-label="方法"><code>setSourceAiVirtualBackground(slotOrTarget, options)</code></td>
+            <td data-label="返回"><code>AiVBConfig | null</code></td>
+            <td data-label="说明">对某一路源设置虚拟背景。</td>
+          </tr>
+          <tr>
+            <td data-label="方法"><code>getSourceAiVirtualBackground(slotOrTarget)</code></td>
+            <td data-label="返回"><code>AiVBConfig | null</code></td>
+            <td data-label="说明">读取某一路源当前 AiVB 配置快照。</td>
+          </tr>
+          <tr>
+            <td data-label="方法"><code>clearSourceAiVirtualBackground(slotOrTarget)</code></td>
+            <td data-label="返回"><code>void</code></td>
+            <td data-label="说明">清理对应源的虚拟背景配置。</td>
+          </tr>
+          <tr>
+            <td data-label="方法"><code>setConfig(patch)</code></td>
+            <td data-label="返回"><code>Promise&lt;ConfigState&gt;</code></td>
+            <td data-label="说明">统一热更新入口。当前源码明确处理的是镜像、水印和覆盖项，不处理 <code>width / height / fps / renderMode</code> 这类构造期主参数。</td>
+          </tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="params">
+      <h2>参数速查</h2>
+      <p class="section-lead">看参数时要分两类：一类是构造期决定主结构的，一类是运行时适合热更新的。不要把它们看成同一种配置。</p>
+
+      <div class="table-wrap"><table class="question-table table-stack table-wrap-target">
+        <thead>
+          <tr>
+            <th>你想做什么</th>
+            <th>优先看什么</th>
+            <th>原因</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="你想做什么">改输出分辨率 / 帧率</td>
+            <td data-label="优先看什么"><code>width / height / fps</code></td>
+            <td data-label="原因">这是构造期主参数，更适合重新创建实例。</td>
+          </tr>
+          <tr>
+            <td data-label="你想做什么">切整体镜像</td>
+            <td data-label="优先看什么"><code>mirror</code> / <code>outputMirror</code></td>
+            <td data-label="原因">影响最终输出流。</td>
+          </tr>
+          <tr>
+            <td data-label="你想做什么">切某一路源镜像</td>
+            <td data-label="优先看什么"><code>sourceMirror</code> / <code>sourceMirrorOverrides</code></td>
+            <td data-label="原因">这是源级或 slot 级策略。</td>
+          </tr>
+          <tr>
+            <td data-label="你想做什么">加水印</td>
+            <td data-label="优先看什么"><code>watermarks</code></td>
+            <td data-label="原因">由 Watermark 做规范化和资源准备。</td>
+          </tr>
+          <tr>
+            <td data-label="你想做什么">给某一路开虚拟背景</td>
+            <td data-label="优先看什么"><code>sources[].aiVirtualBackground</code></td>
+            <td data-label="原因">AiVB 是 source 级能力，不是全局输出能力。</td>
+          </tr>
+        </tbody>
+      </table></div>
+
+      <h3>构造参数 <code>MediaEffectsComposerOptions</code></h3>
+      <div class="table-wrap"><table class="table-stack table-wrap-target">
+        <thead>
+          <tr>
+            <th>字段</th>
+            <th>类型</th>
+            <th>说明</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="字段"><code>width</code> / <code>height</code></td>
+            <td data-label="类型"><code>number</code></td>
+            <td data-label="说明">输出画布宽高。默认分别为 <code>1280</code> / <code>720</code>。</td>
+          </tr>
+          <tr>
+            <td data-label="字段"><code>fps</code></td>
+            <td data-label="类型"><code>number</code></td>
+            <td data-label="说明">输出帧率。<code>ComposerConfig</code> 默认归一化为 <code>15</code>；安卓微信 / 鸿蒙浏览器下默认 <code>60</code>。</td>
+          </tr>
+          <tr>
+            <td data-label="字段"><code>backgroundColor</code></td>
+            <td data-label="类型"><code>string</code></td>
+            <td data-label="说明">画布底色，默认 <code>#000</code>。</td>
+          </tr>
+          <tr>
+            <td data-label="字段"><code>audioGain</code></td>
+            <td data-label="类型"><code>number</code></td>
+            <td data-label="说明">全局默认音量增益，默认 <code>0.8</code>。</td>
+          </tr>
+          <tr>
+            <td data-label="字段"><code>renderMode</code></td>
+            <td data-label="类型"><code>'auto' | 'worker-webgl2' | 'main-webgl2' | 'worker-2d' | 'main-2d'</code></td>
+            <td data-label="说明">渲染后端选择。非法值会回退到 <code>auto</code>。</td>
+          </tr>
+          <tr>
+            <td data-label="字段"><code>workerUrl</code></td>
+            <td data-label="类型"><code>string</code></td>
+            <td data-label="说明">可选外部 Worker 脚本地址。不传时通常走 Blob Worker。</td>
+          </tr>
+          <tr>
+            <td data-label="字段"><code>dropFrameWhenBusy</code></td>
+            <td data-label="类型"><code>boolean</code></td>
+            <td data-label="说明">Worker 忙时是否丢帧，默认 <code>true</code>。</td>
+          </tr>
+          <tr>
+            <td data-label="字段"><code>maxFrameQueue</code></td>
+            <td data-label="类型"><code>number</code></td>
+            <td data-label="说明">保留的最大帧队列，当前默认 <code>1</code>。</td>
+          </tr>
+          <tr>
+            <td data-label="字段"><code>preserveDrawingBuffer</code></td>
+            <td data-label="类型"><code>boolean</code></td>
+            <td data-label="说明">默认 <code>true</code>。</td>
+          </tr>
+          <tr>
+            <td data-label="字段"><code>mirror</code></td>
+            <td data-label="类型"><code>boolean</code></td>
+            <td data-label="说明">最终输出整体镜像，内部字段名是 <code>outputMirrorX</code>。</td>
+          </tr>
+          <tr>
+            <td data-label="字段"><code>sourceMirror</code></td>
+            <td data-label="类型"><code>boolean</code></td>
+            <td data-label="说明">所有源的默认镜像策略，内部字段名是 <code>mirrorX</code>。</td>
+          </tr>
+          <tr>
+            <td data-label="字段"><code>mirrorWatermarksWithOutput</code></td>
+            <td data-label="类型"><code>boolean</code></td>
+            <td data-label="说明">当输出镜像时，输出级水印是否一起翻转。</td>
+          </tr>
+          <tr>
+            <td data-label="字段"><code>watermarks</code></td>
+            <td data-label="类型"><code>Watermark | Watermark[] | null</code></td>
+            <td data-label="说明">初始水印列表。</td>
+          </tr>
+          <tr>
+            <td data-label="字段"><code>sources</code></td>
+            <td data-label="类型"><code>SourceOptions[] | null</code></td>
+            <td data-label="说明">与初始输入源逐项对应的源级配置。</td>
+          </tr>
+        </tbody>
+      </table></div>
+
+      <h3>源级参数 <code>MediaEffectsComposerSourceOptions</code></h3>
+      <div class="table-wrap"><table class="table-stack table-wrap-target">
+        <thead>
+          <tr>
+            <th>字段</th>
+            <th>说明</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="字段"><code>slot</code></td>
+            <td data-label="说明">指定源落到哪个槽位。</td>
+          </tr>
+          <tr>
+            <td data-label="字段"><code>gain</code></td>
+            <td data-label="说明">这一路源的音频增益。</td>
+          </tr>
+          <tr>
+            <td data-label="字段"><code>sourceMirror</code></td>
+            <td data-label="说明">这一路源的镜像覆盖值。</td>
+          </tr>
+          <tr>
+            <td data-label="字段"><code>aiVirtualBackground</code></td>
+            <td data-label="说明">这一路源的 AiVB 配置。</td>
+          </tr>
+        </tbody>
+      </table></div>
+
+      <h3>AiVB 配置重点</h3>
+      <div class="table-wrap"><table class="table-stack table-wrap-target">
+        <thead>
+          <tr>
+            <th>字段</th>
+            <th>说明</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="字段"><code>mode</code></td>
+            <td data-label="说明"><code>'none' | 'blur' | 'image' | 'color'</code>。源码会自动根据 <code>imageUrl / color / blurRadius</code> 推断。</td>
+          </tr>
+          <tr>
+            <td data-label="字段"><code>imageUrl</code></td>
+            <td data-label="说明">图片背景地址。</td>
+          </tr>
+          <tr>
+            <td data-label="字段"><code>color</code></td>
+            <td data-label="说明">输入字段名是 <code>color</code>，归一化后内部状态字段会变成 <code>backgroundColor</code>。</td>
+          </tr>
+          <tr>
+            <td data-label="字段"><code>blurRadius</code></td>
+            <td data-label="说明">模糊半径。</td>
+          </tr>
+          <tr>
+            <td data-label="字段"><code>runtimeEnabled</code></td>
+            <td data-label="说明">是否允许启用 runtime 分割链路。源码归一化后默认是开启的，除非显式传 <code>false</code>。</td>
+          </tr>
+          <tr>
+            <td data-label="字段"><code>video / segmentation / postProcessing / assetConfig</code></td>
+            <td data-label="说明">更细的分割和资源配置，归一化逻辑在 <code>AIVirtualBackground/AiVBConfig.js</code>。</td>
+          </tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="examples">
+      <h2>常见用法示例</h2>
+      <p class="section-lead">下面的示例按"最常见学习场景"排序，不按接口完整性排序。你可以先抄最接近自己场景的例子，再回头对照 API 表。</p>
+
+      <h3>1. 构造时带源级配置</h3>
+<pre><code>const composer = new CRTC.MediaEffectsComposer([localStream, remoteStream], {
+  width: 1280,
+  height: 720,
+  renderMode: 'auto',
+  sources: [
+    {
+      slot: 0,
+      sourceMirror: true,
+      aiVirtualBackground: {
+        mode: 'blur',
+        blurRadius: 18
+      }
+    },
+    {
+      slot: 1,
+      gain: 0.6
+    }
+  ]
+});
+</code></pre>
+
+      <h3>2. 只拿视频预览，稍后再拿 mixed</h3>
+<pre><code>const composer = new CRTC.MediaEffectsComposer([], options);
+
+const previewStream = await composer.getOutput({ type: 'video' });
+previewVideo.srcObject = previewStream;
+
+composer.addSource(localStream, { slot: 0 });
+composer.addSource(remoteStream, { slot: 1 });
+
+const publishStream = await composer.getOutput({ type: 'mixed' });
+</code></pre>
+
+      <h3>3. 在 RTCSession 里启用</h3>
+<pre><code>session.call(target, {
+  mediaEffectsComposer: {
+    mirror: false,
+    sourceMirror: true,
+    watermarks: {
+      target: 'output',
+      type: 'text',
+      text: '内部测试'
+    },
+    sources: [
+      {
+        aiVirtualBackground: {
+          mode: 'image',
+          imageUrl: '/assets/backgrounds/office.png'
+        }
+      }
+    ]
+  }
+});
+</code></pre>
+
+      <h3>4. 通话中热更新</h3>
+<pre><code>await rtcSession.updateMediaEffectsComposer({
+  mirror: true,
+  mirrorWatermarksWithOutput: true,
+  sources: [
+    {
+      sourceMirror: true,
+      aiVirtualBackground: {
+        mode: 'color',
+        color: '#00ff00'
+      }
+    }
+  ]
+});
+</code></pre>
+    </section>
+
+    <section id="pitfalls">
+      <h2>易错点</h2>
+      <p class="section-lead">如果你一边看源码一边觉得"这里怎么跟我预期不一样"，优先先看这节，很多困惑其实是模块边界没建立起来。</p>
+
+      <div class="grid">
+        <div class="card span-6">
+          <h3>1. 把 output mirror 和 preview mirror 混为一谈</h3>
+          <p><code>setMirror()</code> 改的是实际输出流，不是页面上 <code>video { transform: scaleX(-1) }</code> 这种本地预览样式。</p>
+        </div>
+
+        <div class="card span-6">
+          <h3>2. RTCSession 集成的音频行为</h3>
+          <p>会话集成路径里，当输入流有音频轨时使用 <code>type:'mixed'</code>（含 composer 混音输出），无音频轨时使用 <code>type:'video'</code>。这个行为在 <code>MediaPipeline.applyMediaEffectsComposerOnSdkGumStream()</code> 里写得很明确。</p>
+        </div>
+
+        <div class="card span-6">
+          <h3>3. <code>stop()</code> 后继续复用实例</h3>
+          <p>不支持。源码显式把实例标记为 destroyed，之后继续调用会抛错。</p>
+        </div>
+
+        <div class="card span-6">
+          <h3>4. 以为所有配置都适合运行时切</h3>
+          <p>镜像、水印、AiVB 很适合热更新；分辨率、渲染模式这类主结构参数更适合重新创建实例。</p>
+        </div>
+
+        <div class="card span-6">
+          <h3>5. 忽略移动端宽高交换</h3>
+          <p><code>RTCSession</code> 集成里，<code>buildMediaEffectsComposerCtorOptions()</code> 在移动端默认会交换宽高，除非显式传 <code>forceNoSwapWH: true</code>。这个字段只用于 RTCSession 侧推导，不会继续传给 composer 构造参数。</p>
+        </div>
+
+        <div class="card span-6">
+          <h3>6. 误用 AiVB 颜色字段</h3>
+          <p>外部输入时常写 <code>color</code>，但内部状态快照里常看到的是 <code>backgroundColor</code>。这是归一化过程导致的，不是两个并存参数。</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="current-code-calibration">
+      <h2>当前代码校准补充</h2>
+      <p class="section-lead">本节是新目录追加内容，用来把原文档与当前源码对齐。更完整的逐文件方法入口见 <a href="./source-code-reference.html">源码逐文件索引</a>。</p>
+      <pre><code>当前主链路文件
+  lib/MediaEffectsComposer/MediaEffectsComposer.js
+  lib/MediaEffectsComposer/ComposerConfig.js
+  lib/MediaEffectsComposer/Sources.js
+  lib/MediaEffectsComposer/LayoutEngine.js
+  lib/MediaEffectsComposer/RenderLoop.js
+  lib/MediaEffectsComposer/OutputStream.js
+  lib/MediaEffectsComposer/AudioMixer.js
+  lib/MediaEffectsComposer/Watermark.js
+  lib/MediaEffectsComposer/AIVirtualBackground/*
+  lib/MediaEffectsComposer/Renderers/*
+  lib/AINoiseSuppression/*
+  lib/RTCSession/MediaPipeline.js
+  lib/RTCSession.js</code></pre>
+      <div class="table-wrap"><table class="table-stack table-wrap-target">
+        <thead>
+          <tr><th>API / 场景</th><th>当前入口</th><th>核心调用链</th></tr>
+        </thead>
+        <tbody>
+          <tr><td data-label="API / 场景">构造 composer</td><td data-label="当前入口"><code>MediaEffectsComposer.js constructor</code></td><td data-label="核心调用链"><code>ComposerConfig.create</code> -> 子模块实例化 -> 初始 <code>addSource</code></td></tr>
+          <tr><td data-label="API / 场景">新增源</td><td data-label="当前入口"><code>addSource</code></td><td data-label="核心调用链"><code>_normalizeSourceOptions</code> -> <code>Sources.add</code> -> audio refresh -> render loop start</td></tr>
+          <tr><td data-label="API / 场景">视频输出</td><td data-label="当前入口"><code>getOutput({type:'video'})</code></td><td data-label="核心调用链"><code>_getVideoOutputSync</code> -> <code>OutputStream.getVideoStream</code> -> <code>RenderLoop.renderFrame</code></td></tr>
+          <tr><td data-label="API / 场景">混合输出</td><td data-label="当前入口"><code>getOutput({type:'mixed'})</code></td><td data-label="核心调用链"><code>_getMixedOutput</code> -> video stream -> <code>AudioMixer.getStableAudioStream</code> -> add audio tracks</td></tr>
+          <tr><td data-label="API / 场景">AiVB</td><td data-label="当前入口"><code>setSourceAiVirtualBackground</code></td><td data-label="核心调用链"><code>AiVBState.setSourceConfig</code> -> refresh policy -> force render</td></tr>
+          <tr><td data-label="API / 场景">会话集成</td><td data-label="当前入口"><code>MediaPipeline.getUserMediaWithSessionPipeline</code></td><td data-label="核心调用链">GUM -> 外部处理器 -> AiNS -> Composer</td></tr>
+          <tr><td data-label="API / 场景">通话中更新</td><td data-label="当前入口"><code>RTCSession.updateMediaEffectsComposer</code></td><td data-label="核心调用链">resolve options -> patch or rebuild -> setConfig / replace track</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <div class="footer">
+      文档依据当前仓库内这些实现整理：<code>lib/MediaEffectsComposer/MediaEffectsComposer.js</code>、<code>lib/MediaEffectsComposer/ComposerConfig.js</code>、<code>lib/RTCSession.d.ts</code>、<code>lib/RTCSession/MediaPipeline.js</code>、<code>samples/media-effects-composer</code>、<code>test/test-rtcsession-media-effects-composer.js</code>。
+    </div>
+  </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mediaEffectsIssue 消息清单</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">MediaEffectsComposer</div>
+      <nav>
+        <div class="nav-group-label">文档导航</div>
+        <ul>
+          <li><a href="./index.html">阅读入口</a></li>
+          <li><a href="./MediaEffectsComposer-学习手册.html">学习手册</a></li>
+          <li><a href="./MediaEffectsComposer-API-Docs.html">API 文档</a></li>
+          <li><a href="./media-effects-composer-architecture.html">架构文档</a></li>
+          <li><a href="./media-effects-ains-rtcsession-deep-dive.html">AiNS / RTCSession</a></li>
+          <li><a class="active" href="./mediaeffectsissue-messages.html">Issue 消息</a></li>
+          <li><a href="./source-code-reference.html">源码逐文件索引</a></li>
+        </ul>
+      </nav>
+      <div class="nav-group-label">本页目录</div>
+      <nav>
+        <a href="#event-structure">1. 对外事件结构</a>
+        <a href="#report-chain">2. 上报链路</a>
+        <a href="#ains-msgs">3. AiNS message</a>
+        <a href="#mec-msgs">4. MediaEffectsComposer message</a>
+        <a href="#strategy">5. 处理策略</a>
+      </nav>
+    </aside>
+    <main class="content">
+      <section class="hero">
+        <p class="eyebrow">Issues</p>
+        <h1><code>mediaEffectsIssue</code> 事件与 message 清单</h1>
+        <p class="lead">这份文档用于排查当前媒体效果管线问题。对外事件只保留 <code>module</code> 和 <code>message</code>，更细信息留在实例 issue 快照和 logger。</p>
+      </section>
+
+      <section>
+        <h2 id="event-structure">1. 对外事件结构</h2>
+        <pre><code>session.on('mediaEffectsIssue', ({ module, message }) => {
+  console.log(module, message);
+});</code></pre>
+        <pre><code>{
+  module: 'AiNS' | 'MediaEffectsComposer',
+  message: '...'
+}</code></pre>
+        <p>内部 issue 可能包含 <code>component</code>、<code>stage</code>、<code>severity</code>、<code>fallbackApplied</code>、<code>degraded</code>、<code>details</code>，这些字段不作为对外事件稳定负载。</p>
+      </section>
+
+      <section>
+        <h2 id="report-chain">2. 上报链路</h2>
+        <pre><code>MediaEffectsComposer child module
+  -> MediaEffectsComposer._recordIssue()
+  -> MediaPipeline.emitMediaEffectsIssue()
+  -> RTCSession._emitMediaEffectsIssue()
+  -> session.emit('mediaEffectsIssue', { module, message })
+
+AiNoiseSuppression / AiNSWorkletRuntime
+  -> AiNoiseSuppression._reportIssue()
+  -> MediaPipeline.emitMediaEffectsIssue()
+  -> RTCSession._emitMediaEffectsIssue()
+  -> session.emit('mediaEffectsIssue', { module, message })</code></pre>
+      </section>
+
+      <section>
+        <h2 id="ains-msgs">3. AiNS message</h2>
+        <div class="table-wrap"><table class="table-messages table-scroll table-wrap-target">
+          <thead><tr><th>message</th><th>常见来源</th><th>含义</th><th>建议处理</th></tr></thead>
+          <tbody>
+            <tr><td><code>Timed out fetching asset after 15000ms: ...</code></td><td><code>AiNSWorkletRuntime</code></td><td>资源拉取超时。</td><td>关闭 AiNS，保留原始音频；检查 CDN、网络和跨域。</td></tr>
+            <tr><td><code>Failed to fetch asset: url=... status=...</code></td><td><code>AiNSWorkletRuntime</code></td><td>资源返回非 2xx。</td><td>检查资源地址和部署。</td></tr>
+            <tr><td><code>Assets not loaded</code></td><td><code>AiNSWorkletRuntime</code></td><td>初始化前资源未准备好。</td><td>不要继续复用当前实例，重建或关闭 AiNS。</td></tr>
+            <tr><td><code>AudioWorklet internal initialization failed</code></td><td><code>AiNSWorkletRuntime</code></td><td>Worklet 初始化失败。</td><td>回退原始音频。</td></tr>
+            <tr><td><code>Processor not initialized. Call initialize() first.</code></td><td><code>AiNSWorkletRuntime</code></td><td>初始化时序不对或前置失败。</td><td>重建实例或关闭 AiNS。</td></tr>
+            <tr><td><code>AiNoiseSuppression.init: failed to create processed MediaStream</code></td><td><code>AiNoiseSuppression</code></td><td>初始化后没有输出处理流。</td><td>回退原始音频。</td></tr>
+            <tr><td><code>AiNoiseSuppression.replaceAudioTrack: failed to create processed MediaStream</code></td><td><code>AiNoiseSuppression</code></td><td>切麦后没有输出新处理流。</td><td>重建 AiNS 或回退原始音频。</td></tr>
+            <tr><td><code>AiNoiseSuppression: input stream has no audio track</code></td><td><code>AiNoiseSuppression</code></td><td>输入流没有音轨。</td><td>跳过 AiNS。</td></tr>
+            <tr><td><code>AiNoiseSuppression: input track must be audio</code></td><td><code>AiNoiseSuppression</code></td><td>传入非音频轨。</td><td>修正调用方入参。</td></tr>
+            <tr><td><code>AiNoiseSuppression: replacement input has no audio track</code></td><td><code>AiNoiseSuppression</code></td><td>切麦新流没有音轨。</td><td>保留当前音轨或回退原始音频。</td></tr>
+            <tr><td><code>AiNoiseSuppression: missing source audio track</code></td><td><code>AiNoiseSuppression</code></td><td>构建音频图时源音轨无效。</td><td>关闭 AiNS，检查输入流。</td></tr>
+            <tr><td><code>AiNoiseSuppression: missing destination node</code></td><td><code>AiNoiseSuppression</code></td><td>音频图目标节点未创建。</td><td>回退原始音频。</td></tr>
+            <tr><td><code>AiNoiseSuppression: worklet destination did not produce an audio track</code></td><td><code>AiNoiseSuppression</code></td><td>Worklet 输出端没有音轨。</td><td>回退原始音频。</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <section>
+        <h2 id="mec-msgs">4. MediaEffectsComposer message</h2>
+        <div class="table-wrap"><table class="table-messages table-scroll table-wrap-target">
+          <thead><tr><th>message</th><th>常见来源</th><th>含义</th><th>建议处理</th></tr></thead>
+          <tbody>
+            <tr><td><code>composer output has no video track</code></td><td><code>MediaPipeline</code></td><td>composer 输出流没有视频轨。</td><td>回退原始视频流，查看 <code>getRenderInfo()</code> 和 <code>getIssues()</code>。</td></tr>
+            <tr><td><code>MediaEffectsComposer has been stopped. Create a new composer before calling ...</code></td><td><code>MediaEffectsComposer</code></td><td>实例 stop 后继续调用。</td><td>重新创建 composer。</td></tr>
+            <tr><td><code>AudioContext is not available</code></td><td><code>AudioMixer</code></td><td>当前环境不可用 WebAudio。</td><td>关闭 composer 音频混音，保留视频或原音频。</td></tr>
+            <tr><td><code>No valid audio sources, skip audio stream creation</code></td><td><code>AudioMixer</code></td><td>没有有效音频源。</td><td>只影响音频输出，检查 source 音轨。</td></tr>
+            <tr><td><code>Insertable frame writing disabled due to repeated failures</code></td><td><code>OutputStream</code></td><td>Insertable 写帧连续失败。</td><td>允许回退 captureStream，必要时弱提示。</td></tr>
+            <tr><td><code>TrackGenerator constructor is unavailable</code></td><td><code>OutputStream</code></td><td>不支持 <code>MediaStreamTrackGenerator</code>。</td><td>使用 captureStream 路径。</td></tr>
+            <tr><td><code>generator track is unavailable</code></td><td><code>OutputStream</code></td><td>generator 没产出轨。</td><td>回退其他输出路径。</td></tr>
+            <tr><td><code>generator writable is unavailable</code></td><td><code>OutputStream</code></td><td>generator 不可写。</td><td>回退其他输出路径。</td></tr>
+            <tr><td><code>VideoFrame constructor is unavailable</code></td><td><code>OutputStream</code></td><td>不支持 <code>VideoFrame</code>。</td><td>关闭 Insertable 路径。</td></tr>
+            <tr><td><code>Image constructor is unavailable</code></td><td><code>Watermark</code></td><td>无法创建图片加载器。</td><td>关闭图片水印。</td></tr>
+            <tr><td><code>Failed to load image: ...</code></td><td><code>Watermark</code></td><td>图片水印加载失败。</td><td>检查 URL、跨域和资源。</td></tr>
+            <tr><td><code>Missing image</code></td><td><code>Watermark</code></td><td>图片水印缺资源。</td><td>修正水印配置。</td></tr>
+            <tr><td><code>Failed to load background image</code></td><td><code>AiVBState</code> / worker</td><td>虚拟背景图加载失败。</td><td>回退 blur 或关闭 AiVB。</td></tr>
+            <tr><td><code>AIVirtualBackground requires browser environment</code></td><td><code>AiVBAssetLoader</code></td><td>非浏览器环境启用 AiVB。</td><td>关闭 AiVB。</td></tr>
+            <tr><td><code>Failed to load MediaPipe Tasks runtime: ...</code></td><td><code>AiVBAssetLoader</code></td><td>MediaPipe runtime 加载失败。</td><td>关闭 AiVB，检查资源路径。</td></tr>
+            <tr><td><code>Timed out waiting for MediaPipe Tasks runtime: ...</code></td><td><code>AiVBAssetLoader</code></td><td>等待 runtime 超时。</td><td>关闭 AiVB，检查脚本是否可达。</td></tr>
+            <tr><td><code>MediaPipe segmenter destroyed</code></td><td><code>MediaPipeSegmenterRuntime</code></td><td>销毁后仍被调用。</td><td>重新创建实例。</td></tr>
+            <tr><td><code>MediaPipe segmenter not initialized</code></td><td><code>MediaPipeSegmenterRuntime</code></td><td>初始化未完成就分割。</td><td>检查时序。</td></tr>
+            <tr><td><code>ImageSegmenter returned invalid categoryMask size</code></td><td><code>MediaPipeSegmenterRuntime</code></td><td>mask 尺寸异常。</td><td>关闭 AiVB。</td></tr>
+            <tr><td><code>ImageSegmenter did not return a supported mask output</code></td><td><code>AiVBSegmentationCommon</code> / worker</td><td>mask 类型不支持。</td><td>检查 runtime 版本。</td></tr>
+            <tr><td><code>WebGL2 context is not available</code></td><td><code>MainWebGL2Renderer</code></td><td>主线程 WebGL2 不可用。</td><td>回退 2D 或 worker。</td></tr>
+            <tr><td><code>Canvas2D context is not available</code></td><td><code>MainCanvas2DRenderer</code></td><td>主线程 2D 不可用。</td><td>尝试其他路径或回退原视频。</td></tr>
+            <tr><td><code>Worker OffscreenCanvas is not available</code></td><td><code>WorkerRenderer</code></td><td>worker 渲染基础能力缺失。</td><td>回退主线程。</td></tr>
+            <tr><td><code>Worker WebGL2 context is not available</code></td><td><code>workerScript</code></td><td>worker WebGL2 不可用。</td><td>回退 worker 2D 或主线程。</td></tr>
+            <tr><td><code>VideoFrame and createImageBitmap are unavailable</code></td><td><code>WorkerRenderer</code></td><td>worker 帧传递能力缺失。</td><td>关闭 worker 路径。</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <section>
+        <h2 id="strategy">5. 处理策略</h2>
+        <div class="table-wrap"><table class="table-stack table-wrap-target">
+          <thead><tr><th>模块</th><th>用户提示</th><th>技术处理</th></tr></thead>
+          <tbody>
+            <tr><td data-label="模块"><code>AiNS</code></td><td data-label="用户提示">降噪不可用，已回退原始音频。</td><td data-label="技术处理">保留通话，查看 AiNS capability 和 issues。</td></tr>
+            <tr><td data-label="模块"><code>MediaEffectsComposer</code> 单效果失败</td><td data-label="用户提示">虚拟背景或水印处理失败，已关闭该效果。</td><td data-label="技术处理">只关失败效果，不直接挂断。</td></tr>
+            <tr><td data-label="模块"><code>MediaEffectsComposer</code> 主链路失败</td><td data-label="用户提示">视频效果不可用，已回退原始摄像头流。</td><td data-label="技术处理">查看 render/output/audio issue，必要时重建 composer。</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+    <section id="current-code-calibration">
+      <h2>当前代码校准补充</h2>
+      <p class="section-lead">本节是新目录追加内容，用来把原文档与当前源码对齐。更完整的逐文件方法入口见 <a href="./source-code-reference.html">源码逐文件索引</a>。</p>
+      <pre><code>当前主链路文件
+  lib/MediaEffectsComposer/MediaEffectsComposer.js
+  lib/MediaEffectsComposer/ComposerConfig.js
+  lib/MediaEffectsComposer/Sources.js
+  lib/MediaEffectsComposer/LayoutEngine.js
+  lib/MediaEffectsComposer/RenderLoop.js
+  lib/MediaEffectsComposer/OutputStream.js
+  lib/MediaEffectsComposer/AudioMixer.js
+  lib/MediaEffectsComposer/Watermark.js
+  lib/MediaEffectsComposer/AIVirtualBackground/*
+  lib/MediaEffectsComposer/Renderers/*
+  lib/AINoiseSuppression/*
+  lib/RTCSession/MediaPipeline.js
+  lib/RTCSession.js</code></pre>
+      <div class="table-wrap"><table class="table-stack table-wrap-target">
+        <thead>
+          <tr><th>API / 场景</th><th>当前入口</th><th>核心调用链</th></tr>
+        </thead>
+        <tbody>
+          <tr><td data-label="API / 场景">构造 composer</td><td data-label="当前入口"><code>MediaEffectsComposer.js constructor</code></td><td data-label="核心调用链"><code>ComposerConfig.create</code> -> 子模块实例化 -> 初始 <code>addSource</code></td></tr>
+          <tr><td data-label="API / 场景">新增源</td><td data-label="当前入口"><code>addSource</code></td><td data-label="核心调用链"><code>_normalizeSourceOptions</code> -> <code>Sources.add</code> -> audio refresh -> render loop start</td></tr>
+          <tr><td data-label="API / 场景">视频输出</td><td data-label="当前入口"><code>getOutput({type:'video'})</code></td><td data-label="核心调用链"><code>_getVideoOutputSync</code> -> <code>OutputStream.getVideoStream</code> -> <code>RenderLoop.renderFrame</code></td></tr>
+          <tr><td data-label="API / 场景">混合输出</td><td data-label="当前入口"><code>getOutput({type:'mixed'})</code></td><td data-label="核心调用链"><code>_getMixedOutput</code> -> video stream -> <code>AudioMixer.getStableAudioStream</code> -> add audio tracks</td></tr>
+          <tr><td data-label="API / 场景">AiVB</td><td data-label="当前入口"><code>setSourceAiVirtualBackground</code></td><td data-label="核心调用链"><code>AiVBState.setSourceConfig</code> -> refresh policy -> force render</td></tr>
+          <tr><td data-label="API / 场景">会话集成</td><td data-label="当前入口"><code>MediaPipeline.getUserMediaWithSessionPipeline</code></td><td data-label="核心调用链">GUM -> 外部处理器 -> AiNS -> Composer</td></tr>
+          <tr><td data-label="API / 场景">通话中更新</td><td data-label="当前入口"><code>RTCSession.updateMediaEffectsComposer</code></td><td data-label="核心调用链">resolve options -> patch or rebuild -> setConfig / replace track</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+  </main>
+</div>
+</body>
+</html>

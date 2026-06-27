@@ -89,18 +89,13 @@ lib/
     ├── AudioMixer.js
     ├── OutputStream.js
     ├── RenderLoop.js
-    └── Watermark.js
-    │
+    ├── Watermark.js
     └── Renderers/
-        ├── RenderLoop.js
         ├── rendererBase.js
         ├── MainCanvas2DRenderer.js
         ├── MainWebGL2Renderer.js
         ├── WorkerRenderer.js
-        ├── workerScript.js
-        └── helpers/
-            ├── gl.js
-            └── color.js
+        └── workerScript.js
 ```
 
 ---
@@ -202,7 +197,7 @@ addSource()
 旧方法对应：
 
 ```js
-appendStream(...)
+appendStream(...) // 兼容别名，实际进入 addSource(...)
 ```
 
 ### `removeSource()` 和 `clearSources()`
@@ -526,10 +521,10 @@ getOutput({ type: 'mixed' })
   │
   ├─ OutputStream.setMixedStream(videoStream)
   │
-  ├─ AudioMixer.getAudioStream()
+  ├─ AudioMixer.getStableAudioStream()
   │   ├─ _ensureAudioSystem()
   │   ├─ _refreshAudioConnections()
-  │   └─ 返回 audio destination stream
+  │   └─ 返回 audio destination stream（即使无源也创建静音轨）
   │
   └─ addAudioTracksToStream(videoStream, audioStream)
 ```
@@ -556,7 +551,15 @@ setConfig(patch)
 - `worker-2d`
 - `main-2d`
 
-auto 模式降级顺序仍是：
+auto 模式创建期降级顺序：
+
+```
+worker-webgl2 -> main-webgl2 -> main-2d
+```
+
+（创建期不尝试 worker-2d，因为 Worker/OffscreenCanvas 不可用时 worker-2d 同样会失败。）
+
+auto 模式运行期降级顺序（仅当当前为 Worker 渲染器或已标记为 worker-failed 时触发）：
 
 ```
 worker-webgl2 -> main-webgl2 -> worker-2d -> main-2d
