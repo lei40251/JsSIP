@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.5.20266272145
+ * CRTC v2.0.5.20266272212
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3849,7 +3849,7 @@ User.FloorRequestId = 0;
 module.exports = User;
 }).call(this)}).call(this,require("buffer").Buffer)
 
-},{"../AttributeName.js":6,"../messages/FloorRelease.js":14,"../messages/FloorRequest.js":15,"../messages/FloorRequestStatus.js":16,"../messages/FloorRequestStatusAck.js":17,"../messages/FloorStatus.js":18,"../messages/FloorStatusAck.js":19,"../messages/Hello.js":20,"../messages/HelloAck.js":21,"../messages/Primitive.js":24,"../messages/RequestStatusValue.js":25,"../parser/Parser.js":27,"buffer":83}],29:[function(require,module,exports){
+},{"../AttributeName.js":6,"../messages/FloorRelease.js":14,"../messages/FloorRequest.js":15,"../messages/FloorRequestStatus.js":16,"../messages/FloorRequestStatusAck.js":17,"../messages/FloorStatus.js":18,"../messages/FloorStatusAck.js":19,"../messages/Hello.js":20,"../messages/HelloAck.js":21,"../messages/Primitive.js":24,"../messages/RequestStatusValue.js":25,"../parser/Parser.js":27,"buffer":84}],29:[function(require,module,exports){
 "use strict";
 
 var Utils = require('./Utils');
@@ -4098,11 +4098,11 @@ exports.load = (dst, src) => {
     }
   }
 };
-},{"./Constants":30,"./Exceptions":35,"./Grammar":36,"./Socket":71,"./URI":77,"./Utils":78}],30:[function(require,module,exports){
+},{"./Constants":30,"./Exceptions":35,"./Grammar":36,"./Socket":72,"./URI":78,"./Utils":79}],30:[function(require,module,exports){
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.5.405212544290 (Web)',
+  USER_AGENT: 'UA/2.0.5.405212544424 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -4616,7 +4616,7 @@ module.exports = class Dialog {
     return true;
   }
 };
-},{"./Constants":30,"./Dialog/RequestSender":33,"./Logger":38,"./SIPMessage":70,"./Transactions":74,"./Utils":78}],33:[function(require,module,exports){
+},{"./Constants":30,"./Dialog/RequestSender":33,"./Logger":38,"./SIPMessage":71,"./Transactions":75,"./Utils":79}],33:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('../Constants');
@@ -4711,7 +4711,7 @@ module.exports = class DialogRequestSender {
     }
   }
 };
-},{"../Constants":30,"../RequestSender":69,"../Transactions":74}],34:[function(require,module,exports){
+},{"../Constants":30,"../RequestSender":70,"../Transactions":75}],34:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -4890,7 +4890,7 @@ module.exports = class DigestAuthentication {
     return `Digest ${auth_params.join(', ')}`;
   }
 };
-},{"./Logger":38,"./Utils":78}],35:[function(require,module,exports){
+},{"./Logger":38,"./Utils":79}],35:[function(require,module,exports){
 "use strict";
 
 class ConfigurationError extends Error {
@@ -17342,7 +17342,7 @@ module.exports = function () {
   result.SyntaxError.prototype = Error.prototype;
   return result;
 }();
-},{"./NameAddrHeader":59,"./URI":77}],37:[function(require,module,exports){
+},{"./NameAddrHeader":59,"./URI":78}],37:[function(require,module,exports){
 "use strict";
 
 var C = require('./Constants');
@@ -17356,7 +17356,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var MediaEffectsComposer = require('./MediaEffectsComposer/MediaEffectsComposer');
-debug('version %s', '2.0.5.405212544290');
+debug('version %s', '2.0.5.405212544424');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17394,10 +17394,10 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.5.405212544290';
+    return '2.0.5.405212544424';
   }
 };
-},{"./Constants":30,"./Exceptions":35,"./Grammar":36,"./MediaEffectsComposer/MediaEffectsComposer":47,"./NameAddrHeader":59,"./Stats":72,"./UA":76,"./URI":77,"./Utils":78,"./WebSocketInterface":79,"debug":84}],38:[function(require,module,exports){
+},{"./Constants":30,"./Exceptions":35,"./Grammar":36,"./MediaEffectsComposer/MediaEffectsComposer":47,"./NameAddrHeader":59,"./Stats":73,"./UA":77,"./URI":78,"./Utils":79,"./WebSocketInterface":80,"debug":85}],38:[function(require,module,exports){
 "use strict";
 
 var debugFactory = require('debug');
@@ -17499,7 +17499,7 @@ module.exports = class Logger {
 // log.debug('登录成功');  // [ts] CRTC:D:Auth 登录成功 +5ms
 // log.warn('风险提示');   // [ts] CRTC:W:Auth 风险提示 +3ms
 // log.error('异常信息');  // [ts] CRTC:E:Auth 异常信息 +1ms
-},{"debug":84}],39:[function(require,module,exports){
+},{"debug":85}],39:[function(require,module,exports){
 "use strict";
 
 /**
@@ -21474,7 +21474,7 @@ exports.normalizeSourceOptions = function (optionsOrSlot, index, defaultGain) {
   logger.debug(`normalizeSourceOptions: index=${index} options=${JSON.stringify(options)}`);
   return options;
 };
-},{"../Logger":38,"../Utils":78}],46:[function(require,module,exports){
+},{"../Logger":38,"../Utils":79}],46:[function(require,module,exports){
 "use strict";
 
 /**
@@ -23416,7 +23416,7 @@ class MediaEffectsComposer {
   }
 }
 module.exports = MediaEffectsComposer;
-},{"../Logger":38,"../MediaEffectsIssue":57,"../Utils":78,"./AiVirtualBackground/AiVBState":42,"./AudioMixer":44,"./ComposerConfig":45,"./LayoutEngine":46,"./OutputStream":48,"./RenderLoop":49,"./Sources":50,"./Watermark":51}],48:[function(require,module,exports){
+},{"../Logger":38,"../MediaEffectsIssue":57,"../Utils":79,"./AiVirtualBackground/AiVBState":42,"./AudioMixer":44,"./ComposerConfig":45,"./LayoutEngine":46,"./OutputStream":48,"./RenderLoop":49,"./Sources":50,"./Watermark":51}],48:[function(require,module,exports){
 (function (global){(function (){
 "use strict";
 
@@ -28659,7 +28659,7 @@ module.exports = class Message extends EventEmitter {
     });
   }
 };
-},{"./Constants":30,"./Exceptions":35,"./Logger":38,"./RequestSender":69,"./SIPMessage":70,"./URI":77,"./Utils":78,"events":82}],59:[function(require,module,exports){
+},{"./Constants":30,"./Exceptions":35,"./Logger":38,"./RequestSender":70,"./SIPMessage":71,"./URI":78,"./Utils":79,"events":83}],59:[function(require,module,exports){
 "use strict";
 
 var URI = require('./URI');
@@ -28748,7 +28748,7 @@ module.exports = class NameAddrHeader {
     return body;
   }
 };
-},{"./Grammar":36,"./URI":77}],60:[function(require,module,exports){
+},{"./Grammar":36,"./URI":78}],60:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -28954,7 +28954,7 @@ module.exports = class Options extends EventEmitter {
     });
   }
 };
-},{"./Constants":30,"./Exceptions":35,"./Logger":38,"./RequestSender":69,"./SIPMessage":70,"./Utils":78,"events":82}],61:[function(require,module,exports){
+},{"./Constants":30,"./Exceptions":35,"./Logger":38,"./RequestSender":70,"./SIPMessage":71,"./Utils":79,"events":83}],61:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -29208,8 +29208,7 @@ function parseHeader(message, data, headerStart, headerEnd) {
     return true;
   }
 }
-},{"./Grammar":36,"./Logger":38,"./SIPMessage":70}],62:[function(require,module,exports){
-(function (Buffer){(function (){
+},{"./Grammar":36,"./Logger":38,"./SIPMessage":71}],62:[function(require,module,exports){
 "use strict";
 
 /* globals RTCPeerConnection: false, RTCSessionDescription: false */
@@ -29231,12 +29230,10 @@ var RTCSession_ReferNotifier = require('./RTCSession/ReferNotifier');
 var RTCSession_ReferSubscriber = require('./RTCSession/ReferSubscriber');
 var issueUtils = require('./MediaEffectsIssue');
 var MediaPipeline = require('./RTCSession/MediaPipeline');
+var BFCPChannel = require('./RTCSession/BFCPChannel'); // BFCP 协议 + DataChannel 封装
 var URI = require('./URI');
 var BFCPLib = require('./BFCP/index');
 var logger = new Logger('RTCSession');
-var BFCPUser = BFCPLib.User;
-var Primitive = BFCPLib.Primitive;
-var AttributeName = BFCPLib.AttributeName;
 var RequestStatusValue = BFCPLib.RequestStatusValue;
 var MEDIA_EFFECTS_ISSUE_DEFAULTS = {
   module: 'MediaEffects',
@@ -29264,16 +29261,11 @@ var holdMediaTypes = ['audio', 'video'];
 var EVENT_SET_REMOTE_DESCRIPTION_FAILED = 'peerconnection:setremotedescriptionfailed';
 var HEADER_ACCEPT_CONTACT_MMTEL_VIDEO = 'Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video';
 var HEADER_P_PREFERRED_SERVICE_MMTEL = 'P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel';
-var SDP_DATA_CHANNEL_MEDIA = 'UDP/DTLS/SCTP webrtc-datachannel';
-var SDP_BFCP_MEDIA = 'UDP/DTLS/SCTP/BFCP *';
 function push5GServiceHeaders(extraHeaders, ua) {
   if (Utils.is5GService(ua)) {
     extraHeaders.push(HEADER_ACCEPT_CONTACT_MMTEL_VIDEO);
     extraHeaders.push(HEADER_P_PREFERRED_SERVICE_MMTEL);
   }
-}
-function replaceDataChannelMediaWithBFCP(sdp) {
-  return sdp.replace(SDP_DATA_CHANNEL_MEDIA, SDP_BFCP_MEDIA);
 }
 function emitSetRemoteDescriptionFailed(session, error) {
   session._logEventError('warn', EVENT_SET_REMOTE_DESCRIPTION_FAILED, error);
@@ -29302,51 +29294,10 @@ module.exports = class RTCSession extends EventEmitter {
     // 适配183音频后200ok无sdp
     this._earlyAudio;
 
-    // DataChannel
-    this._dataChannel = null;
-    this._dataChannelName = CRTC_C.BFCP;
-    this._dataChannelReady = false;
-    this._dataChannelConfig = {
-      ordered: false,
-      maxRetransmits: 0
-    }; // 乱序，不可靠
-    this._dataChannelMsgs = {};
+    // DataChannel & BFCP —— 全部委托给 BFCPChannel 模块。
+    this._bfcp = new BFCPChannel(this);
 
-    // 是否启用BFCP
-    this._enableBFCP = false;
-    // 用于解析BFCP消息的User对象
-    this._bfcpUser = null;
-    // BFCP控制的floorId，SDP协商获得
-    this._floorId = null;
-    // BFCP服务类型，默认c-s，根据SDP协商修改
-    this._floorctrl = null;
-    // 本端发送给BFCP服务器的流的mid
-    this._mStream = null;
-    // 服务端发送给本端的流的label，根据SDP协商获得，用于获取远端辅流
-    this._mstrm = null;
-    // 远端的辅流在PC中的transceiver索引号，根据前面label及SDP计算得到
-    this._transceiverIndex = null;
-    // SDP协商过程中远端给的userId
-    this._bfcpUserId = null;
-    // SDP协商过程中远端给的confId
-    this._confId = null;
-    // 本端发送floorRequest收到响应里面的，用于后续释放资源
-    this._floorRequestId = null;
-    // 发送BFCP消息事务ID，起始值为1-9的随机整数
-    this._transactionId = 1;
-    // BFCP的心跳定时器
-    this._bfcpHeatbeatTimer = null;
-    // BFCP协商时的视频轨道，用于后面替换
-    this._bfcpVideoTrack = null;
     // BFCP控制的流，接通后立即获取
-    this._bfcpStream = null;
-    // 是否已经收到共享
-    this._remoteShared = false;
-    // bfcp使用的混音音频
-    this._bfcpAudioDestination = null;
-    this._bfcpAudioSources = [];
-    this._bfcpMediastreams = [];
-    this._bfcpAudioCtx = null;
 
     // 预处理媒体流，如虚拟背景等
     this._mediaStreamProcessor = null;
@@ -29774,12 +29725,8 @@ module.exports = class RTCSession extends EventEmitter {
       }
     }
 
-    // 是否启用BFCP
-    this._enableBFCP = false;
-    if (extraFeatures && extraFeatures.indexOf(CRTC_C.BFCP) !== -1) {
-      this._enableBFCP = true;
-      this._bfcpUser = new BFCPUser(this._ua.contact.uri.user, target.user);
-    }
+    // 是否启用BFCP（委托给 BFCPChannel 初始化）
+    this._bfcp.init(extraFeatures, this._ua.contact.uri.user, target.user);
 
     // 定制模式
     this._customizedMode = options.cMode;
@@ -30038,22 +29985,8 @@ module.exports = class RTCSession extends EventEmitter {
       }
     }
 
-    // 更新BFCP的floorctrl
-    var lines = request.body.split(/\r?\n/);
-    var line = lines.find(l => l.trim().startsWith('a=floorctrl:') && l.includes(':'));
-    if (line) {
-      switch (line.split(':')[1].trim()) {
-        case 'c-s':
-        case 'c-only':
-          this._floorctrl = 's-only';
-          break;
-        case 's-only':
-          this._floorctrl = 'c-only';
-          break;
-        default:
-          break;
-      }
-    }
+    // 解析呼入 SDP 中的 BFCP floorctrl（委托给 BFCPChannel）
+    this._bfcp.parseFloorctrlFromIncomingSDP(request.body);
 
     // Fire 'newRTCSession' event.
     this._newRTCSession('remote', request);
@@ -30103,12 +30036,8 @@ module.exports = class RTCSession extends EventEmitter {
     this._mediaStreamProcessor = options.mediaStreamProcessor || null;
     this._mediaPipeline.stopSessionAiNoiseSuppression();
 
-    // 是否启用BFCP
-    this._enableBFCP = false;
-    if (extraFeatures && extraFeatures.indexOf(CRTC_C.BFCP) !== -1) {
-      this._enableBFCP = true;
-      this._bfcpUser = new BFCPUser(this.local_identity.uri.user, this.remote_identity.uri.user);
-    }
+    // 是否启用BFCP（委托给 BFCPChannel 初始化）
+    this._bfcp.init(extraFeatures, this.local_identity.uri.user, this.remote_identity.uri.user);
 
     // SDP协商的分辨率速率
     if (extraFeatures) {
@@ -30302,15 +30231,9 @@ module.exports = class RTCSession extends EventEmitter {
         /**
          * 是否启用 DataChannel
          **/
-        if (this._enableBFCP) {
-          var {
-            videoTrack
-          } = Utils.generateAnEmptyVideoTrack();
-          this._bfcpVideoTrack = videoTrack;
-          this._connection.addTrack(this._bfcpVideoTrack, this._localMediaStream);
-          this._connection.ondatachannel = event => {
-            this._initDataChannel(event);
-          };
+        if (this._bfcp.enabled) {
+          // BFCP 呼入准备：添加占位视频轨道，监听远端 DataChannel
+          this._bfcp.setupForIncoming();
         }
       }
     })
@@ -30372,9 +30295,9 @@ module.exports = class RTCSession extends EventEmitter {
         desc = desc.replace(/(m=video) \d+ ([\s\S]*?a=)recvonly/g, '$1 0 $2inactive');
         desc = Utils.updateSdpByConstraints(desc, options.mediaConstraints);
       }
-      if (this._enableBFCP && this._floorctrl == 's-only') {
-        this._floorId = 2;
-        desc = desc.replace(/^(m=application .*\r\n)/mg, `$1a=floorctrl:${this._floorctrl}\r\na=floorid:${this._floorId} mstrm:12\r\na=confid:123\r\na=userid:456\r\n`);
+      if (this._bfcp.enabled) {
+        // BFCP SDP 应答属性注入（floorctrl / floorid / mstrm / confid / userid）
+        desc = this._bfcp.addAnswerSDPAttributes(desc);
       }
       this._handleSessionTimersInIncomingRequest(request, extraHeaders);
       request.reply(200, null, extraHeaders, desc, () => {
@@ -30744,10 +30667,10 @@ module.exports = class RTCSession extends EventEmitter {
             // 只要检测到“会话中存在视频 sender”即可继续流程。
             // 注意：在 composer 分支里 sender.track 可能是 composer 输出轨，不能提前 stop。
             next = true;
-            if (this._enableBFCP) {
+            if (this._bfcp.enabled) {
               // 启用了BFCP，区分一下BFCP控制的视频轨道
               // eslint-disable-next-line max-len
-              if (!useComposerBranch && s.track != this._bfcpVideoTrack && s.track != (this._localShareStream && this._localShareStream.getVideoTracks()[0])) {
+              if (!useComposerBranch && s.track != this._bfcp.videoTrack && s.track != (this._localShareStream && this._localShareStream.getVideoTracks()[0])) {
                 s.track.stop();
               }
             } else {
@@ -30775,9 +30698,9 @@ module.exports = class RTCSession extends EventEmitter {
       }) => {
         logger.debug(`${this._id} videoConstraints`, JSON.stringify(videoConstraints));
         var sender = this._connection.getSenders().find(s => {
-          if (this._enableBFCP) {
+          if (this._bfcp.enabled) {
             // 启用了BFCP，区分一下BFCP控制的视频轨道
-            return s.track && s.track.kind == 'video' && s.track != this._bfcpVideoTrack && s.track != (this._localShareStream && this._localShareStream.getVideoTracks()[0]);
+            return s.track && s.track.kind == 'video' && s.track != this._bfcp.videoTrack && s.track != (this._localShareStream && this._localShareStream.getVideoTracks()[0]);
           } else {
             return s.track && s.track.kind == 'video';
           }
@@ -30975,8 +30898,8 @@ module.exports = class RTCSession extends EventEmitter {
     logger.debug(`${this._id} share()`);
 
     // 双流必须开启BFCP支持
-    if (dual && !this._enableBFCP || !dual && this._enableBFCP) {
-      return Promise.reject(new Exceptions.NotSupportedError(`Dual and BFCP settings must be consistent. Dual: ${dual}, BFCP: ${this._enableBFCP}`));
+    if (dual && !this._bfcp.enabled || !dual && this._bfcp.enabled) {
+      return Promise.reject(new Exceptions.NotSupportedError(`Dual and BFCP settings must be consistent. Dual: ${dual}, BFCP: ${this._bfcp.enabled}`));
     }
 
     // Check Session Status.
@@ -30990,24 +30913,18 @@ module.exports = class RTCSession extends EventEmitter {
 
     // 根据BFCP协议响应判断如何执行双流
     try {
-      if (this._enableBFCP && !skip) {
-        floorResponse = await this._sendFloorRequest();
-        this._handleFloorRequestStatusMessage(floorResponse);
+      if (this._bfcp.enabled && !skip) {
+        // 发送 BFCP FloorRequest 获取共享权限
+        floorResponse = await this._bfcp.sendFloorRequest();
+
+        // 处理响应并获取请求状态（BFCPChannel 内部会发送 ACK、更新状态、触发事件）
+        var status = this._bfcp.handleFloorRequestStatusMessage(floorResponse);
         // Log the response for debugging purposes
+
         logger.debug(`${this._id} Floor request response:`, floorResponse);
-        var status = floorResponse.getAttribute(AttributeName.FloorRequestInformation).content[1].content[1].content[0];
         if (status != RequestStatusValue.Granted) {
           return Promise.reject(`Floor request not accepted. Status: ${status}`);
-          // throw new Error(`Floor request not accepted. Status: ${status}`);
         }
-
-        // 保存一下状态
-        this._bfcpRequestStatus = status;
-
-        // 主动踢掉远端的共享
-        this._remoteShared = false;
-        this.emit('remoteUnShared');
-        this._floorRequestId = floorResponse.getAttribute(AttributeName.FloorRequestInformation).content[0];
       }
     } catch (error) {
       logger.error(`${this._id} Error while processing floor request:`, error.message || error);
@@ -31038,7 +30955,7 @@ module.exports = class RTCSession extends EventEmitter {
       this._localShareStream.getVideoTracks().forEach(track => {
         if (dual) {
           var sender = this._connection.getSenders().find(s => {
-            return s.track == this._bfcpVideoTrack;
+            return s.track == this._bfcp.videoTrack;
           });
           sender.replaceTrack(track);
         } else {
@@ -31069,7 +30986,7 @@ module.exports = class RTCSession extends EventEmitter {
       this._localShareStream.getVideoTracks().forEach(track => {
         if (dual) {
           var sender = this._connection.getSenders().find(s => {
-            return s.track == this._bfcpVideoTrack;
+            return s.track == this._bfcp.videoTrack;
           });
           sender.replaceTrack(track);
         } else {
@@ -31097,7 +31014,7 @@ module.exports = class RTCSession extends EventEmitter {
       this._localShareStream.getVideoTracks().forEach(track => {
         if (dual) {
           var sender = this._connection.getSenders().find(s => {
-            return s.track == this._bfcpVideoTrack;
+            return s.track == this._bfcp.videoTrack;
           });
           sender.replaceTrack(track);
           // this._bfct = track;
@@ -31136,14 +31053,14 @@ module.exports = class RTCSession extends EventEmitter {
         this._localShareStream = stream;
         this._streamInactiveHandle(dual);
         if (dual) {
-          if (this._bfcpRequestStatus === RequestStatusValue.Granted) {
+          if (this._bfcp.requestStatus === RequestStatusValue.Granted) {
             // BFCP 双流方式分享屏幕
             stream.getTracks().forEach(track => {
               if (track.kind === 'audio') {
-                this._addShareAudioToBfcpAudioTrack(stream);
+                this._bfcp.addShareAudioToBfcpAudioTrack(stream);
               } else {
                 var sender = this._connection.getSenders().find(s => {
-                  return s.track == this._bfcpVideoTrack;
+                  return s.track == this._bfcp.videoTrack;
                 });
                 sender.replaceTrack(track);
               }
@@ -31170,11 +31087,11 @@ module.exports = class RTCSession extends EventEmitter {
         if (error.message || error.message.indexOf('user gesture handler') !== -1) {
           setTimeout(() => {
             // BFCP 释放资源
-            this._localShareStreamLocallyGenerated || this._enableBFCP && this._sendFloorRelease();
+            this._localShareStreamLocallyGenerated || this._bfcp.enabled && this._bfcp.sendFloorRelease();
           }, 10000);
         } else {
           // BFCP 释放资源
-          this._enableBFCP && this._sendFloorRelease();
+          this._bfcp.enabled && this._bfcp.sendFloorRelease();
         }
         this._logEventError('warn', 'getdisplaymediafailed', error);
         this.emit('getdisplaymediafailed', error);
@@ -31824,75 +31741,6 @@ module.exports = class RTCSession extends EventEmitter {
   }
 
   /**
-   * Send a BFCP FloorRequest
-   */
-  _sendFloorRequest() {
-    logger.debug(`${this._id} sendFloorRequest()`);
-    var currentTransactionId = this._transactionId;
-    this._transactionId++;
-    var floorRequest = this._bfcpUser.floorRequestMessage(currentTransactionId, this._floorId);
-    return this._dataChannelSend(floorRequest, currentTransactionId);
-  }
-
-  // TODO: 测试用
-  sendFloorStatus(status) {
-    logger.debug(`${this._id} _sendFloorStatus()`);
-    var currentTransactionId = this._transactionId;
-    this._transactionId++;
-    var floorStatus = this._bfcpUser.floorStatusMessage(this._floorId, status, currentTransactionId);
-    return this._dataChannelSend(floorStatus, currentTransactionId);
-  }
-  _sendFloorStatusAck(message) {
-    logger.debug(`${this._id} _sendFloorStatusAck()`);
-    var floorStatus = this._bfcpUser.floorStatusAckMessage(this._floorId, message);
-    return this._sendDataChannelMessage(floorStatus);
-  }
-
-  /**
-   * Send a BFCP Hello
-   */
-  _sendHello() {
-    logger.debug(`${this._id} sendHello()`);
-    var currentTransactionId = this._transactionId;
-    this._transactionId++;
-    var hello = this._bfcpUser.helloMessage(currentTransactionId, this._floorId);
-    return this._dataChannelSend(hello, currentTransactionId);
-  }
-
-  /**
-   * Send a BFCP FloorRelease
-   */
-  _sendFloorRelease() {
-    logger.debug(`${this._id} sendFloorRelease()`);
-    var currentTransactionId = this._transactionId;
-    this._transactionId++;
-    var floorRelease = this._bfcpUser.floorReleaseMessage(currentTransactionId, this._floorRequestId);
-    return this._dataChannelSend(floorRelease, currentTransactionId);
-  }
-
-  // BFCP用的混音相关方法
-  _createBfcpAudioTrack(mediaStream) {
-    this._bfcpAudioCtx = new AudioContext();
-    var audioSource = this._bfcpAudioCtx.createMediaStreamSource(mediaStream);
-    this._bfcpAudioSources.push(audioSource);
-    this._bfcpAudioDestination = this._bfcpAudioCtx.createMediaStreamDestination();
-    audioSource.connect(this._bfcpAudioDestination);
-    return this._bfcpAudioDestination.stream.getAudioTracks()[0];
-  }
-  _addShareAudioToBfcpAudioTrack(mediaStream) {
-    var audioSource = this._bfcpAudioCtx.createMediaStreamSource(mediaStream);
-    this._bfcpAudioSources.push(audioSource);
-    audioSource.connect(this._bfcpAudioDestination);
-  }
-  _distoryBfcpAudioTrack() {
-    if (this._bfcpAudioSources.length > 0) {
-      this._bfcpAudioSources.forEach(audioSource => audioSource.disconnect());
-      this._bfcpAudioSources = [];
-      this._bfcpAudioDestination = null;
-    }
-  }
-
-  /**
    * In dialog Request Reception
    */
   receiveRequest(request) {
@@ -32121,19 +31969,11 @@ module.exports = class RTCSession extends EventEmitter {
       Utils.closeMediaStream(this._localMediaStream);
     }
 
-    // 销毁BFCP相关媒体
-    this._distoryBfcpAudioTrack();
-    this._bfcpMediastreams.length > 0 && this._bfcpMediastreams.forEach(mediaStream => {
-      logger.debug(`${this._id} close() | closing local bfcp MediaStream`);
-      Utils.closeMediaStream(mediaStream);
-    });
+    // 销毁BFCP相关媒体（委托给 BFCPChannel 统一清理）
+    this._bfcp.close();
     if (this._localShareStream) {
       logger.debug(`${this._id} close() | closing local share MediaStream`);
       Utils.closeMediaStream(this._localShareStream);
-    }
-    if (this._bfcpStream) {
-      logger.debug(`${this._id} close() | closing local bfcp MediaStream`);
-      Utils.closeMediaStream(this._bfcpStream);
     }
 
     /**
@@ -32312,7 +32152,7 @@ module.exports = class RTCSession extends EventEmitter {
         } else if (!this._canSend) {
           logger.warn(`${this._id} iceConnectionState ${state}`);
           // RTCPeerConnection failed断开后启动重新协商
-          if (this._enableBFCP) {
+          if (this._bfcp.enabled) {
             self.renegotiate();
           } else {
             self.renegotiate({
@@ -32465,7 +32305,7 @@ module.exports = class RTCSession extends EventEmitter {
 
       // 非BFCP修改为根据配置参数设置 profile-level-id
       var localSdpLevel = CRTC_C.SDP_LEVELID_AS[this._sdpResolution];
-      !this._enableBFCP && localSdpLevel && (desc.sdp = desc.sdp.replace(/profile-level-id=[\w\d]+/g, `profile-level-id=${localSdpLevel.LEVELID}`));
+      !this._bfcp.enabled && localSdpLevel && (desc.sdp = desc.sdp.replace(/profile-level-id=[\w\d]+/g, `profile-level-id=${localSdpLevel.LEVELID}`));
       if (localSdpLevel && localSdpLevel.AS) {
         var videoAsKbps = localSdpLevel.AS;
 
@@ -32522,7 +32362,7 @@ module.exports = class RTCSession extends EventEmitter {
           type: type,
           sdp: connection.localDescription.sdp
         };
-        this._enableBFCP && (e.sdp = replaceDataChannelMediaWithBFCP(e.sdp));
+        this._bfcp.enabled && (e.sdp = this._bfcp.replaceDataChannelMediaWithBFCP(e.sdp));
         // x-google-* 是本地 WebRTC 编码器参数，不透传给 SIP 对端。
         e.sdp = e.sdp.replace(/;x-google-min-bitrate=\d+/g, '').replace(/;x-google-max-bitrate=\d+/g, '');
 
@@ -32550,7 +32390,7 @@ module.exports = class RTCSession extends EventEmitter {
             type: type,
             sdp: connection.localDescription.sdp
           };
-          this._enableBFCP && (e.sdp = replaceDataChannelMediaWithBFCP(e.sdp));
+          this._bfcp.enabled && (e.sdp = this._bfcp.replaceDataChannelMediaWithBFCP(e.sdp));
           // x-google-* 是本地 WebRTC 编码器参数，不透传给 SIP 对端。
           e.sdp = e.sdp.replace(/;x-google-min-bitrate=\d+/g, '').replace(/;x-google-max-bitrate=\d+/g, '');
           logger.debug(`${this._id} ready emit "sdp"`);
@@ -32874,8 +32714,8 @@ module.exports = class RTCSession extends EventEmitter {
           desc = desc.replace(/a=pcfg:1 t=1\r\n/, '');
           desc = desc.replace(/a=tcap.*AVPF\r\n/, '');
         }
-        if (this._enableBFCP && this._floorctrl == 's-only') {
-          desc = desc.replace(/^(m=application .*\r\n)/mg, `$1a=floorctrl:${this._floorctrl}\r\na=floorid:${this._floorId} mstrm:12\r\na=confid:123\r\na=userid:456\r\n`);
+        if (this._bfcp.enabled) {
+          desc = this._bfcp.addReinviteAnswerAttributes(desc, null);
         }
         if (this._status === C.STATUS_TERMINATED) {
           return;
@@ -32973,11 +32813,8 @@ module.exports = class RTCSession extends EventEmitter {
       if (this._late_sdp) {
         desc = this._mangleOffer(desc);
       }
-      if (this._enableBFCP) {
-        // 适配通用情况下的SDP H224
-        applicationIndex && applicationIndex[1] !== -1 && (desc += 'm=application 0 UDP/TLS/RTP/SAVPF 100\r\na=rtpmap:100 H224/4800\r\na=inactive\r\n');
-        logger.debug(`${this._id} OLD SDP: `, desc);
-        desc = Utils.reorderApplicationMedia(desc, applicationIndex);
+      if (this._bfcp.enabled) {
+        desc = this._bfcp.addReinviteAnswerAttributes(desc, applicationIndex);
         logger.debug(`${this._id} NEW Answer SDP: `, desc);
       }
       request.reply(200, null, extraHeaders, desc, () => {
@@ -33336,7 +33173,7 @@ module.exports = class RTCSession extends EventEmitter {
       if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
         return false;
       }
-      if (this._enableBFCP) {
+      if (this._bfcp.enabled) {
         initCallback && initCallback();
         return;
       }
@@ -33344,24 +33181,24 @@ module.exports = class RTCSession extends EventEmitter {
       session.on('progress', ({
         response
       }) => {
-        this._enableBFCP || notifier.notify(response.status_code, response.reason_phrase);
+        this._bfcp.enabled || notifier.notify(response.status_code, response.reason_phrase);
       });
       session.on('accepted', ({
         response
       }) => {
-        this._enableBFCP || notifier.notify(response.status_code, response.reason_phrase);
+        this._bfcp.enabled || notifier.notify(response.status_code, response.reason_phrase);
 
         // 华为MCU需要挂断
-        this._enableBFCP && this.terminate();
+        this._bfcp.enabled && this.terminate();
       });
       session.on('_failed', ({
         message,
         cause
       }) => {
         if (message) {
-          this._enableBFCP || notifier.notify(message.status_code, message.reason_phrase);
+          this._bfcp.enabled || notifier.notify(message.status_code, message.reason_phrase);
         } else {
-          this._enableBFCP || notifier.notify(487, cause);
+          this._bfcp.enabled || notifier.notify(487, cause);
         }
       });
 
@@ -33489,11 +33326,9 @@ module.exports = class RTCSession extends EventEmitter {
         throw new Error('terminated');
       }
 
-      // 兼容BFCP需要做音频混音
-      if (this._enableBFCP) {
-        var stream = new MediaStream([this._createBfcpAudioTrack(mediaStream), mediaStream.getVideoTracks()[0]]);
-        this._bfcpMediastreams.push(mediaStream);
-        this._localMediaStream = stream;
+      // 兼容BFCP需要做音频混音（委托给 BFCPChannel）
+      if (this._bfcp.enabled) {
+        this._localMediaStream = this._bfcp.setupForOutgoing(mediaStream);
       } else {
         this._localMediaStream = mediaStream;
       }
@@ -33514,13 +33349,9 @@ module.exports = class RTCSession extends EventEmitter {
       /**
        * 是否启用 DataChannel
        **/
-      if (this._enableBFCP) {
-        var {
-          videoTrack
-        } = Utils.generateAnEmptyVideoTrack();
-        this._bfcpVideoTrack = videoTrack;
-        this._connection.addTrack(this._bfcpVideoTrack, this._localMediaStream);
-        this._initDataChannel();
+      if (this._bfcp.enabled) {
+        // BFCP 添加占位视频轨道并初始化 DataChannel
+        this._bfcp.setupVideoTrackAndDataChannel();
       }
 
       // TODO: should this be triggered here?
@@ -33534,33 +33365,12 @@ module.exports = class RTCSession extends EventEmitter {
         throw new Error('terminated');
       }
 
-      // 添加BFCP所需属性
-      if (this._enableBFCP) {
-        // 根据 MediaStreamTrackGenerator 是否支持判断是否存在第二个视频流
-        var supportedMSTC = false;
-        if ('MediaStreamTrackGenerator' in window) {
-          supportedMSTC = true;
-        }
-        this._connection.getTransceivers().forEach(transceiver => {
-          var track = transceiver.sender.track;
-          if (!track) {
-            return;
-          }
-          if (supportedMSTC) {
-            // eslint-disable-next-line no-undef
-            if (track instanceof MediaStreamTrackGenerator || this._isCanvasTrack(track)) {
-              this._mStream = transceiver.mid;
-              sessionStorage.setItem(CRTC_C.BFCP_SHARED_STREAM_INDEX, transceiver.mid);
-            }
-          } else if (this._isCanvasTrack(track)) {
-            this._mStream = transceiver.mid;
-            sessionStorage.setItem(CRTC_C.BFCP_SHARED_STREAM_INDEX, transceiver.mid);
-          }
-        });
-        desc = desc.replace(/^(m=application .*\r\n)/mg, `$1a=floorctrl:${this._floorctrl ? this._floorctrl : 'c-s'}\r\n`);
-
-        // 添加主辅流标志
-        desc = this._addMediastreamFlag(desc, this._mStream);
+      // 添加BFCP所需属性（委托给 BFCPChannel）
+      if (this._bfcp.enabled) {
+        // 查找画布流对应的 transceiver mid
+        this._bfcp.findAndSetMStream();
+        // 注入 floorctrl / 主辅流标志 / BFCP 媒体描述
+        desc = this._bfcp.addOfferSDPAttributes(desc);
       }
       this._request.body = desc;
       this._status = C.STATUS_INVITE_SENT;
@@ -33795,17 +33605,9 @@ module.exports = class RTCSession extends EventEmitter {
           };
           logger.debug(`${this._id} emit "sdp"`);
           this.emit('sdp', _e);
-          if (this._enableBFCP) {
-            // 获取响应中BFCP相关属性
-            this._floorId = Number((_e.sdp.match(/a=floorid:(\d+)/) || [null, 1])[1]);
-            this._floorctrl = (_e.sdp.match(/a=floorctrl:([a-z-]+)/) || [null, ''])[1] === 's-only' ? 'c-only' : 'c-s';
-            this._confId = (_e.sdp.match(/a=confid:(\d+)/) || [null, ''])[1];
-            this._bfcpUserId = (_e.sdp.match(/a=userid:(\d+)/) || [null, ''])[1];
-            this._mstrm = (_e.sdp.match(/mstrm:(\d+)/) || [null, ''])[1];
-
-            // 把协商来的userId 和 confId赋值给bfcpUser对象
-            this._bfcpUser.userId = Number(this._bfcpUserId);
-            this._bfcpUser.conferenceId = Number(this._confId);
+          if (this._bfcp.enabled) {
+            // 解析应答 SDP 中的 BFCP 属性（floorId / floorctrl / confId / userId / mstrm）
+            this._bfcp.parseAnswerSDP(_e.sdp);
           }
           var _answer = new RTCSessionDescription({
             type: 'answer',
@@ -33864,7 +33666,7 @@ module.exports = class RTCSession extends EventEmitter {
               }
 
               // 开启 BFCP，自动发送reInvite
-              this._enableBFCP && this.renegotiate();
+              this._bfcp.enabled && this.renegotiate();
             }).catch(error => {
               this._acceptAndTerminate(response, 488, 'Not Acceptable Here');
               this._failed('remote', response, CRTC_C.causes.BAD_MEDIA_DESCRIPTION);
@@ -33904,16 +33706,18 @@ module.exports = class RTCSession extends EventEmitter {
     this._connectionPromiseQueue = this._connectionPromiseQueue.then(() => this._createLocalDescription('offer', rtcOfferConstraints)).then(sdp => {
       sdp = this._mangleOffer(sdp);
 
-      // 添加BFCP所需属性
-      this._enableBFCP && (sdp = sdp.replace(/^(m=application .*\r\n)/mg, `$1a=floorctrl:${this._floorctrl}\r\na=floorid:${this._floorId} m-stream:${this._mStream}\r\n`));
-      // 添加主辅流标志
-      sdp = this._addMediastreamFlag(sdp, this._mStream);
+      // 添加BFCP所需属性（委托给 BFCPChannel）
+      if (this._bfcp.enabled) {
+        sdp = this._bfcp.addReinviteAttributes(sdp);
+      }
       var e = {
         originator: 'local',
         type: 'offer',
         sdp
       };
-      this._enableBFCP && (e.sdp = replaceDataChannelMediaWithBFCP(e.sdp));
+      if (this._bfcp.enabled) {
+        e.sdp = this._bfcp.replaceDataChannelMediaWithBFCP(e.sdp);
+      }
       logger.debug(`${this._id} emit "sdp"`);
       this.emit('sdp', e);
 
@@ -33969,16 +33773,7 @@ module.exports = class RTCSession extends EventEmitter {
       }
 
       // BFCP 控制的媒体 transceiver 索引号
-      this._transceiverIndex = Utils.findLabelIndexByMstrm(response.body);
-      if (this._transceiverIndex && this._transceiverIndex !== -1) {
-        sessionStorage.setItem(CRTC_C.BFCP_TRANSCEIVER_INDEX, this._transceiverIndex);
-        try {
-          this._bfcpStream = Utils.getStreams(this._connection, 'shared');
-          logger.debug(`${this._id} sessionStorage setItem ${CRTC_C.BFCP_TRANSCEIVER_INDEX}: ${this._transceiverIndex}`);
-        } catch (error) {
-          logger.error(`${this._id} Failed to set item in sessionStorage:${error}`);
-        }
-      }
+      this._bfcp.parseTransceiverIndex(response.body);
 
       /**
        * 音视频切换相关
@@ -34058,7 +33853,7 @@ module.exports = class RTCSession extends EventEmitter {
           type: 'offer',
           sdp
         };
-        this._enableBFCP && (e.sdp = replaceDataChannelMediaWithBFCP(e.sdp));
+        this._bfcp.enabled && (e.sdp = this._bfcp.replaceDataChannelMediaWithBFCP(e.sdp));
         logger.debug(`${this._id} emit "sdp"`);
         this.emit('sdp', e);
         this.sendRequest(CRTC_C.UPDATE, {
@@ -34289,18 +34084,6 @@ module.exports = class RTCSession extends EventEmitter {
     this._toggleMuteVideo(!enableVideo);
   }
 
-  // 给SDP添加主辅流标志
-  _addMediastreamFlag(sdp, targetMid = '3') {
-    // 仅处理video媒体块，排除application块
-    var videoPattern = new RegExp('(m=video[\\s\\S]*?^a=mid:(\\d+)\\r?\\n)', 'gm');
-    sdp = sdp.replace(videoPattern, (match, p1, mid) => {
-      // 根据mid设置content值
-      var content = mid === targetMid ? 'slides' : 'main';
-      return `${p1}a=content:${content}\r\n`;
-    });
-    return sdp;
-  }
-
   // 如果是音频模式，则关闭本地视频
   _setLocalMedia(mode) {
     logger.debug(`${this._id} setLocalMedia() ${mode}`);
@@ -34322,7 +34105,7 @@ module.exports = class RTCSession extends EventEmitter {
           this._connection.getTransceivers().forEach(transeiver => {
             if (transeiver.sender.track && transeiver.sender.track.kind === 'video') {
               if (transeiver.sender.track.id === this._localShareStream.getVideoTracks()[0].id) {
-                this._connection.connectionState === 'connected' && transeiver.sender.replaceTrack(this._bfcpVideoTrack);
+                this._connection.connectionState === 'connected' && transeiver.sender.replaceTrack(this._bfcp.videoTrack);
               }
             }
           });
@@ -34330,7 +34113,7 @@ module.exports = class RTCSession extends EventEmitter {
           this._localShareStreamLocallyGenerated = false;
 
           // BFCP 释放资源，当被取消权限以后不再用发送release
-          this._bfcpRequestStatus !== RequestStatusValue.Revoked && this._sendFloorRelease();
+          this._bfcp.requestStatus !== RequestStatusValue.Revoked && this._bfcp.sendFloorRelease();
         } else {
           this._localMediaStream.getVideoTracks().forEach(track => {
             var sender = this._connection.getSenders().find(s => {
@@ -34454,7 +34237,7 @@ module.exports = class RTCSession extends EventEmitter {
   }
   _toggleMuteVideo(mute) {
     var senders = this._connection.getSenders().filter(sender => {
-      if (this._enableBFCP) {
+      if (this._bfcp.enabled) {
         // 检查是否存在视频轨道
         if (!sender.track || sender.track.kind !== 'video') {
           return false;
@@ -34467,7 +34250,7 @@ module.exports = class RTCSession extends EventEmitter {
         }
 
         // 验证视频轨道条件
-        return !this._isCanvasTrack(sender.track) && sender.track !== this._bfcpVideoTrack && sender.track.id !== localShareTrackId;
+        return !this._bfcp._isCanvasTrack(sender.track) && sender.track !== this._bfcp.videoTrack && sender.track.id !== localShareTrackId;
       }
       return sender.track && sender.track.kind === 'video';
     });
@@ -34598,23 +34381,12 @@ module.exports = class RTCSession extends EventEmitter {
       message: message || null,
       cause
     });
-    this._dataChannel && this._dataChannel.close();
-    this._dataChannel = null;
     if (this._inviteVideoTrackStatsTimer) {
       clearInterval(this._inviteVideoTrackStatsTimer);
     }
     if (this._answerVideoTrackStatsTimer) {
       clearInterval(this._answerVideoTrackStatsTimer);
     }
-
-    // DC 状态设置为未准备好
-    this._dataChannelReady = false;
-    // 停止发送心跳
-    this._bfcpHeatbeatTimer && clearInterval(this._bfcpHeatbeatTimer);
-    this._bfcpHeatbeatTimer = null; // 避免潜在的内存泄漏
-
-    // 停止检测close状态
-    this._closingInterval && clearInterval(this._closingInterval);
   }
   _failed(originator, message, cause) {
     logger.debug(`${this._id} session failed`);
@@ -34630,8 +34402,6 @@ module.exports = class RTCSession extends EventEmitter {
       message: message || null,
       cause
     });
-    this._dataChannel && this._dataChannel.close();
-    this._dataChannel = null;
     this._close();
     logger.debug(`${this._id} emit "failed"`);
     this.emit('failed', {
@@ -34639,15 +34409,6 @@ module.exports = class RTCSession extends EventEmitter {
       message: message || null,
       cause
     });
-
-    // DC 状态设置为未准备好
-    this._dataChannelReady = false;
-    // 停止发送心跳
-    this._bfcpHeatbeatTimer && clearInterval(this._bfcpHeatbeatTimer);
-    this._bfcpHeatbeatTimer = null; // 避免潜在的内存泄漏
-
-    // 停止检测close状态
-    this._closingInterval && clearInterval(this._closingInterval);
   }
   _onhold(originator) {
     logger.debug(`${this._id} session onhold`);
@@ -35082,338 +34843,6 @@ module.exports = class RTCSession extends EventEmitter {
   }
 
   /**
-   * BFCP && DataChannel
-   */
-
-  /**
-   * 处理 Hello 消息
-   * @param {Object} message - 接收到的消息对象
-   */
-  _handleHelloMessage(message) {
-    logger.debug(`${this._id} BFCP send HACK: Transaction ID: ${message.commonHeader.transactionId}, Timestamp: ${Date.now()}`);
-    var response = this._bfcpUser.helloAckMessage(message);
-    this._sendDataChannelMessage(response);
-  }
-
-  /**
-   * 处理 FloorRequestStatus 消息
-   * @param {Object} message - 接收到的消息对象
-   */
-  _handleFloorRequestStatusMessage(message) {
-    logger.debug(`${this._id} BFCP send FloorRequestStatusACK: Transaction ID: ${message.commonHeader.transactionId}, Timestamp: ${Date.now()}`);
-    var response = this._bfcpUser.floorRequestStatusAckMessage(message);
-    this._sendDataChannelMessage(response);
-
-    // 处理本端分享被撤销的情况
-    var status = message.getAttribute(AttributeName.FloorRequestInformation).content[1].content[1].content[0];
-    if (status === RequestStatusValue.Revoked) {
-      this._bfcpRequestStatus = status;
-      // 已经共享了的自动取消共享
-      if (this._localShareStreamLocallyGenerated) {
-        this.unShare();
-      }
-    }
-  }
-
-  /**
-   * 处理 FloorStatus 消息
-   * @param {Object} message - 接收到的消息对象
-   */
-  _handleFloorStatusMessage(message) {
-    // 不再回ack，根据support里面是否支持做出这个决定
-    // this._sendFloorStatusAck(message);
-    var floorStatus = message.getAttribute(AttributeName.FloorRequestInformation).content[1].content[1].content[0];
-
-    // 根据状态触发事件
-    if (floorStatus === RequestStatusValue.Granted && !this._remoteShared) {
-      this._remoteShared = true;
-      this.emit('remoteShared', {
-        sharedStream: this._bfcpStream
-      });
-    } else if (floorStatus === RequestStatusValue.Released && this._remoteShared) {
-      this._remoteShared = false;
-      this.emit('remoteUnShared');
-    } else {
-      logger.warn(`${this._id} Unknown floor status: ${floorStatus}`);
-    }
-  }
-
-  /**
-   * 处理 FloorRequest 消息
-   * @param {Object} message - 接收到的消息对象
-   */
-  _handleFloorRequestMessage(message) {
-    var wantedFloorId = message.getAttribute(AttributeName.FloorId).content;
-    if (this.listeners('floorRequest').length === 0 || (message.commonHeader.primitive = Primitive.FloorRelease)) {
-      // 自动接受请求
-      var response = this._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Granted);
-      this._sendDataChannelMessage(response, message.commonHeader.transactionId);
-    } else {
-      // 触发事件，允许外部处理
-      this.emit('floorRequest', {
-        message,
-        accept: () => {
-          var response = this._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Granted);
-          this._sendDataChannelMessage(response, message.commonHeader.transactionId);
-        },
-        reject: () => {
-          var response = this._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Denied);
-          this._sendDataChannelMessage(response, message.commonHeader.transactionId);
-        }
-      });
-    }
-  }
-
-  /**
-   * 发送消息到数据通道
-   * @param {Buffer} message - 要发送的消息
-   * @param {number} [transactionId] - 可选的事务 ID
-   */
-  _sendDataChannelMessage(message, transactionId) {
-    logger.debug(`${this._id} Sending message ${Utils.uint8ArrayToBase64(message)} with Transaction ID: ${transactionId}, Timestamp: ${Date.now()}`);
-    this._dataChannel.send(message);
-  }
-
-  /**
-   * 处理数据通道接收到的消息。
-   *
-   * @param {Object} event - 数据通道消息事件对象。
-   * @param {ArrayBuffer|string} event.data - 接收到的消息数据，通常为 ArrayBuffer 类型。
-   *
-   * 该方法会解析消息并根据消息类型执行相应逻辑。如果数据通道未准备好或消息格式不正确，则忽略处理。
-   */
-  _onChannelMessage(event) {
-    logger.debug(`${this._id} onChannelMessage()`);
-
-    // 如果数据通道未准备好，则忽略消息
-    if (!this._dataChannelReady) {
-      logger.warn(`${this._id} onChannelMessage(): Data channel is not ready, ignoring message.`);
-      return;
-    }
-    var data = event.data;
-
-    // 确保接收到的数据是 ArrayBuffer 类型
-    if (!(data instanceof ArrayBuffer)) {
-      logger.warn(`${this._id} onChannelMessage(): Received non-ArrayBuffer message, ignoring.`);
-      return;
-    }
-    try {
-      // 将 ArrayBuffer 转换为 Buffer 并解析消息
-      var bufferData = Buffer.from(data);
-      logger.debug(`${this._id} recv unit8: `, Utils.uint8ArrayToBase64(bufferData));
-
-      // 适配 0002 0000  的包
-      if (Utils.uint8ArrayToBase64(bufferData) === 'AgAAAA==') {
-        return;
-      }
-      var message = this._bfcpUser.receiveMessage(bufferData);
-
-      // 输出日志：收到消息内容及tid，时间戳
-      logger.debug(`${this._id} BFCP recv: ${JSON.stringify(message)}, Transaction ID: ${message.commonHeader.transactionId}, Timestamp: ${Date.now()}`);
-
-      // 处理已注册的事务消息
-      if (this._dataChannelMsgs[message.commonHeader.transactionId]) {
-        // 记录BFCP消息响应时间
-        logger.debug(`${this._id} bfcp response time: transactionId(${message.commonHeader.transactionId}), time(${Date.now() - this._dataChannelMsgs[message.commonHeader.transactionId].sendAt}ms)`);
-        this._dataChannelMsgs[message.commonHeader.transactionId].received = true;
-        this._dataChannelMsgs[message.commonHeader.transactionId].resolve(message);
-        delete this._dataChannelMsgs[message.commonHeader.transactionId];
-        return;
-      }
-
-      // 根据消息类型执行相应逻辑
-      switch (message.commonHeader.primitive) {
-        case Primitive.Hello:
-          this._handleHelloMessage(message);
-          break;
-        case Primitive.FloorRequestStatus:
-          this._handleFloorRequestStatusMessage(message);
-          break;
-        case Primitive.FloorStatus:
-          this._handleFloorStatusMessage(message);
-          break;
-        case Primitive.FloorRequest:
-          this._handleFloorRequestMessage(message);
-          break;
-        default:
-          logger.debug(`${this._id} onChannelMessage(): do not require processing type: ${message.commonHeader.primitive}`);
-          break;
-      }
-    } catch (error) {
-      logger.error(`${this._id} onChannelMessage(): Error while processing message.`, error);
-    }
-  }
-
-  /**
-   * DC 关闭后清理
-   */
-  _onChannelClose() {
-    logger.debug(`${this._id} datachannel closed.`);
-    setTimeout(() => {
-      // 判断dc如果断开1秒后ice状态正常则重连dc
-      if (this.connection.iceConnectionState === 'connected') {
-        this.renegotiate();
-      } else {
-        // DC 状态设置为未准备好
-        this._dataChannelReady = false;
-        // 停止发送心跳
-        clearInterval(this._bfcpHeatbeatTimer);
-        this._bfcpHeatbeatTimer = null; // 避免潜在的内存泄漏
-
-        // 停止检测close状态
-        clearInterval(this._closingInterval);
-      }
-    }, 1000);
-  }
-
-  /**
-   * DC 发送消息
-   * @param {*} message
-   * @param {*} transactionId
-   * @returns
-   */
-  _dataChannelSend(message, transactionId) {
-    logger.debug(`${this._id} dataChannelSend() ${transactionId}`);
-    return new Promise((resolve, reject) => {
-      // DataChannel 未准备好
-      if (!this._dataChannelReady) {
-        reject(`[DataChannel] Not ready for transactionId: ${transactionId}`);
-        logger.error(`${this._id} [DataChannel] Not ready for transactionId: ${transactionId}`);
-        return;
-      }
-
-      // 保存发送的处理中的 DC 消息，收到响应后删除
-      if (!this._dataChannelMsgs[transactionId]) {
-        this._dataChannelMsgs[transactionId] = {
-          retries: 0,
-          sendAt: Date.now(),
-          message: message,
-          received: false,
-          resolve,
-          reject
-        };
-      }
-      var messageState = this._dataChannelMsgs[transactionId];
-
-      // 如果已经超出最大重试次数，则报告错误
-      if (messageState.retries !== 0 && messageState.retries > CRTC_C.MAX_RETRY_ATTEMPTS) {
-        logger.warn(`${this._id} [DataChannel] Max retry attempts (${CRTC_C.MAX_RETRY_ATTEMPTS}) reached for transactionId: ${transactionId}`);
-        messageState.reject(`[DataChannel] Max retry attempts (${CRTC_C.MAX_RETRY_ATTEMPTS}) reached for transactionId: ${transactionId}`);
-        return;
-      }
-
-      // 输出日志：发送消息次数及tid，时间戳
-      logger.debug(`${this._id} BFCP send: ${JSON.stringify(this._bfcpUser.receiveMessage(messageState.message))} ${JSON.stringify(Utils.uint8ArrayToBase64(messageState.message))} ${messageState.retries + 1}, ${transactionId} ${Date.now()}`);
-      var sendMessage = this._bfcpUser.receiveMessage(messageState.message);
-
-      // DC 消息超时重试, FloorRelease消息不重发
-      if (CRTC_C.MAX_RETRY_ATTEMPTS > 0 && sendMessage.commonHeader.primitive != Primitive.FloorRelease) {
-        setTimeout(() => {
-          // 如果没有收到响应，则重试
-          if (messageState && !messageState.received) {
-            messageState.retries++;
-            // 增加重试的间隔
-            this._dataChannelSend(messageState.message, transactionId);
-          }
-        }, Math.pow(2, messageState.retries) * 500);
-      }
-      this._dataChannel && this._dataChannel.send(messageState.message);
-    });
-  }
-
-  // 检查是否为画布流的通用方法
-  _isCanvasTrack(track) {
-    // 检查track的settings中是否包含canvas相关信息
-    var settings = track.getSettings();
-
-    // Firefox中canvas轨道的label通常包含"MediaStreamTrack"且不会有deviceId
-    // 同时增加对Firefox中CanvasCaptureMediaStreamTrack的检查
-    return !settings.deviceId || settings.deviceId === 'canvas' || track.label.toLowerCase().includes('canvas') || track.constructor && track.constructor.name === 'CanvasCaptureMediaStreamTrack' || !settings.deviceId && track.label.includes('MediaStreamTrack');
-  }
-
-  /**
-   * 初始化 DataChannel
-   */
-  _initDataChannel(event) {
-    logger.debug(`${this._id} initDataChannel() ${JSON.stringify(event)}`);
-
-    // 内部变量
-    var datachannel;
-
-    /**
-     * 异常处理
-     */
-    if (event && event.channel) {
-      this._dataChannel = datachannel = event.channel;
-    } else {
-      // 如果是DataChannel的发起方则创建DataChannel
-      this._dataChannel = datachannel = this._connection.createDataChannel(this._dataChannelName, this._dataChannelConfig);
-    }
-    // 特殊场景存在createDataChannel不成功的问题 See: https://github.com/feross/simple-peer/issues/163
-    if (!datachannel) {
-      logger.error(`${this._id} Data channel event is missing \`channel\` property`);
-      return;
-    }
-
-    /**
-     * 设置DC默认属性
-     */
-    datachannel.binaryType = 'arraybuffer';
-    this._dataChannelName = datachannel.label;
-
-    /**
-     * 事件监听
-     */
-    datachannel.onmessage = ev => {
-      // 收到数据
-      this._onChannelMessage(ev);
-    };
-
-    // 端口状态处于 established 的时候会触发
-    datachannel.onopen = () => {
-      logger.warn(`${this._id} datachannel opened.`);
-      this._dataChannelReady = true;
-      // 开始发送心跳消息
-      this._sendHello();
-      this._bfcpHeatbeatTimer = setInterval(() => {
-        this._sendHello();
-      }, CRTC_C.BFCP_HEARTBEAT_INTERVAL);
-    };
-    datachannel.onclose = () => {
-      // 底层链路被关闭的时候会触发
-      this._onChannelClose();
-    };
-
-    // 遇到错误的时候会触发
-    datachannel.onerror = ev => {
-      logger.error(`${this._id} datachannel error.`);
-      var err = ev.error instanceof Error ? ev.error : new Error(`Datachannel error: ${ev.message} ${ev.filename}:${ev.lineno}:${ev.colno}`);
-      this._dataChannelReady = false;
-      logger.warn(`${this._id} data err: `, err);
-
-      // 异常重连
-      if (this.connection.iceConnectionState === 'connected') {
-        this.renegotiate();
-      }
-    };
-
-    // HACK: Chrome will sometimes get stuck in readyState "closing", let's check for this condition
-    // https://bugs.chromium.org/p/chromium/issues/detail?id=882743
-    var isClosing = false;
-    this._closingInterval = setInterval(() => {
-      // No "onclosing" event
-      if (datachannel && datachannel.readyState === 'closing') {
-        // closing timed out: equivalent to onclose firing
-        if (isClosing) this._onChannelClose();
-        isClosing = true;
-      } else {
-        isClosing = false;
-      }
-    }, CRTC_C.CHANNEL_CLOSING_TIMEOUT);
-    return datachannel;
-  }
-
-  /**
    * 监听页面切后台媒体muted切换为1fps的黑屏
    */
   _initVisibilityChangeHandler() {
@@ -35422,7 +34851,7 @@ module.exports = class RTCSession extends EventEmitter {
     this._trackMutedTimer = null;
     var handleVisibilityChange = () => {
       var conn = this._connection;
-      if (!conn || conn.connectionState !== 'connected' || !this._is_confirmed || this._enableBFCP) return;
+      if (!conn || conn.connectionState !== 'connected' || !this._is_confirmed || this._bfcp.enabled) return;
       if (document.hidden) {
         this._handlePageHidden(conn);
       } else {
@@ -35594,9 +35023,893 @@ module.exports = class RTCSession extends EventEmitter {
     }
   }
 };
+},{"./BFCP/index":11,"./Constants":30,"./Dialog":32,"./Exceptions":35,"./Logger":38,"./MediaEffectsIssue":57,"./RTCSession/BFCPChannel":63,"./RTCSession/DTMF":64,"./RTCSession/Info":65,"./RTCSession/MediaPipeline":66,"./RTCSession/ReferNotifier":67,"./RTCSession/ReferSubscriber":68,"./RequestSender":70,"./SIPMessage":71,"./Timers":74,"./Transactions":75,"./URI":78,"./Utils":79,"events":83,"sdp-transform":92}],63:[function(require,module,exports){
+(function (Buffer){(function (){
+"use strict";
+
+var Logger = require('../Logger');
+var CRTC_C = require('../Constants');
+var Utils = require('../Utils');
+var BFCPLib = require('../BFCP/index');
+var logger = new Logger('RTCSession:BFCPChannel');
+var BFCPUser = BFCPLib.User;
+var Primitive = BFCPLib.Primitive;
+var AttributeName = BFCPLib.AttributeName;
+var RequestStatusValue = BFCPLib.RequestStatusValue;
+
+// 用于将 SDP 中 DataChannel 媒体描述替换为 BFCP 媒体描述
+var SDP_DATA_CHANNEL_MEDIA = 'UDP/DTLS/SCTP webrtc-datachannel';
+var SDP_BFCP_MEDIA = 'UDP/DTLS/SCTP/BFCP *';
+
+/**
+ * BFCPChannel —— BFCP 协议 + DataChannel 封装模块。
+ *
+ * 把原本散落在 RTCSession 中的 BFCP 状态管理、DataChannel 生命周期、
+ * BFCP 消息协议（Hello / FloorRequest / FloorRelease / FloorRequestStatus / FloorStatus）、
+ * SDP 属性注入及 BFCP 音频混音等逻辑集中收敛到一个文件。
+ *
+ * 使用方式与现有子模块（DTMF.js, Info.js）一致：
+ *   - RTCSession 构造函数中创建 `this._bfcp = new BFCPChannel(this)`
+ *   - 通过 getter 访问状态：`this._bfcp.enabled`、`this._bfcp.floorctrl` 等
+ *   - 通过方法操作：`this._bfcp.init(...)`、`this._bfcp.sendFloorRequest()` 等
+ *
+ * @param {RTCSession} session - 所属的 RTCSession 实例，用于访问连接、UA、事件发射等
+ */
+module.exports = class BFCPChannel {
+  constructor(session) {
+    this._session = session;
+
+    // ── DataChannel 状态 ──
+    this._dataChannel = null; // RTCDataChannel 实例
+    this._dataChannelName = CRTC_C.BFCP; // DataChannel 名称
+    this._dataChannelReady = false; // DataChannel 是否就绪
+    this._dataChannelConfig = {
+      ordered: false,
+      maxRetransmits: 0
+    }; // 乱序，不可靠传输
+    this._dataChannelMsgs = {}; // 待响应的 DC 消息映射表（transactionId → {resolve, reject, ...}）
+
+    // ── BFCP 协商状态 ──
+    this._enabled = false; // 是否启用 BFCP
+    this._bfcpUser = null; // BFCP 协议 User 对象，用于构造/解析消息
+    this._floorId = null; // BFCP 控制的 floorId，SDP 协商获得
+    this._floorctrl = null; // BFCP 服务类型（c-s / s-only / c-only），根据 SDP 协商修改
+    this._mStream = null; // 本端发送给 BFCP 服务器的流的 mid
+    this._mstrm = null; // 服务端发送给本端的流的 label，用于获取远端辅流
+    this._transceiverIndex = null; // 远端辅流在 PC 中的 transceiver 索引号
+    this._bfcpUserId = null; // SDP 协商过程中远端给的 userId
+    this._confId = null; // SDP 协商过程中远端给的 confId
+    this._floorRequestId = null; // 发送 FloorRequest 后收到的响应里的 requestId，用于释放资源
+    this._transactionId = 1; // BFCP 消息事务 ID，每次发送自增
+    this._bfcpHeatbeatTimer = null; // BFCP 心跳定时器
+    this._bfcpVideoTrack = null; // BFCP 协商时的占位视频轨道，用于后续替换
+    this._bfcpStream = null; // BFCP 控制的远端辅流，接通后获取
+    this._remoteShared = false; // 远端是否正在共享
+    this._requestStatus = null; // 本端 FloorRequest 的响应状态
+
+    // ── BFCP 音频混音 ──
+    this._bfcpAudioDestination = null; // AudioContext 混音目标
+    this._bfcpAudioSources = []; // 音频源列表
+    this._bfcpMediastreams = []; // BFCP 相关 MediaStream 列表，用于清理
+    this._bfcpAudioCtx = null; // AudioContext 实例
+
+    // ── DataChannel 关闭状态检测 ──
+    this._closingInterval = null; // 检测 DC 卡在 "closing" 状态的定时器
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // 公开属性（Getter）
+  // ═══════════════════════════════════════════════════════════
+
+  /** 是否启用 BFCP */
+  get enabled() {
+    return this._enabled;
+  }
+
+  /** BFCP 服务类型：'c-s' | 's-only' | 'c-only' */
+  get floorctrl() {
+    return this._floorctrl;
+  }
+  set floorctrl(v) {
+    this._floorctrl = v;
+  }
+
+  /** BFCP 控制的 floorId */
+  get floorId() {
+    return this._floorId;
+  }
+
+  /** 本端辅流的 mid */
+  get mStream() {
+    return this._mStream;
+  }
+  set mStream(v) {
+    this._mStream = v;
+  }
+
+  /** 远端辅流的 label */
+  get mstrm() {
+    return this._mstrm;
+  }
+
+  /** BFCP 占位视频轨道 */
+  get videoTrack() {
+    return this._bfcpVideoTrack;
+  }
+
+  /** 远端 BFCP 辅流 */
+  get stream() {
+    return this._bfcpStream;
+  }
+
+  /** 远端是否正在共享 */
+  get remoteShared() {
+    return this._remoteShared;
+  }
+
+  /** 本端 FloorRequest 的响应状态 */
+  get requestStatus() {
+    return this._requestStatus;
+  }
+
+  /** 远端辅流在 PC 中的 transceiver 索引 */
+  get transceiverIndex() {
+    return this._transceiverIndex;
+  }
+
+  /** BFCP 相关 MediaStream 列表（用于清理） */
+  get mediastreams() {
+    return this._bfcpMediastreams;
+  }
+
+  /** DataChannel 是否就绪 */
+  get dataChannelReady() {
+    return this._dataChannelReady;
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // 初始化
+  // ═══════════════════════════════════════════════════════════
+
+  /**
+   * 根据 connect / answer 的 extraFeatures 决定是否启用 BFCP。
+   * 如果启用，创建 BFCPUser 实例用于后续消息构造与解析。
+   *
+   * @param {string[]} extraFeatures - 用户传入的扩展特性列表
+   * @param {string}   localUser     - 本端 SIP 用户名
+   * @param {string}   remoteUser    - 远端 SIP 用户名
+   */
+  init(extraFeatures, localUser, remoteUser) {
+    this._enabled = false;
+    if (extraFeatures && extraFeatures.indexOf(CRTC_C.BFCP) !== -1) {
+      this._enabled = true;
+      this._bfcpUser = new BFCPUser(localUser, remoteUser);
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // SDP 处理
+  // ═══════════════════════════════════════════════════════════
+
+  /**
+   * 从呼入 INVITE 的 SDP 中解析 floorctrl。
+   * 对端发送的值与本端相反：c-s ↔ s-only, c-only ↔ s-only。
+   *
+   * @param {string} sdpText - 原始 SDP 文本
+   */
+  parseFloorctrlFromIncomingSDP(sdpText) {
+    var lines = sdpText.split(/\r?\n/);
+    var line = lines.find(l => l.trim().startsWith('a=floorctrl:') && l.includes(':'));
+    if (line) {
+      switch (line.split(':')[1].trim()) {
+        case 'c-s':
+        case 'c-only':
+          this._floorctrl = 's-only';
+          break;
+        case 's-only':
+          this._floorctrl = 'c-only';
+          break;
+        default:
+          break;
+      }
+    }
+  }
+
+  /**
+   * 给外呼 offer SDP 添加 BFCP 属性：
+   *   - a=floorctrl
+   *   - a=content（主辅流标志）
+   *   - 将 DataChannel 媒体替换为 BFCP
+   *
+   * @param {string} desc - SDP 文本
+   * @returns {string} 修改后的 SDP 文本
+   */
+  addOfferSDPAttributes(desc) {
+    var floorctrl = this._floorctrl || 'c-s';
+    var result = desc.replace(/^(m=application .*\r\n)/mg, `$1a=floorctrl:${floorctrl}\r\n`);
+
+    // 添加主辅流标志
+    result = this._addMediastreamFlag(result, this._mStream);
+
+    // 替换 DataChannel 媒体描述为 BFCP
+    result = this.replaceDataChannelMediaWithBFCP(result);
+    return result;
+  }
+
+  /**
+   * 给应答 SDP 添加 BFCP 属性。
+   * s-only 模式下设置 floorId=2，并添加 floorid / mstrm / confid / userid。
+   *
+   * @param {string} desc - SDP 文本
+   * @returns {string} 修改后的 SDP 文本
+   */
+  addAnswerSDPAttributes(desc) {
+    var result = desc;
+    if (this._floorctrl === 's-only') {
+      this._floorId = 2;
+      result = result.replace(/^(m=application .*\r\n)/mg, `$1a=floorctrl:${this._floorctrl}\r\na=floorid:${this._floorId} mstrm:12\r\na=confid:123\r\na=userid:456\r\n`);
+    }
+    result = this.replaceDataChannelMediaWithBFCP(result);
+    return result;
+  }
+
+  /**
+   * 从远端 SDP 应答中解析 BFCP 属性：floorId、floorctrl、confId、userId、mstrm。
+   * 同时将 userId 和 confId 写入 BFCPUser 实例。
+   *
+   * @param {string} sdpText - SDP 文本
+   */
+  parseAnswerSDP(sdpText) {
+    this._floorId = Number((sdpText.match(/a=floorid:(\d+)/) || [null, 1])[1]);
+    this._floorctrl = (sdpText.match(/a=floorctrl:([a-z-]+)/) || [null, ''])[1] === 's-only' ? 'c-only' : 'c-s';
+    this._confId = (sdpText.match(/a=confid:(\d+)/) || [null, ''])[1];
+    this._bfcpUserId = (sdpText.match(/a=userid:(\d+)/) || [null, ''])[1];
+    this._mstrm = (sdpText.match(/mstrm:(\d+)/) || [null, ''])[1];
+
+    // 将协商到的 userId 和 confId 写入 BFCPUser，后续消息构造需要
+    if (this._bfcpUser) {
+      this._bfcpUser.userId = Number(this._bfcpUserId);
+      this._bfcpUser.conferenceId = Number(this._confId);
+    }
+  }
+
+  /**
+   * 给 re-INVITE offer SDP 添加 BFCP 属性：floorctrl、floorid、m-stream 及主辅流标志。
+   *
+   * @param {string} desc - SDP 文本
+   * @returns {string} 修改后的 SDP 文本
+   */
+  addReinviteAttributes(desc) {
+    var result = desc.replace(/^(m=application .*\r\n)/mg, `$1a=floorctrl:${this._floorctrl}\r\na=floorid:${this._floorId} m-stream:${this._mStream}\r\n`);
+    result = this._addMediastreamFlag(result, this._mStream);
+    return result;
+  }
+
+  /**
+   * 给 re-INVITE 应答 SDP 添加 BFCP 属性，并重排 application 媒体顺序。
+   *
+   * @param {string} desc              - SDP 文本
+   * @param {number[]} applicationIndex - 原始 SDP 中 application 媒体的位置
+   * @returns {string} 修改后的 SDP 文本
+   */
+  addReinviteAnswerAttributes(desc, applicationIndex) {
+    var result = desc;
+    if (this._floorctrl === 's-only') {
+      result = result.replace(/^(m=application .*\r\n)/mg, `$1a=floorctrl:${this._floorctrl}\r\na=floorid:${this._floorId} mstrm:12\r\na=confid:123\r\na=userid:456\r\n`);
+    }
+
+    // 适配通用情况下的 SDP H224
+    if (applicationIndex && applicationIndex[1] !== -1) {
+      result += 'm=application 0 UDP/TLS/RTP/SAVPF 100\r\na=rtpmap:100 H224/4800\r\na=inactive\r\n';
+    }
+    result = Utils.reorderApplicationMedia(result, applicationIndex);
+    return result;
+  }
+
+  /**
+   * 从 re-INVITE 响应中解析 transceiver 索引并获取远端辅流。
+   *
+   * @param {string} responseBody - 响应 SDP 内容
+   */
+  parseTransceiverIndex(responseBody) {
+    this._transceiverIndex = Utils.findLabelIndexByMstrm(responseBody);
+    if (this._transceiverIndex && this._transceiverIndex !== -1) {
+      sessionStorage.setItem(CRTC_C.BFCP_TRANSCEIVER_INDEX, this._transceiverIndex);
+      try {
+        this._bfcpStream = Utils.getStreams(this._session._connection, 'shared');
+      } catch (error) {
+        logger.error(`${this._session._id} Failed to set item in sessionStorage:${error}`);
+      }
+    }
+  }
+
+  /**
+   * 将 SDP 中 DataChannel 媒体描述替换为 BFCP 媒体描述。
+   * 用于 sdp 事件发出前，将 webrtc-datachannel 替换为 BFCP 协议标识。
+   *
+   * @param {string} sdp - SDP 文本
+   * @returns {string}
+   */
+  replaceDataChannelMediaWithBFCP(sdp) {
+    return sdp.replace(SDP_DATA_CHANNEL_MEDIA, SDP_BFCP_MEDIA);
+  }
+
+  /**
+   * 给 SDP 的 video 媒体块添加 a=content 主辅流标志。
+   * 根据 mid 判断：匹配 targetMid 的标记为 "slides"，其余为 "main"。
+   *
+   * @param {string} sdp       - SDP 文本
+   * @param {string} targetMid  - 辅流对应的 mid 值
+   * @returns {string}
+   */
+  _addMediastreamFlag(sdp, targetMid) {
+    if (!targetMid) return sdp;
+    var videoPattern = new RegExp('(m=video[\\s\\S]*?^a=mid:(\\d+)\\r?\\n)', 'gm');
+    sdp = sdp.replace(videoPattern, (match, p1, mid) => {
+      // 根据 mid 设置 content：匹配辅流 mid 的为 slides，其余为 main
+      var content = mid === targetMid ? 'slides' : 'main';
+      return `${p1}a=content:${content}\r\n`;
+    });
+    return sdp;
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // BFCP 媒体 & DataChannel 初始化
+  // ═══════════════════════════════════════════════════════════
+
+  /**
+   * 外呼时初始化 BFCP：创建音频混音流，包装为新的 MediaStream。
+   *
+   * @param {MediaStream} mediaStream - 原始本地媒体流
+   * @returns {MediaStream} 混音后的媒体流
+   */
+  setupForOutgoing(mediaStream) {
+    var mixedStream = new MediaStream([this._createBfcpAudioTrack(mediaStream), mediaStream.getVideoTracks()[0]]);
+    this._bfcpMediastreams.push(mediaStream);
+    return mixedStream;
+  }
+
+  /**
+   * 外呼时添加 BFCP 占位视频轨道并初始化 DataChannel。
+   */
+  setupVideoTrackAndDataChannel() {
+    var connection = this._session._connection;
+    var localMediaStream = this._session._localMediaStream;
+    var {
+      videoTrack
+    } = Utils.generateAnEmptyVideoTrack();
+    this._bfcpVideoTrack = videoTrack;
+    connection.addTrack(this._bfcpVideoTrack, localMediaStream);
+    this._initDataChannel();
+  }
+
+  /**
+   * 呼入时添加 BFCP 占位视频轨道，并监听远端 DataChannel。
+   */
+  setupForIncoming() {
+    var connection = this._session._connection;
+    var localMediaStream = this._session._localMediaStream;
+    var {
+      videoTrack
+    } = Utils.generateAnEmptyVideoTrack();
+    this._bfcpVideoTrack = videoTrack;
+    connection.addTrack(this._bfcpVideoTrack, localMediaStream);
+    connection.ondatachannel = event => {
+      this._initDataChannel(event);
+    };
+  }
+
+  /**
+   * 遍历 transceiver 找到画布流对应的 mid，设为 mStream。
+   * 用于后续 SDP 中标记辅流。
+   */
+  findAndSetMStream() {
+    var connection = this._session._connection;
+    var supportedMSTC = false;
+    if ('MediaStreamTrackGenerator' in window) {
+      supportedMSTC = true;
+    }
+    connection.getTransceivers().forEach(transceiver => {
+      var track = transceiver.sender.track;
+      if (!track) return;
+      if (supportedMSTC) {
+        // eslint-disable-next-line no-undef
+        if (track instanceof MediaStreamTrackGenerator || this._isCanvasTrack(track)) {
+          this._mStream = transceiver.mid;
+          sessionStorage.setItem(CRTC_C.BFCP_SHARED_STREAM_INDEX, transceiver.mid);
+        }
+      } else if (this._isCanvasTrack(track)) {
+        this._mStream = transceiver.mid;
+        sessionStorage.setItem(CRTC_C.BFCP_SHARED_STREAM_INDEX, transceiver.mid);
+      }
+    });
+  }
+
+  /**
+   * 判断 sender track 是否为 BFCP 占位视频轨道或本地共享轨道。
+   * 用于 switchDevice 等场景中排除 BFCP 控制轨道的干扰。
+   *
+   * @param {MediaStreamTrack} track            - 待判断的轨道
+   * @param {MediaStream}      localShareStream  - 本地共享流
+   * @returns {boolean}
+   */
+  isBfcpVideoTrack(track, localShareStream) {
+    var shareVideoTrack = localShareStream && localShareStream.getVideoTracks ? localShareStream.getVideoTracks()[0] : null;
+    return track === this._bfcpVideoTrack || track === shareVideoTrack;
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // BFCP 协议操作
+  // ═══════════════════════════════════════════════════════════
+
+  /**
+   * 发送 BFCP FloorRequest，请求共享权限。
+   *
+   * @returns {Promise<Object>} 解析后的 FloorRequestStatus 响应消息
+   */
+  sendFloorRequest() {
+    var currentTransactionId = this._transactionId;
+    this._transactionId++;
+    var floorRequest = this._bfcpUser.floorRequestMessage(currentTransactionId, this._floorId);
+    return this._dataChannelSend(floorRequest, currentTransactionId);
+  }
+
+  /**
+   * 发送 BFCP FloorRelease，释放共享权限。
+   */
+  sendFloorRelease() {
+    var currentTransactionId = this._transactionId;
+    this._transactionId++;
+    var floorRelease = this._bfcpUser.floorReleaseMessage(currentTransactionId, this._floorRequestId);
+    return this._dataChannelSend(floorRelease, currentTransactionId);
+  }
+
+  /**
+   * 发送 BFCP Hello 心跳消息。
+   */
+  sendHello() {
+    var currentTransactionId = this._transactionId;
+    this._transactionId++;
+    var hello = this._bfcpUser.helloMessage(currentTransactionId, this._floorId);
+    return this._dataChannelSend(hello, currentTransactionId);
+  }
+
+  /**
+   * 处理收到的 FloorRequestStatus 响应消息。
+   * 内部会发送 FloorRequestStatusAck 确认，并更新本端请求状态。
+   * 如果状态为 Granted，会踢掉远端共享（触发 remoteUnShared 事件）。
+   *
+   * @param {Object} floorResponse - 解析后的 FloorRequestStatus 消息
+   * @returns {string} 请求状态值（如 Granted / Denied / Revoked）
+   */
+  handleFloorRequestStatusMessage(floorResponse) {
+    this._sendFloorRequestStatusAck(floorResponse);
+    var status = floorResponse.getAttribute(AttributeName.FloorRequestInformation).content[1].content[1].content[0];
+    this._requestStatus = status;
+
+    // 主动踢掉远端的共享
+    this._remoteShared = false;
+    this._session.emit('remoteUnShared');
+
+    // 保存 FloorRequestId，用于后续 sendFloorRelease
+    this._floorRequestId = floorResponse.getAttribute(AttributeName.FloorRequestInformation).content[0];
+    return status;
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // BFCP 音频混音
+  // ═══════════════════════════════════════════════════════════
+
+  /**
+   * 为 BFCP 创建混音音频轨道。
+   * 将 mediaStream 的音频输入 AudioContext 混音，返回混音后的 AudioTrack。
+   *
+   * @param {MediaStream} mediaStream - 需要混音的媒体流
+   * @returns {MediaStreamTrack} 混音后的音频轨道
+   */
+  _createBfcpAudioTrack(mediaStream) {
+    this._bfcpAudioCtx = new AudioContext();
+    var audioSource = this._bfcpAudioCtx.createMediaStreamSource(mediaStream);
+    this._bfcpAudioSources.push(audioSource);
+    this._bfcpAudioDestination = this._bfcpAudioCtx.createMediaStreamDestination();
+    audioSource.connect(this._bfcpAudioDestination);
+    return this._bfcpAudioDestination.stream.getAudioTracks()[0];
+  }
+
+  /**
+   * 将屏幕共享的音频轨道加入 BFCP 混音。
+   *
+   * @param {MediaStream} mediaStream - 屏幕共享流
+   */
+  addShareAudioToBfcpAudioTrack(mediaStream) {
+    var audioSource = this._bfcpAudioCtx.createMediaStreamSource(mediaStream);
+    this._bfcpAudioSources.push(audioSource);
+    audioSource.connect(this._bfcpAudioDestination);
+  }
+
+  /**
+   * 销毁 BFCP 混音资源。
+   */
+  destroyBfcpAudioTrack() {
+    if (this._bfcpAudioSources.length > 0) {
+      this._bfcpAudioSources.forEach(audioSource => audioSource.disconnect());
+      this._bfcpAudioSources = [];
+      this._bfcpAudioDestination = null;
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // DataChannel 生命周期
+  // ═══════════════════════════════════════════════════════════
+
+  /**
+   * 初始化 DataChannel。
+   * 外呼方通过 createDataChannel 创建，呼入方通过 ondatachannel 事件接收。
+   * 设置 binaryType、onmessage、onopen（启动心跳）、onclose、onerror 等事件处理。
+   *
+   * @param {Object} [event] - 呼入方的 datachannel 事件对象
+   * @returns {RTCDataChannel|undefined}
+   */
+  _initDataChannel(event) {
+    logger.debug(`${this._session._id} initDataChannel() ${JSON.stringify(event)}`);
+    var datachannel;
+
+    // 呼入方：使用远端创建的 channel
+    if (event && event.channel) {
+      this._dataChannel = datachannel = event.channel;
+    }
+    // 外呼方：本端创建 DataChannel
+    else {
+      this._dataChannel = datachannel = this._session._connection.createDataChannel(this._dataChannelName, this._dataChannelConfig);
+    }
+
+    // 特殊场景存在 createDataChannel 不成功的问题
+    if (!datachannel) {
+      logger.error(`${this._session._id} Data channel event is missing \`channel\` property`);
+      return;
+    }
+
+    // 设置二进制传输模式
+    datachannel.binaryType = 'arraybuffer';
+    this._dataChannelName = datachannel.label;
+
+    // 收到消息
+    datachannel.onmessage = ev => {
+      this._onChannelMessage(ev);
+    };
+
+    // DC 打开：开始发送 BFCP Hello 心跳
+    datachannel.onopen = () => {
+      logger.warn(`${this._session._id} datachannel opened.`);
+      this._dataChannelReady = true;
+      this.sendHello();
+      this._bfcpHeatbeatTimer = setInterval(() => {
+        this.sendHello();
+      }, CRTC_C.BFCP_HEARTBEAT_INTERVAL);
+    };
+
+    // DC 关闭
+    datachannel.onclose = () => {
+      this._onChannelClose();
+    };
+
+    // DC 错误：尝试重连
+    datachannel.onerror = ev => {
+      logger.error(`${this._session._id} datachannel error.`);
+      var err = ev.error instanceof Error ? ev.error : new Error(`Datachannel error: ${ev.message} ${ev.filename}:${ev.lineno}:${ev.colno}`);
+      this._dataChannelReady = false;
+      logger.warn(`${this._session._id} data err: `, err);
+
+      // 如果 ICE 连接正常则触发重新协商重建 DC
+      if (this._session._connection.iceConnectionState === 'connected') {
+        this._session.renegotiate();
+      }
+    };
+
+    // Chrome 偶现 DC 卡在 "closing" 状态不触发 onclose，定时检测兜底
+    var isClosing = false;
+    this._closingInterval = setInterval(() => {
+      if (datachannel && datachannel.readyState === 'closing') {
+        if (isClosing) this._onChannelClose();
+        isClosing = true;
+      } else {
+        isClosing = false;
+      }
+    }, CRTC_C.CHANNEL_CLOSING_TIMEOUT);
+    return datachannel;
+  }
+
+  /**
+   * 处理 DataChannel 收到的消息。
+   * 先检查是否有已注册的 Promise（事务匹配），再根据 Primitive 类型路由。
+   *
+   * @param {MessageEvent} event - DataChannel 消息事件
+   */
+  _onChannelMessage(event) {
+    logger.debug(`${this._session._id} onChannelMessage()`);
+    if (!this._dataChannelReady) {
+      logger.warn(`${this._session._id} onChannelMessage(): Data channel is not ready, ignoring message.`);
+      return;
+    }
+    var data = event.data;
+    if (!(data instanceof ArrayBuffer)) {
+      logger.warn(`${this._session._id} onChannelMessage(): Received non-ArrayBuffer message, ignoring.`);
+      return;
+    }
+    try {
+      var bufferData = Buffer.from(data);
+      logger.debug(`${this._session._id} recv unit8: `, Utils.uint8ArrayToBase64(bufferData));
+
+      // 忽略空心跳包（0002 0000）
+      if (Utils.uint8ArrayToBase64(bufferData) === 'AgAAAA==') {
+        return;
+      }
+      var message = this._bfcpUser.receiveMessage(bufferData);
+      logger.debug(`${this._session._id} BFCP recv: ${JSON.stringify(message)}, Transaction ID: ${message.commonHeader.transactionId}, Timestamp: ${Date.now()}`);
+
+      // 匹配已注册的事务消息（如 FloorRequest / Hello 的响应）
+      if (this._dataChannelMsgs[message.commonHeader.transactionId]) {
+        logger.debug(`${this._session._id} bfcp response time: transactionId(${message.commonHeader.transactionId}), time(${Date.now() - this._dataChannelMsgs[message.commonHeader.transactionId].sendAt}ms)`);
+        this._dataChannelMsgs[message.commonHeader.transactionId].received = true;
+        this._dataChannelMsgs[message.commonHeader.transactionId].resolve(message);
+        delete this._dataChannelMsgs[message.commonHeader.transactionId];
+        return;
+      }
+
+      // 根据消息类型路由到对应处理器
+      switch (message.commonHeader.primitive) {
+        case Primitive.Hello:
+          this._handleHelloMessage(message);
+          break;
+        case Primitive.FloorRequestStatus:
+          this._handleFloorRequestStatus(message);
+          break;
+        case Primitive.FloorStatus:
+          this._handleFloorStatus(message);
+          break;
+        case Primitive.FloorRequest:
+          this._handleFloorRequest(message);
+          break;
+        default:
+          logger.debug(`${this._session._id} onChannelMessage(): do not require processing type: ${message.commonHeader.primitive}`);
+          break;
+      }
+    } catch (error) {
+      logger.error(`${this._session._id} onChannelMessage(): Error while processing message.`, error);
+    }
+  }
+
+  /**
+   * DataChannel 关闭后的处理。
+   * 如果 ICE 连接正常则触发重新协商重建 DC，否则清理状态。
+   */
+  _onChannelClose() {
+    logger.debug(`${this._session._id} datachannel closed.`);
+    setTimeout(() => {
+      if (this._session._connection && this._session._connection.iceConnectionState === 'connected') {
+        this._session.renegotiate();
+      } else {
+        this._dataChannelReady = false;
+        clearInterval(this._bfcpHeatbeatTimer);
+        this._bfcpHeatbeatTimer = null;
+        clearInterval(this._closingInterval);
+      }
+    }, 1000);
+  }
+
+  /**
+   * 通过 DataChannel 发送消息，带超时重试机制。
+   * FloorRelease 消息不重试。
+   *
+   * @param {Buffer}  message       - 待发送的 BFCP 消息
+   * @param {number}  transactionId - 事务 ID
+   * @returns {Promise<Object>} 解析后的响应消息
+   */
+  _dataChannelSend(message, transactionId) {
+    logger.debug(`${this._session._id} dataChannelSend() ${transactionId}`);
+    return new Promise((resolve, reject) => {
+      if (!this._dataChannelReady) {
+        reject(`[DataChannel] Not ready for transactionId: ${transactionId}`);
+        logger.error(`${this._session._id} [DataChannel] Not ready for transactionId: ${transactionId}`);
+        return;
+      }
+
+      // 注册事务消息，等待响应匹配
+      if (!this._dataChannelMsgs[transactionId]) {
+        this._dataChannelMsgs[transactionId] = {
+          retries: 0,
+          sendAt: Date.now(),
+          message,
+          received: false,
+          resolve,
+          reject
+        };
+      }
+      var messageState = this._dataChannelMsgs[transactionId];
+
+      // 超过最大重试次数
+      if (messageState.retries !== 0 && messageState.retries > CRTC_C.MAX_RETRY_ATTEMPTS) {
+        logger.warn(`${this._session._id} [DataChannel] Max retry attempts (${CRTC_C.MAX_RETRY_ATTEMPTS}) reached for transactionId: ${transactionId}`);
+        messageState.reject(`[DataChannel] Max retry attempts (${CRTC_C.MAX_RETRY_ATTEMPTS}) reached for transactionId: ${transactionId}`);
+        return;
+      }
+      logger.debug(`${this._session._id} BFCP send: ${JSON.stringify(this._bfcpUser.receiveMessage(messageState.message))} ${JSON.stringify(Utils.uint8ArrayToBase64(messageState.message))} ${messageState.retries + 1}, ${transactionId} ${Date.now()}`);
+      var sendMessage = this._bfcpUser.receiveMessage(messageState.message);
+
+      // FloorRelease 不重发，其他消息启用指数退避重试
+      if (CRTC_C.MAX_RETRY_ATTEMPTS > 0 && sendMessage.commonHeader.primitive !== Primitive.FloorRelease) {
+        setTimeout(() => {
+          if (messageState && !messageState.received) {
+            messageState.retries++;
+            this._dataChannelSend(messageState.message, transactionId);
+          }
+        }, Math.pow(2, messageState.retries) * 500);
+      }
+      this._dataChannel && this._dataChannel.send(messageState.message);
+    });
+  }
+
+  /**
+   * 直接通过 DataChannel 发送消息（无重试），用于 ACK 类响应。
+   */
+  _sendDataChannelMessage(message, transactionId) {
+    logger.debug(`${this._session._id} Sending message ${Utils.uint8ArrayToBase64(message)} with Transaction ID: ${transactionId}, Timestamp: ${Date.now()}`);
+    this._dataChannel.send(message);
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // BFCP 消息处理器
+  // ═══════════════════════════════════════════════════════════
+
+  /**
+   * 处理收到的 Hello 消息：回复 HelloAck。
+   */
+  _handleHelloMessage(message) {
+    logger.debug(`${this._session._id} BFCP send HACK: Transaction ID: ${message.commonHeader.transactionId}, Timestamp: ${Date.now()}`);
+    var response = this._bfcpUser.helloAckMessage(message);
+    this._sendDataChannelMessage(response);
+  }
+
+  /**
+   * 处理收到的 FloorRequestStatus 消息（来自服务器对本端请求的响应）。
+   * 发送 FloorRequestStatusAck 确认，如果状态为 Revoked 则自动取消共享。
+   */
+  _handleFloorRequestStatus(message) {
+    logger.debug(`${this._session._id} BFCP send FloorRequestStatusACK: Transaction ID: ${message.commonHeader.transactionId}, Timestamp: ${Date.now()}`);
+    var response = this._bfcpUser.floorRequestStatusAckMessage(message);
+    this._sendDataChannelMessage(response);
+
+    // 处理本端分享被撤销的情况
+    var status = message.getAttribute(AttributeName.FloorRequestInformation).content[1].content[1].content[0];
+    if (status === RequestStatusValue.Revoked) {
+      this._requestStatus = status;
+      // 已经共享了的自动取消共享
+      if (this._session._localShareStreamLocallyGenerated) {
+        this._session.unShare();
+      }
+    }
+  }
+
+  /**
+   * 处理收到的 FloorStatus 消息（远端共享状态变更通知）。
+   * 根据 Granted / Released 触发 remoteShared / remoteUnShared 事件。
+   */
+  _handleFloorStatus(message) {
+    var floorStatus = message.getAttribute(AttributeName.FloorRequestInformation).content[1].content[1].content[0];
+    if (floorStatus === RequestStatusValue.Granted && !this._remoteShared) {
+      this._remoteShared = true;
+      this._session.emit('remoteShared', {
+        sharedStream: this._bfcpStream
+      });
+    } else if (floorStatus === RequestStatusValue.Released && this._remoteShared) {
+      this._remoteShared = false;
+      this._session.emit('remoteUnShared');
+    } else {
+      logger.warn(`${this._session._id} Unknown floor status: ${floorStatus}`);
+    }
+  }
+
+  /**
+   * 处理收到的 FloorRequest 消息（远端请求共享权限）。
+   * 如果没有外部监听器，自动 Granted；否则抛出 floorRequest 事件交业务决定。
+   */
+  _handleFloorRequest(message) {
+    var wantedFloorId = message.getAttribute(AttributeName.FloorId).content;
+    if (this._session.listeners('floorRequest').length === 0 || message.commonHeader.primitive === Primitive.FloorRelease) {
+      // 自动接受请求
+      var response = this._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Granted);
+      this._sendDataChannelMessage(response, message.commonHeader.transactionId);
+    } else {
+      // 触发事件，允许外部处理
+      this._session.emit('floorRequest', {
+        message,
+        accept: () => {
+          var response = this._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Granted);
+          this._sendDataChannelMessage(response, message.commonHeader.transactionId);
+        },
+        reject: () => {
+          var response = this._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Denied);
+          this._sendDataChannelMessage(response, message.commonHeader.transactionId);
+        }
+      });
+    }
+  }
+
+  /**
+   * 发送 FloorRequestStatusAck 确认。
+   */
+  _sendFloorRequestStatusAck(message) {
+    logger.debug(`${this._session._id} _sendFloorStatusAck()`);
+    var floorStatus = this._bfcpUser.floorStatusAckMessage(this._floorId, message);
+    return this._sendDataChannelMessage(floorStatus);
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // 工具方法
+  // ═══════════════════════════════════════════════════════════
+
+  /**
+   * 判断一个轨道是否为 canvas 生成的视频轨道。
+   * 用于区分 BFCP 占位轨道、画布流轨道和真实摄像头轨道。
+   *
+   * @param {MediaStreamTrack} track
+   * @returns {boolean}
+   */
+  _isCanvasTrack(track) {
+    var settings = track.getSettings();
+    return !settings.deviceId || settings.deviceId === 'canvas' || track.label.toLowerCase().includes('canvas') || track.constructor && track.constructor.name === 'CanvasCaptureMediaStreamTrack' || !settings.deviceId && track.label.includes('MediaStreamTrack');
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // 资源清理
+  // ═══════════════════════════════════════════════════════════
+
+  /**
+   * 关闭并清理所有 BFCP / DataChannel 相关资源。
+   * 清理顺序：混音资源 → MediaStream → bfcpStream → DataChannel → 定时器。
+   */
+  close() {
+    // 销毁 BFCP 混音
+    this.destroyBfcpAudioTrack();
+
+    // 关闭 BFCP 相关 MediaStream
+    if (this._bfcpMediastreams.length > 0) {
+      this._bfcpMediastreams.forEach(mediaStream => {
+        logger.debug(`${this._session._id} close() | closing local bfcp MediaStream`);
+        Utils.closeMediaStream(mediaStream);
+      });
+    }
+
+    // 关闭远端辅流
+    if (this._bfcpStream) {
+      logger.debug(`${this._session._id} close() | closing local bfcp MediaStream`);
+      Utils.closeMediaStream(this._bfcpStream);
+    }
+
+    // 关闭 DataChannel
+    if (this._dataChannel) {
+      this._dataChannel.close();
+      this._dataChannel = null;
+    }
+
+    // 重置状态
+    this._dataChannelReady = false;
+
+    // 停止 BFCP 心跳
+    if (this._bfcpHeatbeatTimer) {
+      clearInterval(this._bfcpHeatbeatTimer);
+      this._bfcpHeatbeatTimer = null;
+    }
+
+    // 停止 closing 状态检测
+    if (this._closingInterval) {
+      clearInterval(this._closingInterval);
+    }
+  }
+};
 }).call(this)}).call(this,require("buffer").Buffer)
 
-},{"./BFCP/index":11,"./Constants":30,"./Dialog":32,"./Exceptions":35,"./Logger":38,"./MediaEffectsIssue":57,"./RTCSession/DTMF":63,"./RTCSession/Info":64,"./RTCSession/MediaPipeline":65,"./RTCSession/ReferNotifier":66,"./RTCSession/ReferSubscriber":67,"./RequestSender":69,"./SIPMessage":70,"./Timers":73,"./Transactions":74,"./URI":77,"./Utils":78,"buffer":83,"events":82,"sdp-transform":91}],63:[function(require,module,exports){
+},{"../BFCP/index":11,"../Constants":30,"../Logger":38,"../Utils":79,"buffer":84}],64:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -35735,7 +36048,7 @@ module.exports = class DTMF extends EventEmitter {
  * Expose C object.
  */
 module.exports.C = C;
-},{"../Constants":30,"../Exceptions":35,"../Logger":38,"../Utils":78,"events":82}],64:[function(require,module,exports){
+},{"../Constants":30,"../Exceptions":35,"../Logger":38,"../Utils":79,"events":83}],65:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -35816,7 +36129,7 @@ module.exports = class Info extends EventEmitter {
     });
   }
 };
-},{"../Constants":30,"../Exceptions":35,"../Utils":78,"events":82}],65:[function(require,module,exports){
+},{"../Constants":30,"../Exceptions":35,"../Utils":79,"events":83}],66:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
@@ -36595,7 +36908,7 @@ module.exports = class MediaPipeline {
     return await this.applyMediaEffectsComposerOnSdkGumStream(aiNoiseSuppressedStream, composerOptions);
   }
 };
-},{"../AiNoiseSuppression/AiNSEngine":2,"../Logger":38,"../MediaEffectsComposer/MediaEffectsComposer":47,"../MediaEffectsIssue":57,"../Utils":78}],66:[function(require,module,exports){
+},{"../AiNoiseSuppression/AiNSEngine":2,"../Logger":38,"../MediaEffectsComposer/MediaEffectsComposer":47,"../MediaEffectsIssue":57,"../Utils":79}],67:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
@@ -36642,7 +36955,7 @@ module.exports = class ReferNotifier {
     });
   }
 };
-},{"../Constants":30,"../Logger":38}],67:[function(require,module,exports){
+},{"../Constants":30,"../Logger":38}],68:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -36766,7 +37079,7 @@ module.exports = class ReferSubscriber extends EventEmitter {
     });
   }
 };
-},{"../Constants":30,"../Grammar":36,"../Logger":38,"../Utils":78,"events":82}],68:[function(require,module,exports){
+},{"../Constants":30,"../Grammar":36,"../Logger":38,"../Utils":79,"events":83}],69:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -37064,7 +37377,7 @@ ${this._contact}${this._extraContactParams}`);
     });
   }
 };
-},{"./Constants":30,"./Logger":38,"./RequestSender":69,"./SIPMessage":70,"./Utils":78}],69:[function(require,module,exports){
+},{"./Constants":30,"./Logger":38,"./RequestSender":70,"./SIPMessage":71,"./Utils":79}],70:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -37203,7 +37516,7 @@ module.exports = class RequestSender {
     }
   }
 };
-},{"./Constants":30,"./DigestAuthentication":34,"./Logger":38,"./Transactions":74}],70:[function(require,module,exports){
+},{"./Constants":30,"./DigestAuthentication":34,"./Logger":38,"./Transactions":75}],71:[function(require,module,exports){
 "use strict";
 
 var sdp_transform = require('sdp-transform');
@@ -37775,7 +38088,7 @@ module.exports = {
   IncomingRequest,
   IncomingResponse
 };
-},{"./Constants":30,"./Grammar":36,"./Logger":38,"./NameAddrHeader":59,"./Utils":78,"sdp-transform":91}],71:[function(require,module,exports){
+},{"./Constants":30,"./Grammar":36,"./Logger":38,"./NameAddrHeader":59,"./Utils":79,"sdp-transform":92}],72:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -37843,7 +38156,7 @@ exports.isSocket = socket => {
   }
   return true;
 };
-},{"./Grammar":36,"./Logger":38,"./Utils":78}],72:[function(require,module,exports){
+},{"./Grammar":36,"./Logger":38,"./Utils":79}],73:[function(require,module,exports){
 "use strict";
 
 /* eslint-disable max-len */
@@ -38249,7 +38562,7 @@ module.exports = class getStats extends EventEmitter {
     this.emit('network-quality', this._networkQuality);
   }
 };
-},{"./Constants":30,"./Logger":38,"./Utils":78,"events":82}],73:[function(require,module,exports){
+},{"./Constants":30,"./Logger":38,"./Utils":79,"events":83}],74:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
@@ -38270,7 +38583,7 @@ module.exports = {
   TIMER_M: 64 * T1,
   PROVISIONAL_RESPONSE_INTERVAL: 60000 // See RFC 3261 Section 13.3.1.1
 };
-},{}],74:[function(require,module,exports){
+},{}],75:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -38860,7 +39173,7 @@ module.exports = {
   InviteServerTransaction,
   checkTransaction
 };
-},{"./Constants":30,"./Logger":38,"./SIPMessage":70,"./Timers":73,"events":82}],75:[function(require,module,exports){
+},{"./Constants":30,"./Logger":38,"./SIPMessage":71,"./Timers":74,"events":83}],76:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -39235,7 +39548,7 @@ module.exports = class Transport {
     });
   }
 };
-},{"./Constants":30,"./Logger":38,"./Socket":71,"./Utils":78}],76:[function(require,module,exports){
+},{"./Constants":30,"./Logger":38,"./Socket":72,"./Utils":79}],77:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -40295,7 +40608,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":29,"./Constants":30,"./CryptoKey":31,"./Exceptions":35,"./Logger":38,"./Message":58,"./Options":60,"./Parser":61,"./RTCSession":62,"./Registrator":68,"./SIPMessage":70,"./Transactions":74,"./Transport":75,"./URI":77,"./Utils":78,"./sanityCheck":80,"events":82,"jsencrypt":87}],77:[function(require,module,exports){
+},{"./Config":29,"./Constants":30,"./CryptoKey":31,"./Exceptions":35,"./Logger":38,"./Message":58,"./Options":60,"./Parser":61,"./RTCSession":62,"./Registrator":69,"./SIPMessage":71,"./Transactions":75,"./Transport":76,"./URI":78,"./Utils":79,"./sanityCheck":81,"events":83,"jsencrypt":88}],78:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('./Constants');
@@ -40467,7 +40780,7 @@ module.exports = class URI {
     return aor;
   }
 };
-},{"./Constants":30,"./Grammar":36,"./Utils":78}],78:[function(require,module,exports){
+},{"./Constants":30,"./Grammar":36,"./Utils":79}],79:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('./Constants');
@@ -42525,7 +42838,7 @@ exports.disableVideoInSdp = sdp => {
   });
   return newSdp;
 };
-},{"./Constants":30,"./Grammar":36,"./URI":77}],79:[function(require,module,exports){
+},{"./Constants":30,"./Grammar":36,"./URI":78}],80:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -42644,7 +42957,7 @@ module.exports = class WebSocketInterface {
     logger.warn(`WebSocket ${this._url} error: `, e);
   }
 };
-},{"./Grammar":36,"./Logger":38}],80:[function(require,module,exports){
+},{"./Grammar":36,"./Logger":38}],81:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -42837,7 +43150,7 @@ function reply(status_code) {
   response += '\r\n';
   transport.send(response);
 }
-},{"./Constants":30,"./Logger":38,"./SIPMessage":70,"./Utils":78}],81:[function(require,module,exports){
+},{"./Constants":30,"./Logger":38,"./SIPMessage":71,"./Utils":79}],82:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -42989,7 +43302,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],82:[function(require,module,exports){
+},{}],83:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -43514,7 +43827,7 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],83:[function(require,module,exports){
+},{}],84:[function(require,module,exports){
 (function (Buffer){(function (){
 /*!
  * The buffer module from node.js, for the browser.
@@ -45296,7 +45609,7 @@ function numberIsNaN (obj) {
 
 }).call(this)}).call(this,require("buffer").Buffer)
 
-},{"base64-js":81,"buffer":83,"ieee754":86}],84:[function(require,module,exports){
+},{"base64-js":82,"buffer":84,"ieee754":87}],85:[function(require,module,exports){
 (function (process){(function (){
 /* eslint-env browser */
 
@@ -45573,7 +45886,7 @@ formatters.j = function (v) {
 
 }).call(this)}).call(this,require('_process'))
 
-},{"./common":85,"_process":89}],85:[function(require,module,exports){
+},{"./common":86,"_process":90}],86:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -45867,7 +46180,7 @@ function setup(env) {
 
 module.exports = setup;
 
-},{"ms":88}],86:[function(require,module,exports){
+},{"ms":89}],87:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
@@ -45954,7 +46267,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],87:[function(require,module,exports){
+},{}],88:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -51345,7 +51658,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{}],88:[function(require,module,exports){
+},{}],89:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -51509,7 +51822,7 @@ function plural(ms, msAbs, n, name) {
   return Math.round(ms / n) + ' ' + name + (isPlural ? 's' : '');
 }
 
-},{}],89:[function(require,module,exports){
+},{}],90:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -51695,7 +52008,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],90:[function(require,module,exports){
+},{}],91:[function(require,module,exports){
 var grammar = module.exports = {
   v: [{
     name: 'version',
@@ -52191,7 +52504,7 @@ Object.keys(grammar).forEach(function (key) {
   });
 });
 
-},{}],91:[function(require,module,exports){
+},{}],92:[function(require,module,exports){
 var parser = require('./parser');
 var writer = require('./writer');
 var grammar = require('./grammar');
@@ -52206,7 +52519,7 @@ exports.parseRemoteCandidates = parser.parseRemoteCandidates;
 exports.parseImageAttributes = parser.parseImageAttributes;
 exports.parseSimulcastStreamList = parser.parseSimulcastStreamList;
 
-},{"./grammar":90,"./parser":92,"./writer":93}],92:[function(require,module,exports){
+},{"./grammar":91,"./parser":93,"./writer":94}],93:[function(require,module,exports){
 var toIntIfInt = function (v) {
   return String(Number(v)) === v ? Number(v) : v;
 };
@@ -52332,7 +52645,7 @@ exports.parseSimulcastStreamList = function (str) {
   });
 };
 
-},{"./grammar":90}],93:[function(require,module,exports){
+},{"./grammar":91}],94:[function(require,module,exports){
 var grammar = require('./grammar');
 
 // customized util.format - discards excess arguments and can void middle ones
@@ -52448,7 +52761,7 @@ module.exports = function (session, opts) {
   return sdp.join('\r\n') + '\r\n';
 };
 
-},{"./grammar":90}]},{},[37])(37)
+},{"./grammar":91}]},{},[37])(37)
 });
 
 //# sourceMappingURL=maps/CRTC.js.map
