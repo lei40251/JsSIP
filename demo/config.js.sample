@@ -13,3 +13,7 @@ const defaulteEnvs = {
 const envs = {
   env_default : defaulteEnvs,
 };
+
+//数字人用
+const metaHumanServer = '';
+const metaHumanIceServers = [];

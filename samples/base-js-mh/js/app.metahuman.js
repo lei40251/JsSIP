@@ -15,11 +15,6 @@
 // 当前 MetaHumanClient 实例
 let mh = null;
 
-const META_HUMAN_SERVER = 'https://dev.vsbc.com:9090';
-const META_HUMAN_TURN_SERVERS = [
-  { urls: 'turn:dev.vsbc.com:9001?transport=udp', username: 'test', credential: 'test' }
-];
-
 /**
  * 释放当前数字人连接，并清理预览画面。
  */
@@ -103,9 +98,10 @@ function buildMetaHumanOptions()
 {
   syncMetaHumanConfigFromUI();
 
+  // 从当前环境配置读取 metaHumanServer（定义在 config.js）
   return {
-    server             : META_HUMAN_SERVER,
-    iceServers         : META_HUMAN_TURN_SERVERS,
+    server             : metaHumanServer,
+    iceServers         : metaHumanIceServers,
     avatar             : metaavatar,
     flag               : metaflag,
     micDeviceId        : selectMic || undefined,

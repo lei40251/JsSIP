@@ -15,6 +15,10 @@ const defaulteEnv_no = {
   secretKey    : sessionStorage.getItem('secret_key') || 'NqxXyFxzRgtUFimTCPdX++hWdLPlFNZsiD9FzMyZF3fLix3YQ33e81ioVXEmH5lTNDWN4R/FX43O+L4qgi1P02Zi8t18Stg36yxG8N9mLTtM8ksD1joAV21MT/NquAadCI0u/Ki9jwxoyutWd5BlpimAWvEKeZycgPnxbQJdlse8lyuQMDdMfY+EbBvuqe7eYOpIOG3Qh5xwfnK1tSJK5vkNSI0HWOFGEYKGynayYKnzOCLRC1Us4VPsD+a50IpiZAn7/sSpTXByt5uclHvIdWe1DaeSlKM/dPm9KpO78fRTdlqFEpWMdyZ8MUoFDXktRjl3PLPnAmTdSnSo3fyA6g=='
 };
 
+const metaHumanServer = 'https://dev.vsbc.com:9090';
+const metaHumanIceServers = [ { urls: 'turn:dev.vsbc.com:9001?transport=udp', username: 'test', credential: 'test' } ];
+
+
 const envs =
 {
   env_default : defaulteEnv,
