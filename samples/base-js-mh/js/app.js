@@ -93,6 +93,10 @@ let cloneStream = null;
 // 是否正在处理 refer 呼叫转移
 let isRefer = false;
 
+// 数字人（MetaHuman）通话相关变量
+let metaflag = 0; // ASR/TTS 处理开关（0 不处理，1 处理）
+let metaavatar = 'wav2lip256_avatar1'; // 数字人头像标识
+
 // =============================================================================
 // 录音与通知变量
 // =============================================================================
@@ -817,6 +821,11 @@ ua.on('newRTCSession', function(e)
     cusMediaStream.getTracks().forEach((track) => track.stop());
     cusMediaStream = new MediaStream();
 
+    if (typeof releaseMetaHuman === 'function')
+    {
+      releaseMetaHuman();
+    }
+
     // 停止 AiNS 验证器（如果该 demo 版本提供了该函数）
     if (typeof stopAiNsMonitor === 'function')
     {
@@ -905,6 +914,11 @@ ua.on('newRTCSession', function(e)
     // 清理自定义媒体流
     cusMediaStream.getTracks().forEach((track) => track.stop());
     cusMediaStream = new MediaStream();
+
+    if (typeof releaseMetaHuman === 'function')
+    {
+      releaseMetaHuman();
+    }
 
     // 停止 AiNS 验证器（如果该 demo 版本提供了该函数）
     if (typeof stopAiNsMonitor === 'function')
@@ -2186,7 +2200,7 @@ async function call(type, direction, mediaStream)
 
     // ---- 重新构建媒体效果和降噪配置（使用最新的 UI 选择） ----
     options.mediaEffectsComposer = buildCallComposerOptions();
-    options.aiNoiseSuppression = buildCallAiNsOptions();
+    options.aiNoiseSuppression = isMetaHumanMediaStream(mediaStream) ? null : buildCallAiNsOptions();
 
     remoteNo = number;
 
@@ -2243,6 +2257,11 @@ async function call(type, direction, mediaStream)
       });
 
       cloneStream = null;
+
+      if (typeof releaseMetaHuman === 'function')
+      {
+        releaseMetaHuman();
+      }
     };
   }
   catch (error)

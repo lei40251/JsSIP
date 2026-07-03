@@ -6,6 +6,7 @@
   --muted: #6a7a90;
   --radius: 5px;
   --shadow: 0 10px 24px rgba(20, 31, 48, 0.08);
+  --call-config-side-field-width: 84px;
 }
 
 html,
@@ -386,7 +387,7 @@ body {
 
 .call-config-row {
   display: grid;
-  grid-template-columns: minmax(0, 5.15fr) minmax(0, 2.6fr) minmax(0, 1.7fr);
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
   gap: 0.5rem;
   align-items: stretch;
 }
@@ -410,6 +411,24 @@ body {
 .call-config-group-main .call-field-label,
 .call-config-group-main .call-config-group-title {
   color: #6f5736;
+}
+
+.call-config-group-meta {
+  border-color: #ddd7f2;
+  background: linear-gradient(180deg, #fcfbff, #f5f2ff);
+}
+
+.call-config-group-meta .call-field-label,
+.call-config-group-meta .call-config-group-title {
+  color: #62507e;
+}
+
+.call-config-group-meta,
+.call-config-group-effects,
+.call-config-group-ains {
+  width: fit-content;
+  max-width: 100%;
+  justify-self: start;
 }
 
 .call-config-group-effects {
@@ -444,15 +463,22 @@ body {
 
 .call-config-grid-main {
   grid-template-columns:
-    minmax(0, 1.4fr) minmax(0, 1.18fr) minmax(0, 1.18fr) minmax(0, 0.96fr) minmax(0, 0.96fr);
+    minmax(0, 1.34fr) minmax(0, 1.06fr) minmax(0, 1.06fr) minmax(0, 1.24fr) minmax(0, 0.94fr);
+}
+
+.call-config-grid-meta {
+  width: fit-content;
+  grid-template-columns: repeat(2, minmax(0, var(--call-config-side-field-width)));
 }
 
 .call-config-grid-effects {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.18fr);
+  width: fit-content;
+  grid-template-columns: repeat(2, minmax(0, var(--call-config-side-field-width)));
 }
 
 .call-config-grid-ains {
-  grid-template-columns: minmax(0, 1.06fr) minmax(0, 0.94fr);
+  width: fit-content;
+  grid-template-columns: repeat(2, minmax(0, var(--call-config-side-field-width)));
 }
 
 .call-field .form-control,
@@ -466,12 +492,24 @@ body {
 .call-config-grid-main #cameras,
 .call-config-grid-main #mics,
 .call-config-grid-main #useupdate,
-.call-config-grid-main #videoHint,
+.call-config-grid-main #videoHint {
+  width: 100%;
+  max-width: none !important;
+}
+
+.call-config-grid-meta #metaflag,
+.call-config-grid-meta #metaavatar,
 .call-config-grid-effects #callMediaEffectsComposerOutputMirror,
-.call-config-grid-effects #virtualBackground,
+.call-config-grid-effects #virtualBackground {
+  width: 100%;
+  min-width: 0;
+  max-width: none !important;
+}
+
 .call-config-grid-ains #aiNoiseSuppression,
 .call-config-grid-ains #aiNoiseReductionLevel {
   width: 100%;
+  min-width: 0;
   max-width: none !important;
 }
 
@@ -705,7 +743,7 @@ body {
 @media (max-width: 1399px) {
   .call-config-row {
     display: grid;
-    grid-template-columns: minmax(0, 5fr) minmax(240px, 2.25fr) minmax(200px, 1.4fr);
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
     align-items: stretch;
     gap: 0.4rem;
   }
@@ -716,6 +754,7 @@ body {
   }
 
   .call-config-group-main,
+  .call-config-group-meta,
   .call-config-group-effects,
   .call-config-group-ains {
     width: auto;
@@ -729,18 +768,22 @@ body {
 
   .call-config-grid-main {
     grid-template-columns:
-      minmax(92px, 1fr) minmax(104px, 1.08fr) minmax(104px, 1.08fr) minmax(88px, 0.86fr) minmax(88px, 0.86fr);
+      minmax(88px, 1fr) minmax(94px, 1.02fr) minmax(94px, 1.02fr) minmax(84px, 1.14fr) minmax(82px, 0.92fr);
+  }
+
+  .call-config-grid-meta {
+    grid-template-columns: repeat(2, minmax(0, var(--call-config-side-field-width)));
   }
 
   .call-config-grid-effects {
-    grid-template-columns:
-      minmax(104px, 0.96fr) minmax(112px, 1.12fr);
+    grid-template-columns: repeat(2, minmax(0, var(--call-config-side-field-width)));
   }
 
   .call-config-grid-ains {
-    grid-template-columns:
-      minmax(102px, 1fr) minmax(72px, 0.72fr);
+    grid-template-columns: repeat(2, minmax(0, var(--call-config-side-field-width)));
   }
+
+
 
   .log-card {
     max-height: calc(100vh - 108px);
@@ -757,7 +800,7 @@ body {
   }
 
   .call-config-row {
-    grid-template-columns: minmax(0, 4.75fr) minmax(228px, 2.2fr) minmax(188px, 1.34fr);
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
     gap: 0.32rem;
   }
 
@@ -771,18 +814,22 @@ body {
 
   .call-config-grid-main {
     grid-template-columns:
-      minmax(88px, 1fr) minmax(78px, 0.84fr) minmax(78px, 0.84fr) minmax(84px, 0.88fr) minmax(60px, 0.58fr);
+      minmax(82px, 0.94fr) minmax(68px, 0.76fr) minmax(68px, 0.76fr) minmax(94px, 1.16fr) minmax(62px, 0.62fr);
+  }
+
+  .call-config-grid-meta {
+    grid-template-columns: repeat(2, minmax(0, var(--call-config-side-field-width)));
   }
 
   .call-config-grid-effects {
-    grid-template-columns:
-      minmax(92px, 0.88fr) minmax(104px, 1.06fr);
+    grid-template-columns: repeat(2, minmax(0, var(--call-config-side-field-width)));
   }
 
   .call-config-grid-ains {
-    grid-template-columns:
-      minmax(92px, 0.9fr) minmax(68px, 0.64fr);
+    grid-template-columns: repeat(2, minmax(0, var(--call-config-side-field-width)));
   }
+
+
 
   .call-field-label {
     font-size: 0.68rem;
@@ -805,7 +852,7 @@ body {
 @media (max-width: 1510px) and (min-width: 1400px) {
   .call-config-row {
     display: grid;
-    grid-template-columns: minmax(0, 4.95fr) minmax(242px, 2.25fr) minmax(196px, 1.38fr);
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
     align-items: stretch;
     gap: 0.34rem;
   }
@@ -817,6 +864,7 @@ body {
   }
 
   .call-config-group-main,
+  .call-config-group-meta,
   .call-config-group-effects,
   .call-config-group-ains {
     width: auto;
@@ -830,18 +878,22 @@ body {
 
   .call-config-grid-main {
     grid-template-columns:
-      minmax(94px, 1.04fr) minmax(100px, 1.02fr) minmax(100px, 1.02fr) minmax(88px, 0.86fr) minmax(78px, 0.74fr);
+      minmax(86px, 0.92fr) minmax(84px, 0.84fr) minmax(84px, 0.84fr) minmax(102px, 1.12fr) minmax(70px, 0.68fr);
+  }
+
+  .call-config-grid-meta {
+    grid-template-columns: repeat(2, minmax(0, var(--call-config-side-field-width)));
   }
 
   .call-config-grid-effects {
-    grid-template-columns:
-      minmax(108px, 0.98fr) minmax(126px, 1.24fr);
+    grid-template-columns: repeat(2, minmax(0, var(--call-config-side-field-width)));
   }
 
   .call-config-grid-ains {
-    grid-template-columns:
-      minmax(104px, 1fr) minmax(76px, 0.74fr);
+    grid-template-columns: repeat(2, minmax(0, var(--call-config-side-field-width)));
   }
+
+
 
   .call-field-label {
     white-space: nowrap;
@@ -874,12 +926,27 @@ body {
     grid-template-columns: repeat(3, minmax(140px, 1fr));
   }
 
+  .call-config-grid-meta {
+    grid-template-columns: repeat(2, minmax(140px, 1fr));
+  }
+
   .call-config-grid-effects {
     grid-template-columns: repeat(2, minmax(140px, 1fr));
   }
 
   .call-config-grid-ains {
     grid-template-columns: repeat(2, minmax(140px, 1fr));
+  }
+
+  .call-config-grid-meta #metaflag,
+  .call-config-grid-meta #metaavatar,
+  .call-config-grid-effects #callMediaEffectsComposerOutputMirror,
+  .call-config-grid-effects #virtualBackground,
+  .call-config-grid-ains #aiNoiseSuppression,
+  .call-config-grid-ains #aiNoiseReductionLevel {
+    width: 100%;
+    min-width: 0;
+    max-width: none !important;
   }
 }
 
@@ -921,12 +988,27 @@ body {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .call-config-grid-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .call-config-grid-effects {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .call-config-grid-ains {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .call-config-grid-meta #metaflag,
+  .call-config-grid-meta #metaavatar,
+  .call-config-grid-effects #callMediaEffectsComposerOutputMirror,
+  .call-config-grid-effects #virtualBackground,
+  .call-config-grid-ains #aiNoiseSuppression,
+  .call-config-grid-ains #aiNoiseReductionLevel {
+    width: 100%;
+    min-width: 0;
+    max-width: none !important;
   }
 
   .control-card .btn {
@@ -1014,3 +1096,5 @@ body {
     gap: 0.4rem;
   }
 }
+
+

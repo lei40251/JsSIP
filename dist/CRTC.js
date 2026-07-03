@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.5.20266272212
+ * CRTC v2.0.5.202673156
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3849,7 +3849,7 @@ User.FloorRequestId = 0;
 module.exports = User;
 }).call(this)}).call(this,require("buffer").Buffer)
 
-},{"../AttributeName.js":6,"../messages/FloorRelease.js":14,"../messages/FloorRequest.js":15,"../messages/FloorRequestStatus.js":16,"../messages/FloorRequestStatusAck.js":17,"../messages/FloorStatus.js":18,"../messages/FloorStatusAck.js":19,"../messages/Hello.js":20,"../messages/HelloAck.js":21,"../messages/Primitive.js":24,"../messages/RequestStatusValue.js":25,"../parser/Parser.js":27,"buffer":84}],29:[function(require,module,exports){
+},{"../AttributeName.js":6,"../messages/FloorRelease.js":14,"../messages/FloorRequest.js":15,"../messages/FloorRequestStatus.js":16,"../messages/FloorRequestStatusAck.js":17,"../messages/FloorStatus.js":18,"../messages/FloorStatusAck.js":19,"../messages/Hello.js":20,"../messages/HelloAck.js":21,"../messages/Primitive.js":24,"../messages/RequestStatusValue.js":25,"../parser/Parser.js":27,"buffer":85}],29:[function(require,module,exports){
 "use strict";
 
 var Utils = require('./Utils');
@@ -4098,11 +4098,11 @@ exports.load = (dst, src) => {
     }
   }
 };
-},{"./Constants":30,"./Exceptions":35,"./Grammar":36,"./Socket":72,"./URI":78,"./Utils":79}],30:[function(require,module,exports){
+},{"./Constants":30,"./Exceptions":35,"./Grammar":36,"./Socket":73,"./URI":79,"./Utils":80}],30:[function(require,module,exports){
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.5.405212544424 (Web)',
+  USER_AGENT: 'UA/2.0.5.405214063012 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -4616,7 +4616,7 @@ module.exports = class Dialog {
     return true;
   }
 };
-},{"./Constants":30,"./Dialog/RequestSender":33,"./Logger":38,"./SIPMessage":71,"./Transactions":75,"./Utils":79}],33:[function(require,module,exports){
+},{"./Constants":30,"./Dialog/RequestSender":33,"./Logger":38,"./SIPMessage":72,"./Transactions":76,"./Utils":80}],33:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('../Constants');
@@ -4711,7 +4711,7 @@ module.exports = class DialogRequestSender {
     }
   }
 };
-},{"../Constants":30,"../RequestSender":70,"../Transactions":75}],34:[function(require,module,exports){
+},{"../Constants":30,"../RequestSender":71,"../Transactions":76}],34:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -4890,7 +4890,7 @@ module.exports = class DigestAuthentication {
     return `Digest ${auth_params.join(', ')}`;
   }
 };
-},{"./Logger":38,"./Utils":79}],35:[function(require,module,exports){
+},{"./Logger":38,"./Utils":80}],35:[function(require,module,exports){
 "use strict";
 
 class ConfigurationError extends Error {
@@ -17342,7 +17342,7 @@ module.exports = function () {
   result.SyntaxError.prototype = Error.prototype;
   return result;
 }();
-},{"./NameAddrHeader":59,"./URI":78}],37:[function(require,module,exports){
+},{"./NameAddrHeader":60,"./URI":79}],37:[function(require,module,exports){
 "use strict";
 
 var C = require('./Constants');
@@ -17356,7 +17356,8 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var MediaEffectsComposer = require('./MediaEffectsComposer/MediaEffectsComposer');
-debug('version %s', '2.0.5.405212544424');
+var MetaHumanClient = require('./MetaHumanClient');
+debug('version %s', '2.0.5.405214063012');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17386,6 +17387,7 @@ module.exports = {
   WebSocketInterface,
   MediaEffectsComposer,
   Mixer: MediaEffectsComposer,
+  MetaHumanClient,
   Grammar,
   getStats,
   // Expose the debug module.
@@ -17394,10 +17396,10 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.5.405212544424';
+    return '2.0.5.405214063012';
   }
 };
-},{"./Constants":30,"./Exceptions":35,"./Grammar":36,"./MediaEffectsComposer/MediaEffectsComposer":47,"./NameAddrHeader":59,"./Stats":73,"./UA":77,"./URI":78,"./Utils":79,"./WebSocketInterface":80,"debug":85}],38:[function(require,module,exports){
+},{"./Constants":30,"./Exceptions":35,"./Grammar":36,"./MediaEffectsComposer/MediaEffectsComposer":47,"./MetaHumanClient":59,"./NameAddrHeader":60,"./Stats":74,"./UA":78,"./URI":79,"./Utils":80,"./WebSocketInterface":81,"debug":86}],38:[function(require,module,exports){
 "use strict";
 
 var debugFactory = require('debug');
@@ -17499,7 +17501,7 @@ module.exports = class Logger {
 // log.debug('登录成功');  // [ts] CRTC:D:Auth 登录成功 +5ms
 // log.warn('风险提示');   // [ts] CRTC:W:Auth 风险提示 +3ms
 // log.error('异常信息');  // [ts] CRTC:E:Auth 异常信息 +1ms
-},{"debug":85}],39:[function(require,module,exports){
+},{"debug":86}],39:[function(require,module,exports){
 "use strict";
 
 /**
@@ -21474,7 +21476,7 @@ exports.normalizeSourceOptions = function (optionsOrSlot, index, defaultGain) {
   logger.debug(`normalizeSourceOptions: index=${index} options=${JSON.stringify(options)}`);
   return options;
 };
-},{"../Logger":38,"../Utils":79}],46:[function(require,module,exports){
+},{"../Logger":38,"../Utils":80}],46:[function(require,module,exports){
 "use strict";
 
 /**
@@ -23416,7 +23418,7 @@ class MediaEffectsComposer {
   }
 }
 module.exports = MediaEffectsComposer;
-},{"../Logger":38,"../MediaEffectsIssue":57,"../Utils":79,"./AiVirtualBackground/AiVBState":42,"./AudioMixer":44,"./ComposerConfig":45,"./LayoutEngine":46,"./OutputStream":48,"./RenderLoop":49,"./Sources":50,"./Watermark":51}],48:[function(require,module,exports){
+},{"../Logger":38,"../MediaEffectsIssue":57,"../Utils":80,"./AiVirtualBackground/AiVBState":42,"./AudioMixer":44,"./ComposerConfig":45,"./LayoutEngine":46,"./OutputStream":48,"./RenderLoop":49,"./Sources":50,"./Watermark":51}],48:[function(require,module,exports){
 (function (global){(function (){
 "use strict";
 
@@ -28659,7 +28661,459 @@ module.exports = class Message extends EventEmitter {
     });
   }
 };
-},{"./Constants":30,"./Exceptions":35,"./Logger":38,"./RequestSender":70,"./SIPMessage":71,"./URI":78,"./Utils":79,"events":83}],59:[function(require,module,exports){
+},{"./Constants":30,"./Exceptions":35,"./Logger":38,"./RequestSender":71,"./SIPMessage":72,"./URI":79,"./Utils":80,"events":84}],59:[function(require,module,exports){
+"use strict";
+
+var EventEmitter = require('events').EventEmitter;
+var Logger = require('./Logger');
+var Exceptions = require('./Exceptions');
+var issueUtils = require('./MediaEffectsIssue');
+var logger = new Logger('MetaHumanClient');
+var getErrorMessage = issueUtils.getErrorMessage;
+var META_HUMAN_MEDIA_EFFECTS_ISSUE_DEFAULTS = {
+  module: 'AiNS',
+  component: 'MetaHumanClient',
+  stage: 'unknown',
+  severity: 'error',
+  message: 'unknown media effects issue',
+  fallbackApplied: false,
+  degraded: false,
+  details: null
+};
+
+/**
+ * MetaHumanClient — 数字人 WebRTC 客户端
+ *
+ * 封装与数字人后端的 WebRTC 连接流程，可选集成 AI 降噪（AiNoiseSuppression）。
+ *
+ * @example
+ *   const mh = new CRTC.MetaHumanClient({
+ *     server     : 'https://dev.vsbc.com:9090',
+ *     iceServers : [{ urls: 'turn:...', username: '...', credential: '...' }],
+ *     avatar     : 'wav2lip256_avatar1',
+ *     flag       : 0
+ *   });
+ *
+ *   mh.on('track', (evt) => { videoEl.srcObject = evt.stream; });
+ *   mh.on('error', (evt) => { console.error(evt.cause); });
+ *
+ *   mh.connect();
+ */
+module.exports = class MetaHumanClient extends EventEmitter {
+  /**
+   * @param {object} options
+   * @param {string} options.server             - 数字人后端服务地址（如 https://dev.vsbc.com:9090）
+   * @param {Array}  options.iceServers         - ICE 服务器列表
+   * @param {string} options.avatar             - 数字人头像标识
+   * @param {number} [options.flag=0]           - ASR/TTS 处理开关（0 不处理，1 处理）
+   * @param {object} [options.audioConstraints] - 麦克风采集约束
+   * @param {number} [options.audioConstraints.sampleRate=48000]
+   * @param {number} [options.audioConstraints.channelCount=1]
+   * @param {string} [options.micDeviceId]      - 指定麦克风设备 deviceId（可选）
+   * @param {object} [options.aiNoiseSuppression] - AI 降噪配置（可选，传入则启用）
+   * @param {boolean} [options.aiNoiseSuppression.enabled=true]
+   * @param {number}  [options.aiNoiseSuppression.noiseReductionLevel=80]  - 降噪强度 0-100
+   * @param {object}  [options.aiNoiseSuppression.assetConfig]             - CDN 配置
+   */
+  constructor(options = {}) {
+    super();
+    if (!options.server) {
+      throw new Exceptions.ConfigurationError('server');
+    }
+    var aiNoiseSuppression = options.aiNoiseSuppression || null;
+
+    /** @type {object} */
+    this._audioConstraintOverrides = cloneAudioConstraints(options.audioConstraints);
+    this._config = {
+      server: options.server,
+      iceServers: options.iceServers || [],
+      avatar: options.avatar || 'default',
+      flag: normalizeFlag(options.flag),
+      audioConstraints: createMetaHumanAudioConstraints(this._audioConstraintOverrides, aiNoiseSuppression),
+      micDeviceId: options.micDeviceId || null,
+      aiNoiseSuppression: aiNoiseSuppression
+    };
+
+    /** @type {RTCPeerConnection|null} */
+    this._pc = null;
+
+    /** @type {'idle'|'connecting'|'connected'|'closed'} */
+    this._state = 'idle';
+
+    /** @type {AiNoiseSuppressionEngine|null} */
+    this._ainsEngine = null;
+
+    /** @type {MediaStream|null} */
+    this._localStream = null;
+
+    /** @type {MediaStream|null} */
+    this._processedStream = null;
+
+    /** @type {number} */
+    this._connectSeq = 0;
+
+    /** @type {object} */
+    this._data = {};
+  }
+
+  // ===========================================================================
+  // 公开属性
+  // ===========================================================================
+
+  /**
+   * 获取当前连接状态
+   * @returns {'idle'|'connecting'|'connected'|'closed'}
+   */
+  get state() {
+    return this._state;
+  }
+
+  /**
+   * 获取当前 AiNS 引擎实例（若已启用）。
+   *
+   * @returns {AiNoiseSuppressionEngine|null}
+   */
+  getAiNoiseSuppression() {
+    return this._ainsEngine;
+  }
+
+  // ===========================================================================
+  // 公开方法
+  // ===========================================================================
+
+  /**
+   * 发起与数字人后端的 WebRTC 连接
+   *
+   * 流程：采集麦克风 →（可选 AI 降噪）→ 创建 PeerConnection → 发送 Offer → 接收 Answer
+   *
+   * @returns {Promise<void>}
+   */
+  connect() {
+    if (this._state === 'connecting') {
+      return Promise.reject(new Exceptions.InvalidStateError('connecting'));
+    }
+    var connectSeq = ++this._connectSeq;
+    this._closePC();
+    this._releaseLocalMedia();
+    this._destroyAiNS();
+    this._setState('connecting');
+
+    // 构建麦克风约束
+    var audioConstraints = Object.assign({}, this._config.audioConstraints);
+    if (this._config.micDeviceId) {
+      audioConstraints.deviceId = {
+        exact: this._config.micDeviceId
+      };
+    }
+    return navigator.mediaDevices.getUserMedia({
+      audio: audioConstraints
+    }).then(stream => {
+      this._ensureActiveConnect(connectSeq, stream);
+      this._localStream = stream;
+      return stream;
+    }).then(stream => this._applyAiNoiseSuppression(stream)).then(processedStream => {
+      this._ensureActiveConnect(connectSeq, processedStream === this._localStream ? null : processedStream);
+      this._createPC();
+      this._processedStream = processedStream;
+      var audioTrack = processedStream.getAudioTracks()[0];
+      if (!audioTrack) {
+        throw new Error('未获取到麦克风音频轨道');
+      }
+      this._pc.addTrack(audioTrack, processedStream);
+      return this._pc.createOffer();
+    }).then(offer => {
+      this._assertActiveConnect(connectSeq);
+      return this._pc.setLocalDescription(offer);
+    }).then(() => {
+      this._assertActiveConnect(connectSeq);
+      var offer = this._pc.localDescription;
+      return fetch(`${this._config.server}/offer`, {
+        body: JSON.stringify({
+          sdp: offer.sdp,
+          type: offer.type,
+          flag: this._config.flag,
+          avatar: this._config.avatar
+        }),
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        method: 'POST'
+      });
+    }).then(response => {
+      this._assertActiveConnect(connectSeq);
+      if (!response.ok) {
+        throw new Error(`服务器返回错误: ${response.status}`);
+      }
+      return response.json();
+    }).then(answer => {
+      this._assertActiveConnect(connectSeq);
+      return this._pc.setRemoteDescription(answer);
+    }).catch(err => {
+      if (err && err.name === 'AbortError') {
+        return;
+      }
+      var errorMessage = getErrorMessage(err);
+      logger.error(`连接失败: ${errorMessage}`);
+      this._closePC();
+      this._releaseLocalMedia();
+      this._destroyAiNS();
+      this._setState('closed');
+      this._emitError(errorMessage);
+      throw err;
+    });
+  }
+
+  /**
+   * 关闭连接，释放 WebRTC 和 AiNS 资源
+   */
+  close() {
+    logger.debug('close');
+    this._connectSeq += 1;
+    this._closePC();
+    this._releaseLocalMedia();
+    this._destroyAiNS();
+    this._setState('closed');
+  }
+
+  /**
+   * 更新配置项（下次 connect() 时生效）
+   *
+   * @param {object} updates
+   * @param {string} [updates.avatar] - 新头像标识
+   * @param {number} [updates.flag]   - 新 ASR/TTS 开关
+   * @param {object} [updates.audioConstraints] - 新麦克风采集约束
+   * @param {string|null} [updates.micDeviceId] - 新麦克风设备 ID
+   * @param {object|null} [updates.aiNoiseSuppression] - 新 AiNS 配置
+   */
+  updateConfig(updates = {}) {
+    if (updates.avatar !== undefined) {
+      this._config.avatar = updates.avatar;
+    }
+    if (updates.flag !== undefined) {
+      this._config.flag = normalizeFlag(updates.flag);
+    }
+    if (updates.audioConstraints && typeof updates.audioConstraints === 'object') {
+      this._audioConstraintOverrides = Object.assign({}, this._audioConstraintOverrides, updates.audioConstraints);
+    }
+    if (updates.micDeviceId !== undefined) {
+      this._config.micDeviceId = updates.micDeviceId || null;
+    }
+    if (updates.aiNoiseSuppression !== undefined) {
+      this._config.aiNoiseSuppression = updates.aiNoiseSuppression || null;
+    }
+    if (updates.audioConstraints !== undefined || updates.aiNoiseSuppression !== undefined) {
+      this._config.audioConstraints = createMetaHumanAudioConstraints(this._audioConstraintOverrides, this._config.aiNoiseSuppression);
+    }
+  }
+
+  // ===========================================================================
+  // 内部方法
+  // ===========================================================================
+
+  /** @private */
+  _createPC() {
+    this._pc = new RTCPeerConnection({
+      sdpSemantics: 'unified-plan',
+      iceTransportPolicy: 'relay',
+      iceServers: this._config.iceServers
+    });
+    this._pc.addEventListener('track', evt => {
+      if (evt.track.kind === 'video' && evt.streams[0]) {
+        this._setState('connected');
+        this.emit('track', {
+          stream: evt.streams[0]
+        });
+      }
+    });
+    this._pc.addTransceiver('video', {
+      direction: 'recvonly'
+    });
+    this._pc.addTransceiver('audio', {
+      direction: 'sendrecv'
+    });
+  }
+
+  /** @private */
+  _closePC() {
+    if (this._pc) {
+      this._pc.close();
+      this._pc = null;
+    }
+  }
+
+  /** @private */
+  _setState(state) {
+    if (this._state !== state) {
+      this._state = state;
+      this.emit('stateChanged', {
+        state
+      });
+    }
+  }
+
+  /** @private */
+  _emitError(cause) {
+    if (this.listenerCount('error') > 0) {
+      this.emit('error', {
+        cause
+      });
+    }
+  }
+
+  /** @private */
+  _emitMediaEffectsIssue(issue) {
+    var normalizedIssue = issueUtils.normalizeIssue(META_HUMAN_MEDIA_EFFECTS_ISSUE_DEFAULTS, issue);
+    logger.debug(`emit "mediaEffectsIssue": module=${normalizedIssue.module} message=${normalizedIssue.message}`);
+    this.emit('mediaEffectsIssue', normalizedIssue);
+  }
+
+  /** @private */
+  _hasAiNoiseSuppressionEnabled() {
+    var aiNoiseSuppression = this._config.aiNoiseSuppression;
+    return Boolean(aiNoiseSuppression && aiNoiseSuppression.enabled !== false);
+  }
+
+  /**
+   * 对采集到的麦克风流应用 AI 降噪（如果已配置）
+   * @private
+   * @param {MediaStream} stream - 原始麦克风流
+   * @returns {Promise<MediaStream>} - 处理后的流（降级时返回原始流）
+   */
+  async _applyAiNoiseSuppression(stream) {
+    var ainsOptions = this._config.aiNoiseSuppression;
+    if (!this._hasAiNoiseSuppressionEnabled()) {
+      return stream;
+    }
+
+    // 延迟加载，避免非 AiNS 场景引入额外依赖
+    var AiNSEngine = require('./AiNoiseSuppression/AiNSEngine');
+    if (!AiNSEngine.isSupported()) {
+      logger.warn('AiNS 不可用，使用原始音频流');
+      this._emitMediaEffectsIssue({
+        stage: 'capability-check',
+        severity: 'warn',
+        message: 'AiNS is not supported in the current browser',
+        fallbackApplied: true,
+        degraded: true
+      });
+      return stream;
+    }
+    try {
+      this._ainsEngine = new AiNSEngine({
+        enabled: ainsOptions.enabled !== false,
+        sampleRate: this._config.audioConstraints.sampleRate,
+        noiseReductionLevel: ainsOptions.noiseReductionLevel !== undefined ? ainsOptions.noiseReductionLevel : 80,
+        assetConfig: ainsOptions.assetConfig || null,
+        onIssue: issue => {
+          var normalizedIssue = issueUtils.normalizeIssue(META_HUMAN_MEDIA_EFFECTS_ISSUE_DEFAULTS, issue);
+          logger.warn(`AiNS issue: ${normalizedIssue.message || 'unknown'}`);
+          this._emitMediaEffectsIssue(normalizedIssue);
+        }
+      });
+      var processedStream = await this._ainsEngine.process(stream);
+      logger.debug('AiNS 已启用');
+      return processedStream;
+    } catch (err) {
+      var errorMessage = getErrorMessage(err);
+      logger.error(`AiNS 初始化失败，使用原始音频流: ${errorMessage}`);
+      if (!err || err.__mediaEffectsIssueReported !== true) {
+        this._emitMediaEffectsIssue({
+          stage: 'apply-ai-noise-suppression',
+          severity: 'error',
+          message: errorMessage,
+          fallbackApplied: true,
+          degraded: true,
+          details: {
+            normalizedAiNSOptions: {
+              enabled: ainsOptions.enabled !== false,
+              sampleRate: this._config.audioConstraints.sampleRate,
+              noiseReductionLevel: ainsOptions.noiseReductionLevel !== undefined ? ainsOptions.noiseReductionLevel : 80,
+              assetConfig: ainsOptions.assetConfig || null
+            }
+          }
+        });
+      }
+      this._destroyAiNS();
+      return stream;
+    }
+  }
+
+  /** @private */
+  _destroyAiNS() {
+    if (this._ainsEngine) {
+      this._ainsEngine.destroy().catch(error => {
+        logger.warn(`AiNS 销毁失败: ${error && error.message ? error.message : error}`);
+      });
+      this._ainsEngine = null;
+    }
+  }
+
+  /** @private */
+  _releaseLocalMedia() {
+    stopStreamTracks(this._processedStream);
+    if (this._localStream !== this._processedStream) {
+      stopStreamTracks(this._localStream);
+    }
+    this._localStream = null;
+    this._processedStream = null;
+  }
+
+  /** @private */
+  _assertActiveConnect(connectSeq) {
+    if (this._connectSeq !== connectSeq || this._state === 'closed') {
+      throw createAbortError();
+    }
+  }
+
+  /** @private */
+  _ensureActiveConnect(connectSeq, streamToStop) {
+    if (this._connectSeq !== connectSeq || this._state === 'closed') {
+      stopStreamTracks(streamToStop);
+      throw createAbortError();
+    }
+  }
+};
+function cloneAudioConstraints(audioConstraints) {
+  return audioConstraints && typeof audioConstraints === 'object' ? Object.assign({}, audioConstraints) : {};
+}
+function createMetaHumanAudioConstraints(audioConstraints, aiNoiseSuppression) {
+  var normalized = Object.assign({
+    sampleRate: 48000,
+    channelCount: 1,
+    echoCancellation: true,
+    autoGainControl: true,
+    noiseSuppression: true,
+    latency: {
+      ideal: 0.01
+    }
+  }, audioConstraints || {});
+  if (aiNoiseSuppression && aiNoiseSuppression.enabled !== false) {
+    normalized.noiseSuppression = false;
+  }
+  return normalized;
+}
+function normalizeFlag(value) {
+  if (value === undefined || value === null || value === '') {
+    return 0;
+  }
+  return Number(value) === 1 ? 1 : 0;
+}
+function createAbortError() {
+  var error = new Error('MetaHumanClient connect aborted');
+  error.name = 'AbortError';
+  return error;
+}
+function stopStreamTracks(stream) {
+  if (!(stream instanceof MediaStream)) {
+    return;
+  }
+  stream.getTracks().forEach(track => {
+    try {
+      track.stop();
+    } catch (error) {}
+  });
+}
+},{"./AiNoiseSuppression/AiNSEngine":2,"./Exceptions":35,"./Logger":38,"./MediaEffectsIssue":57,"events":84}],60:[function(require,module,exports){
 "use strict";
 
 var URI = require('./URI');
@@ -28748,7 +29202,7 @@ module.exports = class NameAddrHeader {
     return body;
   }
 };
-},{"./Grammar":36,"./URI":78}],60:[function(require,module,exports){
+},{"./Grammar":36,"./URI":79}],61:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -28954,7 +29408,7 @@ module.exports = class Options extends EventEmitter {
     });
   }
 };
-},{"./Constants":30,"./Exceptions":35,"./Logger":38,"./RequestSender":70,"./SIPMessage":71,"./Utils":79,"events":83}],61:[function(require,module,exports){
+},{"./Constants":30,"./Exceptions":35,"./Logger":38,"./RequestSender":71,"./SIPMessage":72,"./Utils":80,"events":84}],62:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -29208,7 +29662,7 @@ function parseHeader(message, data, headerStart, headerEnd) {
     return true;
   }
 }
-},{"./Grammar":36,"./Logger":38,"./SIPMessage":71}],62:[function(require,module,exports){
+},{"./Grammar":36,"./Logger":38,"./SIPMessage":72}],63:[function(require,module,exports){
 "use strict";
 
 /* globals RTCPeerConnection: false, RTCSessionDescription: false */
@@ -35023,7 +35477,7 @@ module.exports = class RTCSession extends EventEmitter {
     }
   }
 };
-},{"./BFCP/index":11,"./Constants":30,"./Dialog":32,"./Exceptions":35,"./Logger":38,"./MediaEffectsIssue":57,"./RTCSession/BFCPChannel":63,"./RTCSession/DTMF":64,"./RTCSession/Info":65,"./RTCSession/MediaPipeline":66,"./RTCSession/ReferNotifier":67,"./RTCSession/ReferSubscriber":68,"./RequestSender":70,"./SIPMessage":71,"./Timers":74,"./Transactions":75,"./URI":78,"./Utils":79,"events":83,"sdp-transform":92}],63:[function(require,module,exports){
+},{"./BFCP/index":11,"./Constants":30,"./Dialog":32,"./Exceptions":35,"./Logger":38,"./MediaEffectsIssue":57,"./RTCSession/BFCPChannel":64,"./RTCSession/DTMF":65,"./RTCSession/Info":66,"./RTCSession/MediaPipeline":67,"./RTCSession/ReferNotifier":68,"./RTCSession/ReferSubscriber":69,"./RequestSender":71,"./SIPMessage":72,"./Timers":75,"./Transactions":76,"./URI":79,"./Utils":80,"events":84,"sdp-transform":93}],64:[function(require,module,exports){
 (function (Buffer){(function (){
 "use strict";
 
@@ -35909,7 +36363,7 @@ module.exports = class BFCPChannel {
 };
 }).call(this)}).call(this,require("buffer").Buffer)
 
-},{"../BFCP/index":11,"../Constants":30,"../Logger":38,"../Utils":79,"buffer":84}],64:[function(require,module,exports){
+},{"../BFCP/index":11,"../Constants":30,"../Logger":38,"../Utils":80,"buffer":85}],65:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -36048,7 +36502,7 @@ module.exports = class DTMF extends EventEmitter {
  * Expose C object.
  */
 module.exports.C = C;
-},{"../Constants":30,"../Exceptions":35,"../Logger":38,"../Utils":79,"events":83}],65:[function(require,module,exports){
+},{"../Constants":30,"../Exceptions":35,"../Logger":38,"../Utils":80,"events":84}],66:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -36129,7 +36583,7 @@ module.exports = class Info extends EventEmitter {
     });
   }
 };
-},{"../Constants":30,"../Exceptions":35,"../Utils":79,"events":83}],66:[function(require,module,exports){
+},{"../Constants":30,"../Exceptions":35,"../Utils":80,"events":84}],67:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
@@ -36908,7 +37362,7 @@ module.exports = class MediaPipeline {
     return await this.applyMediaEffectsComposerOnSdkGumStream(aiNoiseSuppressedStream, composerOptions);
   }
 };
-},{"../AiNoiseSuppression/AiNSEngine":2,"../Logger":38,"../MediaEffectsComposer/MediaEffectsComposer":47,"../MediaEffectsIssue":57,"../Utils":79}],67:[function(require,module,exports){
+},{"../AiNoiseSuppression/AiNSEngine":2,"../Logger":38,"../MediaEffectsComposer/MediaEffectsComposer":47,"../MediaEffectsIssue":57,"../Utils":80}],68:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
@@ -36955,7 +37409,7 @@ module.exports = class ReferNotifier {
     });
   }
 };
-},{"../Constants":30,"../Logger":38}],68:[function(require,module,exports){
+},{"../Constants":30,"../Logger":38}],69:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -37079,7 +37533,7 @@ module.exports = class ReferSubscriber extends EventEmitter {
     });
   }
 };
-},{"../Constants":30,"../Grammar":36,"../Logger":38,"../Utils":79,"events":83}],69:[function(require,module,exports){
+},{"../Constants":30,"../Grammar":36,"../Logger":38,"../Utils":80,"events":84}],70:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -37377,7 +37831,7 @@ ${this._contact}${this._extraContactParams}`);
     });
   }
 };
-},{"./Constants":30,"./Logger":38,"./RequestSender":70,"./SIPMessage":71,"./Utils":79}],70:[function(require,module,exports){
+},{"./Constants":30,"./Logger":38,"./RequestSender":71,"./SIPMessage":72,"./Utils":80}],71:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -37516,7 +37970,7 @@ module.exports = class RequestSender {
     }
   }
 };
-},{"./Constants":30,"./DigestAuthentication":34,"./Logger":38,"./Transactions":75}],71:[function(require,module,exports){
+},{"./Constants":30,"./DigestAuthentication":34,"./Logger":38,"./Transactions":76}],72:[function(require,module,exports){
 "use strict";
 
 var sdp_transform = require('sdp-transform');
@@ -38088,7 +38542,7 @@ module.exports = {
   IncomingRequest,
   IncomingResponse
 };
-},{"./Constants":30,"./Grammar":36,"./Logger":38,"./NameAddrHeader":59,"./Utils":79,"sdp-transform":92}],72:[function(require,module,exports){
+},{"./Constants":30,"./Grammar":36,"./Logger":38,"./NameAddrHeader":60,"./Utils":80,"sdp-transform":93}],73:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -38156,7 +38610,7 @@ exports.isSocket = socket => {
   }
   return true;
 };
-},{"./Grammar":36,"./Logger":38,"./Utils":79}],73:[function(require,module,exports){
+},{"./Grammar":36,"./Logger":38,"./Utils":80}],74:[function(require,module,exports){
 "use strict";
 
 /* eslint-disable max-len */
@@ -38562,7 +39016,7 @@ module.exports = class getStats extends EventEmitter {
     this.emit('network-quality', this._networkQuality);
   }
 };
-},{"./Constants":30,"./Logger":38,"./Utils":79,"events":83}],74:[function(require,module,exports){
+},{"./Constants":30,"./Logger":38,"./Utils":80,"events":84}],75:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
@@ -38583,7 +39037,7 @@ module.exports = {
   TIMER_M: 64 * T1,
   PROVISIONAL_RESPONSE_INTERVAL: 60000 // See RFC 3261 Section 13.3.1.1
 };
-},{}],75:[function(require,module,exports){
+},{}],76:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -39173,7 +39627,7 @@ module.exports = {
   InviteServerTransaction,
   checkTransaction
 };
-},{"./Constants":30,"./Logger":38,"./SIPMessage":71,"./Timers":74,"events":83}],76:[function(require,module,exports){
+},{"./Constants":30,"./Logger":38,"./SIPMessage":72,"./Timers":75,"events":84}],77:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -39548,7 +40002,7 @@ module.exports = class Transport {
     });
   }
 };
-},{"./Constants":30,"./Logger":38,"./Socket":72,"./Utils":79}],77:[function(require,module,exports){
+},{"./Constants":30,"./Logger":38,"./Socket":73,"./Utils":80}],78:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -40608,7 +41062,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":29,"./Constants":30,"./CryptoKey":31,"./Exceptions":35,"./Logger":38,"./Message":58,"./Options":60,"./Parser":61,"./RTCSession":62,"./Registrator":69,"./SIPMessage":71,"./Transactions":75,"./Transport":76,"./URI":78,"./Utils":79,"./sanityCheck":81,"events":83,"jsencrypt":88}],78:[function(require,module,exports){
+},{"./Config":29,"./Constants":30,"./CryptoKey":31,"./Exceptions":35,"./Logger":38,"./Message":58,"./Options":61,"./Parser":62,"./RTCSession":63,"./Registrator":70,"./SIPMessage":72,"./Transactions":76,"./Transport":77,"./URI":79,"./Utils":80,"./sanityCheck":82,"events":84,"jsencrypt":89}],79:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('./Constants');
@@ -40780,7 +41234,7 @@ module.exports = class URI {
     return aor;
   }
 };
-},{"./Constants":30,"./Grammar":36,"./Utils":79}],79:[function(require,module,exports){
+},{"./Constants":30,"./Grammar":36,"./Utils":80}],80:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('./Constants');
@@ -42838,7 +43292,7 @@ exports.disableVideoInSdp = sdp => {
   });
   return newSdp;
 };
-},{"./Constants":30,"./Grammar":36,"./URI":78}],80:[function(require,module,exports){
+},{"./Constants":30,"./Grammar":36,"./URI":79}],81:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -42957,7 +43411,7 @@ module.exports = class WebSocketInterface {
     logger.warn(`WebSocket ${this._url} error: `, e);
   }
 };
-},{"./Grammar":36,"./Logger":38}],81:[function(require,module,exports){
+},{"./Grammar":36,"./Logger":38}],82:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -43150,7 +43604,7 @@ function reply(status_code) {
   response += '\r\n';
   transport.send(response);
 }
-},{"./Constants":30,"./Logger":38,"./SIPMessage":71,"./Utils":79}],82:[function(require,module,exports){
+},{"./Constants":30,"./Logger":38,"./SIPMessage":72,"./Utils":80}],83:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -43302,7 +43756,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],83:[function(require,module,exports){
+},{}],84:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -43827,7 +44281,7 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],84:[function(require,module,exports){
+},{}],85:[function(require,module,exports){
 (function (Buffer){(function (){
 /*!
  * The buffer module from node.js, for the browser.
@@ -45609,7 +46063,7 @@ function numberIsNaN (obj) {
 
 }).call(this)}).call(this,require("buffer").Buffer)
 
-},{"base64-js":82,"buffer":84,"ieee754":87}],85:[function(require,module,exports){
+},{"base64-js":83,"buffer":85,"ieee754":88}],86:[function(require,module,exports){
 (function (process){(function (){
 /* eslint-env browser */
 
@@ -45886,7 +46340,7 @@ formatters.j = function (v) {
 
 }).call(this)}).call(this,require('_process'))
 
-},{"./common":86,"_process":90}],86:[function(require,module,exports){
+},{"./common":87,"_process":91}],87:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -46180,7 +46634,7 @@ function setup(env) {
 
 module.exports = setup;
 
-},{"ms":89}],87:[function(require,module,exports){
+},{"ms":90}],88:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
@@ -46267,7 +46721,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],88:[function(require,module,exports){
+},{}],89:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -51658,7 +52112,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{}],89:[function(require,module,exports){
+},{}],90:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -51822,7 +52276,7 @@ function plural(ms, msAbs, n, name) {
   return Math.round(ms / n) + ' ' + name + (isPlural ? 's' : '');
 }
 
-},{}],90:[function(require,module,exports){
+},{}],91:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -52008,7 +52462,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],91:[function(require,module,exports){
+},{}],92:[function(require,module,exports){
 var grammar = module.exports = {
   v: [{
     name: 'version',
@@ -52504,7 +52958,7 @@ Object.keys(grammar).forEach(function (key) {
   });
 });
 
-},{}],92:[function(require,module,exports){
+},{}],93:[function(require,module,exports){
 var parser = require('./parser');
 var writer = require('./writer');
 var grammar = require('./grammar');
@@ -52519,7 +52973,7 @@ exports.parseRemoteCandidates = parser.parseRemoteCandidates;
 exports.parseImageAttributes = parser.parseImageAttributes;
 exports.parseSimulcastStreamList = parser.parseSimulcastStreamList;
 
-},{"./grammar":91,"./parser":93,"./writer":94}],93:[function(require,module,exports){
+},{"./grammar":92,"./parser":94,"./writer":95}],94:[function(require,module,exports){
 var toIntIfInt = function (v) {
   return String(Number(v)) === v ? Number(v) : v;
 };
@@ -52645,7 +53099,7 @@ exports.parseSimulcastStreamList = function (str) {
   });
 };
 
-},{"./grammar":91}],94:[function(require,module,exports){
+},{"./grammar":92}],95:[function(require,module,exports){
 var grammar = require('./grammar');
 
 // customized util.format - discards excess arguments and can void middle ones
@@ -52761,7 +53215,7 @@ module.exports = function (session, opts) {
   return sdp.join('\r\n') + '\r\n';
 };
 
-},{"./grammar":91}]},{},[37])(37)
+},{"./grammar":92}]},{},[37])(37)
 });
 
 //# sourceMappingURL=maps/CRTC.js.map

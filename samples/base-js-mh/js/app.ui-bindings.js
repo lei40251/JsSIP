@@ -179,6 +179,11 @@ document.querySelector('#mics').addEventListener('change', function()
     rtcSession.switchDevice('audio', deviceId);
   }
 
+  if (typeof syncMetaHumanMicSelection === 'function')
+  {
+    syncMetaHumanMicSelection(deviceId);
+  }
+
   setStatus(`${rtcSession ? 'switchDevice' : 'select mic'} ${this.options[this.selectedIndex].innerText}`);
 });
 
@@ -275,6 +280,11 @@ document.querySelector('#aiNoiseSuppression').addEventListener('change', functio
   {
     setStatus('AI 降噪已关闭');
   }
+
+  if (typeof applyCurrentAiNsToMetaHuman === 'function' && applyCurrentAiNsToMetaHuman())
+  {
+    setStatus('当前数字人连接的 AI 降噪已同步更新');
+  }
 });
 
 // AiNS 强度变化时：
@@ -291,10 +301,17 @@ document.querySelector('#aiNoiseReductionLevel').addEventListener('change', func
   // 只有 AiNS 开启时，才需要提示和应用这个强度
   if (aiNsType === 'AiNS')
   {
+    const appliedToMetaHuman = typeof applyCurrentAiNsToMetaHuman === 'function' &&
+      applyCurrentAiNsToMetaHuman();
+
     // 已经在通话里并且拿到了 AiNS 实例，就直接热更新
     if (applyAiNsLevelToCurrentCall(nextLevel))
     {
       setStatus(`AI 降噪强度已设为 ${nextLevel}，已应用到当前通话`);
+    }
+    else if (appliedToMetaHuman)
+    {
+      setStatus(`AI 降噪强度已设为 ${nextLevel}，已应用到当前数字人连接`);
     }
     else
     {
@@ -323,3 +340,5 @@ document.querySelector('#clearCurrentImageWatermark').onclick = async function()
 {
   await clearCurrentImageWatermarkFromSession();
 };
+
+
