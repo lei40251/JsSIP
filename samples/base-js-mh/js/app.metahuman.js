@@ -32,6 +32,7 @@ function releaseMetaHuman()
   {
     screenVideo.classList.add('hide');
     screenVideo.srcObject = null;
+    screenVideo.muted = true;
   }
 }
 
@@ -158,6 +159,7 @@ function startMetaHumanFlow(options = {})
 
       screenVideo.srcObject = remoteStream;
       screenVideo.classList.remove('hide');
+      screenVideo.muted = false;
 
       return;
     }
@@ -167,7 +169,7 @@ function startMetaHumanFlow(options = {})
       try
       {
         rtcSession.answer({
-          mediaConstraints    : { audio: false, video: true },
+          mediaConstraints    : { audio: true, video: true },
           pcConfig            : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
           rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
           extraFeatures       : extraFeatures,

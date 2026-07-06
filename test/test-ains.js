@@ -299,6 +299,9 @@ async function testProcessBuildsProcessedStreamAndPreservesVideoTrack()
     assert.strictEqual(engine.getCapabilityReport().runtime.initialized, true);
     assert.strictEqual(engine.getCapabilityReport().runtime.noiseReductionLevel, 92);
     assert.strictEqual(MockAudioContext.instances[0].lastSourceStream.getAudioTracks()[0], input.audioTrack);
+    assert.strictEqual(engine.getProcessor().workletNode.options.channelCount, 1);
+    assert.strictEqual(engine.getProcessor().workletNode.options.channelCountMode, 'explicit');
+    assert.deepStrictEqual(engine.getProcessor().workletNode.options.outputChannelCount, [ 1 ]);
 
     await engine.destroy();
   }
