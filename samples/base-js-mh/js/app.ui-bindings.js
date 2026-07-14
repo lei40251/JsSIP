@@ -321,6 +321,53 @@ document.querySelector('#aiNoiseReductionLevel').addEventListener('change', func
   }
 });
 
+// 数字人预览区的输出增益变化时，直接调用当前 AiNS 实例热更新。
+const aiNoiseOutputGainInput = document.querySelector('#aiNoiseOutputGain');
+
+// 手动输入超过范围时立即钳位，避免输入框暂存无效增益。
+aiNoiseOutputGainInput.addEventListener('input', function()
+{
+  if (this.value === '')
+  {
+    return;
+  }
+
+  const parsedGain = Number(this.value);
+
+  if (Number.isFinite(parsedGain) && (parsedGain < 0 || parsedGain > 4))
+  {
+    this.value = normalizeAiNsOutputGain(parsedGain);
+  }
+});
+
+aiNoiseOutputGainInput.addEventListener('change', function()
+{
+  const nextGain = normalizeAiNsOutputGain(this.value);
+
+  this.value = nextGain;
+
+  const appliedToCall = applyAiNsOutputGainToCurrentCall(nextGain);
+  const appliedToMetaHuman = typeof applyAiNsOutputGainToMetaHuman === 'function' &&
+    applyAiNsOutputGainToMetaHuman(nextGain);
+
+  if (appliedToCall && appliedToMetaHuman)
+  {
+    setStatus(`AI 降噪输出增益已设为 ${nextGain}，已应用到当前通话和数字人连接`);
+  }
+  else if (appliedToCall)
+  {
+    setStatus(`AI 降噪输出增益已设为 ${nextGain}，已应用到当前通话`);
+  }
+  else if (appliedToMetaHuman)
+  {
+    setStatus(`AI 降噪输出增益已设为 ${nextGain}，已应用到当前数字人连接`);
+  }
+  else
+  {
+    setStatus(`AI 降噪输出增益已设为 ${nextGain}，将在下次启用时生效`);
+  }
+});
+
 document.querySelector('#applyCurrentTextWatermark').onclick = async function()
 {
   await applyCurrentTextWatermarkToSession();

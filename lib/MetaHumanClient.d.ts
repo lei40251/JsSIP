@@ -24,6 +24,8 @@ export interface MetaHumanAiNsOptions {
   enabled?: boolean;
   /** 降噪强度 0-100，默认 80 */
   noiseReductionLevel?: number;
+  /** AiNS 处理后的输出增益 0-4，默认 1 */
+  outputGain?: number;
   /** WASM 资源 CDN 配置 */
   assetConfig?: MetaHumanAiNsAssetConfig;
 }
@@ -78,6 +80,7 @@ export interface MetaHumanMediaEffectsIssueEvent {
 export interface MetaHumanAiNoiseSuppressionController {
   setEnabled(enable: boolean): Promise<boolean>;
   setSuppressionLevel(level: number): void;
+  setOutputGain(value: number): number;
   isEnabled(): boolean;
 }
 

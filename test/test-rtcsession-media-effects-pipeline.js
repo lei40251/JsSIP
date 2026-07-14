@@ -221,7 +221,7 @@ async function testSessionAiNoiseSuppressionDisablesNativeNoiseSuppression()
   const constraints = session._mediaPipeline.getGumConstraintsWithProcessorFlags({
     audio : { deviceId: { exact: 'mic-1' } },
     video : false
-  }, session._sessionAiNSOptions);
+  });
 
   assert.strictEqual(constraints.audio.noiseSuppression, false);
   assert.deepStrictEqual(constraints.audio.deviceId, { exact: 'mic-1' });

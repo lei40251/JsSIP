@@ -98,6 +98,14 @@ class MockAudioContext
     return this.destination;
   }
 
+  createGain()
+  {
+    this.outputGainNode = new MockAudioNode();
+    this.outputGainNode.gain = { value: 1 };
+
+    return this.outputGainNode;
+  }
+
   createMediaStreamSource(stream)
   {
     const node = new MockAudioNode();
@@ -287,7 +295,7 @@ async function testProcessBuildsProcessedStreamAndPreservesVideoTrack()
   try
   {
     const Engine = loadEngine();
-    const engine = new Engine({ noiseReductionLevel: 92, sampleRate: 44100 });
+    const engine = new Engine({ noiseReductionLevel: 92, sampleRate: 44100, outputGain: 1.2 });
     const input = createInputStream();
     const output = await engine.process(input.stream);
 
@@ -298,10 +306,18 @@ async function testProcessBuildsProcessedStreamAndPreservesVideoTrack()
     assert.strictEqual(engine.getCapabilityReport().supported, true);
     assert.strictEqual(engine.getCapabilityReport().runtime.initialized, true);
     assert.strictEqual(engine.getCapabilityReport().runtime.noiseReductionLevel, 92);
+    assert.strictEqual(engine.getCapabilityReport().runtime.outputGain, 1.2);
+    assert.strictEqual(MockAudioContext.instances[0].outputGainNode.gain.value, 1.2);
     assert.strictEqual(MockAudioContext.instances[0].lastSourceStream.getAudioTracks()[0], input.audioTrack);
     assert.strictEqual(engine.getProcessor().workletNode.options.channelCount, 1);
     assert.strictEqual(engine.getProcessor().workletNode.options.channelCountMode, 'explicit');
     assert.deepStrictEqual(engine.getProcessor().workletNode.options.outputChannelCount, [ 1 ]);
+
+    assert.strictEqual(engine.setOutputGain(1.5), 1.5);
+    assert.strictEqual(engine.getCapabilityReport().runtime.outputGain, 1.5);
+    assert.strictEqual(MockAudioContext.instances[0].outputGainNode.gain.value, 1.5);
+    assert.strictEqual(engine.setOutputGain(10), 4);
+    assert.strictEqual(MockAudioContext.instances[0].outputGainNode.gain.value, 4);
 
     await engine.destroy();
   }

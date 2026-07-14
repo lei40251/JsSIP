@@ -160,6 +160,42 @@ function getCurrentAiNsLevel()
 }
 
 /**
+ * 把 AiNS 输出增益整理到 SDK 支持的 0-4 范围。
+ *
+ * @param {string|number} value - 输入框里的原始值
+ * @returns {number} 归一化后的输出增益，默认 1
+ */
+function normalizeAiNsOutputGain(value)
+{
+  if (String(value).trim() === '')
+  {
+    return 1;
+  }
+
+  const parsedGain = Number(value);
+
+  if (!Number.isFinite(parsedGain))
+  {
+    return 1;
+  }
+
+  return Math.max(0, Math.min(4, parsedGain));
+}
+
+/**
+ * 读取数字人预览区的 AiNS 输出增益。
+ *
+ * @returns {number} 当前合法输出增益
+ */
+function getCurrentAiNsOutputGain()
+{
+  const gainInput = document.querySelector('#aiNoiseOutputGain');
+  const currentValue = gainInput ? gainInput.value : '';
+
+  return normalizeAiNsOutputGain(currentValue);
+}
+
+/**
  * 把透明度输入框的值统一转成 0-1。
  * 支持：
  * 1. 小数写法，例如 0.8

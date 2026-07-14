@@ -235,7 +235,33 @@ function applyCurrentAiNsToMetaHuman()
   if (enabled)
   {
     aiNsEngine.setSuppressionLevel(getCurrentAiNsLevel());
+    aiNsEngine.setOutputGain(getCurrentAiNsOutputGain());
   }
+
+  return true;
+}
+
+/**
+ * 通话中动态调整数字人 AiNS 输出增益。
+ *
+ * @param {number} value - 输出增益，范围 0-4
+ * @returns {boolean} 当前数字人连接存在 AiNS 实例时返回 true
+ */
+function applyAiNsOutputGainToMetaHuman(value)
+{
+  if (!mh || typeof mh.getAiNoiseSuppression !== 'function')
+  {
+    return false;
+  }
+
+  const aiNsEngine = mh.getAiNoiseSuppression();
+
+  if (!aiNsEngine)
+  {
+    return false;
+  }
+
+  aiNsEngine.setOutputGain(value);
 
   return true;
 }

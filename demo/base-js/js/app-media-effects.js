@@ -751,6 +751,9 @@ async function handleVirtualBackgroundChange(selectEl)
  *   - 100 = 最大降噪强度
  *   - 值越高噪声抑制越强，但语音可能稍有失真
  *
+ * @property {number} [outputGain] — AiNS 处理后的输出增益（0~4，默认 1）
+ *   大于 1 可补偿降噪后的音量，过高可能造成削波
+ *
  * @property {Object} [assetConfig] — AI 模型资源路径配置
  * @property {string} [assetConfig.cdnUrl] — CDN 根路径（默认 './static'）
  *   SDK 会在该路径下查找 WASM 和模型文件
@@ -771,6 +774,7 @@ function buildCallAiNsOptions()
   return {
     enabled             : true,
     noiseReductionLevel : getCurrentAiNsLevel(),
+    outputGain          : 1,
     assetConfig         : { cdnUrl: AI_NOISE_ASSET_ROOT }
   };
 }
@@ -794,6 +798,31 @@ function applyAiNsLevelToCurrentCall(level)
   }
 
   aiNsEngine.setSuppressionLevel(level);
+
+  return true;
+}
+
+/**
+ * 通话中动态调整 AiNS 输出增益，不会重建处理链或替换音轨。
+ *
+ * @param {number} value — 输出增益，范围 0~4；1 表示不额外放大
+ * @returns {boolean} 当前通话存在 AiNS 实例时返回 true
+ */
+function applyAiNsOutputGainToCurrentCall(value)
+{
+  if (aiNsType !== 'AiNS' || !rtcSession)
+  {
+    return false;
+  }
+
+  const aiNsEngine = rtcSession.getAiNoiseSuppression();
+
+  if (!aiNsEngine)
+  {
+    return false;
+  }
+
+  aiNsEngine.setOutputGain(value);
 
   return true;
 }

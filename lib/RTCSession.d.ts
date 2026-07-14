@@ -353,6 +353,13 @@ export interface AiVBOptions {
   [key: string]: any;
 }
 
+export interface AiNoiseSuppressionController {
+  setEnabled(enable: boolean): Promise<boolean>;
+  setSuppressionLevel(level: number): void;
+  setOutputGain(value: number): number;
+  isEnabled(): boolean;
+}
+
 export interface ExtraHeaders {
   extraHeaders?: string[];
 }
@@ -629,7 +636,7 @@ export class RTCSession extends EventEmitter {
 
   getMediaEffectsComposer(): MediaEffectsComposerInstance | null;
 
-  getAiNoiseSuppression(): any | null;
+  getAiNoiseSuppression(): AiNoiseSuppressionController | null;
 
   getAiVirtualBackground(): any | null;
 

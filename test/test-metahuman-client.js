@@ -194,7 +194,7 @@ async function testApplyAiNoiseSuppressionForwardsIssueEventAndSampleRate()
   const client = new MetaHumanClient({
     server             : 'https://example.com',
     audioConstraints   : { sampleRate: 32000 },
-    aiNoiseSuppression : {}
+    aiNoiseSuppression : { outputGain: 1.2 }
   });
 
   client.on('mediaEffectsIssue', (issue) => issues.push(issue));
@@ -204,6 +204,7 @@ async function testApplyAiNoiseSuppressionForwardsIssueEventAndSampleRate()
   assert.strictEqual(result, sourceStream);
   assert.strictEqual(MockAiNSEngine.instances.length, 1);
   assert.strictEqual(MockAiNSEngine.instances[0].options.sampleRate, 32000);
+  assert.strictEqual(MockAiNSEngine.instances[0].options.outputGain, 1.2);
   assert.strictEqual(issues.length, 1);
   assert.strictEqual(issues[0].stage, 'mock-process');
   assert.strictEqual(issues[0].message, 'mock ai noise suppression issue');

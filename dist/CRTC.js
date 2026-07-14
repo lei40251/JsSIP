@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.5.2026761044
+ * CRTC v2.0.5.20267131017
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -44,6 +44,9 @@ var DEFAULT_SAMPLE_RATE = 48000;
  */
 var DEFAULT_SUPPRESSION_LEVEL = 80;
 
+/** 默认不改变模型输出音量。 */
+var DEFAULT_OUTPUT_GAIN = 1;
+
 /**
  * 降噪 WASM/模型资源的默认 CDN 地址（相对路径）。
  *
@@ -54,6 +57,7 @@ var DEFAULT_SUPPRESSION_LEVEL = 80;
 var DEFAULT_CDN_URL = './static';
 exports.DEFAULT_SAMPLE_RATE = DEFAULT_SAMPLE_RATE;
 exports.DEFAULT_SUPPRESSION_LEVEL = DEFAULT_SUPPRESSION_LEVEL;
+exports.DEFAULT_OUTPUT_GAIN = DEFAULT_OUTPUT_GAIN;
 exports.DEFAULT_CDN_URL = DEFAULT_CDN_URL;
 
 /**
@@ -67,12 +71,14 @@ exports.DEFAULT_CDN_URL = DEFAULT_CDN_URL;
  * @param {boolean} [options.preserveOtherTracks=true] — 处理时是否保留原始流中非音频轨道（如视频轨）
  * @param {number} [options.sampleRate=48000] — AudioContext 采样率
  * @param {number} [options.noiseReductionLevel=80] — 降噪强度（0-100）
+ * @param {number} [options.outputGain=1] — AiNS 处理后的输出增益（0-4）
  * @param {Object} [options.assetConfig] — 资源 CDN / 路径覆盖，含 cdnUrl 字段
  * @returns {Object} 归一化后的配置对象
  * @returns {boolean} returns.enabled
  * @returns {boolean} returns.preserveOtherTracks
  * @returns {number} returns.sampleRate
  * @returns {number} returns.noiseReductionLevel — 已钳位到 [0, 100]
+ * @returns {number} returns.outputGain — 已钳位到 [0, 4]
  * @returns {Object|null} returns.assetConfig — 归一化后的资源配置，或 null
  */
 exports.create = function (options) {
@@ -82,6 +88,7 @@ exports.create = function (options) {
     preserveOtherTracks: exports.normalizeBoolean(options.preserveOtherTracks, true),
     sampleRate: exports.normalizePositiveInteger(options.sampleRate, DEFAULT_SAMPLE_RATE),
     noiseReductionLevel: exports.normalizeSuppressionLevel(options.noiseReductionLevel, DEFAULT_SUPPRESSION_LEVEL),
+    outputGain: exports.normalizeOutputGain(options.outputGain, DEFAULT_OUTPUT_GAIN),
     assetConfig: exports.normalizeAssetConfig(options.assetConfig)
   };
   logger.debug(`Config created: ${JSON.stringify(config)}`);
@@ -157,6 +164,24 @@ exports.normalizeSuppressionLevel = function (value, fallback) {
 };
 
 /**
+ * 将输出增益钳位到 [0, 4]，非法值回退到默认值。
+ *
+ * @param {*} value — 原始传入值
+ * @param {number} fallback — 非法或未传时使用的备选值
+ * @returns {number}
+ */
+exports.normalizeOutputGain = function (value, fallback) {
+  var numberValue = Number(value);
+  if (Number.isFinite(numberValue)) {
+    return Math.max(0, Math.min(4, numberValue));
+  }
+  if (value !== undefined) {
+    logger.debug(`normalizeOutputGain fallback: value=${value} fallback=${fallback}`);
+  }
+  return fallback;
+};
+
+/**
  * 归一化资源配置。
  *
  * 规则：
@@ -224,7 +249,8 @@ function collectCapabilityReport(engine) {
       enabled: typeof engine.isEnabled === 'function' ? engine.isEnabled() : Boolean(engine.enabled),
       preserveOtherTracks: Boolean(engine.preserveOtherTracks),
       sampleRate: engine.config && engine.config.sampleRate,
-      noiseReductionLevel: engine.config && engine.config.noiseReductionLevel
+      noiseReductionLevel: engine.config && engine.config.noiseReductionLevel,
+      outputGain: engine.config && engine.config.outputGain
     } : null
   };
 }
@@ -243,6 +269,7 @@ class AiNoiseSuppressionEngine {
    * @param {boolean} [options.preserveOtherTracks=true]
    * @param {number} [options.sampleRate=48000]
    * @param {number} [options.noiseReductionLevel=80] - 降噪强度 (0-100)
+   * @param {number} [options.outputGain=1] - AiNS 处理后的输出增益 (0-4)
    * @param {Object} [options.assetConfig] - 模型资源 CDN 配置
    */
   constructor(options = {}) {
@@ -257,6 +284,7 @@ class AiNoiseSuppressionEngine {
     this.audioContext = null;
     this.sourceNode = null;
     this.workletNode = null;
+    this.outputGainNode = null;
     this.destination = null;
     this.enabled = normalizedOptions.enabled;
     this.originalTrack = null;
@@ -408,6 +436,22 @@ class AiNoiseSuppressionEngine {
     logger.debug(`setSuppressionLevel(): level=${nextLevel}`);
     this._workletRuntime.setSuppressionLevel(nextLevel);
   }
+
+  /**
+   * 动态调整 AiNS 处理后的输出增益，不重建音频处理图。
+   *
+   * @param {number} value - 输出增益，范围 0-4
+   * @returns {number} 归一化后的实际增益
+   */
+  setOutputGain(value) {
+    var nextGain = AiNSConfig.normalizeOutputGain(value, this.config.outputGain);
+    this.config.outputGain = nextGain;
+    logger.debug(`setOutputGain(): value=${nextGain}`);
+    if (this.outputGainNode) {
+      this.outputGainNode.gain.value = nextGain;
+    }
+    return nextGain;
+  }
   isEnabled() {
     return this.enabled;
   }
@@ -545,6 +589,10 @@ class AiNoiseSuppressionEngine {
     if (!this.workletNode) {
       this.workletNode = await this._workletRuntime.createAudioWorkletNode(this.audioContext);
     }
+    if (!this.outputGainNode) {
+      this.outputGainNode = this.audioContext.createGain();
+    }
+    this.outputGainNode.gain.value = this.config.outputGain;
     if (!this.destination) {
       this.destination = this.audioContext.createMediaStreamDestination();
     }
@@ -552,7 +600,7 @@ class AiNoiseSuppressionEngine {
       this.sourceNode.disconnect();
     }
     this.sourceNode = this.audioContext.createMediaStreamSource(new MediaStream([this.originalTrack]));
-    this.sourceNode.connect(this.workletNode).connect(this.destination);
+    this.sourceNode.connect(this.workletNode).connect(this.outputGainNode).connect(this.destination);
     this.rebuildProcessedStream();
     await this.setEnabled(this.enabled);
     logger.debug(`ensureGraph() complete: contextState=${this.audioContext.state} preserveOtherTracks=${this.preserveOtherTracks}`);
@@ -581,6 +629,10 @@ class AiNoiseSuppressionEngine {
       if (this.workletNode) {
         this.workletNode.disconnect();
         this.workletNode = null;
+      }
+      if (this.outputGainNode) {
+        this.outputGainNode.disconnect();
+        this.outputGainNode = null;
       }
       if (this.sourceNode) {
         this.sourceNode.disconnect();
@@ -4116,7 +4168,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.5.405214122088 (Web)',
+  USER_AGENT: 'UA/2.0.5.405214262034 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17371,7 +17423,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var MediaEffectsComposer = require('./MediaEffectsComposer/MediaEffectsComposer');
 var MetaHumanClient = require('./MetaHumanClient');
-debug('version %s', '2.0.5.405214122088');
+debug('version %s', '2.0.5.405214262034');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17410,7 +17462,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.5.405214122088';
+    return '2.0.5.405214262034';
   }
 };
 },{"./Constants":30,"./Exceptions":35,"./Grammar":36,"./MediaEffectsComposer/MediaEffectsComposer":47,"./MetaHumanClient":59,"./NameAddrHeader":60,"./Stats":74,"./UA":78,"./URI":79,"./Utils":80,"./WebSocketInterface":81,"debug":86}],38:[function(require,module,exports){
@@ -28727,6 +28779,7 @@ module.exports = class MetaHumanClient extends EventEmitter {
    * @param {object} [options.aiNoiseSuppression] - AI 降噪配置（可选，传入则启用）
    * @param {boolean} [options.aiNoiseSuppression.enabled=true]
    * @param {number}  [options.aiNoiseSuppression.noiseReductionLevel=80]  - 降噪强度 0-100
+   * @param {number}  [options.aiNoiseSuppression.outputGain=1]            - AiNS 输出增益 0-4
    * @param {object}  [options.aiNoiseSuppression.assetConfig]             - CDN 配置
    */
   constructor(options = {}) {
@@ -29017,6 +29070,7 @@ module.exports = class MetaHumanClient extends EventEmitter {
         enabled: ainsOptions.enabled !== false,
         sampleRate: this._config.audioConstraints.sampleRate,
         noiseReductionLevel: ainsOptions.noiseReductionLevel !== undefined ? ainsOptions.noiseReductionLevel : 80,
+        outputGain: ainsOptions.outputGain !== undefined ? ainsOptions.outputGain : 1,
         assetConfig: ainsOptions.assetConfig || null,
         onIssue: issue => {
           var normalizedIssue = issueUtils.normalizeIssue(META_HUMAN_MEDIA_EFFECTS_ISSUE_DEFAULTS, issue);
@@ -29042,6 +29096,7 @@ module.exports = class MetaHumanClient extends EventEmitter {
               enabled: ainsOptions.enabled !== false,
               sampleRate: this._config.audioConstraints.sampleRate,
               noiseReductionLevel: ainsOptions.noiseReductionLevel !== undefined ? ainsOptions.noiseReductionLevel : 80,
+              outputGain: ainsOptions.outputGain !== undefined ? ainsOptions.outputGain : 1,
               assetConfig: ainsOptions.assetConfig || null
             }
           }
@@ -29094,6 +29149,8 @@ function createMetaHumanAudioConstraints(audioConstraints, aiNoiseSuppression) {
   var normalized = Object.assign({
     sampleRate: 48000,
     channelCount: 1,
+    echoCancellation: true,
+    autoGainControl: true,
     noiseSuppression: true
   }, audioConstraints || {});
   if (aiNoiseSuppression && aiNoiseSuppression.enabled !== false) {
@@ -37081,10 +37138,10 @@ module.exports = class MediaPipeline {
    * 纯视频请求不受影响。
    *
    * @param {Object|boolean} constraints — 原始 getUserMedia 约束。
-   * @param {boolean|Object|null} [aiNSOptions=null] — AI 降噪选项。
+   * @param {boolean|Object|null} [aiNSOptions=this._session._sessionAiNSOptions] — AI 降噪选项。
    * @returns {Object|boolean} — 修正后的约束（新对象，不修改原对象）。
    */
-  getGumConstraintsWithProcessorFlags(constraints, aiNSOptions = null) {
+  getGumConstraintsWithProcessorFlags(constraints, aiNSOptions = this._session._sessionAiNSOptions) {
     var session = this._session;
     var nextConstraints = Utils.cloneObject(constraints);
     if (!nextConstraints) {

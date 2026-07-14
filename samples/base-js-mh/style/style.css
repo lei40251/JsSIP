@@ -661,6 +661,34 @@ body {
   width: 100%;
 }
 
+.tool-row .meta-human-gain-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.2rem;
+  padding: 0.2rem 0.35rem 0.2rem 0.55rem;
+  border: 1px solid #d7e0ea;
+  border-radius: 5px;
+  background: #f6f9fc;
+}
+
+.meta-human-gain-control label {
+  flex: 0 0 auto;
+  margin: 0;
+  color: #53657b;
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.meta-human-gain-control .form-control {
+  flex: 0 0 3.6rem;
+  width: 3.6rem;
+  min-width: 0;
+  padding: 0.25rem 0.35rem;
+  text-align: center;
+}
+
 .tool-row .input-group>.form-control {
   flex: 1 1 auto;
   min-width: 0;
