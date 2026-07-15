@@ -146,10 +146,10 @@ body {
   background: rgba(9, 15, 24, 0.66);
   border: 1px solid rgba(176, 198, 226, 0.3);
   color: #e8f1ff;
-  padding: 0.38rem 0.5rem;
+  padding: 0.26rem 0.4rem;
   border-radius: 5px;
-  font-size: 11px;
-  line-height: 1.5;
+  font-size: 10px;
+  line-height: 1.35;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
@@ -157,6 +157,62 @@ body {
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: break-word;
+}
+
+.rtc-stats-main {
+  color: #dbeafe;
+}
+
+.rtc-stats-section {
+  display: grid;
+  grid-template-columns: max-content minmax(0, auto);
+  column-gap: 0.35rem;
+  align-items: start;
+}
+
+.rtc-stats-section + .rtc-stats-section {
+  margin-top: 0.14rem;
+}
+
+.rtc-stats-section > div:last-child {
+  min-width: 0;
+}
+
+.rtc-stats-metric-table,
+.rtc-stats-connection-table {
+  display: grid;
+  align-items: baseline;
+}
+
+.rtc-stats-metric-table {
+  grid-template-columns: repeat(5, max-content);
+}
+
+.rtc-stats-connection-table {
+  grid-template-columns: repeat(3, max-content);
+}
+
+.rtc-stats-cell {
+  white-space: nowrap;
+}
+
+.rtc-stats-metric-table .rtc-stats-cell:not(:nth-child(5n+1))::before,
+.rtc-stats-connection-table .rtc-stats-cell:not(:nth-child(3n+1))::before {
+  content: "|";
+  display: inline-block;
+  margin: 0 0.35rem;
+  color: rgba(219, 234, 254, 0.75);
+}
+
+.rtc-stats-metric-table .rtc-stats-cell:empty::before,
+.rtc-stats-connection-table .rtc-stats-cell:empty::before {
+  content: none;
+}
+
+.rtc-stats-label {
+  color: #9fc4f4;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .control-groups {
@@ -1032,7 +1088,7 @@ body {
   }
 
   .video-stats-overlay {
-    font-size: 10px;
+    font-size: 9px;
   }
 
   .control-card {

@@ -328,19 +328,25 @@ function createMockUA()
 function installGlobals()
 {
   const snapshot = {
-    MediaStream : global.MediaStream,
-    navigator   : global.navigator,
-    document    : global.document,
-    window      : global.window
+    MediaStream         : global.MediaStream,
+    navigatorDescriptor : Object.getOwnPropertyDescriptor(global, 'navigator'),
+    document            : global.document,
+    window              : global.window
   };
 
   global.MediaStream = MockMediaStream;
-  global.navigator = {
-    userAgent    : 'unit-test',
-    mediaDevices : {
-      getUserMedia : () => Promise.resolve(new MockMediaStream())
+  // Node 22 的 global.navigator 没有 setter，普通赋值不会替换原生 Navigator。
+  Object.defineProperty(global, 'navigator', {
+    configurable : true,
+    enumerable   : true,
+    writable     : true,
+    value        : {
+      userAgent    : 'unit-test',
+      mediaDevices : {
+        getUserMedia : () => Promise.resolve(new MockMediaStream())
+      }
     }
-  };
+  });
   global.document = {
     hidden           : false,
     addEventListener : function() {}
@@ -350,7 +356,16 @@ function installGlobals()
   return () =>
   {
     global.MediaStream = snapshot.MediaStream;
-    global.navigator = snapshot.navigator;
+
+    if (snapshot.navigatorDescriptor)
+    {
+      Object.defineProperty(global, 'navigator', snapshot.navigatorDescriptor);
+    }
+    else
+    {
+      delete global.navigator;
+    }
+
     global.document = snapshot.document;
     global.window = snapshot.window;
   };

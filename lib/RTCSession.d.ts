@@ -5,6 +5,7 @@ import {IncomingRequest, IncomingResponse, OutgoingRequest} from './SIPMessage'
 import {NameAddrHeader} from './NameAddrHeader'
 import {URI} from './URI'
 import {causes, DTMF_TRANSPORT} from './Constants'
+import RTCStatsMonitor = require('./RTCStatsMonitor')
 
 interface RTCPeerConnectionDeprecated extends RTCPeerConnection {
   /**
@@ -587,6 +588,14 @@ export interface RTCSessionEventMap {
   'upgradeToVideo': AnyListener,
   'getusermediafailed': AnyListener;
   'mediaEffectsIssue': (event: MediaEffectsIssueEvent) => void;
+  /** RTCStatsMonitor 的兼容 report，由会话增加 stats: 前缀后转发。 */
+  'stats:report': (report: RTCStatsMonitor.LegacyReport) => void;
+  /** 0 暂无数据，1 最佳，6 最差。 */
+  'stats:network-quality': (report: RTCStatsMonitor.NetworkQualityReport) => void;
+  /** Demo 和常规监控使用的诊断摘要。 */
+  'stats:detailed-report': (report: RTCStatsMonitor.DetailedReportEvent) => void;
+  /** 统计错误不影响通话流程。 */
+  'stats:stats-error': (error: RTCStatsMonitor.StatsError) => void;
   'peerconnection:createofferfailed': AnyListener;
   'peerconnection:createanswerfailed': AnyListener;
   'peerconnection:setlocaldescriptionfailed': AnyListener;
@@ -619,6 +628,9 @@ export class RTCSession extends EventEmitter {
   get data(): any;
 
   get connection(): RTCPeerConnectionDeprecated;
+
+  /** PC 创建后自动生成；会话关闭后恢复为 null。 */
+  get statsMonitor(): RTCStatsMonitor | null;
 
   get contact(): string;
 

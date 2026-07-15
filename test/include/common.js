@@ -23,13 +23,21 @@ global.WebSocket = function()
 };
 
 // navigator (used by bowser, UA.js)
-global.navigator = {
-  userAgent    : '',
-  mediaDevices : {
-    addEventListener    : function() {},
-    removeEventListener : function() {}
+//
+// Node 22 开始内置了只有 getter、没有 setter 的 global.navigator。
+// 直接赋值会被静默忽略，因此必须通过可配置属性安装浏览器 mock。
+Object.defineProperty(global, 'navigator', {
+  configurable : true,
+  enumerable   : true,
+  writable     : true,
+  value        : {
+    userAgent    : '',
+    mediaDevices : {
+      addEventListener    : function() {},
+      removeEventListener : function() {}
+    }
   }
-};
+});
 
 // document (used by UA.js, RTCSession.js)
 global.document = {

@@ -5,8 +5,10 @@ import * as Exceptions from './Exceptions'
 import * as Grammar from './Grammar'
 import * as Utils from './Utils'
 import {MediaEffectsComposerInstance} from './RTCSession'
+import RTCStatsMonitor = require('./RTCStatsMonitor')
 
-export { C, Exceptions, Grammar, Utils };
+// getStats 是历史公开名称，与 RTCStatsMonitor 指向同一个构造函数。
+export { C, Exceptions, Grammar, Utils, RTCStatsMonitor, RTCStatsMonitor as getStats };
 
 export {UA} from './UA'
 export {URI} from './URI'

@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang=zh-CN>
+<head>
+  <meta charset=utf-8>
+  <meta name=viewport content=width=device-width,initial-scale=1>
+  <title>RTCStatsMonitor 浏览器兼容测试</title>
+</head>
+<body>
+  <h1>RTCStatsMonitor 浏览器兼容测试</h1>
+  <pre id=result data-status=running>正在建立本地 WebRTC 回环连接…</pre>
+  <canvas id=source width=320 height=180 hidden></canvas>
+  <video id=remote autoplay muted playsinline hidden></video>
+  <script src=../../dist/CRTC.js></script>
+  <script>
+    (async function()
+    {
+      const resultElement = document.querySelector('#result');
+      const resources = [];
+
+      const waitFor = function(check, timeoutMs)
+      {
+        return new Promise(function(resolve, reject)
+        {
+          const startedAt = Date.now();
+          const timer = setInterval(function()
+          {
+            if (check())
+            {
+              clearInterval(timer);
+              resolve();
+            }
+            else if (Date.now() - startedAt > timeoutMs)
+            {
+              clearInterval(timer);
+              reject(new Error('等待浏览器统计报告超时'));
+            }
+          }, 50);
+        });
+      };
+
+      try
+      {
+        if (!window.RTCPeerConnection || !window.CRTC || !CRTC.RTCStatsMonitor)
+        {
+          throw new Error('缺少 RTCPeerConnection 或 RTCStatsMonitor');
+        }
+
+        const localPc = new RTCPeerConnection();
+        const remotePc = new RTCPeerConnection();
+        const canvas = document.querySelector('#source');
+        const context = canvas.getContext('2d');
+        const sourceStream = canvas.captureStream(15);
+        const sourceTrack = sourceStream.getVideoTracks()[0];
+
+        resources.push(localPc, remotePc, sourceTrack);
+        localPc.onicecandidate = function(event)
+        {
+          event.candidate && remotePc.addIceCandidate(event.candidate);
+        };
+        remotePc.onicecandidate = function(event)
+        {
+          event.candidate && localPc.addIceCandidate(event.candidate);
+        };
+        remotePc.ontrack = function(event)
+        {
+          document.querySelector('#remote').srcObject = event.streams[0];
+        };
+
+        localPc.addTrack(sourceTrack, sourceStream);
+
+        let frame = 0;
+        const drawTimer = setInterval(function()
+        {
+          context.fillStyle = frame++ % 2 ? '#1769aa' : '#43a047';
+          context.fillRect(0, 0, canvas.width, canvas.height);
+          context.fillStyle = '#fff';
+          context.font = '20px sans-serif';
+          context.fillText(String(frame), 20, 40);
+        }, 67);
+
+        resources.push({ close: function() { clearInterval(drawTimer); } });
+
+        await localPc.setLocalDescription(await localPc.createOffer());
+        await remotePc.setRemoteDescription(localPc.localDescription);
+        await remotePc.setLocalDescription(await remotePc.createAnswer());
+        await localPc.setRemoteDescription(remotePc.localDescription);
+        await waitFor(function() { return localPc.connectionState === 'connected'; }, 10000);
+
+        const monitor = new CRTC.RTCStatsMonitor(localPc, {
+          autoStart              : false,
+          sampleIntervalMs       : 500,
+          legacyReportIntervalMs : 1000,
+          transitionGraceSamples : 0
+        });
+        const detailedReports = [];
+        let legacyReport = null;
+        let networkReport = null;
+
+        resources.push({ close: function() { monitor.stop(); } });
+        monitor.on('detailed-report', function(report) { detailedReports.push(report); });
+        monitor.on('report', function(report) { legacyReport = report; });
+        monitor.on('network-quality', function(report) { networkReport = report; });
+        monitor.start();
+
+        await waitFor(function()
+        {
+          return detailedReports.some(function(report) { return report.outbound.length > 0; }) && legacyReport && networkReport;
+        }, 10000);
+
+        const detailedEvent = detailedReports[detailedReports.length - 1];
+        const detailed = monitor.getLatestReport();
+        const eventShape = Object.keys(detailedEvent).sort().join(',') === 'connection,inbound,outbound,quality';
+        const consistent = legacyReport.RTT === detailed.quality.RTT &&
+          networkReport.RTT === detailed.quality.RTT &&
+          networkReport.uplinkLoss === detailed.quality.uplinkLoss &&
+          networkReport.uplinkNetworkQuality === detailed.quality.uplinkNetworkQuality;
+        const output = {
+          passed            : detailed.ready && consistent && eventShape,
+          userAgent         : navigator.userAgent,
+          compatibility     : detailed.compatibility,
+          phase             : detailed.phase,
+          outboundCount     : detailed.outbound.length,
+          reportConsistent  : consistent,
+          eventSummaryShape : eventShape,
+          qualityLevelRange : detailed.quality.uplinkNetworkQuality >= 0 && detailed.quality.uplinkNetworkQuality <= 6
+        };
+
+        resultElement.dataset.status = output.passed ? 'passed' : 'failed';
+        resultElement.textContent = JSON.stringify(output, null, 2);
+      }
+      catch (error)
+      {
+        resultElement.dataset.status = 'failed';
+        resultElement.textContent = JSON.stringify({
+          passed   : false,
+          userAgent: navigator.userAgent,
+          error    : error && error.message ? error.message : String(error)
+        }, null, 2);
+      }
+      finally
+      {
+        resources.reverse().forEach(function(resource)
+        {
+          try
+          {
+            resource.stop ? resource.stop() : resource.close();
+          }
+          catch (error) {}
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

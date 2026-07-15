@@ -53,10 +53,29 @@
           <audio id="remoteAudio" autoplay class="hide"></audio>
         </article>
         <div class="video-stats-overlay">
-          <div><span>延迟:</span> <span id="RTT"></span></div>
-          <div><span>上行统计:</span> <span id="upF"></span></div>
-          <div><span>下行统计:</span> <span id="downF"></span></div>
-          <div><span>NetworkQualities:</span> <span id="NQ"></span></div>
+          <div class="rtc-stats-main">
+            <!-- 统计展示取自 RTCSession 转发的 stats:detailed-report 事件。 -->
+            <div class="rtc-stats-section">
+              <div class="rtc-stats-label">上行链路:</div>
+              <div id="rtcStatsOutbound">--</div>
+            </div>
+            <div class="rtc-stats-section">
+              <div class="rtc-stats-label">下行链路:</div>
+              <div id="rtcStatsInbound">--</div>
+            </div>
+            <div class="rtc-stats-section">
+              <div class="rtc-stats-label">网络连接:</div>
+              <div id="rtcStatsConnection">--</div>
+            </div>
+            <div class="rtc-stats-section">
+              <div class="rtc-stats-label">网络质量:</div>
+              <div id="rtcStatsQuality">--</div>
+            </div>
+            <div class="rtc-stats-section">
+              <div class="rtc-stats-label">存在问题:</div>
+              <div id="rtcStatsIssues">无</div>
+            </div>
+          </div>
         </div>
       </section>
 

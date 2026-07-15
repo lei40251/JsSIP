@@ -24,8 +24,8 @@ const no_camera_svg = '<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC
 // 通话状态变量
 // =============================================================================
 
-// 通话统计实例，用于收集网络质量、码率、丢包等实时数据
-let stats;
+// 当前向页面统计浮层提供数据的 RTCSession。
+let statsSession;
 // 远端是否存在回铃音：false 表示可播放本地振铃音
 let earlyMedia = false;
 // 当前活跃通话的 RTCSession 实例
@@ -450,6 +450,243 @@ ua.on('newRTCSession', function(e)
     // setStatus(`收到 x-data: ${e.request.getHeader('x-data')}`);
   }
 
+  // =========================================================================
+  // RTCSession 统计事件接入示例
+  // =========================================================================
+
+  // 统计浮层只负责展示；节点不存在时不影响通话流程。
+  const setSessionStatsPanelText = function(selector, value)
+  {
+    const element = document.querySelector(selector);
+
+    if (element)
+    {
+      element.textContent = value;
+    }
+  };
+
+  // null/undefined 表示浏览器未提供该指标，不应显示为 0。
+  const formatSessionStatsNumber = function(value, unit)
+  {
+    return value === null || value === undefined ? '-' : `${value}${unit || ''}`;
+  };
+
+  // stats:detailed-report 中的码率统一为 bps，页面换算为 kbps。
+  const formatSessionStatsBitrate = function(value)
+  {
+    return value === null || value === undefined ? '-' : `${(Math.round(value / 100) / 10).toFixed(1)}kbps`;
+  };
+
+  const getSessionStatsStreamName = function(stream)
+  {
+    return stream.kind === 'audio' || stream.type === 'audio' ? '音频' : '视频';
+  };
+
+  // 质量问题 code 保持在事件中不变，页面只转换成更短、更直观的中文名称。
+  const sessionStatsIssueNames = {
+    CONNECTION_UNAVAILABLE       : '连接不可用',
+    CONNECTION_PATH_CHANGED      : '网络路径变化',
+    DOWNLINK_HIGH_JITTER         : '下行高抖动',
+    DOWNLINK_JITTER_BUFFER_DELAY : '下行缓冲过高',
+    DOWNLINK_PACKET_DISCARDS     : '下行本地丢弃',
+    DOWNLINK_PACKET_LOSS         : '下行丢包',
+    DOWNLINK_TRANSPORT_STALLED   : '下行传输停滞',
+    DOWNLINK_FEEDBACK_REQUESTS   : '下行重传请求多',
+    ENCODER_CPU_LIMITED          : '编码器CPU受限',
+    ENCODER_FRAME_RATE_REDUCED   : '编码帧率下降',
+    ENCODER_RESOLUTION_REDUCED   : '编码分辨率下降',
+    ENCODER_SLOW                 : '编码器过慢',
+    HIGH_RTT                     : '高延迟',
+    UPLINK_BANDWIDTH_BUDGET_LOW  : '上行可用带宽不足',
+    UPLINK_BANDWIDTH_LIMITED     : '上行带宽受限',
+    UPLINK_FEEDBACK_REQUESTS     : '上行重传请求多',
+    UPLINK_HIGH_RETRANSMISSION   : '上行重传率高',
+    UPLINK_LOCAL_SEND_DISCARDS   : '上行本地丢弃',
+    UPLINK_PACKET_LOSS           : '上行丢包',
+    UPLINK_SEND_QUEUE_DELAY      : '上行发送排队',
+    VIDEO_DECODER_SLOW           : '解码器过慢',
+    VIDEO_FRAME_DROPPING         : '视频丢帧',
+    VIDEO_FREEZING               : '视频卡顿',
+    VIDEO_PAUSING                : '视频暂停'
+  };
+
+  const sessionStatsQualityNames = [ '未知', '极佳', '较好', '一般', '差', '极差', '已断开' ];
+
+  const formatSessionNetworkQuality = function(value)
+  {
+    if (value === null || value === undefined)
+    {
+      return '-';
+    }
+
+    return `${sessionStatsQualityNames[value] || '未知'}(${value})`;
+  };
+
+  const appendSessionStatsRow = function(table, values)
+  {
+    values.forEach((value) =>
+    {
+      const cell = document.createElement('span');
+
+      cell.className = 'rtc-stats-cell';
+      cell.textContent = value;
+      table.appendChild(cell);
+    });
+  };
+
+  const renderSessionStatsStreams = function(selector, streams, outbound)
+  {
+    const element = document.querySelector(selector);
+
+    if (!element)
+    {
+      return;
+    }
+
+    // 上下行都按音频、视频、MID 排序，统计行与 SDP 中的媒体顺序保持一致。
+    const sortedStreams = streams.slice().sort((left, right) =>
+    {
+      const leftKindOrder = getSessionStatsStreamName(left) === '音频' ? 0 : 1;
+      const rightKindOrder = getSessionStatsStreamName(right) === '音频' ? 0 : 1;
+
+      if (leftKindOrder !== rightKindOrder)
+      {
+        return leftKindOrder - rightKindOrder;
+      }
+
+      return String(left.mid === null ? '' : left.mid).localeCompare(
+        String(right.mid === null ? '' : right.mid),
+        undefined,
+        { numeric: true }
+      );
+    });
+
+    element.textContent = '';
+
+    if (sortedStreams.length === 0)
+    {
+      element.textContent = '无';
+
+      return;
+    }
+
+    const table = document.createElement('div');
+
+    table.className = 'rtc-stats-metric-table';
+
+    sortedStreams.forEach((stream) =>
+    {
+      const streamName = getSessionStatsStreamName(stream);
+      const codecName = stream.codec && stream.codec.name ? stream.codec.name : '-';
+      const feedback = stream.remoteInbound;
+      const bitrate = outbound ? stream.actualBitrateBps : stream.receiveBitrateBps;
+      const jitter = outbound ? feedback && feedback.jitterMs : stream.jitterMs;
+      const loss = outbound ? feedback && feedback.intervalLossPercent : stream.intervalLossPercent;
+
+      appendSessionStatsRow(table, [
+        `${streamName}[${stream.mid === null ? '-' : stream.mid}]`,
+        `编码:${codecName}`,
+        `码率:${formatSessionStatsBitrate(bitrate)}`,
+        `抖动:${formatSessionStatsNumber(jitter, 'ms')}`,
+        `丢包:${formatSessionStatsNumber(loss, '%')}`
+      ]);
+
+      if (streamName === '视频')
+      {
+        appendSessionStatsRow(table, [
+          '',
+          `画面:${stream.frameWidth === null || stream.frameWidth === undefined ||
+            stream.frameHeight === null || stream.frameHeight === undefined
+            ? '-' : `${stream.frameWidth}x${stream.frameHeight}`}`,
+          `FPS:${formatSessionStatsNumber(stream.framesPerSecond)}`,
+          outbound
+            ? `编码:${formatSessionStatsNumber(stream.averageEncodeTimeMs, 'ms')}`
+            : `解码:${formatSessionStatsNumber(stream.averageDecodeTimeMs, 'ms')}`,
+          outbound ? `限制:${stream.qualityLimitationReason || '-'}` : ''
+        ]);
+      }
+    });
+
+    element.appendChild(table);
+  };
+
+  const renderSessionConnectionStats = function(connection)
+  {
+    const element = document.querySelector('#rtcStatsConnection');
+
+    if (!element)
+    {
+      return;
+    }
+
+    const table = document.createElement('div');
+
+    table.className = 'rtc-stats-connection-table';
+    appendSessionStatsRow(table, [
+      `状态:${connection.connectionState || '-'}`,
+      `ICE:${connection.iceConnectionState || '-'}`,
+      `DTLS:${connection.dtlsState || '-'}`
+    ]);
+    appendSessionStatsRow(table, [
+      `↑:${formatSessionStatsBitrate(connection.sendBitrateBps)}/可用${formatSessionStatsBitrate(connection.availableOutgoingBitrateBps)}`,
+      `↓:${formatSessionStatsBitrate(connection.receiveBitrateBps)}/可用${formatSessionStatsBitrate(connection.availableIncomingBitrateBps)}`,
+      ''
+    ]);
+
+    element.textContent = '';
+    element.appendChild(table);
+  };
+
+  // 会话切换或结束时清空旧数据，避免把上一通通话误认为当前状态。
+  const resetSessionStatsPanel = function()
+  {
+    const waitingText = '--';
+
+    setSessionStatsPanelText('#rtcStatsConnection', waitingText);
+    setSessionStatsPanelText('#rtcStatsQuality', waitingText);
+    setSessionStatsPanelText('#rtcStatsIssues', '无');
+    setSessionStatsPanelText('#rtcStatsOutbound', waitingText);
+    setSessionStatsPanelText('#rtcStatsInbound', waitingText);
+  };
+
+  statsSession = e.session;
+  resetSessionStatsPanel();
+
+  // 推荐从 RTCSession 消费统计事件，不在 Demo 中直接管理 RTCStatsMonitor。
+  e.session.on('stats:detailed-report', function(report)
+  {
+    if (statsSession !== e.session)
+    {
+      return;
+    }
+
+    // 事件只提供浮层使用的摘要；完整报告由 SDK logger 输出，也可通过
+    // e.session.statsMonitor.getLatestReport() 获取。
+    const quality = report.quality;
+    const issueText = quality.issues.map((issue) =>
+    {
+      return `${sessionStatsIssueNames[issue.code] || issue.code}(L${issue.severity})`;
+    }).join(' | ');
+
+    renderSessionStatsStreams('#rtcStatsOutbound', report.outbound, true);
+    renderSessionStatsStreams('#rtcStatsInbound', report.inbound, false);
+    renderSessionConnectionStats(report.connection);
+    setSessionStatsPanelText(
+      '#rtcStatsQuality',
+      `RTT:${formatSessionStatsNumber(quality.RTT, 'ms')} | ↑:${formatSessionNetworkQuality(quality.uplinkNetworkQuality)} | ↓:${formatSessionNetworkQuality(quality.downlinkNetworkQuality)}`
+    );
+    setSessionStatsPanelText('#rtcStatsIssues', issueText || '无');
+  });
+
+  // 统计失败不会中断通话，业务只需按需记录。
+  e.session.on('stats:stats-error', function(error)
+  {
+    if (statsSession === e.session)
+    {
+      console.warn('[RTCStatsMonitor] stats-error:', error);
+    }
+  });
+
   // ***** Session 事件回调 *****
   // 以下为通话级事件监听，在每个 newRTCSession 中注册
 
@@ -600,7 +837,7 @@ ua.on('newRTCSession', function(e)
    * @property {string} mode - 'audio' 或 'video'
    *
    * 处理逻辑：
-   * - 更新当前模式和统计实例
+   * - 更新当前模式
    * - 切换为视频模式时设置最大码率 400kbps
    * - 重新获取媒体流渲染
    */
@@ -610,9 +847,6 @@ ua.on('newRTCSession', function(e)
 
     // 更新当前通话模式
     curMode = d.mode;
-
-    // 同步模式到统计模块
-    stats && stats.setMode(d.mode);
 
     // 切换到视频模式时，设置视频发送最大码率
     if (d.mode == 'video')
@@ -807,8 +1041,11 @@ ua.on('newRTCSession', function(e)
     setStatus(`start: ${e.session.start_time}`);
     setStatus(`ended: ${e.session.end_time}`);
 
-    // 停止统计信息收集
-    stats && stats.stop();
+    if (statsSession === e.session)
+    {
+      statsSession = null;
+      resetSessionStatsPanel();
+    }
 
     // 停止 iOS OPTIONS 保活定时器
     optionsTimer && clearInterval(optionsTimer);
@@ -890,6 +1127,12 @@ ua.on('newRTCSession', function(e)
     setStatus(`start: ${e.session.start_time}`);
     setStatus(`ended: ${e.session.end_time}`);
 
+    if (statsSession === e.session)
+    {
+      statsSession = null;
+      resetSessionStatsPanel();
+    }
+
     // ---- 会话交接逻辑 ----
     // 如果结束的是主会话且有排队的 tmpSession，切换到该会话
     if (rtcSession === e.session && Boolean(tmpSession))
@@ -903,7 +1146,6 @@ ua.on('newRTCSession', function(e)
       // 无排队的会话，完全清理
       tmpSession = null;
       rtcSession = null;
-      stats && stats.stop();
     }
     optionsTimer && clearInterval(optionsTimer);
 
@@ -1121,10 +1363,9 @@ ua.on('newRTCSession', function(e)
    * 1. 关闭来电通知
    * 2. ICE 状态异常检测
    * 3. 启动录音（如果 URL 参数指定）
-   * 4. 初始化通话统计（getStats）
-   * 5. 渲染本地/远端媒体流
-   * 6. 监听 ontrack 处理远端辅助视频流
-   * 7. 根据参数设置视频码率
+   * 4. 渲染本地/远端媒体流
+   * 5. 监听 ontrack 处理远端辅助视频流
+   * 6. 根据参数设置视频码率
    */
   e.session.on('confirmed', async function()
   {
@@ -1168,60 +1409,6 @@ ua.on('newRTCSession', function(e)
 
     // 标记通话已确认
     confirmed = true;
-
-    // =====================================================================
-    // 初始化通话统计（网络质量、码率、丢包率等）
-    // =====================================================================
-    stats = new CRTC.getStats(e.session.connection);
-
-    // 统计报告事件：每秒输出上下行媒体质量数据
-    stats.on('report', function(r)
-    {
-      let downF = ''; // 下行（接收）媒体格式化文本
-      let upF = ''; // 上行（发送）媒体格式化文本
-
-      // 格式化下行流信息
-      r.downStreams.forEach((item) =>
-      {
-        if (item.type === 'audio')
-        {
-          downF += `# 音频 # ${item.speed}kbps | ${item.jitter || ''}ms | ${item.loss}%\n`;
-        }
-        else
-        {
-          // 视频或共享流：显示分辨率 + 帧率 + 码率 + 抖动 + 丢包
-          downF += `# ${item.type === 'shared' ? '共享' : '视频'} # ${item.frameWidth || ''} * ${item.frameHeight || ''} | ${item.framesPerSecond || ''}fps | ${item.speed}kbps | ${item.jitter || ''}ms | ${item.loss}%\n`;
-        }
-      });
-
-      // 格式化上行流信息
-      r.upStreams.forEach((item) =>
-      {
-        if (item.type === 'audio')
-        {
-          upF += `# 音频 # ${item.speed}kbps | ${item.jitter || ''}ms | ${item.loss}%\n`;
-        }
-        else
-        {
-          upF += `# ${item.type === 'shared' ? '共享' : '视频'} # ${item.frameWidth || ''} * ${item.frameHeight || ''} | ${item.framesPerSecond || ''}fps | ${item.speed}kbps | ${item.jitter || ''}ms | ${item.loss}%\n`;
-        }
-      });
-
-      // 更新页面上的上下行统计文本
-      document.querySelector('#upF').innerText = upF;
-      document.querySelector('#downF').innerText = downF;
-
-      // 更新往返时延
-      document.querySelector('#RTT').innerText = r.RTT || '';
-    });
-
-    // 网络质量评估事件
-    stats.on('network-quality', function(ev)
-    {
-      const { uplinkNetworkQuality, RTT, uplinkLoss, downlinkNetworkQuality, downlinkLoss } = ev;
-
-      document.querySelector('#NQ').innerText = `Rtt: ${RTT} ## uQ: ${uplinkNetworkQuality} uL: ${uplinkLoss} ## dQ: ${downlinkNetworkQuality} dL: ${downlinkLoss}`;
-    });
 
     // ---- 渲染本地和远端媒体流 ----
     getStreams(e.session.connection);

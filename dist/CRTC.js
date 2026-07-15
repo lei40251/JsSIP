@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.5.20267131017
+ * CRTC v2.0.5.20267151059
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -4164,11 +4164,11 @@ exports.load = (dst, src) => {
     }
   }
 };
-},{"./Constants":30,"./Exceptions":35,"./Grammar":36,"./Socket":73,"./URI":79,"./Utils":80}],30:[function(require,module,exports){
+},{"./Constants":30,"./Exceptions":35,"./Grammar":36,"./Socket":74,"./URI":79,"./Utils":80}],30:[function(require,module,exports){
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.5.405214262034 (Web)',
+  USER_AGENT: 'UA/2.0.5.405214302118 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -4682,7 +4682,7 @@ module.exports = class Dialog {
     return true;
   }
 };
-},{"./Constants":30,"./Dialog/RequestSender":33,"./Logger":38,"./SIPMessage":72,"./Transactions":76,"./Utils":80}],33:[function(require,module,exports){
+},{"./Constants":30,"./Dialog/RequestSender":33,"./Logger":38,"./SIPMessage":73,"./Transactions":76,"./Utils":80}],33:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('../Constants');
@@ -4777,7 +4777,7 @@ module.exports = class DialogRequestSender {
     }
   }
 };
-},{"../Constants":30,"../RequestSender":71,"../Transactions":76}],34:[function(require,module,exports){
+},{"../Constants":30,"../RequestSender":72,"../Transactions":76}],34:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -17420,10 +17420,10 @@ var NameAddrHeader = require('./NameAddrHeader');
 var Grammar = require('./Grammar');
 var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
-var getStats = require('./Stats');
+var RTCStatsMonitor = require('./RTCStatsMonitor');
 var MediaEffectsComposer = require('./MediaEffectsComposer/MediaEffectsComposer');
 var MetaHumanClient = require('./MetaHumanClient');
-debug('version %s', '2.0.5.405214262034');
+debug('version %s', '2.0.5.405214302118');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17455,17 +17455,19 @@ module.exports = {
   Mixer: MediaEffectsComposer,
   MetaHumanClient,
   Grammar,
-  getStats,
+  // 保留历史公开名称；新旧入口共用同一套统计实现，避免两套逻辑产生不同结果。
+  getStats: RTCStatsMonitor,
+  RTCStatsMonitor,
   // Expose the debug module.
   debug: require('debug'),
   get name() {
     return 'CRTC';
   },
   get version() {
-    return '2.0.5.405214262034';
+    return '2.0.5.405214302118';
   }
 };
-},{"./Constants":30,"./Exceptions":35,"./Grammar":36,"./MediaEffectsComposer/MediaEffectsComposer":47,"./MetaHumanClient":59,"./NameAddrHeader":60,"./Stats":74,"./UA":78,"./URI":79,"./Utils":80,"./WebSocketInterface":81,"debug":86}],38:[function(require,module,exports){
+},{"./Constants":30,"./Exceptions":35,"./Grammar":36,"./MediaEffectsComposer/MediaEffectsComposer":47,"./MetaHumanClient":59,"./NameAddrHeader":60,"./RTCStatsMonitor":70,"./UA":78,"./URI":79,"./Utils":80,"./WebSocketInterface":81,"debug":86}],38:[function(require,module,exports){
 "use strict";
 
 var debugFactory = require('debug');
@@ -28727,7 +28729,7 @@ module.exports = class Message extends EventEmitter {
     });
   }
 };
-},{"./Constants":30,"./Exceptions":35,"./Logger":38,"./RequestSender":71,"./SIPMessage":72,"./URI":79,"./Utils":80,"events":84}],59:[function(require,module,exports){
+},{"./Constants":30,"./Exceptions":35,"./Logger":38,"./RequestSender":72,"./SIPMessage":73,"./URI":79,"./Utils":80,"events":84}],59:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -29475,7 +29477,7 @@ module.exports = class Options extends EventEmitter {
     });
   }
 };
-},{"./Constants":30,"./Exceptions":35,"./Logger":38,"./RequestSender":71,"./SIPMessage":72,"./Utils":80,"events":84}],62:[function(require,module,exports){
+},{"./Constants":30,"./Exceptions":35,"./Logger":38,"./RequestSender":72,"./SIPMessage":73,"./Utils":80,"events":84}],62:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -29729,7 +29731,7 @@ function parseHeader(message, data, headerStart, headerEnd) {
     return true;
   }
 }
-},{"./Grammar":36,"./Logger":38,"./SIPMessage":72}],63:[function(require,module,exports){
+},{"./Grammar":36,"./Logger":38,"./SIPMessage":73}],63:[function(require,module,exports){
 "use strict";
 
 /* globals RTCPeerConnection: false, RTCSessionDescription: false */
@@ -29752,6 +29754,7 @@ var RTCSession_ReferSubscriber = require('./RTCSession/ReferSubscriber');
 var issueUtils = require('./MediaEffectsIssue');
 var MediaPipeline = require('./RTCSession/MediaPipeline');
 var BFCPChannel = require('./RTCSession/BFCPChannel'); // BFCP 协议 + DataChannel 封装
+var RTCStatsMonitor = require('./RTCStatsMonitor');
 var URI = require('./URI');
 var BFCPLib = require('./BFCP/index');
 var logger = new Logger('RTCSession');
@@ -29853,6 +29856,8 @@ module.exports = class RTCSession extends EventEmitter {
 
     // The RTCPeerConnection instance (public attribute).
     this._connection = null;
+    // 每个会话独立维护统计实例，PC 创建后自动启动，关闭会话时统一释放。
+    this._statsMonitor = null;
 
     // Prevent races on serial PeerConnction operations.
     this._connectionPromiseQueue = Promise.resolve();
@@ -29997,6 +30002,9 @@ module.exports = class RTCSession extends EventEmitter {
   }
   get connection() {
     return this._connection;
+  }
+  get statsMonitor() {
+    return this._statsMonitor;
   }
   get contact() {
     return this._contact;
@@ -30536,9 +30544,6 @@ module.exports = class RTCSession extends EventEmitter {
    */
   answer(options = {}) {
     logger.debug(`${this._id} answer() ${JSON.stringify(options)}`);
-
-    // 初始化统计信息参数
-    window.CRTCStats = 'start';
     var request = this._request;
     var extraHeaders = Utils.cloneArray(options.extraHeaders);
     var mediaConstraints = Utils.cloneObject(options.mediaConstraints);
@@ -31095,6 +31100,7 @@ module.exports = class RTCSession extends EventEmitter {
     if (this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED) {
       throw new Exceptions.InvalidStateError(this._status);
     }
+    this._markStatsTransition('device-switch');
 
     // TODO 需要判断当前是否是视频通话
     if (type === 'camera') {
@@ -31452,6 +31458,7 @@ module.exports = class RTCSession extends EventEmitter {
       return Promise.reject(`Floor request failed: ${error.message || 'Unknown error'}`);
       // throw new Error(`Floor request failed: ${error.message || 'Unknown error'}`);
     }
+    this._markStatsTransition('share-start');
 
     // 分享页面元素
     function renderHtml(canvas, ctx) {
@@ -31631,6 +31638,7 @@ module.exports = class RTCSession extends EventEmitter {
     if (this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED) {
       throw new Exceptions.InvalidStateError(this._status);
     }
+    this._markStatsTransition('share-stop');
     Utils.closeMediaStream(this._localShareStream);
   }
 
@@ -32185,6 +32193,7 @@ module.exports = class RTCSession extends EventEmitter {
     if (!this._isReadyToReOffer()) {
       return false;
     }
+    this._markStatsTransition('renegotiate');
     var eventHandlers = {
       succeeded: () => {
         if (done) {
@@ -32484,6 +32493,7 @@ module.exports = class RTCSession extends EventEmitter {
   }
   _close() {
     logger.debug(`${this._id} close()`);
+    this._stopStatsMonitor();
     // Close local MediaStream if it was not given by the user.
     if (this._localMediaStream && this._localMediaStreamLocallyGenerated) {
       logger.warn(`${this._id} close() | closing local MediaStream`);
@@ -32613,6 +32623,7 @@ module.exports = class RTCSession extends EventEmitter {
     // 是否成功连接过
     var successfullyConnected = false;
     this._connection = new RTCPeerConnection(pcConfig, rtcConstraints);
+    this._startStatsMonitor(this._connection);
     this._connection.onconnectionstatechange = () => {
       switch (this._connection.connectionState) {
         case 'connecting':
@@ -32701,6 +32712,59 @@ module.exports = class RTCSession extends EventEmitter {
     this.emit('peerconnection', {
       peerconnection: this._connection
     });
+  }
+
+  /**
+   * PC 创建后立即启动会话级统计。
+   *
+   * 此时 sender、MID、RTP 报告可能尚未出现，RTCStatsMonitor 会先进入 warming-up，
+   * 等字段和增量基线就绪后自动切换为 active，不要求业务判断 PC 是否“准备完毕”。
+   */
+  _startStatsMonitor(pc) {
+    this._stopStatsMonitor();
+    if (!pc) {
+      return;
+    }
+    var monitor = new RTCStatsMonitor(pc, {
+      autoStart: false,
+      contextProvider: () => {
+        var sharedMid = null;
+
+        // 隐私模式或受限 WebView 可能暴露 sessionStorage 但禁止读取，统计不能影响通话。
+        try {
+          sharedMid = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(CRTC_C.BFCP_SHARED_STREAM_INDEX) : null;
+        } catch (error) {}
+        return {
+          sessionStatus: this._status,
+          mode: this._mode || null,
+          localHold: this._localHold,
+          remoteHold: this._remoteHold,
+          audioMuted: this._audioMuted,
+          videoMuted: this._videoMuted,
+          sharedMid
+        };
+      }
+    });
+
+    // RTCSession 原样转发统计事件，业务既可从 statsMonitor 监听，也可直接监听会话。
+    ['report', 'network-quality', 'detailed-report', 'stats-error'].forEach(eventName => {
+      monitor.on(eventName, payload => {
+        logger.debug(`${this._id} stats:${eventName}`);
+        this.emit(`stats:${eventName}`, payload);
+      });
+    });
+    this._statsMonitor = monitor;
+    monitor.start();
+  }
+  _stopStatsMonitor() {
+    if (!this._statsMonitor) {
+      return;
+    }
+    this._statsMonitor.stop();
+    this._statsMonitor = null;
+  }
+  _markStatsTransition(reason) {
+    this._statsMonitor && this._statsMonitor.markTransition(reason);
   }
   _createLocalDescription(type, constraints) {
     logger.debug(`${this._id} createLocalDescription() ${type} ${JSON.stringify(constraints)}`);
@@ -34894,9 +34958,6 @@ module.exports = class RTCSession extends EventEmitter {
     this._clearMaxBitrateRetryTimer();
     this._close();
     logger.debug(`${this._id} emit "ended"`);
-
-    // 停止全部统计信息事件
-    window.CRTCStats = 'stop';
     this.emit('ended', {
       originator,
       message: message || null,
@@ -34915,9 +34976,6 @@ module.exports = class RTCSession extends EventEmitter {
 
     // Emit private '_failed' event first.
     logger.debug(`${this._id} emit "_failed"`);
-
-    // 停止全部统计信息事件
-    window.CRTCStats = 'stop';
     this.emit('_failed', {
       originator,
       message: message || null,
@@ -34979,6 +35037,7 @@ module.exports = class RTCSession extends EventEmitter {
       return;
     }
     this._mode = mode;
+    this._markStatsTransition('mode-change');
     logger.debug(`${this._id} session ontogglemode`);
     if (!this._remoteHold) {
       this._setLocalMedia(mode);
@@ -35544,7 +35603,7 @@ module.exports = class RTCSession extends EventEmitter {
     }
   }
 };
-},{"./BFCP/index":11,"./Constants":30,"./Dialog":32,"./Exceptions":35,"./Logger":38,"./MediaEffectsIssue":57,"./RTCSession/BFCPChannel":64,"./RTCSession/DTMF":65,"./RTCSession/Info":66,"./RTCSession/MediaPipeline":67,"./RTCSession/ReferNotifier":68,"./RTCSession/ReferSubscriber":69,"./RequestSender":71,"./SIPMessage":72,"./Timers":75,"./Transactions":76,"./URI":79,"./Utils":80,"events":84,"sdp-transform":93}],64:[function(require,module,exports){
+},{"./BFCP/index":11,"./Constants":30,"./Dialog":32,"./Exceptions":35,"./Logger":38,"./MediaEffectsIssue":57,"./RTCSession/BFCPChannel":64,"./RTCSession/DTMF":65,"./RTCSession/Info":66,"./RTCSession/MediaPipeline":67,"./RTCSession/ReferNotifier":68,"./RTCSession/ReferSubscriber":69,"./RTCStatsMonitor":70,"./RequestSender":72,"./SIPMessage":73,"./Timers":75,"./Transactions":76,"./URI":79,"./Utils":80,"events":84,"sdp-transform":93}],64:[function(require,module,exports){
 (function (Buffer){(function (){
 "use strict";
 
@@ -37603,6 +37662,1682 @@ module.exports = class ReferSubscriber extends EventEmitter {
 },{"../Constants":30,"../Grammar":36,"../Logger":38,"../Utils":80,"events":84}],70:[function(require,module,exports){
 "use strict";
 
+/* eslint-disable max-len */
+var EventEmitter = require('events').EventEmitter;
+var Logger = require('./Logger');
+var logger = new Logger('RTCStatsMonitor');
+var DEFAULT_OPTIONS = {
+  sampleIntervalMs: 2000,
+  legacyReportIntervalMs: 2000,
+  backgroundSampleIntervalMs: 2000,
+  transitionGraceSamples: 2,
+  enableDetailedReport: true,
+  enableRawStatsLog: false,
+  rawStatsLogIntervalMs: 10000,
+  getStatsTimeoutMs: 5000,
+  autoStart: true,
+  contextProvider: null,
+  streamClassifier: null
+};
+var LEVEL = {
+  FULL: 'full',
+  PARTIAL: 'partial',
+  LEGACY_BASIC: 'legacy-basic',
+  UNSUPPORTED: 'unsupported'
+};
+
+/**
+ * 数据处理主链路：
+ *
+ * RTCPeerConnection.getStats()
+ *   -> 兼容标准 Map、普通对象和旧版 result()/stat() 报告
+ *   -> 按 report.id 保存上一份基线
+ *   -> 使用报告自身 timestamp 计算区间增量
+ *   -> 生成 detailed-report
+ *   -> 按较低频率生成兼容的 report / network-quality
+ *
+ * 这里刻意不使用 setInterval：一次 getStats 尚未完成时不会启动下一次采样，
+ * 可避免低性能移动设备上出现并发解析、乱序覆盖基线和定时器堆积。
+ *
+ * 兼容等级由运行时实际收到的 API 和字段自动判断，不依赖 UA：
+ * - full：存在 RTP、传输/候选对和至少一类高级质量字段；
+ * - partial：支持标准 getStats，但浏览器只提供部分字段；
+ * - legacy-basic：使用旧版 callback/result()/stat() 报告；
+ * - unsupported：PeerConnection 不提供 getStats。
+ */
+
+/**
+ * 独立的 WebRTC 统计监控器。
+ *
+ * PC 创建后即可启动，不要求当时已经存在 sender、receiver、MID 或 RTP 数据。
+ * 浏览器缺失的字段统一返回 null，避免把“未知”误判为 0。
+ *
+ * @fires RTCStatsMonitor#detailed-report 每次成功采样后触发的完整诊断报告
+ * @fires RTCStatsMonitor#report 兼容旧模块结构的上下行媒体报告
+ * @fires RTCStatsMonitor#network-quality 兼容旧模块结构的网络等级
+ * @fires RTCStatsMonitor#stats-error 不影响通话流程的统计错误
+ */
+module.exports = class RTCStatsMonitor extends EventEmitter {
+  /**
+   * @param {RTCPeerConnection} pc 要监控的 PeerConnection
+   * @param {object} [options] 采样与输出选项
+   * @param {number} [options.sampleIntervalMs=2000] 前台基础采样间隔，最小 500ms
+   * @param {number} [options.legacyReportIntervalMs=2000] 两个兼容事件的输出间隔
+   * @param {number} [options.backgroundSampleIntervalMs=2000] 页面后台时的采样间隔
+   * @param {number} [options.transitionGraceSamples=2] 媒体变化后跳过异常诊断的样本数
+   * @param {boolean} [options.enableDetailedReport=true] 是否发送 detailed-report
+   * @param {boolean} [options.enableRawStatsLog=false] 是否按限频规则记录原始报告
+   * @param {number} [options.getStatsTimeoutMs=5000] 单次 getStats 超时时间，最小 100ms
+   * @param {boolean} [options.autoStart=true] 构造后是否立即开始采样
+   * @param {Function} [options.contextProvider] 提供 hold、mute、mode、sharedMid 等会话上下文
+   * @param {Function} [options.streamClassifier] 自定义 audio/video/shared 流分类
+   */
+  constructor(pc, options = {}) {
+    super();
+    this._pc = pc;
+    this._options = Object.assign({}, DEFAULT_OPTIONS, options);
+    this._options.sampleIntervalMs = Math.max(500, number(this._options.sampleIntervalMs) || DEFAULT_OPTIONS.sampleIntervalMs);
+    this._options.legacyReportIntervalMs = Math.max(this._options.sampleIntervalMs, number(this._options.legacyReportIntervalMs) || DEFAULT_OPTIONS.legacyReportIntervalMs);
+    this._options.backgroundSampleIntervalMs = Math.max(this._options.sampleIntervalMs, number(this._options.backgroundSampleIntervalMs) || DEFAULT_OPTIONS.backgroundSampleIntervalMs);
+    this._options.getStatsTimeoutMs = Math.max(100, number(this._options.getStatsTimeoutMs) || DEFAULT_OPTIONS.getStatsTimeoutMs);
+    var transitionGraceSamples = number(this._options.transitionGraceSamples);
+    this._options.transitionGraceSamples = transitionGraceSamples === null ? DEFAULT_OPTIONS.transitionGraceSamples : Math.max(0, Math.floor(transitionGraceSamples));
+    this._previous = new Map();
+    this._observedTypes = new Set();
+    this._observedFeatures = new Set();
+    this._timer = null;
+    this._started = false;
+    this._sampling = false;
+    // stop() 后若在旧 getStats 返回前再次 start()，由旧采样的 finally 安排新一轮采样。
+    this._restartPending = false;
+    this._runId = 0;
+    this._sampleCount = 0;
+    this._lastLegacyTimestamp = null;
+    this._lastRawLogTimestamp = null;
+    this._lastTopology = null;
+    this._transitionReason = null;
+    this._transitionSamples = 0;
+    this._consecutiveErrors = 0;
+    this._unsupportedReported = false;
+    this._statsFormat = 'unknown';
+    this._latestDetailedReport = null;
+    this._latestLegacyReport = null;
+    this._latestNetworkQuality = null;
+    this._compatibility = {
+      level: this._canGetStats() ? LEVEL.PARTIAL : LEVEL.UNSUPPORTED,
+      api: {
+        getStats: this._canGetStats(),
+        promiseGetStats: false,
+        callbackGetStats: false,
+        getTransceivers: Boolean(pc && typeof pc.getTransceivers === 'function'),
+        standardStatsReport: false
+      }
+    };
+    if (this._options.autoStart !== false) {
+      this.start();
+    }
+  }
+  get supported() {
+    return this._compatibility.level !== LEVEL.UNSUPPORTED;
+  }
+  get compatibility() {
+    return this._compatibilitySnapshot();
+  }
+
+  /**
+   * 启动采样。重复调用不会创建多个定时器。
+   *
+   * 第一次立即采样只建立计数器基线；需要增量的码率、区间丢包等字段在
+   * 下一份可比较报告到达前保持 null。
+   */
+  start() {
+    if (this._started) {
+      return;
+    }
+    this._started = true;
+    this._runId++;
+    if (this._sampling) {
+      // 已发出的 getStats 无法取消；等待旧采样退出后立即为新 runId 重新调度。
+      this._restartPending = true;
+      return;
+    }
+
+    // 立即采样第一份基线，否则要等两个周期后才能得到第一组有效增量。
+    this._schedule(0);
+  }
+
+  /**
+   * 停止采样并释放定时器、历史基线和质量窗口。
+   *
+   * 浏览器不支持取消已经发出的 getStats Promise，因此使用 runId 丢弃在途结果，
+   * 保证 stop() 返回后不再触发任何报告事件。
+   */
+  stop() {
+    if (!this._started && !this._sampling) {
+      return;
+    }
+    this._started = false;
+    this._runId++;
+    this._restartPending = false;
+    if (this._timer !== null) {
+      clearTimeout(this._timer);
+      this._timer = null;
+    }
+
+    // 在途 getStats 不能取消，通过 runId 让它返回后不再发事件。
+    this._clearSamplingBaseline();
+  }
+
+  /**
+   * 保持运行状态不变，仅重建统计基线。
+   *
+   * 适合外部明确知道计数器会重置的场景；下一份报告会重新进入 warming-up，
+   * 不会把新的小计数器减去旧的大计数器而得到负速率。
+   */
+  reset() {
+    this._clearSamplingBaseline();
+    this.markTransition('reset');
+  }
+
+  /**
+   * 清除所有依赖上一轮报告的状态，但保留 latest 报告供停止后诊断查看。
+   * stop、reset 和旧 runId 在途结果返回时都必须走这里，避免旧基线污染重启会话。
+   *
+   * @private
+   */
+  _clearSamplingBaseline() {
+    this._previous.clear();
+    this._sampleCount = 0;
+    this._lastLegacyTimestamp = null;
+    this._lastTopology = null;
+    this._transitionReason = null;
+    this._transitionSamples = 0;
+  }
+
+  /**
+   * 正常情况下模块会自动识别媒体变化；RTCSession 也可以用此方法补充更明确的变化原因。
+   */
+  markTransition(reason = 'external-media-change') {
+    this._transitionReason = reason;
+    this._transitionSamples = this._options.transitionGraceSamples;
+  }
+  getLatestReport() {
+    return this._latestDetailedReport;
+  }
+  getLatestLegacyReport() {
+    return this._latestLegacyReport;
+  }
+  getLatestNetworkQuality() {
+    return this._latestNetworkQuality;
+  }
+  _canGetStats() {
+    return Boolean(this._pc && typeof this._pc.getStats === 'function');
+  }
+  _schedule(timeoutMs) {
+    if (!this._started) {
+      return;
+    }
+    this._timer = setTimeout(() => this._sample(), timeoutMs);
+  }
+  _nextInterval() {
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+      return this._options.backgroundSampleIntervalMs;
+    }
+    return this._options.sampleIntervalMs;
+  }
+
+  /**
+   * 执行一个完整采样周期。
+   *
+   * 只有上一个周期完全结束后才调度下一次；单次失败通过 stats-error 上报，
+   * 不会抛到 RTCSession，也不会停止后续重试。PC 已关闭或 API 不存在时才停止。
+   *
+   * @returns {Promise<void>}
+   * @private
+   */
+  async _sample() {
+    if (!this._started || this._sampling) {
+      return;
+    }
+    var runId = this._runId;
+    this._sampling = true;
+    try {
+      if (!this._canGetStats()) {
+        this._reportUnsupported();
+        this.stop();
+        return;
+      }
+      if (this._pc.signalingState === 'closed') {
+        this.stop();
+        return;
+      }
+      var detailedReport = await this._collect();
+      if (!this._started || runId !== this._runId) {
+        // _collect() 在解析阶段会更新基线；如果本轮已经失效，必须再次清除这些副作用。
+        this._clearSamplingBaseline();
+        return;
+      }
+      this._sampleCount++;
+      this._consecutiveErrors = 0;
+      this._latestDetailedReport = detailedReport;
+      if (this._options.enableDetailedReport) {
+        logger.debug('detailed-report: ', JSON.stringify(detailedReport));
+        this.emit('detailed-report', this._createDetailedEventReport(detailedReport));
+      }
+      if (this._shouldEmitLegacy(detailedReport.timestamp)) {
+        var legacyReport = this._createLegacyReport(detailedReport);
+        var networkQualityReport = this._createNetworkQuality(detailedReport);
+        this._lastLegacyTimestamp = detailedReport.timestamp;
+        this._latestLegacyReport = legacyReport;
+        this._latestNetworkQuality = networkQualityReport;
+        this.emit('report', legacyReport);
+        this.emit('network-quality', networkQualityReport);
+      }
+    } catch (error) {
+      this._consecutiveErrors++;
+      this._emitStatsError('GET_STATS_FAILED', error, false);
+    } finally {
+      this._sampling = false;
+      if (this._started && (runId === this._runId || this._restartPending)) {
+        var restartImmediately = this._restartPending;
+        this._restartPending = false;
+        this._schedule(restartImmediately ? 0 : this._nextInterval());
+      }
+    }
+  }
+
+  /**
+   * 收集、归一化并解析一次报告，同时记录 getStats 和解析耗时。
+   *
+   * @returns {Promise<object>} detailed-report payload
+   * @private
+   */
+  async _collect() {
+    var getStatsStartedAt = monotonicNow();
+    // callback 和 Promise 形式都可能遇到异常实现静默不返回；统一超时可确保
+    // _sample() 进入 finally 释放采样锁，并在下一周期继续重试。
+    var rawStats = await withTimeout(this._requestStats(), this._options.getStatsTimeoutMs, `getStats timed out after ${this._options.getStatsTimeoutMs}ms`);
+    var getStatsDurationMs = monotonicNow() - getStatsStartedAt;
+    var parseStartedAt = monotonicNow();
+    var normalized = this._normalize(rawStats);
+    var report = this._createDetailedReport(normalized.reports, getStatsDurationMs, normalized.format);
+    this._updateCompatibility(normalized.reports, normalized.format);
+    report.compatibility = this._compatibilitySnapshot();
+    report.performance.parseDurationMs = rounded(monotonicNow() - parseStartedAt, 3);
+    this._logRawStats(report.timestamp, normalized.reports);
+    return report;
+  }
+
+  /**
+   * 优先调用现代 Promise getStats；返回值为空或同步抛错时自动切换 callback API。
+   *
+   * 能力判断基于实际调用结果，避免仅凭函数 length 或浏览器 UA 作结论。
+   *
+   * @returns {Promise<RTCStatsReport|object>}
+   * @private
+   */
+  async _requestStats() {
+    var result;
+    try {
+      result = this._pc.getStats();
+    } catch (error) {
+      return this._requestStatsByCallback(error);
+    }
+    if (result && typeof result.then === 'function') {
+      this._compatibility.api.promiseGetStats = true;
+      return result;
+    }
+    if (result) {
+      return result;
+    }
+    return this._requestStatsByCallback();
+  }
+
+  /**
+   * 兼容历史上出现过的两种 callback 参数顺序。
+   *
+   * 函数 length 仅作为第一次尝试的提示；同步失败后会交换签名重试。
+   * settled 防止异常浏览器同时调用成功和失败回调时重复完成 Promise。
+   *
+   * @param {Error} [initialError] Promise 形式首次调用时的同步异常
+   * @returns {Promise<object>}
+   * @private
+   */
+  _requestStatsByCallback(initialError) {
+    this._compatibility.api.callbackGetStats = true;
+    return new Promise((fulfill, reject) => {
+      var settled = false;
+      var success = result => {
+        if (!settled) {
+          settled = true;
+          fulfill(result);
+        }
+      };
+      var failure = error => {
+        if (!settled) {
+          settled = true;
+          reject(error || initialError || new Error('getStats callback failed'));
+        }
+      };
+      try {
+        if (this._pc.getStats.length >= 3) {
+          // 一部分旧实现使用 getStats(selector, success, failure)。
+          this._pc.getStats(null, success, failure);
+        } else {
+          // 旧 Chrome 常见签名为 getStats(success, selector)。
+          this._pc.getStats(success, null);
+        }
+      } catch (firstError) {
+        try {
+          // 函数 length 不可靠时，再尝试另一种历史签名。
+          if (this._pc.getStats.length >= 3) {
+            this._pc.getStats(success, null);
+          } else {
+            this._pc.getStats(null, success, failure);
+          }
+        } catch (secondError) {
+          reject(secondError || firstError || initialError);
+        }
+      }
+    });
+  }
+
+  /**
+   * 将不同浏览器的报告容器转换为普通对象数组。
+   *
+   * - standard：现代 RTCStatsReport（MapLike/forEach）；
+   * - object：部分 WebView/polyfill 返回的普通对象；
+   * - legacy：旧 Chrome result() + stat() 格式。
+   *
+   * @param {*} rawStats 浏览器原始 getStats 返回值
+   * @returns {{reports: object[], format: string}}
+   * @private
+   */
+  _normalize(rawStats) {
+    var reports = [];
+    var format;
+    if (rawStats && typeof rawStats.result === 'function') {
+      format = 'legacy';
+      rawStats.result().forEach(report => reports.push(normalizeLegacyReport(report)));
+    } else if (rawStats && typeof rawStats.forEach === 'function') {
+      format = 'standard';
+      rawStats.forEach(report => reports.push(copyReport(report)));
+    } else if (rawStats && typeof rawStats === 'object') {
+      format = 'object';
+      Object.keys(rawStats).forEach(key => reports.push(copyReport(rawStats[key])));
+    } else {
+      throw new TypeError('Unsupported getStats report format');
+    }
+    return {
+      reports,
+      format
+    };
+  }
+
+  /**
+   * 建立索引并组装一份完整报告。
+   *
+   * 解析顺序保持为“关联对象 -> 媒体流 -> 连接 -> 质量”，这样 codec、
+   * media-source、remote RTP 和 candidate 可以通过 id 关联到对应主报告。
+   *
+   * @private
+   */
+  _createDetailedReport(reports, getStatsDurationMs, format) {
+    var byId = new Map();
+    var byType = new Map();
+    reports.forEach(report => {
+      if (report.id !== undefined && report.id !== null) {
+        byId.set(String(report.id), report);
+      }
+      if (!byType.has(report.type)) {
+        byType.set(report.type, []);
+      }
+      byType.get(report.type).push(report);
+    });
+    var timestamp = findTimestamp(reports);
+    var context = this._readContext();
+    var transceivers = this._readTransceivers();
+    var selectedPair = findSelectedPair(byType, byId);
+    var remoteInboundByLocalId = indexByField(byType.get('remote-inbound-rtp') || [], 'localId');
+    var remoteOutboundByLocalId = indexByField(byType.get('remote-outbound-rtp') || [], 'localId');
+    var outbound = (byType.get('outbound-rtp') || []).filter(report => !report.isRemote).map(report => this._createOutbound(report, byId, remoteInboundByLocalId, context, transceivers));
+    var remoteInbound = (byType.get('remote-inbound-rtp') || []).map(report => this._createRemoteInbound(report, byId));
+    var inbound = (byType.get('inbound-rtp') || []).filter(report => !report.isRemote).map(report => this._createInbound(report, byId, remoteOutboundByLocalId, context, transceivers));
+    var sources = (byType.get('media-source') || []).map(report => createSource(report));
+    var connection = this._createConnection(selectedPair, byId, timestamp);
+    var topology = createTopology(outbound, inbound, transceivers, selectedPair.pair);
+    if (this._lastTopology !== null && topology !== this._lastTopology) {
+      this.markTransition('stats-topology-changed');
+    }
+    this._lastTopology = topology;
+    var ready = hasComparableStreams(outbound, inbound);
+    var phase = this._readPhase(ready);
+    var detailedReport = {
+      timestamp,
+      sampleDurationMs: findSampleDuration(outbound, inbound),
+      ready,
+      phase,
+      transition: phase === 'transitioning' ? {
+        reason: this._transitionReason || 'media-change',
+        remainingSamples: this._transitionSamples
+      } : null,
+      connection,
+      sources,
+      outbound,
+      remoteInbound,
+      inbound,
+      quality: null,
+      compatibility: null,
+      performance: {
+        getStatsDurationMs: rounded(getStatsDurationMs, 3),
+        parseDurationMs: 0,
+        reportCount: reports.length,
+        statsFormat: format
+      }
+    };
+    detailedReport.quality = this._createDetailedQuality(detailedReport, context);
+    if (this._transitionSamples > 0) {
+      this._transitionSamples--;
+    }
+    this._remember(reports);
+    return detailedReport;
+  }
+
+  /**
+   * 解析本地发送链路：媒体源 -> 编码器/RTP -> 远端接收反馈。
+   *
+   * 区间指标全部依赖同一 report.id 的前后两份数据；浏览器缺字段、时间戳不前进、
+   * 计数器回退时返回 null，避免制造负码率或虚假丢包。
+   *
+   * @private
+   */
+  _createOutbound(report, byId, remoteInboundByLocalId, context, transceivers) {
+    var previous = this._previous.get(String(report.id));
+    var seconds = durationSeconds(report, previous);
+    var codec = resolve(report.codecId, byId);
+    var source = resolve(report.mediaSourceId, byId);
+    var remoteReport = resolve(report.remoteId, byId) || remoteInboundByLocalId.get(String(report.id)) || null;
+    var transceiver = findTransceiver(transceivers, report.mid, source && source.trackIdentifier, 'sender');
+    var sourceInfo = createSourceWithFallback(source, transceiver);
+    var packetsSentDelta = delta(report, previous, 'packetsSent');
+    return {
+      id: String(report.id),
+      type: this._classify(report, context, transceiver),
+      kind: readKind(report),
+      ssrc: valueOrNull(report.ssrc),
+      mid: valueOrNull(report.mid),
+      rid: valueOrNull(report.rid),
+      encodingIndex: number(report.encodingIndex),
+      active: report.active !== false,
+      trackIdentifier: source && source.trackIdentifier || report.trackIdentifier || readTrackId(transceiver, 'sender'),
+      mediaSourceId: report.mediaSourceId || null,
+      codec: createCodec(codec, report),
+      timestamp: number(report.timestamp),
+      sampleDurationMs: seconds === null ? null : rounded(seconds * 1000, 3),
+      actualBitrateBps: bitrate(report, previous, 'bytesSent'),
+      rtpBitrateBps: combinedBitrate(report, previous, 'bytesSent', 'headerBytesSent'),
+      targetBitrateBps: number(report.targetBitrate),
+      retransmitBitrateBps: bitrate(report, previous, 'retransmittedBytesSent'),
+      retransmitPacketPercent: percent(delta(report, previous, 'retransmittedPacketsSent'), packetsSentDelta),
+      bytesSent: number(report.bytesSent),
+      headerBytesSent: number(report.headerBytesSent),
+      retransmittedBytesSent: number(report.retransmittedBytesSent),
+      packetsSent: number(report.packetsSent),
+      packetsSentDelta: packetsSentDelta,
+      retransmittedPacketsSent: number(report.retransmittedPacketsSent),
+      framesSent: number(report.framesSent),
+      framesEncoded: number(report.framesEncoded),
+      framesEncodedDelta: delta(report, previous, 'framesEncoded'),
+      framesPerSecond: number(report.framesPerSecond) || number(report.framerateMean),
+      frameWidth: number(report.frameWidth) === null && sourceInfo ? sourceInfo.width : number(report.frameWidth),
+      frameHeight: number(report.frameHeight) === null && sourceInfo ? sourceInfo.height : number(report.frameHeight),
+      keyFramesEncoded: number(report.keyFramesEncoded),
+      hugeFramesSent: number(report.hugeFramesSent),
+      averageEncodeTimeMs: average(report, previous, 'totalEncodeTime', 'framesEncoded', 1000),
+      averagePacketSendDelayMs: average(report, previous, 'totalPacketSendDelay', 'packetsSent', 1000),
+      averageQp: average(report, previous, 'qpSum', 'framesEncoded', 1),
+      qpSum: number(report.qpSum),
+      qualityLimitationReason: report.qualityLimitationReason || null,
+      qualityLimitationDurations: numericObject(report.qualityLimitationDurations),
+      qualityLimitationDurationsDelta: objectDelta(report.qualityLimitationDurations, previous && previous.qualityLimitationDurations),
+      qualityLimitationResolutionChangesDelta: delta(report, previous, 'qualityLimitationResolutionChanges'),
+      nackCountDelta: delta(report, previous, 'nackCount'),
+      pliCountDelta: delta(report, previous, 'pliCount'),
+      firCountDelta: delta(report, previous, 'firCount'),
+      source: sourceInfo,
+      remoteInbound: remoteReport ? this._createRemoteInbound(remoteReport, byId) : null,
+      comparable: seconds !== null
+    };
+  }
+
+  /**
+   * 解析 remote-inbound-rtp，即对端对本端上行 RTP 的接收反馈。
+   * 它是判断上行丢包、抖动和 RTT 的优先数据源。
+   *
+   * @private
+   */
+  _createRemoteInbound(report, byId) {
+    var previous = this._previous.get(String(report.id));
+    var lostDelta = delta(report, previous, 'packetsLost');
+    var receivedDelta = delta(report, previous, 'packetsReceived');
+    var fractionLost = number(report.fractionLost);
+    return {
+      id: String(report.id),
+      localId: report.localId || null,
+      kind: readKind(report),
+      ssrc: valueOrNull(report.ssrc),
+      codec: createCodec(resolve(report.codecId, byId), report),
+      packetsLost: number(report.packetsLost),
+      packetsReceived: number(report.packetsReceived),
+      intervalLossPercent: fractionLost === null ? lossPercent(lostDelta, receivedDelta) : rounded(Math.max(0, fractionLost) * 100, 2),
+      fractionLost,
+      jitterMs: timeMs(report.jitter, report._legacyJitterMs),
+      rttMs: timeMs(report.roundTripTime, report._legacyRttMs),
+      averageRttMs: cumulativeAverage(report.totalRoundTripTime, report.roundTripTimeMeasurements, 1000)
+    };
+  }
+
+  /**
+   * 解析远端发送到本地的下行链路，重点计算接收码率、区间丢包、
+   * jitter buffer、解码耗时、丢帧和卡顿等指标。
+   *
+   * @private
+   */
+  _createInbound(report, byId, remoteOutboundByLocalId, context, transceivers) {
+    var previous = this._previous.get(String(report.id));
+    var seconds = durationSeconds(report, previous);
+    var transceiver = findTransceiver(transceivers, report.mid, report.trackIdentifier, 'receiver');
+    var lostDelta = delta(report, previous, 'packetsLost');
+    var receivedDelta = delta(report, previous, 'packetsReceived');
+    var droppedDelta = delta(report, previous, 'framesDropped');
+    var decodedDelta = delta(report, previous, 'framesDecoded');
+    var remoteReport = resolve(report.remoteId, byId) || remoteOutboundByLocalId.get(String(report.id)) || null;
+    return {
+      id: String(report.id),
+      type: this._classify(report, context, transceiver),
+      kind: readKind(report),
+      ssrc: valueOrNull(report.ssrc),
+      mid: valueOrNull(report.mid),
+      trackIdentifier: report.trackIdentifier || readTrackId(transceiver, 'receiver'),
+      codec: createCodec(resolve(report.codecId, byId), report),
+      timestamp: number(report.timestamp),
+      sampleDurationMs: seconds === null ? null : rounded(seconds * 1000, 3),
+      receiveBitrateBps: bitrate(report, previous, 'bytesReceived'),
+      rtpBitrateBps: combinedBitrate(report, previous, 'bytesReceived', 'headerBytesReceived'),
+      bytesReceived: number(report.bytesReceived),
+      headerBytesReceived: number(report.headerBytesReceived),
+      packetsReceived: number(report.packetsReceived),
+      packetsLost: number(report.packetsLost),
+      intervalLossPercent: lossPercent(lostDelta, receivedDelta),
+      packetsDiscarded: number(report.packetsDiscarded),
+      packetsDiscardedDelta: delta(report, previous, 'packetsDiscarded'),
+      jitterMs: timeMs(report.jitter, report._legacyJitterMs),
+      framesReceived: number(report.framesReceived),
+      framesDecoded: number(report.framesDecoded),
+      framesDecodedDelta: decodedDelta,
+      framesRendered: number(report.framesRendered),
+      framesDropped: number(report.framesDropped),
+      droppedFramePercent: lossPercent(droppedDelta, decodedDelta),
+      framesPerSecond: number(report.framesPerSecond) || number(report.framerateMean),
+      frameWidth: number(report.frameWidth),
+      frameHeight: number(report.frameHeight),
+      averageDecodeTimeMs: average(report, previous, 'totalDecodeTime', 'framesDecoded', 1000),
+      averageProcessingDelayMs: average(report, previous, 'totalProcessingDelay', 'framesDecoded', 1000),
+      averageJitterBufferDelayMs: average(report, previous, 'jitterBufferDelay', 'jitterBufferEmittedCount', 1000),
+      averageJitterBufferTargetDelayMs: average(report, previous, 'jitterBufferTargetDelay', 'jitterBufferEmittedCount', 1000),
+      averageJitterBufferMinimumDelayMs: average(report, previous, 'jitterBufferMinimumDelay', 'jitterBufferEmittedCount', 1000),
+      jitterBufferEmittedCount: number(report.jitterBufferEmittedCount),
+      freezeCount: number(report.freezeCount),
+      freezeCountDelta: delta(report, previous, 'freezeCount'),
+      totalFreezesDuration: number(report.totalFreezesDuration),
+      freezesDurationDeltaMs: multiplied(delta(report, previous, 'totalFreezesDuration'), 1000),
+      pauseCount: number(report.pauseCount),
+      pauseCountDelta: delta(report, previous, 'pauseCount'),
+      totalPausesDuration: number(report.totalPausesDuration),
+      pausesDurationDeltaMs: multiplied(delta(report, previous, 'totalPausesDuration'), 1000),
+      nackCountDelta: delta(report, previous, 'nackCount'),
+      pliCountDelta: delta(report, previous, 'pliCount'),
+      firCountDelta: delta(report, previous, 'firCount'),
+      retransmittedPacketsReceived: number(report.retransmittedPacketsReceived),
+      retransmittedPacketsReceivedDelta: delta(report, previous, 'retransmittedPacketsReceived'),
+      retransmittedBytesReceived: number(report.retransmittedBytesReceived),
+      retransmittedBytesReceivedDelta: delta(report, previous, 'retransmittedBytesReceived'),
+      retransmitReceiveBitrateBps: bitrate(report, previous, 'retransmittedBytesReceived'),
+      fecPacketsReceived: number(report.fecPacketsReceived),
+      fecPacketsReceivedDelta: delta(report, previous, 'fecPacketsReceived'),
+      fecPacketsDiscarded: number(report.fecPacketsDiscarded),
+      fecPacketsDiscardedDelta: delta(report, previous, 'fecPacketsDiscarded'),
+      fecBytesReceived: number(report.fecBytesReceived),
+      fecBytesReceivedDelta: delta(report, previous, 'fecBytesReceived'),
+      fecReceiveBitrateBps: bitrate(report, previous, 'fecBytesReceived'),
+      remoteOutbound: createRemoteOutbound(remoteReport),
+      comparable: seconds !== null
+    };
+  }
+
+  /**
+   * 解析当前选中的 ICE candidate-pair 与 transport。
+   * 优先使用 transport.selectedCandidatePairId，缺失时再回退 nominated+succeeded。
+   *
+   * @private
+   */
+  _createConnection(selected, byId, timestamp) {
+    var pair = selected.pair;
+    var previous = pair && this._previous.get(String(pair.id));
+    var transport = selected.transport;
+    var previousTransport = transport && this._previous.get(String(transport.id));
+    return {
+      connectionState: readConnectionState(this._pc),
+      iceConnectionState: this._pc.iceConnectionState || null,
+      iceGatheringState: this._pc.iceGatheringState || null,
+      signalingState: this._pc.signalingState || null,
+      dtlsState: transport && transport.dtlsState || null,
+      iceState: transport && transport.iceState || null,
+      selectedCandidatePairId: pair && pair.id || null,
+      candidatePairSelection: selected.method,
+      candidatePairState: pair && pair.state || null,
+      candidatePairNominated: pair ? pair.nominated === true : null,
+      localCandidateId: pair && pair.localCandidateId || null,
+      remoteCandidateId: pair && pair.remoteCandidateId || null,
+      selectedCandidatePairChanges: transport ? number(transport.selectedCandidatePairChanges) : null,
+      selectedCandidatePairChangesDelta: transport ? delta(transport, previousTransport, 'selectedCandidatePairChanges') : null,
+      rttMs: pair ? timeMs(pair.currentRoundTripTime, pair._legacyRttMs) : null,
+      averageRttMs: pair ? cumulativeAverage(pair.totalRoundTripTime, pair.responsesReceived, 1000) : null,
+      availableOutgoingBitrateBps: pair ? number(pair.availableOutgoingBitrate) : null,
+      availableIncomingBitrateBps: pair ? number(pair.availableIncomingBitrate) : null,
+      sendBitrateBps: pair ? bitrate(pair, previous, 'bytesSent') : null,
+      receiveBitrateBps: pair ? bitrate(pair, previous, 'bytesReceived') : null,
+      bytesSent: pair ? number(pair.bytesSent) : null,
+      bytesReceived: pair ? number(pair.bytesReceived) : null,
+      packetsSent: pair ? number(pair.packetsSent) : null,
+      packetsReceived: pair ? number(pair.packetsReceived) : null,
+      packetsDiscardedOnSend: pair ? number(pair.packetsDiscardedOnSend) : null,
+      packetsDiscardedOnSendDelta: pair ? delta(pair, previous, 'packetsDiscardedOnSend') : null,
+      bytesDiscardedOnSend: pair ? number(pair.bytesDiscardedOnSend) : null,
+      bytesDiscardedOnSendDelta: pair ? delta(pair, previous, 'bytesDiscardedOnSend') : null,
+      lastPacketSentAgoMs: pair ? age(timestamp, pair.lastPacketSentTimestamp) : null,
+      lastPacketReceivedAgoMs: pair ? age(timestamp, pair.lastPacketReceivedTimestamp) : null,
+      localCandidate: pair ? createCandidate(resolve(pair.localCandidateId, byId)) : null,
+      remoteCandidate: pair ? createCandidate(resolve(pair.remoteCandidateId, byId)) : null
+    };
+  }
+
+  /**
+   * 把详细流报告投影为旧 report 事件结构。
+   *
+   * 这里有意保留音频/视频对象各自的历史字段集合；只修正计算口径，并按用户约定
+   * 将 speed 统一为 number，避免旧业务监听器迁移时需要同时改字段路径。
+   *
+   * @private
+   */
+  _createLegacyReport(report) {
+    var outbound = groupByType(report.outbound);
+    var inbound = groupByType(report.inbound);
+    var upStreams = [];
+    var downStreams = [];
+    ['audio', 'video', 'shared'].forEach(type => {
+      var up = outbound[type] || [];
+      var down = inbound[type] || [];
+      if (up.length > 0) {
+        up.forEach(stream => upStreams.push(createLegacyOutbound(type, stream)));
+      } else if (type === 'audio') {
+        upStreams.push(createLegacyOutbound(type, null));
+      }
+      if (down.length > 0) {
+        down.forEach(stream => downStreams.push(createLegacyInbound(type, stream)));
+      } else if (type === 'audio') {
+        downStreams.push(createLegacyInbound(type, null));
+      }
+    });
+    return {
+      // 与 network-quality、detailed-report.quality 使用同一份当前网络快照。
+      RTT: report.quality.RTT,
+      upStreams,
+      downStreams
+    };
+  }
+
+  /**
+   * 将 detailed-report.quality 中已经计算完成的网络快照投影为旧事件结构。
+   * 这里不再二次更新滑动窗口，保证三个事件的重叠字段来自同一轮计算。
+   *
+   * @private
+   */
+  _createNetworkQuality(report) {
+    var quality = report.quality;
+    return {
+      uplinkNetworkQuality: quality.uplinkNetworkQuality,
+      RTT: quality.RTT,
+      uplinkLoss: quality.uplinkLoss,
+      downlinkNetworkQuality: quality.downlinkNetworkQuality,
+      downlinkLoss: quality.downlinkLoss
+    };
+  }
+  _createDetailedEventReport(report) {
+    return {
+      connection: {
+        connectionState: report.connection.connectionState,
+        iceConnectionState: report.connection.iceConnectionState,
+        dtlsState: report.connection.dtlsState,
+        sendBitrateBps: report.connection.sendBitrateBps,
+        availableOutgoingBitrateBps: report.connection.availableOutgoingBitrateBps,
+        receiveBitrateBps: report.connection.receiveBitrateBps,
+        availableIncomingBitrateBps: report.connection.availableIncomingBitrateBps
+      },
+      outbound: report.outbound.map(stream => ({
+        type: stream.type,
+        kind: stream.kind,
+        mid: stream.mid,
+        codec: stream.codec ? {
+          name: stream.codec.name
+        } : null,
+        actualBitrateBps: stream.actualBitrateBps,
+        framesPerSecond: stream.framesPerSecond,
+        frameWidth: stream.frameWidth,
+        frameHeight: stream.frameHeight,
+        averageEncodeTimeMs: stream.averageEncodeTimeMs,
+        qualityLimitationReason: stream.qualityLimitationReason,
+        remoteInbound: stream.remoteInbound ? {
+          jitterMs: stream.remoteInbound.jitterMs,
+          intervalLossPercent: stream.remoteInbound.intervalLossPercent
+        } : null
+      })),
+      inbound: report.inbound.map(stream => ({
+        type: stream.type,
+        kind: stream.kind,
+        mid: stream.mid,
+        codec: stream.codec ? {
+          name: stream.codec.name
+        } : null,
+        receiveBitrateBps: stream.receiveBitrateBps,
+        jitterMs: stream.jitterMs,
+        intervalLossPercent: stream.intervalLossPercent,
+        framesPerSecond: stream.framesPerSecond,
+        frameWidth: stream.frameWidth,
+        frameHeight: stream.frameHeight,
+        averageDecodeTimeMs: stream.averageDecodeTimeMs
+      })),
+      quality: {
+        RTT: report.quality.RTT,
+        uplinkNetworkQuality: report.quality.uplinkNetworkQuality,
+        downlinkNetworkQuality: report.quality.downlinkNetworkQuality,
+        issues: report.quality.issues.map(eventIssue => ({
+          code: eventIssue.code,
+          severity: eventIssue.severity
+        }))
+      }
+    };
+  }
+
+  /**
+   * 生成 detailed-report 中的媒体质量诊断。
+   *
+   * 网络等级与媒体问题分开：网络可能正常，但编码器仍可能因 CPU 或带宽限制降级。
+   * transition 期间暂缓瞬时问题诊断，避免 replaceTrack/重协商产生误报。
+   *
+   * @private
+   */
+  _createDetailedQuality(report, context) {
+    var issues = [];
+    var currentNetwork = currentNetworkSample(report);
+
+    // RTT 和丢包率使用当前采样，避免多样本平均掩盖用户正在感受的瞬时劣化。
+    var network = currentNetwork;
+    var unavailable = report.connection.connectionState === 'failed' || report.connection.connectionState === 'closed';
+
+    // 媒体刚变化时先等待新基线稳定，避免换轨和重协商产生瞬时误报。
+    if (report.phase !== 'transitioning') {
+      report.outbound.forEach(stream => collectOutboundIssues(stream, issues));
+      report.inbound.forEach(stream => collectInboundIssues(stream, issues));
+      collectConnectionIssues(report, issues, context);
+      if (network.rtt !== null && network.rtt > 200) {
+        issues.push(issue('HIGH_RTT', network.rtt > 500 ? 6 : 4, null, {
+          rttMs: network.rtt
+        }));
+      }
+    }
+    if (report.connection.connectionState === 'failed' || report.connection.connectionState === 'closed') {
+      issues.push(issue('CONNECTION_UNAVAILABLE', 6, null, {
+        connectionState: report.connection.connectionState
+      }));
+    }
+    var uplinkNetworkQuality = unavailable ? 6 : networkQuality(network.uplinkLoss, network.rtt, network.hasUplink);
+    var downlinkNetworkQuality = unavailable ? 6 : networkQuality(network.downlinkLoss, network.rtt, network.hasDownlink);
+    return {
+      uplinkNetworkQuality,
+      downlinkNetworkQuality,
+      RTT: network.rtt === null ? 0 : Math.floor(network.rtt),
+      uplinkLoss: network.uplinkLoss === null ? 0 : Math.floor(network.uplinkLoss),
+      downlinkLoss: network.downlinkLoss === null ? 0 : Math.floor(network.downlinkLoss),
+      uplinkMediaQuality: mediaQuality(uplinkNetworkQuality, issues, 'uplink'),
+      downlinkMediaQuality: mediaQuality(downlinkNetworkQuality, issues, 'downlink'),
+      issues,
+      context: cleanContext(context)
+    };
+  }
+  _classify(report, context, transceiver) {
+    if (typeof this._options.streamClassifier === 'function') {
+      try {
+        var result = this._options.streamClassifier({
+          report,
+          context,
+          transceiver
+        });
+        if (result) {
+          return result;
+        }
+      } catch (error) {
+        this._emitStatsError('STREAM_CLASSIFIER_FAILED', error, false);
+      }
+    }
+    var kind = readKind(report);
+    if (kind === 'video' && context.sharedMid !== undefined && context.sharedMid !== null && String(report.mid) === String(context.sharedMid)) {
+      return 'shared';
+    }
+    return kind || 'unknown';
+  }
+  _readContext() {
+    if (typeof this._options.contextProvider !== 'function') {
+      return {};
+    }
+    try {
+      return this._options.contextProvider() || {};
+    } catch (error) {
+      this._emitStatsError('CONTEXT_PROVIDER_FAILED', error, false);
+      return {};
+    }
+  }
+  _readTransceivers() {
+    if (!this._pc || typeof this._pc.getTransceivers !== 'function') {
+      return [];
+    }
+    try {
+      return this._pc.getTransceivers() || [];
+    } catch (error) {
+      return [];
+    }
+  }
+  _readPhase(ready) {
+    var state = readConnectionState(this._pc);
+    if (state === 'closed') {
+      return 'stopped';
+    }
+    if (state === 'failed' || state === 'disconnected') {
+      return 'reconnecting';
+    }
+    if (this._transitionSamples > 0) {
+      return 'transitioning';
+    }
+    return ready ? 'active' : 'warming-up';
+  }
+
+  /**
+   * 保存本次原始报告作为下一周期基线，并移除已经消失的 report id。
+   * 这既适配重协商后的 SSRC/编码层变化，也避免长通话中 Map 无限增长。
+   *
+   * @private
+   */
+  _remember(reports) {
+    var currentIds = new Set();
+    reports.forEach(report => {
+      if (report.id === undefined || report.id === null) {
+        return;
+      }
+      var id = String(report.id);
+      currentIds.add(id);
+      this._previous.set(id, report);
+    });
+
+    // 清除协商后已经消失的旧 report，避免长通话中 Map 持续增长。
+    Array.from(this._previous.keys()).forEach(id => {
+      if (!currentIds.has(id)) {
+        this._previous.delete(id);
+      }
+    });
+  }
+
+  /**
+   * 根据实际观察到的报告类型和字段自动更新兼容等级。
+   *
+   * observed 集合跨样本累积，因为音视频 RTP、transport 和远端反馈未必会在
+   * 同一份报告中同时出现；一旦浏览器证明支持某字段，就保留该能力结论。
+   *
+   * @private
+   */
+  _updateCompatibility(reports, format) {
+    this._statsFormat = format;
+    if (format === 'legacy') {
+      this._compatibility.level = LEVEL.LEGACY_BASIC;
+      return;
+    }
+    this._compatibility.api.standardStatsReport = format === 'standard';
+    reports.forEach(report => {
+      report.type && this._observedTypes.add(report.type);
+      observeFeatures(report, this._observedFeatures);
+    });
+    var hasTransport = this._observedTypes.has('transport') && this._observedTypes.has('candidate-pair');
+    var hasRtp = this._observedTypes.has('outbound-rtp') || this._observedTypes.has('inbound-rtp');
+    var hasAdvanced = this._observedFeatures.has('remoteInboundRtp') || this._observedFeatures.has('qualityLimitationReason') || this._observedFeatures.has('jitterBufferDelay');
+    this._compatibility.level = hasTransport && hasRtp && hasAdvanced ? LEVEL.FULL : LEVEL.PARTIAL;
+  }
+  _compatibilitySnapshot() {
+    return {
+      level: this._compatibility.level,
+      api: Object.assign({}, this._compatibility.api),
+      observedStatsTypes: Array.from(this._observedTypes).sort(),
+      observedFeatures: featureSnapshot(this._observedFeatures),
+      statsFormat: this._statsFormat
+    };
+  }
+  _shouldEmitLegacy(timestamp) {
+    if (this._sampleCount === 1) {
+      this._lastLegacyTimestamp = timestamp;
+      return false;
+    }
+    return this._lastLegacyTimestamp === null || timestamp - this._lastLegacyTimestamp >= this._options.legacyReportIntervalMs;
+  }
+  _logRawStats(timestamp, reports) {
+    if (!this._options.enableRawStatsLog) {
+      return;
+    }
+    if (this._lastRawLogTimestamp !== null && timestamp - this._lastRawLogTimestamp < this._options.rawStatsLogIntervalMs) {
+      return;
+    }
+    this._lastRawLogTimestamp = timestamp;
+    logger.debug(`raw stats: ${JSON.stringify(reports)}`);
+  }
+  _reportUnsupported() {
+    if (this._unsupportedReported) {
+      return;
+    }
+    this._unsupportedReported = true;
+    this._compatibility.level = LEVEL.UNSUPPORTED;
+    this._emitStatsError('GET_STATS_UNSUPPORTED', new Error('RTCPeerConnection.getStats is unavailable'), true);
+  }
+  _emitStatsError(code, error, fatal) {
+    var event = {
+      code,
+      fatal: Boolean(fatal),
+      message: error && error.message ? error.message : String(error),
+      error: error || null,
+      consecutiveErrors: this._consecutiveErrors
+    };
+    logger.warn(`${code}: ${event.message}`);
+    this.emit('stats-error', event);
+  }
+};
+function monotonicNow() {
+  if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
+    return performance.now();
+  }
+  return Date.now();
+}
+function number(value) {
+  if (typeof value === 'number' && isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string' && value.trim() !== '') {
+    var result = Number(value);
+    return isFinite(result) ? result : null;
+  }
+  return null;
+}
+function rounded(value, digits = 2) {
+  if (number(value) === null) {
+    return null;
+  }
+  var factor = Math.pow(10, digits);
+  return Math.round(value * factor) / factor;
+}
+function multiplied(value, multiplier) {
+  return value === null ? null : rounded(value * multiplier, 3);
+}
+function valueOrNull(value) {
+  return value === undefined ? null : value;
+}
+function copyReport(report) {
+  var result = {};
+  if (!report || typeof report !== 'object') {
+    return result;
+  }
+  Object.keys(report).forEach(key => {
+    result[key] = report[key];
+  });
+  ['id', 'type', 'timestamp'].forEach(key => {
+    if (result[key] === undefined && report[key] !== undefined) {
+      result[key] = report[key];
+    }
+  });
+  return result;
+}
+function normalizeLegacyReport(report) {
+  var result = {
+    id: report.id,
+    type: report.type,
+    timestamp: number(report.timestamp) || Date.now()
+  };
+  if (typeof report.names === 'function' && typeof report.stat === 'function') {
+    report.names().forEach(name => {
+      result[name] = report.stat(name);
+    });
+  }
+  var originalType = String(result.type || '').toLowerCase();
+  if (originalType === 'ssrc') {
+    if (result.bytesSent !== undefined) {
+      result.type = 'outbound-rtp';
+      result.frameWidth = number(result.frameWidth) || number(result.googFrameWidthSent);
+      result.frameHeight = number(result.frameHeight) || number(result.googFrameHeightSent);
+      result.framesPerSecond = number(result.framesPerSecond) || number(result.googFrameRateSent);
+    } else if (result.bytesReceived !== undefined) {
+      result.type = 'inbound-rtp';
+      result.frameWidth = number(result.frameWidth) || number(result.googFrameWidthReceived);
+      result.frameHeight = number(result.frameHeight) || number(result.googFrameHeightReceived);
+      result.framesPerSecond = number(result.framesPerSecond) || number(result.googFrameRateReceived);
+      result._legacyJitterMs = number(result.googJitterReceived);
+    }
+    result.kind = result.mediaType || result.kind || (result.frameWidth ? 'video' : 'audio');
+    result.mimeType = result.mimeType || result.googCodecName || null;
+  } else if (originalType === 'googcandidatepair' || originalType === 'candidatepair') {
+    result.type = 'candidate-pair';
+    result.selected = String(result.googActiveConnection) === 'true';
+    result.nominated = result.selected;
+    result.state = result.selected ? 'succeeded' : null;
+    result._legacyRttMs = number(result.googRtt);
+  } else if (originalType === 'localcandidate') {
+    result.type = 'local-candidate';
+  } else if (originalType === 'remotecandidate') {
+    result.type = 'remote-candidate';
+  }
+  Object.keys(result).forEach(key => {
+    var numericValue = number(result[key]);
+    if (numericValue !== null && key !== 'id' && key !== 'type') {
+      result[key] = numericValue;
+    }
+  });
+  return result;
+}
+function readKind(report) {
+  var kind = report && (report.kind || report.mediaType);
+  if (kind) {
+    return String(kind).toLowerCase();
+  }
+  if (report && report.mimeType) {
+    return String(report.mimeType).toLowerCase().indexOf('video') !== -1 ? 'video' : 'audio';
+  }
+  return null;
+}
+function delta(current, previous, key) {
+  if (!current || !previous) {
+    return null;
+  }
+  var currentValue = number(current[key]);
+  var previousValue = number(previous[key]);
+  if (currentValue === null || previousValue === null || currentValue < previousValue) {
+    return null;
+  }
+  return currentValue - previousValue;
+}
+
+/**
+ * 使用报告自身 timestamp 计算实际采样时长。
+ *
+ * setTimeout 在后台页、低性能设备和主线程繁忙时会漂移，因此不能直接把配置的
+ * 1 秒间隔当作分母。时间戳缺失或倒退时返回 null，让调用方重建基线。
+ */
+function durationSeconds(current, previous) {
+  if (!current || !previous) {
+    return null;
+  }
+  var currentTimestamp = number(current.timestamp);
+  var previousTimestamp = number(previous.timestamp);
+  if (currentTimestamp === null || previousTimestamp === null) {
+    return null;
+  }
+  var result = (currentTimestamp - previousTimestamp) / 1000;
+  return result > 0 ? result : null;
+}
+
+/**
+ * 将累计字节差换算为 bit/s。计数器缺失或回退时返回 null。
+ */
+function bitrate(current, previous, key) {
+  var seconds = durationSeconds(current, previous);
+  var bytes = delta(current, previous, key);
+  return seconds === null || bytes === null ? null : rounded(bytes * 8 / seconds, 2);
+}
+function combinedBitrate(current, previous, payloadKey, headerKey) {
+  var seconds = durationSeconds(current, previous);
+  var payload = delta(current, previous, payloadKey);
+  var header = delta(current, previous, headerKey);
+  if (seconds === null || payload === null) {
+    return null;
+  }
+  header === null && (header = 0);
+  return rounded((payload + header) * 8 / seconds, 2);
+}
+function average(current, previous, totalKey, countKey, multiplier) {
+  var total = delta(current, previous, totalKey);
+  var count = delta(current, previous, countKey);
+  return total === null || count === null || count <= 0 ? null : rounded(total / count * multiplier, 3);
+}
+function cumulativeAverage(total, count, multiplier) {
+  var totalValue = number(total);
+  var countValue = number(count);
+  return totalValue === null || countValue === null || countValue <= 0 ? null : rounded(totalValue / countValue * multiplier, 3);
+}
+function percent(part, total) {
+  return part === null || total === null || total <= 0 ? null : rounded(Math.max(0, part) * 100 / total, 2);
+}
+function lossPercent(lost, received) {
+  if (lost === null || received === null) {
+    return null;
+  }
+  var total = Math.max(0, lost) + Math.max(0, received);
+  return total > 0 ? rounded(Math.max(0, lost) * 100 / total, 2) : 0;
+}
+function objectDelta(current, previous) {
+  if (!current || !previous) {
+    return null;
+  }
+  var result = {};
+  Object.keys(current).forEach(key => {
+    var currentValue = number(current[key]);
+    var previousValue = number(previous[key]);
+    result[key] = currentValue === null || previousValue === null || currentValue < previousValue ? null : rounded(currentValue - previousValue, 3);
+  });
+  return result;
+}
+
+/**
+ * 复制浏览器返回的数值对象，同时过滤 undefined、NaN 和字符串等不稳定值。
+ * qualityLimitationDurations 属于累计对象，原值用于展示，增量值用于本轮诊断。
+ */
+function numericObject(input) {
+  if (!input || typeof input !== 'object') {
+    return null;
+  }
+  var result = {};
+  Object.keys(input).forEach(key => {
+    var value = number(input[key]);
+    if (value !== null) {
+      result[key] = value;
+    }
+  });
+  return Object.keys(result).length > 0 ? result : null;
+}
+function resolve(id, byId) {
+  return id === undefined || id === null ? null : byId.get(String(id)) || null;
+}
+function createCodec(codec, report) {
+  var mimeType = codec && codec.mimeType || report.mimeType || null;
+  return {
+    mimeType,
+    name: mimeType ? String(mimeType).split('/').pop() : null,
+    payloadType: codec ? number(codec.payloadType) : number(report.payloadType),
+    clockRate: codec ? number(codec.clockRate) : null,
+    channels: codec ? number(codec.channels) : null,
+    sdpFmtpLine: codec && codec.sdpFmtpLine || null
+  };
+}
+function createSource(report) {
+  return {
+    id: report.id || null,
+    kind: readKind(report),
+    trackIdentifier: report.trackIdentifier || null,
+    width: number(report.width),
+    height: number(report.height),
+    frames: number(report.frames),
+    framesPerSecond: number(report.framesPerSecond)
+  };
+}
+function createSourceWithFallback(source, transceiver) {
+  var track = transceiver && transceiver.sender && transceiver.sender.track;
+  var settings = readTrackSettings(track);
+  if (!source && !settings) {
+    return null;
+  }
+  return {
+    id: source && source.id || null,
+    trackIdentifier: source && source.trackIdentifier || track && track.id || null,
+    width: source ? number(source.width) : settings.width,
+    height: source ? number(source.height) : settings.height,
+    framesPerSecond: source ? number(source.framesPerSecond) : settings.frameRate,
+    origin: source ? 'media-source' : 'track-settings'
+  };
+}
+function createRemoteOutbound(report) {
+  return report ? {
+    id: report.id || null,
+    remoteTimestamp: number(report.remoteTimestamp),
+    reportsSent: number(report.reportsSent),
+    bytesSent: number(report.bytesSent),
+    packetsSent: number(report.packetsSent),
+    roundTripTimeMs: timeMs(report.roundTripTime)
+  } : null;
+}
+function timeMs(secondsValue, legacyMsValue) {
+  var seconds = number(secondsValue);
+  return seconds === null ? number(legacyMsValue) : rounded(seconds * 1000, 2);
+}
+function findTimestamp(reports) {
+  var timestamp = null;
+  reports.forEach(report => {
+    var value = number(report.timestamp);
+    if (value !== null && (timestamp === null || value > timestamp)) {
+      timestamp = value;
+    }
+  });
+  return timestamp === null ? Date.now() : timestamp;
+}
+function findSelectedPair(byType, byId) {
+  var transports = byType.get('transport') || [];
+  for (var transport of transports) {
+    var pair = resolve(transport.selectedCandidatePairId, byId);
+    if (pair) {
+      return {
+        pair,
+        transport,
+        method: 'transport'
+      };
+    }
+  }
+  var pairs = byType.get('candidate-pair') || [];
+  var selected = pairs.find(pair => pair.selected === true) || pairs.find(pair => pair.nominated === true && pair.state === 'succeeded') || null;
+  return {
+    pair: selected,
+    transport: null,
+    method: selected ? 'fallback' : 'unavailable'
+  };
+}
+function indexByField(reports, field) {
+  var result = new Map();
+  reports.forEach(report => {
+    if (report[field] !== undefined && report[field] !== null) {
+      result.set(String(report[field]), report);
+    }
+  });
+  return result;
+}
+function createCandidate(candidate) {
+  return candidate ? {
+    id: candidate.id || null,
+    candidateType: candidate.candidateType || null,
+    protocol: candidate.protocol || null,
+    relayProtocol: candidate.relayProtocol || null,
+    address: candidate.address || candidate.ip || null,
+    port: number(candidate.port),
+    url: candidate.url || null,
+    relatedAddress: candidate.relatedAddress || null,
+    relatedPort: number(candidate.relatedPort)
+  } : null;
+}
+function age(currentTimestamp, eventTimestamp) {
+  var current = number(currentTimestamp);
+  var event = number(eventTimestamp);
+  return current === null || event === null || current < event ? null : rounded(current - event, 2);
+}
+function readConnectionState(pc) {
+  return pc.connectionState || pc.iceConnectionState || null;
+}
+function readTrackSettings(track) {
+  if (!track || typeof track.getSettings !== 'function') {
+    return null;
+  }
+  try {
+    var settings = track.getSettings() || {};
+    return {
+      width: number(settings.width),
+      height: number(settings.height),
+      frameRate: number(settings.frameRate)
+    };
+  } catch (error) {
+    return null;
+  }
+}
+function readTrackId(transceiver, side) {
+  var endpoint = transceiver && transceiver[side];
+  return endpoint && endpoint.track && endpoint.track.id || null;
+}
+function findTransceiver(transceivers, mid, trackIdentifier, side) {
+  return transceivers.find(transceiver => {
+    if (mid !== undefined && mid !== null && transceiver.mid !== undefined && transceiver.mid !== null && String(mid) === String(transceiver.mid)) {
+      return true;
+    }
+    return Boolean(trackIdentifier && readTrackId(transceiver, side) === trackIdentifier);
+  }) || null;
+}
+function createTopology(outbound, inbound, transceivers, pair) {
+  var parts = [];
+  outbound.forEach(stream => parts.push(`o:${stream.id}:${stream.mid}:${stream.trackIdentifier}:${stream.active}`));
+  inbound.forEach(stream => parts.push(`i:${stream.id}:${stream.mid}:${stream.trackIdentifier}`));
+  transceivers.forEach(transceiver => parts.push(`t:${transceiver.mid}:${transceiver.currentDirection || transceiver.direction}:${readTrackId(transceiver, 'sender')}:${readTrackId(transceiver, 'receiver')}`));
+  pair && parts.push(`p:${pair.id}`);
+  return parts.sort().join('|');
+}
+function hasComparableStreams(outbound, inbound) {
+  return outbound.some(stream => stream.comparable && stream.actualBitrateBps !== null) || inbound.some(stream => stream.comparable && stream.receiveBitrateBps !== null);
+}
+function findSampleDuration(outbound, inbound) {
+  var durations = [];
+  outbound.concat(inbound).forEach(stream => {
+    stream.sampleDurationMs !== null && durations.push(stream.sampleDurationMs);
+  });
+  return durations.length > 0 ? rounded(Math.max.apply(null, durations), 3) : null;
+}
+function groupByType(streams) {
+  var result = {};
+  streams.forEach(stream => {
+    result[stream.type] || (result[stream.type] = []);
+    result[stream.type].push(stream);
+  });
+  return result;
+}
+function createLegacyOutbound(type, stream) {
+  var remoteInbound = stream && stream.remoteInbound;
+
+  // 保持旧 report 事件的字段集合不变，避免现有业务按 Object.keys 判断时受影响。
+  if (type === 'audio') {
+    return {
+      type,
+      mimeType: stream && stream.codec && stream.codec.name,
+      bytesSent: number(stream && stream.bytesSent) || 0,
+      packetsSent: number(stream && stream.packetsSent) || 0,
+      loss: number(remoteInbound && remoteInbound.intervalLossPercent) || 0,
+      jitter: number(remoteInbound && remoteInbound.jitterMs) || 0,
+      speed: rounded((number(stream && stream.actualBitrateBps) || 0) / 1000, 1) || 0
+    };
+  }
+  return {
+    type,
+    mimeType: stream && stream.codec && stream.codec.name,
+    framesSent: number(stream && stream.framesSent) || 0,
+    framesEncoded: number(stream && stream.framesEncoded) || 0,
+    framesPerSecond: stream && stream.framesPerSecond,
+    frameHeight: stream && stream.frameHeight,
+    frameWidth: stream && stream.frameWidth,
+    loss: number(remoteInbound && remoteInbound.intervalLossPercent) || 0,
+    jitter: number(remoteInbound && remoteInbound.jitterMs) || 0,
+    speed: rounded((number(stream && stream.actualBitrateBps) || 0) / 1000, 1) || 0
+  };
+}
+function createLegacyInbound(type, stream) {
+  if (type === 'audio') {
+    return {
+      type,
+      mimeType: stream && stream.codec && stream.codec.name,
+      bytesReceived: number(stream && stream.bytesReceived) || 0,
+      packetsReceived: number(stream && stream.packetsReceived) || 0,
+      loss: number(stream && stream.intervalLossPercent) || 0,
+      jitter: number(stream && stream.jitterMs) || 0,
+      speed: rounded((number(stream && stream.receiveBitrateBps) || 0) / 1000, 1) || 0
+    };
+  }
+  return {
+    type,
+    mimeType: stream && stream.codec && stream.codec.name,
+    framesReceived: number(stream && stream.framesReceived) || 0,
+    framesDecoded: number(stream && stream.framesDecoded) || 0,
+    framesPerSecond: stream && stream.framesPerSecond,
+    frameHeight: stream && stream.frameHeight,
+    frameWidth: stream && stream.frameWidth,
+    loss: number(stream && stream.intervalLossPercent) || 0,
+    jitter: number(stream && stream.jitterMs) || 0,
+    speed: rounded((number(stream && stream.receiveBitrateBps) || 0) / 1000, 1) || 0
+  };
+}
+
+/**
+ * 为浏览器 getStats Promise 增加确定的退出边界。
+ * 原 Promise 即使稍后完成也已由 then/reject 处理，不会产生未捕获异常。
+ */
+function withTimeout(promise, timeoutMs, message) {
+  return new Promise((resolvePromise, rejectPromise) => {
+    var settled = false;
+    var timer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        rejectPromise(new Error(message || 'operation timed out'));
+      }
+    }, timeoutMs);
+    Promise.resolve(promise).then(value => {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timer);
+        resolvePromise(value);
+      }
+    }, error => {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timer);
+        rejectPromise(error);
+      }
+    });
+  });
+}
+function currentNetworkSample(report) {
+  var mediaRtt = report.outbound.map(stream => stream.remoteInbound && number(stream.remoteInbound.rttMs)).filter(value => value !== null);
+  var uplink = report.outbound.map(stream => stream.remoteInbound && stream.remoteInbound.intervalLossPercent).map(value => number(value)).filter(value => value !== null);
+  var downlink = report.inbound.map(stream => number(stream.intervalLossPercent)).filter(value => value !== null);
+  // 媒体 RTP 反馈更接近用户实际通话感受；浏览器不提供时再回退 ICE candidate-pair RTT。
+  var rtt = mediaRtt.length > 0 ? Math.max.apply(null, mediaRtt) : number(report.connection.rttMs);
+  return {
+    rtt,
+    uplinkLoss: uplink.length > 0 ? Math.max.apply(null, uplink) : null,
+    downlinkLoss: downlink.length > 0 ? Math.max.apply(null, downlink) : null,
+    hasUplink: report.outbound.some(stream => stream.active),
+    hasDownlink: report.inbound.length > 0,
+    hasData: rtt !== null || uplink.length > 0 || downlink.length > 0
+  };
+}
+function networkQuality(loss, rtt, hasStream) {
+  if (!hasStream || loss === null && rtt === null) {
+    return 0;
+  }
+  var safeLoss = loss === null ? 0 : loss;
+  var safeRtt = rtt === null ? 0 : rtt;
+  return safeLoss > 40 || safeRtt > 500 ? 6 : safeLoss > 30 || safeRtt > 350 ? 5 : safeLoss > 20 || safeRtt > 200 ? 4 : safeLoss > 10 || safeRtt > 100 ? 3 : safeLoss > 0 || safeRtt >= 50 ? 2 : 1;
+}
+function collectOutboundIssues(stream, issues) {
+  if (stream.qualityLimitationReason === 'bandwidth') {
+    issues.push(issue('UPLINK_BANDWIDTH_LIMITED', 4, stream.id, {
+      targetBitrateBps: stream.targetBitrateBps,
+      actualBitrateBps: stream.actualBitrateBps
+    }));
+  } else if (stream.qualityLimitationReason === 'cpu') {
+    issues.push(issue('ENCODER_CPU_LIMITED', 4, stream.id, {
+      averageEncodeTimeMs: stream.averageEncodeTimeMs,
+      framesPerSecond: stream.framesPerSecond
+    }));
+  }
+  if (stream.remoteInbound && stream.remoteInbound.intervalLossPercent !== null && stream.remoteInbound.intervalLossPercent > 10) {
+    issues.push(issue('UPLINK_PACKET_LOSS', stream.remoteInbound.intervalLossPercent > 30 ? 6 : 4, stream.id, {
+      lossPercent: stream.remoteInbound.intervalLossPercent,
+      jitterMs: stream.remoteInbound.jitterMs,
+      rttMs: stream.remoteInbound.rttMs
+    }));
+  }
+
+  // 发送队列延迟和重传必须基于本轮增量，累计总量不能代表当前通话状态。
+  if (stream.averagePacketSendDelayMs !== null && stream.averagePacketSendDelayMs > 50) {
+    issues.push(issue('UPLINK_SEND_QUEUE_DELAY', stream.averagePacketSendDelayMs > 150 ? 5 : 3, stream.id, {
+      averagePacketSendDelayMs: stream.averagePacketSendDelayMs
+    }));
+  }
+  if (stream.retransmitPacketPercent !== null && stream.retransmitPacketPercent > 10) {
+    issues.push(issue('UPLINK_HIGH_RETRANSMISSION', stream.retransmitPacketPercent > 25 ? 5 : 3, stream.id, {
+      retransmitPacketPercent: stream.retransmitPacketPercent,
+      retransmitBitrateBps: stream.retransmitBitrateBps
+    }));
+  }
+  if ((stream.nackCountDelta || 0) > 10 || (stream.pliCountDelta || 0) > 2 || (stream.firCountDelta || 0) > 2) {
+    issues.push(issue('UPLINK_FEEDBACK_REQUESTS', 3, stream.id, {
+      nackCountDelta: stream.nackCountDelta,
+      pliCountDelta: stream.pliCountDelta,
+      firCountDelta: stream.firCountDelta
+    }));
+  }
+
+  // 编码耗时超过单帧预算的 80% 时，编码器已经很难稳定跟上目标帧率。
+  var encodeFrameBudgetMs = stream.framesPerSecond ? 1000 / stream.framesPerSecond : null;
+  if (stream.kind === 'video' && encodeFrameBudgetMs !== null && stream.averageEncodeTimeMs !== null && stream.averageEncodeTimeMs > encodeFrameBudgetMs * 0.8) {
+    issues.push(issue('ENCODER_SLOW', stream.averageEncodeTimeMs > encodeFrameBudgetMs * 1.5 ? 5 : 3, stream.id, {
+      averageEncodeTimeMs: stream.averageEncodeTimeMs,
+      frameBudgetMs: rounded(encodeFrameBudgetMs, 2)
+    }));
+  }
+  if (stream.source && stream.kind === 'video') {
+    var sourceFps = number(stream.source.framesPerSecond);
+    var encodedFps = number(stream.framesPerSecond);
+    var sourcePixels = (stream.source.width || 0) * (stream.source.height || 0);
+    var encodedPixels = (stream.frameWidth || 0) * (stream.frameHeight || 0);
+    if (sourceFps !== null && encodedFps !== null && sourceFps >= 10 && encodedFps < sourceFps * 0.7) {
+      issues.push(issue('ENCODER_FRAME_RATE_REDUCED', 3, stream.id, {
+        sourceFps,
+        encodedFps
+      }));
+    }
+    if (sourcePixels > 0 && encodedPixels > 0 && encodedPixels < sourcePixels * 0.6) {
+      issues.push(issue('ENCODER_RESOLUTION_REDUCED', 3, stream.id, {
+        sourceWidth: stream.source.width,
+        sourceHeight: stream.source.height,
+        encodedWidth: stream.frameWidth,
+        encodedHeight: stream.frameHeight
+      }));
+    }
+  }
+}
+function collectInboundIssues(stream, issues) {
+  if (stream.intervalLossPercent !== null && stream.intervalLossPercent > 10) {
+    issues.push(issue('DOWNLINK_PACKET_LOSS', stream.intervalLossPercent > 30 ? 6 : 4, stream.id, {
+      lossPercent: stream.intervalLossPercent,
+      jitterMs: stream.jitterMs
+    }));
+  }
+  if (stream.jitterMs !== null && stream.jitterMs > 50) {
+    issues.push(issue('DOWNLINK_HIGH_JITTER', stream.jitterMs > 100 ? 5 : 3, stream.id, {
+      jitterMs: stream.jitterMs
+    }));
+  }
+  if (stream.droppedFramePercent !== null && stream.droppedFramePercent > 10) {
+    issues.push(issue('VIDEO_FRAME_DROPPING', stream.droppedFramePercent > 30 ? 5 : 3, stream.id, {
+      droppedFramePercent: stream.droppedFramePercent,
+      averageDecodeTimeMs: stream.averageDecodeTimeMs
+    }));
+  }
+  if ((stream.freezeCountDelta || 0) > 0 || (stream.freezesDurationDeltaMs || 0) > 0) {
+    issues.push(issue('VIDEO_FREEZING', 5, stream.id, {
+      freezeCountDelta: stream.freezeCountDelta,
+      freezesDurationDeltaMs: stream.freezesDurationDeltaMs
+    }));
+  }
+  if ((stream.packetsDiscardedDelta || 0) > 0) {
+    issues.push(issue('DOWNLINK_PACKET_DISCARDS', 3, stream.id, {
+      packetsDiscardedDelta: stream.packetsDiscardedDelta
+    }));
+  }
+  if (stream.averageJitterBufferDelayMs !== null && stream.averageJitterBufferDelayMs > 200) {
+    issues.push(issue('DOWNLINK_JITTER_BUFFER_DELAY', stream.averageJitterBufferDelayMs > 500 ? 5 : 3, stream.id, {
+      averageJitterBufferDelayMs: stream.averageJitterBufferDelayMs,
+      averageJitterBufferTargetDelayMs: stream.averageJitterBufferTargetDelayMs
+    }));
+  }
+  var decodeFrameBudgetMs = stream.framesPerSecond ? 1000 / stream.framesPerSecond : null;
+  if (stream.kind === 'video' && decodeFrameBudgetMs !== null && stream.averageDecodeTimeMs !== null && stream.averageDecodeTimeMs >= decodeFrameBudgetMs * 0.8) {
+    issues.push(issue('VIDEO_DECODER_SLOW', stream.averageDecodeTimeMs > decodeFrameBudgetMs * 1.5 ? 5 : 3, stream.id, {
+      averageDecodeTimeMs: stream.averageDecodeTimeMs,
+      frameBudgetMs: rounded(decodeFrameBudgetMs, 2)
+    }));
+  }
+  if ((stream.pauseCountDelta || 0) > 0 || (stream.pausesDurationDeltaMs || 0) > 0) {
+    issues.push(issue('VIDEO_PAUSING', 4, stream.id, {
+      pauseCountDelta: stream.pauseCountDelta,
+      pausesDurationDeltaMs: stream.pausesDurationDeltaMs
+    }));
+  }
+  if ((stream.nackCountDelta || 0) > 10 || (stream.pliCountDelta || 0) > 2 || (stream.firCountDelta || 0) > 2) {
+    issues.push(issue('DOWNLINK_FEEDBACK_REQUESTS', 3, stream.id, {
+      nackCountDelta: stream.nackCountDelta,
+      pliCountDelta: stream.pliCountDelta,
+      firCountDelta: stream.firCountDelta
+    }));
+  }
+}
+function collectConnectionIssues(report, issues, context) {
+  var connection = report.connection;
+  if ((connection.packetsDiscardedOnSendDelta || 0) > 0 || (connection.bytesDiscardedOnSendDelta || 0) > 0) {
+    issues.push(issue('UPLINK_LOCAL_SEND_DISCARDS', 4, null, {
+      packetsDiscardedOnSendDelta: connection.packetsDiscardedOnSendDelta,
+      bytesDiscardedOnSendDelta: connection.bytesDiscardedOnSendDelta
+    }));
+  }
+
+  // 只有浏览器明确给出可用带宽和各层目标码率时才比较，避免把缺字段误判为带宽不足。
+  var activeTargetBitrate = report.outbound.filter(stream => stream.active !== false && stream.targetBitrateBps !== null).reduce((total, stream) => total + stream.targetBitrateBps, 0);
+  if (connection.availableOutgoingBitrateBps !== null && activeTargetBitrate > 0 && connection.availableOutgoingBitrateBps < activeTargetBitrate * 0.8) {
+    issues.push(issue('UPLINK_BANDWIDTH_BUDGET_LOW', 4, null, {
+      availableOutgoingBitrateBps: connection.availableOutgoingBitrateBps,
+      activeTargetBitrateBps: activeTargetBitrate
+    }));
+  }
+
+  // 远端 hold 时长时间无下行包是正常行为；其余场景超过 10 秒才认为传输停滞。
+  if (report.inbound.length > 0 && !context.remoteHold && connection.lastPacketReceivedAgoMs !== null && connection.lastPacketReceivedAgoMs > 10000) {
+    issues.push(issue('DOWNLINK_TRANSPORT_STALLED', 5, null, {
+      lastPacketReceivedAgoMs: connection.lastPacketReceivedAgoMs
+    }));
+  }
+  if ((connection.selectedCandidatePairChangesDelta || 0) > 0) {
+    issues.push(issue('CONNECTION_PATH_CHANGED', 2, null, {
+      selectedCandidatePairChangesDelta: connection.selectedCandidatePairChangesDelta,
+      selectedCandidatePairId: connection.selectedCandidatePairId
+    }));
+  }
+}
+function issue(code, severity, streamId, evidence) {
+  return {
+    code,
+    severity,
+    streamId: streamId || null,
+    evidence: evidence || {}
+  };
+}
+function mediaQuality(networkValue, issues, direction) {
+  var quality = networkValue;
+  var prefixes = direction === 'uplink' ? ['UPLINK_', 'ENCODER_'] : ['DOWNLINK_', 'VIDEO_'];
+  issues.filter(item => prefixes.some(prefix => item.code.indexOf(prefix) === 0)).forEach(item => {
+    quality = Math.max(quality || 1, item.severity);
+  });
+  return quality;
+}
+function cleanContext(context) {
+  return {
+    sessionStatus: context.sessionStatus === undefined ? null : context.sessionStatus,
+    mode: context.mode || null,
+    localHold: Boolean(context.localHold),
+    remoteHold: Boolean(context.remoteHold),
+    audioMuted: Boolean(context.audioMuted),
+    videoMuted: Boolean(context.videoMuted),
+    sharedMid: context.sharedMid === undefined ? null : context.sharedMid
+  };
+}
+function observeFeatures(report, features) {
+  if (report.type === 'remote-inbound-rtp') {
+    features.add('remoteInboundRtp');
+  }
+  ['qualityLimitationReason', 'jitterBufferDelay', 'freezeCount', 'framesRendered', 'availableOutgoingBitrate', 'availableIncomingBitrate'].forEach(field => {
+    report[field] !== undefined && features.add(field);
+  });
+}
+function featureSnapshot(features) {
+  var result = {};
+  ['remoteInboundRtp', 'qualityLimitationReason', 'jitterBufferDelay', 'freezeCount', 'framesRendered', 'availableOutgoingBitrate', 'availableIncomingBitrate'].forEach(feature => {
+    result[feature] = features.has(feature);
+  });
+  return result;
+}
+},{"./Logger":38,"events":84}],71:[function(require,module,exports){
+"use strict";
+
 var Logger = require('./Logger');
 var Utils = require('./Utils');
 var CRTC_C = require('./Constants');
@@ -37898,7 +39633,7 @@ ${this._contact}${this._extraContactParams}`);
     });
   }
 };
-},{"./Constants":30,"./Logger":38,"./RequestSender":71,"./SIPMessage":72,"./Utils":80}],71:[function(require,module,exports){
+},{"./Constants":30,"./Logger":38,"./RequestSender":72,"./SIPMessage":73,"./Utils":80}],72:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -38037,7 +39772,7 @@ module.exports = class RequestSender {
     }
   }
 };
-},{"./Constants":30,"./DigestAuthentication":34,"./Logger":38,"./Transactions":76}],72:[function(require,module,exports){
+},{"./Constants":30,"./DigestAuthentication":34,"./Logger":38,"./Transactions":76}],73:[function(require,module,exports){
 "use strict";
 
 var sdp_transform = require('sdp-transform');
@@ -38609,7 +40344,7 @@ module.exports = {
   IncomingRequest,
   IncomingResponse
 };
-},{"./Constants":30,"./Grammar":36,"./Logger":38,"./NameAddrHeader":60,"./Utils":80,"sdp-transform":93}],73:[function(require,module,exports){
+},{"./Constants":30,"./Grammar":36,"./Logger":38,"./NameAddrHeader":60,"./Utils":80,"sdp-transform":93}],74:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -38677,413 +40412,7 @@ exports.isSocket = socket => {
   }
   return true;
 };
-},{"./Grammar":36,"./Logger":38,"./Utils":80}],74:[function(require,module,exports){
-"use strict";
-
-/* eslint-disable max-len */
-var EventEmitter = require('events').EventEmitter;
-var Utils = require('./Utils');
-var Logger = require('./Logger');
-var CRTC_C = require('./Constants');
-var logger = new Logger('Stats');
-module.exports = class getStats extends EventEmitter {
-  constructor(pc, delay = 2, interval = 5) {
-    super();
-    logger.debug('new getStats()');
-
-    // 判断pc是不是 RTCPeerConnection
-    try {
-      if (Object.prototype.toString.call(pc) !== '[object RTCPeerConnection]') {
-        logger.warn('pc parameter is not RTCPeerConnection');
-      }
-    } catch (error) {
-      logger.error('err: ', JSON.stringify(error));
-    }
-    this._pc = pc;
-    this._delay = delay;
-    this._interval = interval;
-    this._mode = '';
-
-    // 多少次getStats后发送完整statsReport
-    this._count = this._interval;
-
-    // 存储 mediaSourceId 和 trackIdentifier 的对应关系
-    this._mediaSourceIdToTrackIdentifier = new Map();
-
-    // 远端共享的 trackIdentifier
-    this._remoteSharedTrackIdentifier = null;
-    this._remoteInboundRtps = new Map();
-
-    // 本端共享的 trackIdentifier
-    this._localSharedTrackIdentifier = null;
-    this._statsTimer;
-
-    // 新的统计信息
-    this._newStats = {
-      rtt: 0,
-      upStreams: {
-        audio: {},
-        video: {},
-        shared: {}
-      },
-      downStreams: {
-        audio: {},
-        video: {},
-        shared: {}
-      }
-    };
-    this.start();
-  }
-  start() {
-    logger.debug('start()');
-    window.CRTCStats = '';
-    var processing = async () => {
-      var inform = false;
-
-      // 全局停止统计信息输出
-      if (window.CRTCStats === 'stop') {
-        logger.debug(`CRTCStats: ${window.CRTCStats}`);
-        clearInterval(this._statsTimer);
-        return;
-      }
-      this._data = '';
-      if (this._count === 0) {
-        // 第二次开始间隔5-10次输出一次完整report
-        this._count = this._interval + (Math.random() * 5 | 0);
-        inform = true;
-      }
-      this._count--;
-      var transceivers = await this._pc.getTransceivers();
-      for (var transceiver of transceivers) {
-        var senderReports = await transceiver.sender.getStats();
-        var receiverReports = await transceiver.receiver.getStats();
-        if (transceiver.mid === sessionStorage.getItem(CRTC_C.BFCP_SHARED_STREAM_INDEX)) {
-          this._parseSenderReport(senderReports, transceiver.sender, true, inform);
-          this._parseReceiverReport(receiverReports, transceiver.receiver, true, inform);
-        } else {
-          transceiver.sender.track && this._parseSenderReport(senderReports, transceiver.sender, false, inform);
-          this._parseReceiverReport(receiverReports, transceiver.receiver, false, inform);
-        }
-      }
-      logger.debug(`pc status: cS: ${this._pc.connectionState} iS:${this._pc.iceConnectionState} sS:${this._pc.signalingState}`);
-      try {
-        this._pc.getSenders().forEach(s => {
-          if (!s.track) {
-            return;
-          }
-          var trackStatus = `id: ${s.track.id}, enabled: ${s.track.enabled}, label: ${s.track.label},kind: ${s.track.kind},muted: ${s.track.muted},readyState: ${s.track.readyState},transport: ${s.transport && s.transport.state};`;
-          logger.debug(`curr ${s.track.kind} track status: ${trackStatus}`);
-          logger.debug(`settings: ${JSON.stringify(s.track.getSettings())} ***** constraints: ${JSON.stringify(s.track.getConstraints())} ***** capabilities: ${JSON.stringify(s.track.getCapabilities ? s.track.getCapabilities() : {})}`);
-        });
-      } catch (error) {
-        logger.error(error.toString());
-      }
-      if (this._data) {
-        logger.debug(this._data);
-        return;
-      }
-      this._createReport();
-    };
-    setTimeout(() => {
-      processing();
-    }, this._delay * 500);
-    this._statsTimer = setInterval(async () => {
-      processing();
-    }, this._delay * 1000);
-  }
-  setMode(value) {
-    logger.debug(`setMode() ${value}`);
-    this._mode = value;
-  }
-  stop() {
-    logger.debug('stop()');
-    clearInterval(this._statsTimer);
-    this._count = this._interval;
-    window.CRTCStats = '';
-  }
-  reset() {
-    this.stop();
-  }
-
-  // 解析上行统计报告
-  _parseSenderReport(reports, sender, shared, inform) {
-    var type;
-    var tmpObject = {};
-    shared ? type = 'shared' : type = sender.track.kind;
-
-    // 前一次的统计结果
-    var previewStats = this._newStats.upStreams[type];
-    var calc_bytesSent;
-    var calc_packetsSent;
-    var calc_packetsLost;
-    var fractionLost;
-    reports.forEach(report => {
-      if (inform) {
-        this._data += JSON.stringify(report);
-        return;
-      }
-      switch (report.type) {
-        case 'outbound-rtp':
-          {
-            // 用于计算速率和丢包的值
-            calc_bytesSent = report['bytesSent'] - (previewStats.bytesSent || 0);
-            calc_packetsSent = report['packetsSent'] - (previewStats.packetsSent || 0);
-
-            // 当前报告的原始值
-            tmpObject['bytesSent'] = report['bytesSent'];
-            tmpObject['packetsSent'] = report['packetsSent'] || 0;
-            if (report['kind'] === 'video') {
-              report['framesSent'] && (tmpObject['framesSent'] = report['framesSent']);
-              tmpObject['framesEncoded'] = report['framesEncoded'] || 0;
-              tmpObject['framesPerSecond'] = report['framerateMean'] ? Math.ceil(report['framerateMean']) : report['framesPerSecond'] ? report['framesPerSecond'] : 0;
-              tmpObject['frameHeight'] = report['frameHeight'] || sender.track && sender.track.getSettings()['height'] || 0;
-              tmpObject['frameWidth'] = report['frameWidth'] || sender.track && sender.track.getSettings()['width'] || 0;
-              report.qualityLimitationReason !== 'none' && logger.warn(`qualityLimitationReason: ${report.qualityLimitationReason}`);
-            }
-            break;
-          }
-        case 'remote-inbound-rtp':
-          calc_packetsLost = report['packetsLost'] - (previewStats.packetsLost || 0);
-          fractionLost = 'fractionLost' in report ? report['fractionLost'] : null;
-          this._newStats.rtt = report['roundTripTime'] && Math.floor(1e3 * report['roundTripTime']);
-          if ('jitter' in report) {
-            tmpObject['jitter'] = Math.floor(1e3 * report['jitter']);
-          }
-          tmpObject['packetsLost'] = report['packetsLost'];
-          break;
-        case 'codec':
-          tmpObject['mimeType'] = report['mimeType'].split('/')[1];
-          break;
-        default:
-          break;
-      }
-    });
-
-    // 当前周期的计算值
-    var loss = 0;
-    try {
-      loss = Math.floor(calc_packetsLost * 100 / calc_packetsSent);
-    } catch (error) {}
-    if (!calc_packetsSent) {
-      loss = 100;
-    }
-    if (calc_packetsLost === null) {
-      loss = 0;
-    }
-    if (fractionLost) {
-      loss = Math.floor(fractionLost * 100);
-    }
-    tmpObject['calc_loss'] = isNaN(loss) ? 0 : loss;
-    tmpObject['calc_speed'] = !calc_bytesSent ? 0 : calc_bytesSent / this._delay * 8;
-    !tmpObject['frameWidth'] && type !== 'audio' && (tmpObject = {});
-
-    // 合并统计结果
-    (calc_packetsSent || calc_packetsSent === 0) && (this._newStats.upStreams[type] = tmpObject);
-  }
-
-  // 解析下行统计报告
-  _parseReceiverReport(reports, receiver, shared, inform) {
-    var type;
-    var tmpObject = {};
-    shared ? type = 'shared' : type = receiver.track.kind;
-
-    // 前一次的统计结果
-    var previewStats = this._newStats.downStreams[type];
-
-    // 用于计算速率和丢包的值
-    var calc_bytesReceived;
-    var calc_packetsReceived;
-    var calc_packetsLost;
-    reports.forEach(report => {
-      if (inform) {
-        this._data += JSON.stringify(report);
-        return;
-      }
-      switch (report.type) {
-        case 'inbound-rtp':
-          {
-            // 用于计算速率和丢包的值
-            calc_bytesReceived = report['bytesReceived'] > (previewStats.bytesReceived || 0) ? report['bytesReceived'] - (previewStats.bytesReceived || 0) : 0;
-            calc_packetsReceived = report['packetsReceived'] > (previewStats.packetsReceived || 0) ? report['packetsReceived'] - (previewStats.packetsReceived || 0) : 0;
-            calc_packetsLost = report['packetsLost'] > (previewStats.packetsLost || 0) ? report['packetsLost'] - (previewStats.packetsLost || 0) : 0;
-
-            // 当前报告的原始值
-            tmpObject['bytesReceived'] = report['bytesReceived'];
-            tmpObject['packetsReceived'] = report['packetsReceived'] || 0;
-            tmpObject['packetsLost'] = report['packetsLost'];
-            if ('jitter' in report) {
-              tmpObject['jitter'] = Math.floor(1e3 * report['jitter']);
-            }
-            if (report['kind'] === 'video') {
-              report['framesReceived'] && (tmpObject['framesReceived'] = report['framesReceived']);
-              tmpObject['framesDecoded'] = report['framesDecoded'] || 0;
-              report['framerateMean'] && (tmpObject['framesPerSecond'] = Math.ceil(report['framerateMean']));
-              report['framesPerSecond'] && (tmpObject['framesPerSecond'] = report['framesPerSecond']);
-              // tmpObject['framesPerSecond'] = report['framerateMean'] ? Math.ceil(report['framerateMean']) : report['framesPerSecond'] ? report['framesPerSecond'] : 0;
-              report['frameHeight'] && (tmpObject['frameHeight'] = report['frameHeight']);
-              report['frameWidth'] && (tmpObject['frameWidth'] = report['frameWidth']);
-            }
-            break;
-          }
-        case 'codec':
-          tmpObject['mimeType'] = report['mimeType'].split('/')[1];
-          break;
-        default:
-          break;
-      }
-    });
-
-    // 当前周期的计算值
-    var loss = 0;
-    try {
-      loss = Math.floor(calc_packetsLost * 100 / (calc_packetsReceived + calc_packetsLost));
-    } catch (error) {}
-    if (!calc_bytesReceived) {
-      loss = 100;
-    }
-    if (calc_packetsLost === null) {
-      loss = 0;
-    }
-    tmpObject['calc_loss'] = loss;
-    tmpObject['calc_speed'] = !calc_bytesReceived ? 0 : calc_bytesReceived / this._delay * 8;
-    calc_packetsReceived === 0 && (tmpObject = Object.assign({}, tmpObject, {
-      packetsReceived: tmpObject['packetsReceived'],
-      calc_speed: 0,
-      calc_loss: 100,
-      calc_bytesReceived: 0
-    }));
-    // 合并统计结果
-    (calc_packetsReceived || calc_packetsReceived === 0) && (this._newStats.downStreams[type] = tmpObject);
-  }
-
-  // 参考 https://blog.csdn.net/weixin_41821317/article/details/117261117
-  // https://www.twilio.com/blog/2016/03/chrome-vs-firefox-webrtc-stats-api-with-twilio-video.html
-  _createReport() {
-    if (this._mode === 'audio') {
-      this._newStats.upStreams.video = {};
-      this._newStats.downStreams.video = {};
-    }
-    var newReport = formatStats(this._newStats);
-    logger.debug(JSON.stringify(this._newStats));
-    this.emit('report', {
-      RTT: newReport.rtt,
-      upStreams: newReport.upStreams,
-      downStreams: newReport.downStreams
-    });
-    function formatStats(oldStats) {
-      // 创建新的stats对象结构
-      var newStats = {
-        rtt: oldStats.rtt,
-        audio: {
-          calc_uplink_loss: 0,
-          calc_downlink_loss: 0
-        },
-        video: {
-          calc_uplink_loss: 0,
-          calc_downlink_loss: 0
-        },
-        upStreams: [],
-        downStreams: []
-      };
-
-      // 处理视频上下行流数据
-      var oldUpStreams = oldStats.upStreams;
-      var oldDownStreams = oldStats.downStreams;
-      var maxUpLinkLoss = 0;
-      var maxDownLinkLoss = 0;
-      newStats.upStreams.push({
-        type: 'audio',
-        mimeType: oldUpStreams['audio'].mimeType,
-        bytesSent: oldUpStreams['audio'].bytesSent,
-        packetsSent: oldUpStreams['audio'].packetsSent,
-        loss: oldUpStreams['audio'].calc_loss,
-        jitter: oldUpStreams['audio'].jitter,
-        speed: oldUpStreams['audio'].calc_speed === 0 ? 0 : (oldUpStreams['audio'].calc_speed / 1024).toFixed(1)
-      });
-      newStats.downStreams.push({
-        type: 'audio',
-        mimeType: oldDownStreams['audio'].mimeType,
-        bytesReceived: oldDownStreams['audio'].bytesReceived,
-        packetsReceived: oldDownStreams['audio'].packetsReceived,
-        loss: oldDownStreams['audio'].calc_loss,
-        jitter: oldDownStreams['audio'].jitter,
-        speed: oldDownStreams['audio'].calc_speed === 0 ? 0 : (oldDownStreams['audio'].calc_speed / 1024).toFixed(1)
-      });
-
-      // 计算video和shared的总和
-      for (var type of ['video', 'shared']) {
-        if (Object.keys(oldUpStreams[type]).length > 1) {
-          maxUpLinkLoss = Math.max(maxUpLinkLoss, oldUpStreams[type].calc_loss || 0);
-          // 添加到新的upStreams数组
-          newStats.upStreams.push({
-            type: type,
-            mimeType: oldUpStreams[type].mimeType,
-            framesSent: oldUpStreams[type].framesSent,
-            framesEncoded: oldUpStreams[type].framesEncoded,
-            framesPerSecond: oldUpStreams[type].framesPerSecond,
-            frameHeight: oldUpStreams[type].frameHeight,
-            frameWidth: oldUpStreams[type].frameWidth,
-            loss: oldUpStreams[type].calc_loss,
-            jitter: oldUpStreams[type].jitter,
-            speed: oldUpStreams[type].calc_speed === 0 ? 0 : (oldUpStreams[type].calc_speed / 1024).toFixed(1)
-          });
-        }
-        if (Object.keys(oldDownStreams[type]).length > 1) {
-          maxDownLinkLoss = Math.max(maxDownLinkLoss, oldDownStreams[type].calc_loss || 0);
-          // 添加到新的downStreams数组
-          newStats.downStreams.push({
-            type: type,
-            mimeType: oldDownStreams[type].mimeType,
-            framesReceived: oldDownStreams[type].framesReceived,
-            framesDecoded: oldDownStreams[type].framesDecoded,
-            framesPerSecond: oldDownStreams[type].framesPerSecond,
-            frameHeight: oldDownStreams[type].frameHeight,
-            frameWidth: oldDownStreams[type].frameWidth,
-            loss: oldDownStreams[type].calc_loss,
-            jitter: oldDownStreams[type].jitter,
-            speed: oldDownStreams[type].calc_speed === 0 ? 0 : (oldDownStreams[type].calc_speed / 1024).toFixed(1)
-          });
-        }
-      }
-      newStats.audio.calc_uplink_loss = oldUpStreams['audio'].calc_loss;
-      newStats.audio.calc_downlink_loss = oldDownStreams['audio'].calc_loss;
-      newStats.video.calc_uplink_loss = maxUpLinkLoss;
-      newStats.video.calc_downlink_loss = maxDownLinkLoss;
-      return newStats;
-    }
-
-    // 发送网络质量报告
-    var RTT = [];
-    var uplinkLoss = [];
-    var uplinkNetworkQuality = [];
-    var downlinkNetworkQuality = [];
-    var downlinkLoss = [];
-    RTT.push(newReport.rtt);
-    // eslint-disable-next-line max-len
-    uplinkLoss.push(newReport.audio.calc_uplink_loss > newReport.video.calc_uplink_loss ? newReport.audio.calc_uplink_loss : newReport.video.calc_uplink_loss);
-    // eslint-disable-next-line max-len
-    uplinkNetworkQuality.push(Utils.getNetworkQuality(newReport.audio.calc_uplink_loss > newReport.video.calc_uplink_loss ? newReport.audio.calc_uplink_loss : newReport.video.calc_uplink_loss, newReport.rtt));
-
-    // eslint-disable-next-line max-len
-    downlinkLoss.push(newReport.audio.calc_downlink_loss > newReport.video.calc_downlink_loss ? newReport.audio.calc_downlink_loss : newReport.video.calc_downlink_loss);
-    // eslint-disable-next-line max-len
-    downlinkNetworkQuality.push(Utils.getNetworkQuality(newReport.audio.calc_downlink_loss > newReport.video.calc_downlink_loss ? newReport.audio.calc_downlink_loss : newReport.video.calc_downlink_loss, newReport.rtt));
-    this._networkQuality = {
-      // eslint-disable-next-line max-len
-      uplinkNetworkQuality: uplinkNetworkQuality.length > 0 && (Math.floor(uplinkNetworkQuality.reduce((pre, cur) => pre + cur) / uplinkNetworkQuality.length) || 0),
-      RTT: RTT.length > 0 && (Math.floor(RTT.reduce((pre, cur) => pre + cur) / RTT.length) || 0),
-      // eslint-disable-next-line max-len
-      uplinkLoss: uplinkLoss.length > 0 && (Math.floor(uplinkLoss.reduce((pre, cur) => pre + cur) / uplinkLoss.length) || 0),
-      // eslint-disable-next-line max-len
-      downlinkNetworkQuality: downlinkNetworkQuality.length > 0 && (Math.floor(downlinkNetworkQuality.reduce((pre, cur) => pre + cur) / downlinkNetworkQuality.length) || 0),
-      // eslint-disable-next-line max-len
-      downlinkLoss: downlinkLoss.length > 0 && (Math.floor(downlinkLoss.reduce((pre, cur) => pre + cur) / downlinkLoss.length) || 0)
-    };
-    logger.debug(`networkQuality: ${JSON.stringify(this._networkQuality)}`);
-    this.emit('network-quality', this._networkQuality);
-  }
-};
-},{"./Constants":30,"./Logger":38,"./Utils":80,"events":84}],75:[function(require,module,exports){
+},{"./Grammar":36,"./Logger":38,"./Utils":80}],75:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
@@ -39694,7 +41023,7 @@ module.exports = {
   InviteServerTransaction,
   checkTransaction
 };
-},{"./Constants":30,"./Logger":38,"./SIPMessage":72,"./Timers":75,"events":84}],77:[function(require,module,exports){
+},{"./Constants":30,"./Logger":38,"./SIPMessage":73,"./Timers":75,"events":84}],77:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -40069,7 +41398,7 @@ module.exports = class Transport {
     });
   }
 };
-},{"./Constants":30,"./Logger":38,"./Socket":73,"./Utils":80}],78:[function(require,module,exports){
+},{"./Constants":30,"./Logger":38,"./Socket":74,"./Utils":80}],78:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -40413,9 +41742,6 @@ module.exports = class UA extends EventEmitter {
    */
   call(target, options) {
     logger.debug(`call() target:${target} options:${JSON.stringify(options)}`);
-
-    // 初始化统计信息参数
-    window.CRTCStats = 'start';
     var session = new RTCSession(this);
     return session.connect(target, options).then(() => {
       return session;
@@ -41129,7 +42455,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":29,"./Constants":30,"./CryptoKey":31,"./Exceptions":35,"./Logger":38,"./Message":58,"./Options":61,"./Parser":62,"./RTCSession":63,"./Registrator":70,"./SIPMessage":72,"./Transactions":76,"./Transport":77,"./URI":79,"./Utils":80,"./sanityCheck":82,"events":84,"jsencrypt":89}],79:[function(require,module,exports){
+},{"./Config":29,"./Constants":30,"./CryptoKey":31,"./Exceptions":35,"./Logger":38,"./Message":58,"./Options":61,"./Parser":62,"./RTCSession":63,"./Registrator":71,"./SIPMessage":73,"./Transactions":76,"./Transport":77,"./URI":79,"./Utils":80,"./sanityCheck":82,"events":84,"jsencrypt":89}],79:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('./Constants');
@@ -43671,7 +44997,7 @@ function reply(status_code) {
   response += '\r\n';
   transport.send(response);
 }
-},{"./Constants":30,"./Logger":38,"./SIPMessage":72,"./Utils":80}],83:[function(require,module,exports){
+},{"./Constants":30,"./Logger":38,"./SIPMessage":73,"./Utils":80}],83:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
