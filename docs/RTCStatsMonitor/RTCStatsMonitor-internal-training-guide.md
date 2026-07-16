@@ -1,16 +1,16 @@
 # RTCStatsMonitor 完整报告内部培训手册
 
-本文面向内部研发、测试、技术支持和交付人员，专门解释 SDK 日志中以下内容：
+本文面向内部研发、测试、技术支持和交付人员，专门解释以下接口返回的完整诊断对象：
 
-```text
-[RTCStatsMonitor] detailed-report: { ... }
+```js
+const fullReport = session.statsMonitor.getLatestReport();
 ```
 
-`detailed-report:` 后面的 JSON 是一次采样生成的完整诊断报告。它与对外的 `stats:detailed-report` 事件不是同一个结构：
+普通 SDK 日志中的 `detailed-report:` 已改为常用摘要，不再持续打印完整对象。几种输出的区别如下：
 
-- 日志中的 `detailed-report:`：完整报告，包含连接路径、候选地址、媒体源、所有 RTP 明细、质量诊断、浏览器兼容性和采样性能。
-- `stats:detailed-report` 事件：面向 Demo 和常规监控的摘要，只保留常用字段。
-- `session.statsMonitor.getLatestReport()`：返回最近一份完整报告，与日志中的完整 JSON 结构一致。
+- 日志中的 `detailed-report:`：面向日常观察的摘要，字段说明见[摘要日志内部培训简洁版](./RTCStatsMonitor-summary-training-guide.md)。
+- `stats:detailed-report` 事件：面向 Demo 和常规监控的稳定摘要事件。
+- `session.statsMonitor.getLatestReport()`：返回最近一份完整报告，包含连接路径、候选地址、媒体源、所有 RTP 明细、质量诊断、浏览器兼容性和采样性能，是本文解释的对象。
 - `raw stats:`：浏览器原始 `getStats()` 报告，仅在启用 `enableRawStatsLog` 时限频输出，不是本文解释的对象。
 
 > 完整报告可能包含本地/远端 IP、端口、TURN 地址和轨道标识，只应在授权的内部排障环境中收集、传输和保存。
@@ -632,6 +632,7 @@ freezeCountDelta 或 droppedFramePercent 增长
 ## 14. 与客户指南和升级说明的边界
 
 - 普通客户如何看 Demo 浮层：[RTCStatsMonitor 通话质量解读指南](./RTCStatsMonitor-statistics-guide.md)
+- 内部如何快速阅读普通摘要日志：[RTCStatsMonitor 摘要日志内部培训简洁版](./RTCStatsMonitor-summary-training-guide.md)
 - 旧 `getStats` 接入如何迁移：[RTCStatsMonitor 升级说明](./RTCStatsMonitor-upgrade.md)
 - 浏览器测试范围和实测边界：[RTCStatsMonitor 浏览器兼容验证](./RTCStatsMonitor-browser-compatibility.md)
 

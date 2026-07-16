@@ -134,4 +134,4 @@ RTT 是媒体数据往返时延。SDK 优先采用更接近当前媒体体验的
 | 有信令但无媒体 | 状态、ICE、DTLS、对应 RTP 行、上下行实际码率、远端是否实际发送 |
 | 切换设备或共享后短暂波动 | 先等待数个采样周期；持续不恢复时再按对应链路排查 |
 
-需要分析 SDK 日志中 `detailed-report:` 后的完整版 JSON 时，请使用内部文档：[RTCStatsMonitor 完整报告内部培训手册](./RTCStatsMonitor-internal-training-guide.md)。
+内部培训可先阅读普通日志的简洁版：[RTCStatsMonitor 摘要日志内部培训简洁版](./RTCStatsMonitor-summary-training-guide.md)。需要进一步分析完整诊断对象时，再使用：[RTCStatsMonitor 完整报告内部培训手册](./RTCStatsMonitor-internal-training-guide.md)。

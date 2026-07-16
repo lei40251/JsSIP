@@ -22,7 +22,7 @@
 | RTCSession 自动启动、事件转发、过渡保护和停止释放 | 通过 |
 | 缺字段、计数器回退、采样超时、停止后立即重启 | 通过 |
 
-上述项目由 `test/test-rtc-stats-monitor.js` 覆盖，共 16 个测试。
+上述项目由 `test/test-rtc-stats-monitor.js` 覆盖，共 17 个测试。
 
 ## 2. 实际浏览器回环测试
 
