@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="TRTC 反混淆源码浏览器 Web API 深度分析：TRTC Web API 源码学习文档">
+  <title>TRTC Web API 源码学习文档 · TRTC Web API 深度学习</title>
+  <link rel="stylesheet" href="assets/docs.css">
+  <script>try{const t=localStorage.getItem('trtc-docs-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+  <script src="assets/search-index.js" defer></script>
+  <script src="assets/mermaid.min.js" defer></script>
+  <script src="assets/docs.js" defer></script>
+</head>
+<body data-page="index.html">
+  <header class="topbar">
+    <button type="button" class="icon-button nav-toggle" aria-label="打开目录" aria-expanded="false">☰</button>
+    <a class="brand" href="index.html">TRTC Web API 深度学习</a>
+    <div class="search-shell">
+      <label class="sr-only" for="global-search">搜索全部文档</label>
+      <input id="global-search" type="search" autocomplete="off" placeholder="搜索 API、方法、事件…" aria-controls="search-results">
+      <kbd>/</kbd>
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
+    <a class="source-link" href="../README.md">Markdown</a>
+    <a class="source-link" href="../../trtc.deobfuscated.js">源码</a>
+    <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
+  </header>
+
+  <aside class="sidebar" aria-label="文档目录">
+    
+    <section class="nav-group">
+      <h2>按顺序阅读</h2>
+      
+        <a class="nav-link active" href="index.html">
+          文档首页
+        </a>
+        <a class="nav-link" href="00-Reading-Guide-and-Source-Map.html">
+          00 阅读说明与源码地图
+        </a>
+        <a class="nav-link" href="01-Browser-API-Panorama.html">
+          01 浏览器 API 全景
+        </a>
+        <a class="nav-link" href="02-RTCPeerConnection-usage-analysis.html">
+          02 RTCPeerConnection
+        </a>
+        <a class="nav-link" href="03-WebSocket-usage-analysis.html">
+          03 WebSocket 信令
+        </a>
+        <a class="nav-link" href="04-MediaDevices-and-Capture.html">
+          04 MediaDevices 与采集
+        </a>
+        <a class="nav-link" href="05-MediaStreamTrack-Lifecycle.html">
+          05 Track 生命周期
+        </a>
+        <a class="nav-link" href="06-Web-Audio-usage-analysis.html">
+          06 Web Audio
+        </a>
+        <a class="nav-link" href="07-Media-Playback-and-Rendering.html">
+          07 播放与渲染
+        </a>
+        <a class="nav-link" href="08-Worker-Streams-and-Encoded-Processing.html">
+          08 Worker 与编码帧
+        </a>
+        <a class="nav-link" href="09-WebCodecs-and-WebAssembly.html">
+          09 WebCodecs 与 WASM
+        </a>
+        <a class="nav-link" href="10-Auxiliary-Browser-APIs.html">
+          10 辅助浏览器 API
+        </a>
+        <a class="nav-link" href="11-End-to-End-Business-Flows.html">
+          11 端到端业务流程
+        </a>
+    </section>
+    <section class="nav-group">
+      <h2>附录（按需查询）</h2>
+      
+        <a class="nav-link" href="Appendix-A-WebAPI-Occurrences.html">
+          A Web API 出现位置
+        </a>
+        <a class="nav-link" href="Appendix-B-Source-Method-Index.html">
+          B 源码方法索引
+        </a>
+        <a class="nav-link" href="Appendix-C-Event-Index.html">
+          C 事件索引
+        </a>
+        <a class="nav-link" href="Appendix-D-Method-Adjacency-Index.html">
+          D 方法调用邻接
+        </a>
+        <a class="nav-link" href="Appendix-E-Public-API-Call-Chains.html">
+          E 公开 API 调用链
+        </a>
+        <a class="nav-link" href="Appendix-F-Visual-Call-Flows.html">
+          F 流程图与时序图
+        </a>
+    </section>
+  </aside>
+  <div class="sidebar-backdrop" hidden></div>
+
+  <main class="layout">
+    <article class="doc-content">
+      <h1 id="trtc-web-api-源码学习文档">TRTC Web API 源码学习文档<a class="heading-anchor" href="#trtc-web-api-源码学习文档" aria-label="链接到本节">#</a></h1>
+<blockquote>
+<p>源码：<code>../trtc.deobfuscated.js</code>（51,908 行）</p>
+<p>阅读目标：先建立浏览器 API 全景，再对关键 API 逐个下钻，最后串起完整业务流程。</p>
+</blockquote>
+<h2 id="从哪里开始">从哪里开始<a class="heading-anchor" href="#从哪里开始" aria-label="链接到本节">#</a></h2>
+<p>第一次阅读只走下面这条主线，不需要先查索引：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">00 阅读说明与源码地图
+  → 01 浏览器 API 使用全景分析
+    → 02 RTCPeerConnection
+    → 03 WebSocket
+    → 按需要阅读 04—10
+      → 11 端到端业务流程
+</code></pre>
+</div><h2 id="主阅读线">主阅读线<a class="heading-anchor" href="#主阅读线" aria-label="链接到本节">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th align="right">顺序</th>
+<th>文档</th>
+<th>解决的问题</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="right">00</td>
+<td><a href="00-Reading-Guide-and-Source-Map.html">阅读说明与源码地图</a></td>
+<td>先区分运行时、Adapter、工具、媒体、门面和房间六层代码</td>
+</tr>
+<tr>
+<td align="right">01</td>
+<td><a href="01-Browser-API-Panorama.html">浏览器 API 使用全景分析</a></td>
+<td>整个 SDK 使用了哪些浏览器 API，各自服务什么场景</td>
+</tr>
+<tr>
+<td align="right">02</td>
+<td><a href="02-RTCPeerConnection-usage-analysis.html"><code>RTCPeerConnection</code> 使用分析</a></td>
+<td>Adapter、能力检测、MPC/SPC、状态、重连和释放</td>
+</tr>
+<tr>
+<td align="right">03</td>
+<td><a href="03-WebSocket-usage-analysis.html"><code>WebSocket</code> 使用分析</a></td>
+<td>主备连接、JSON 信封、RPC、在线判断和信令恢复</td>
+</tr>
+<tr>
+<td align="right">04</td>
+<td><a href="04-MediaDevices-and-Capture.html"><code>MediaDevices</code> 与采集</a></td>
+<td>设备枚举、摄像头/麦克风、屏幕共享、约束降级和停止</td>
+</tr>
+<tr>
+<td align="right">05</td>
+<td><a href="05-MediaStreamTrack-Lifecycle.html"><code>MediaStreamTrack</code> 生命周期</a></td>
+<td>source/out/sender/player track 的所有权与交接</td>
+</tr>
+<tr>
+<td align="right">06</td>
+<td><a href="06-Web-Audio-usage-analysis.html">Web Audio 使用分析</a></td>
+<td>AudioContext、处理图、音量、播放恢复和释放</td>
+</tr>
+<tr>
+<td align="right">07</td>
+<td><a href="07-Media-Playback-and-Rendering.html">媒体播放与渲染</a></td>
+<td>HTMLMediaElement、Canvas、WebGL、截图和销毁</td>
+</tr>
+<tr>
+<td align="right">08</td>
+<td><a href="08-Worker-Streams-and-Encoded-Processing.html">Worker、Streams 与编码帧处理</a></td>
+<td>后台定时器、黑帧检测、Insertable Streams 和 Script Transform</td>
+</tr>
+<tr>
+<td align="right">09</td>
+<td><a href="09-WebCodecs-and-WebAssembly.html">WebCodecs 与 WebAssembly</a></td>
+<td>能力检测、实际解码、WASM 加载和回退</td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td><a href="10-Auxiliary-Browser-APIs.html">辅助浏览器 API</a></td>
+<td>HTTP、上报、Navigator、DOM、Storage 和二进制协议</td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td><a href="11-End-to-End-Business-Flows.html">端到端业务流程</a></td>
+<td>进房、发布、订阅、切换设备、重连和退房</td>
+</tr>
+</tbody></table></div>
+<h2 id="附录">附录<a class="heading-anchor" href="#附录" aria-label="链接到本节">#</a></h2>
+<p>附录用于核对完整性和从源码反查，不进入正常学习顺序。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>附录</th>
+<th>文档</th>
+<th>适合什么时候使用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>A</td>
+<td><a href="Appendix-A-WebAPI-Occurrences.html">浏览器 Web API 全部出现位置</a></td>
+<td>已知浏览器 API，查它在源码哪里调用</td>
+</tr>
+<tr>
+<td>B</td>
+<td><a href="Appendix-B-Source-Method-Index.html">源码方法与构造器索引</a></td>
+<td>已知源码方法，查所属层和直接 Web API</td>
+</tr>
+<tr>
+<td>C</td>
+<td><a href="Appendix-C-Event-Index.html">事件反向索引</a></td>
+<td>查事件在哪里监听、派发和解绑</td>
+</tr>
+<tr>
+<td>D</td>
+<td><a href="Appendix-D-Method-Adjacency-Index.html">方法直接调用邻接表</a></td>
+<td>逐方法核对直接调用关系</td>
+</tr>
+<tr>
+<td>E</td>
+<td><a href="Appendix-E-Public-API-Call-Chains.html">公开 SDK API 到 Web API 对照</a></td>
+<td>从公开 API 反查内部方法和浏览器 API</td>
+</tr>
+<tr>
+<td>F</td>
+<td><a href="Appendix-F-Visual-Call-Flows.html">完整流程图与时序图</a></td>
+<td>需要集中查看流程图或打印时序图</td>
+</tr>
+</tbody></table></div>
+<h2 id="阅读约定">阅读约定<a class="heading-anchor" href="#阅读约定" aria-label="链接到本节">#</a></h2>
+<p>文档把结论分为三类：</p>
+<ul>
+<li><strong>源码事实</strong>：方法体、参数或调用关系可以在当前 JS 直接验证。</li>
+<li><strong>合理推断</strong>：多个源码事实共同支持，但缺少服务端或构建前源码。</li>
+<li><strong>不能确认</strong>：必须依赖服务端协议、原始源码、抓包或浏览器实测。</li>
+</ul>
+<p>反混淆文件中的自动中文注释可能与方法体不一致。判断优先级始终是：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">方法体 → 调用方 → 被调用方 → 状态字段 → 自动注释
+</code></pre>
+</div><p>特别注意：源码中“出现过某 API”不代表正式通话一定执行。Polyfill、Adapter、能力检测和正式业务必须分层判断。</p>
+<h3 id="关键-api-的固定阅读模板">关键 API 的固定阅读模板<a class="heading-anchor" href="#关键-api-的固定阅读模板" aria-label="链接到本节">#</a></h3>
+<p>主文不是搜索结果汇总。每个关键 API 都按同一顺序展开：</p>
+<ol>
+<li><strong>API 签名与用途</strong>：先说明这个浏览器 API 解决什么问题。</li>
+<li><strong>源码片段</strong>：引用当前 JS 中真正执行的调用，不只给行号。</li>
+<li><strong>标准参数</strong>：说明每个参数、可选项、默认行为和浏览器限制。</li>
+<li><strong>本项目实参</strong>：逐字段追到公开配置、内部默认值或服务端返回值。</li>
+<li><strong>调用阶段</strong>：区分创建时参数、运行时二次配置和结果读取。</li>
+<li><strong>后续去向</strong>：说明返回对象由谁持有，继续传给哪个 Track、Sender、Player 或信令方法。</li>
+<li><strong>失败与释放</strong>：说明异常、降级、重试、重连和资源关闭。</li>
+</ol>
+<p>其中最重要的是不要把不同阶段的参数混在一个对象里。例如屏幕共享至少分成四步：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">公开 startScreenShare(options)
+  → 第一次选择界面的 getDisplayMedia(options)
+  → 采集后 videoTrack.applyConstraints(constraints)
+  → getSettings() / ended 事件验证最终结果和生命周期
+</code></pre>
+</div><p>所以 <code>preferCurrentTab</code>、<code>systemAudio</code>、<code>selfBrowserSurface</code>、<code>surfaceSwitching</code> 属于第一次选择界面；<code>frameRate</code>、<code>width</code>、<code>height</code> 还会在采集后再次应用到视频轨道。文档会分别展示两次浏览器调用收到的对象。</p>
+<h2 id="已复核的关键纠错">已复核的关键纠错<a class="heading-anchor" href="#已复核的关键纠错" aria-label="链接到本节">#</a></h2>
+<ul>
+<li>业务 WebSocket 没有自定义 ping/pong；在线判断依赖连接状态和最近下行消息时间。</li>
+<li>WebSocket <code>open</code>、应用层 channel setup、join 成功和媒体 PC connected 是不同阶段。</li>
+<li>公开 <code>sendCustomMessage()</code> 在当前构造路径走 WebSocket 信令，不是 SPC DataChannel。</li>
+<li>正式 MPC/SPC 没有可证明的逐 Candidate WebSocket 交换链；<code>addIceCandidate()</code> 的明确业务调用主要位于 H.264 本地回环检测。</li>
+<li><code>exitRoom()</code> 关闭房间媒体连接但保留本地采集 Track；<code>destroy()</code> 才进入实例级完整释放。</li>
+</ul>
+<h2 id="html-文档站">HTML 文档站<a class="heading-anchor" href="#html-文档站" aria-label="链接到本节">#</a></h2>
+<ul>
+<li>浏览入口：<a href="index.html">html/index.html</a></li>
+<li><code>build-html.cjs</code> 以当前目录 Markdown 为内容源，生成左侧主线/附录导航、全文搜索、页内目录和 Mermaid 图。</li>
+</ul>
+
+      <nav class="page-pagination" aria-label="上一篇和下一篇">
+        <span></span>
+        <a class="next" href="00-Reading-Guide-and-Source-Map.html"><span>下一篇</span>00 阅读说明与源码地图</a>
+      </nav>
+    </article>
+    
+    <nav class="page-toc" aria-label="本页目录">
+      <h2>本页目录</h2>
+      <a class="toc-depth-2" href="#从哪里开始">从哪里开始</a><a class="toc-depth-2" href="#主阅读线">主阅读线</a><a class="toc-depth-2" href="#附录">附录</a><a class="toc-depth-2" href="#阅读约定">阅读约定</a><a class="toc-depth-3" href="#关键-api-的固定阅读模板">关键 API 的固定阅读模板</a><a class="toc-depth-2" href="#已复核的关键纠错">已复核的关键纠错</a><a class="toc-depth-2" href="#html-文档站">HTML 文档站</a>
+    </nav>
+  </main>
+  <button type="button" class="back-to-top" aria-label="回到顶部">↑</button>
+</body>
+</html>

@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="TRTC 反混淆源码浏览器 Web API 深度分析：01 浏览器 API 使用全景分析">
+  <title>01 浏览器 API 使用全景分析 · TRTC Web API 深度学习</title>
+  <link rel="stylesheet" href="assets/docs.css">
+  <script>try{const t=localStorage.getItem('trtc-docs-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+  <script src="assets/search-index.js" defer></script>
+  <script src="assets/mermaid.min.js" defer></script>
+  <script src="assets/docs.js" defer></script>
+</head>
+<body data-page="01-Browser-API-Panorama.html">
+  <header class="topbar">
+    <button type="button" class="icon-button nav-toggle" aria-label="打开目录" aria-expanded="false">☰</button>
+    <a class="brand" href="index.html">TRTC Web API 深度学习</a>
+    <div class="search-shell">
+      <label class="sr-only" for="global-search">搜索全部文档</label>
+      <input id="global-search" type="search" autocomplete="off" placeholder="搜索 API、方法、事件…" aria-controls="search-results">
+      <kbd>/</kbd>
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
+    <a class="source-link" href="../01-Browser-API-Panorama.md">Markdown</a>
+    <a class="source-link" href="../../trtc.deobfuscated.js">源码</a>
+    <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
+  </header>
+
+  <aside class="sidebar" aria-label="文档目录">
+    
+    <section class="nav-group">
+      <h2>按顺序阅读</h2>
+      
+        <a class="nav-link" href="index.html">
+          文档首页
+        </a>
+        <a class="nav-link" href="00-Reading-Guide-and-Source-Map.html">
+          00 阅读说明与源码地图
+        </a>
+        <a class="nav-link active" href="01-Browser-API-Panorama.html">
+          01 浏览器 API 全景
+        </a>
+        <a class="nav-link" href="02-RTCPeerConnection-usage-analysis.html">
+          02 RTCPeerConnection
+        </a>
+        <a class="nav-link" href="03-WebSocket-usage-analysis.html">
+          03 WebSocket 信令
+        </a>
+        <a class="nav-link" href="04-MediaDevices-and-Capture.html">
+          04 MediaDevices 与采集
+        </a>
+        <a class="nav-link" href="05-MediaStreamTrack-Lifecycle.html">
+          05 Track 生命周期
+        </a>
+        <a class="nav-link" href="06-Web-Audio-usage-analysis.html">
+          06 Web Audio
+        </a>
+        <a class="nav-link" href="07-Media-Playback-and-Rendering.html">
+          07 播放与渲染
+        </a>
+        <a class="nav-link" href="08-Worker-Streams-and-Encoded-Processing.html">
+          08 Worker 与编码帧
+        </a>
+        <a class="nav-link" href="09-WebCodecs-and-WebAssembly.html">
+          09 WebCodecs 与 WASM
+        </a>
+        <a class="nav-link" href="10-Auxiliary-Browser-APIs.html">
+          10 辅助浏览器 API
+        </a>
+        <a class="nav-link" href="11-End-to-End-Business-Flows.html">
+          11 端到端业务流程
+        </a>
+    </section>
+    <section class="nav-group">
+      <h2>附录（按需查询）</h2>
+      
+        <a class="nav-link" href="Appendix-A-WebAPI-Occurrences.html">
+          A Web API 出现位置
+        </a>
+        <a class="nav-link" href="Appendix-B-Source-Method-Index.html">
+          B 源码方法索引
+        </a>
+        <a class="nav-link" href="Appendix-C-Event-Index.html">
+          C 事件索引
+        </a>
+        <a class="nav-link" href="Appendix-D-Method-Adjacency-Index.html">
+          D 方法调用邻接
+        </a>
+        <a class="nav-link" href="Appendix-E-Public-API-Call-Chains.html">
+          E 公开 API 调用链
+        </a>
+        <a class="nav-link" href="Appendix-F-Visual-Call-Flows.html">
+          F 流程图与时序图
+        </a>
+    </section>
+  </aside>
+  <div class="sidebar-backdrop" hidden></div>
+
+  <main class="layout">
+    <article class="doc-content">
+      <h1 id="01-浏览器-api-使用全景分析">01 浏览器 API 使用全景分析<a class="heading-anchor" href="#01-浏览器-api-使用全景分析" aria-label="链接到本节">#</a></h1>
+<blockquote>
+<p>本文是第一层地图：按浏览器 API 分类说明“用了什么、传了什么、在哪里用”。关键 API 的兼容、能力检测、正式业务和生命周期放到后续专题。</p>
+</blockquote>
+<h2 id="1-webrtc-核心-api">1. WebRTC 核心 API<a class="heading-anchor" href="#1-webrtc-核心-api" aria-label="链接到本节">#</a></h2>
+<p><strong>API 是什么</strong></p>
+<p><code>RTCPeerConnection</code>、<code>RTCRtpTransceiver</code>、<code>RTCRtpSender</code> 和 <code>RTCRtpReceiver</code> 共同负责媒体协商、收发轨道、传输参数和连接统计。</p>
+<p><strong>源码位置</strong></p>
+<ul>
+<li>Adapter：L6651—L9450。</li>
+<li>codec/Transceiver 能力检测：L15760—L16340、L45352—L45455。</li>
+<li>MPC：L37350—L40710。</li>
+<li>SPC：L45320—L49420。</li>
+</ul>
+<p><strong>实际参数</strong></p>
+<p>正式 PC 都使用 <code>iceServers</code>、<code>iceTransportPolicy</code>、<code>sdpSemantics</code>、<code>max-bundle</code> 和 <code>rtcpMuxPolicy=require</code>。SPC 另外使用 <code>encodedInsertableStreams</code> 和 <code>offerExtmapAllowMixed</code>。源码还传入 <code>tcpCandidatePolicy</code>、<code>IceTransportsType</code> 等非标准字段，不能直接当作通用 WebRTC 配置。</p>
+<p><strong>使用场景</strong></p>
+<ul>
+<li>MPC 为上行和每个远端用户分别持有 PC。</li>
+<li>SPC 由房间级 <code>SignalTransport</code> 持有共享 PC。</li>
+<li>固定 Transceiver 槽用于发布、换轨和小流/辅流。</li>
+<li><code>getStats()</code> 用于实际候选路径、码率、丢包、RTT、分辨率和卡顿指标。</li>
+</ul>
+<p><strong>典型调用链</strong></p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">Room.publish / subscribe
+  → MPC 或 SPC transport
+  → createOffer / setLocalDescription
+  → WebSocket 信令或本地 ability 合成
+  → setRemoteDescription
+  → waitForPeerConnectionConnected
+</code></pre>
+</div><p><strong>深入阅读</strong></p>
+<p>见 <a href="02-RTCPeerConnection-usage-analysis.html"><code>RTCPeerConnection</code> 使用分析</a>。</p>
+<h2 id="2-mediadevices-与媒体采集">2. MediaDevices 与媒体采集<a class="heading-anchor" href="#2-mediadevices-与媒体采集" aria-label="链接到本节">#</a></h2>
+<p><strong>API 是什么</strong></p>
+<p><code>enumerateDevices()</code> 枚举输入输出设备；<code>getUserMedia()</code> 采集摄像头和麦克风；<code>getDisplayMedia()</code> 采集屏幕、窗口或标签页。</p>
+<p><strong>源码位置</strong></p>
+<p>媒体约束和能力工具主要位于 L15700—L17400；Track 与采集实现主要位于 L19900—L24000；公开入口位于 L34700—L35200。</p>
+<p><strong>实际参数</strong></p>
+<ul>
+<li>音频：<code>deviceId</code>、<code>echoCancellation</code>、<code>noiseSuppression</code>、<code>autoGainControl</code>、<code>channelCount</code>、<code>sampleRate</code>。</li>
+<li>视频：<code>deviceId</code>、<code>facingMode</code>、<code>width</code>、<code>height</code>、<code>frameRate</code>。</li>
+<li>屏幕：<code>displaySurface</code>、系统音频、Capture Handle、可选 CropTarget 和额外麦克风轨道。</li>
+</ul>
+<p>约束会从精确值逐级降级；最终必须通过 <code>track.getSettings()</code> 确认浏览器实际采用的设备和规格。</p>
+<p><strong>使用场景</strong></p>
+<p>本地音视频启动、设备切换、设备拔插恢复、屏幕分享、系统音频和屏幕区域裁剪。</p>
+<p><strong>典型调用链</strong></p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">startLocalVideo(options)
+  → profile / cameraId 转 capture config
+  → navigator.mediaDevices.getUserMedia({video})
+  → MediaStream.getVideoTracks()[0]
+  → LocalVideoTrack.setInputMediaStreamTrack()
+</code></pre>
+</div><p><strong>深入阅读</strong></p>
+<p>见 <a href="04-MediaDevices-and-Capture.html"><code>MediaDevices</code> 与采集</a>。</p>
+<h2 id="3-mediastream-与-mediastreamtrack">3. MediaStream 与 MediaStreamTrack<a class="heading-anchor" href="#3-mediastream-与-mediastreamtrack" aria-label="链接到本节">#</a></h2>
+<p><strong>API 是什么</strong></p>
+<p><code>MediaStream</code> 负责组合轨道和携带 msid；<code>MediaStreamTrack</code> 是真正的音频或视频资源，提供 <code>enabled</code>、<code>muted</code>、<code>readyState</code>、<code>getSettings()</code>、<code>applyConstraints()</code>、<code>clone()</code> 和 <code>stop()</code>。</p>
+<p><strong>源码位置</strong></p>
+<p>Track 包装与媒体资源层主要位于 L19900—L24000；发布和订阅层在 L37350—L49420 使用这些轨道。</p>
+<p><strong>实际参数</strong></p>
+<ul>
+<li><code>new MediaStream([track])</code> 用于播放、sender 关联和音频节点桥接。</li>
+<li><code>applyConstraints()</code> 接收设备、分辨率、帧率或音频 3A 更新。</li>
+<li><code>contentHint</code> 在视频 motion/detail 和音频 speech/music 之间传播。</li>
+</ul>
+<p><strong>使用场景</strong></p>
+<p>区分采集得到的 source track、处理管线产生的 out track、Sender 当前发送的 track 和 Player 当前播放的 track。</p>
+<p><strong>典型调用链</strong></p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">sourceTrack
+  → Track.setInputMediaStreamTrack()
+  → Audio/Canvas pipeline（可选）
+  → outMediaTrack
+  → RTCRtpSender.replaceTrack(outMediaTrack)
+</code></pre>
+</div><p><strong>深入阅读</strong></p>
+<p>见 <a href="05-MediaStreamTrack-Lifecycle.html"><code>MediaStreamTrack</code> 生命周期</a>。</p>
+<h2 id="4-web-audio">4. Web Audio<a class="heading-anchor" href="#4-web-audio" aria-label="链接到本节">#</a></h2>
+<p><strong>API 是什么</strong></p>
+<p><code>AudioContext</code>、<code>MediaStreamAudioSourceNode</code>、<code>MediaStreamAudioDestinationNode</code>、<code>GainNode</code>、<code>AnalyserNode</code> 和 AudioWorklet 组成浏览器音频处理图。</p>
+<p><strong>源码位置</strong></p>
+<p>AudioContext 管理、播放器和处理管线主要位于 L18000—L22000；AI 降噪和混音模块在媒体资源层继续接入。</p>
+<p><strong>实际参数</strong></p>
+<ul>
+<li><code>createMediaStreamSource(stream)</code> 把 Track 输入处理图。</li>
+<li><code>createMediaStreamDestination()</code> 把处理结果重新变成可发布 Track。</li>
+<li><code>GainNode.gain</code> 控制音量。</li>
+<li>Analyser 或 AudioWorklet 周期输出音量/PCM。</li>
+</ul>
+<p><strong>使用场景</strong></p>
+<p>麦克风预处理、音量检测、混音、耳返、背景音乐、AEC 参考、播放音量和自动播放恢复。</p>
+<p><strong>典型调用链</strong></p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">microphone sourceTrack
+  → createMediaStreamSource
+  → processor / gain / analyser
+  → createMediaStreamDestination
+  → outMediaTrack
+</code></pre>
+</div><p><strong>深入阅读</strong></p>
+<p>见 <a href="06-Web-Audio-usage-analysis.html">Web Audio 使用分析</a>。</p>
+<h2 id="5-htmlmediaelement-播放">5. HTMLMediaElement 播放<a class="heading-anchor" href="#5-htmlmediaelement-播放" aria-label="链接到本节">#</a></h2>
+<p><strong>API 是什么</strong></p>
+<p><code>HTMLVideoElement</code> 和 <code>HTMLAudioElement</code> 通过 <code>srcObject</code> 播放 MediaStream，通过 <code>play()</code> Promise 暴露自动播放限制，通过 <code>setSinkId()</code> 选择音频输出设备。</p>
+<p><strong>源码位置</strong></p>
+<p>Player 基类和音视频播放器主要位于 L17400—L19000。</p>
+<p><strong>实际参数</strong></p>
+<ul>
+<li>视频：<code>autoplay</code>、<code>playsInline</code>、<code>muted</code>、<code>srcObject</code>、object-fit、mirror。</li>
+<li>音频：<code>srcObject</code> 或 URL、<code>volume</code>、可选 <code>setSinkId(deviceId)</code>。</li>
+</ul>
+<p><strong>使用场景</strong></p>
+<p>本地预览、远端音视频播放、背景音乐、输出设备切换、自动播放弹窗恢复和首帧检测。</p>
+<p><strong>典型调用链</strong></p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">RemoteTrack.setInputMediaStreamTrack(track)
+  → Player.setTrack(track)
+  → mediaElement.srcObject = new MediaStream([track])
+  → mediaElement.play()
+</code></pre>
+</div><p><strong>深入阅读</strong></p>
+<p>见 <a href="07-Media-Playback-and-Rendering.html">媒体播放与渲染</a>。</p>
+<h2 id="6-canvas-webgl-与视频帧">6. Canvas、WebGL 与视频帧<a class="heading-anchor" href="#6-canvas-webgl-与视频帧" aria-label="链接到本节">#</a></h2>
+<p><strong>API 是什么</strong></p>
+<p>Canvas 2D 用于绘制、截图和简单混画；WebGL2 用于纹理、着色器、FBO 和 GPU 视频合成；<code>captureStream()</code> 把画布输出重新变成视频轨道。</p>
+<p><strong>源码位置</strong></p>
+<p>Canvas/WebGL 渲染节点主要位于 L24000—L29000；部分黑帧检测和视频帧处理位于 Worker 相关代码。</p>
+<p><strong>实际参数</strong></p>
+<ul>
+<li><code>canvas.getContext(&#39;2d&#39;, {willReadFrequently:true})</code> 用于像素读取。</li>
+<li><code>canvas.getContext(&#39;webgl2&#39;, options)</code> 创建 GPU 渲染上下文。</li>
+<li><code>canvas.captureStream(frameRate)</code> 输出处理后视频轨道。</li>
+<li><code>requestVideoFrameCallback()</code> 在支持时驱动视频帧更新。</li>
+</ul>
+<p><strong>使用场景</strong></p>
+<p>本地混流、镜像、旋转、裁剪、透明度、截图、黑帧检测和处理后 Track 输出。</p>
+<p><strong>典型调用链</strong></p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">video track
+  → hidden video / frame source
+  → Canvas2D 或 WebGL renderer
+  → canvas.captureStream()
+  → processed video track
+</code></pre>
+</div><p><strong>深入阅读</strong></p>
+<p>见 <a href="07-Media-Playback-and-Rendering.html">媒体播放与渲染</a>。</p>
+<h2 id="7-websocket-信令">7. WebSocket 信令<a class="heading-anchor" href="#7-websocket-信令" aria-label="链接到本节">#</a></h2>
+<p><strong>API 是什么</strong></p>
+<p>浏览器 <code>WebSocket</code> 提供长连接；SDK 在其上实现主备地址竞速、JSON 信封、序列号 RPC、在线判断和恢复。</p>
+<p><strong>源码位置</strong></p>
+<p>SignalChannel 主要位于 L36740—L37400；Room 在 L49400—L51908 调用它完成进房、发布、订阅和重建。</p>
+<p><strong>实际参数</strong></p>
+<p>URL 包含 SDK、用户、鉴权和诊断查询参数。发送消息统一为 <code>{cmd,data,userId,tinyId,seq}</code> JSON；源码没有设置 <code>binaryType</code>、子协议或自定义 Ping/Pong。</p>
+<p><strong>使用场景</strong></p>
+<p>join、publish、subscribe、自定义消息、媒体配置、重建 PC、网络质量上报和房间事件。</p>
+<p><strong>典型调用链</strong></p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">sendWaitForResponse(command, data)
+  → send(JSON envelope)
+  → WebSocket.send()
+  → onmessage()
+  → seq 匹配对应等待请求
+</code></pre>
+</div><p><strong>深入阅读</strong></p>
+<p>见 <a href="03-WebSocket-usage-analysis.html"><code>WebSocket</code> 使用分析</a>。</p>
+<h2 id="8-http-url-与上报">8. HTTP、URL 与上报<a class="heading-anchor" href="#8-http-url-与上报" aria-label="链接到本节">#</a></h2>
+<p><strong>API 是什么</strong></p>
+<p><code>fetch</code>、<code>XMLHttpRequest</code>、<code>FormData</code>、<code>URLSearchParams</code> 和 <code>sendBeacon</code> 用于房间调度、资源下载、日志/质量上报和页面退出收尾。</p>
+<p><strong>源码位置</strong></p>
+<p>公共 HTTP 工具约位于 L12500—L13400；WASM/资源下载、调度和上报在各业务模块调用。</p>
+<p><strong>实际参数</strong></p>
+<ul>
+<li>普通请求优先 <code>fetch</code>，必要时降级 XHR。</li>
+<li>调度可能并发主备域名请求。</li>
+<li>页面退出/批量上报优先 <code>navigator.sendBeacon()</code>；返回 <code>false</code> 时退回普通 <code>fetch/XHR</code> 包装。当前 fetch 包装没有传 <code>keepalive</code>。</li>
+<li>日志正文可能先 gzip，再以 Blob/ArrayBuffer 发送。</li>
+</ul>
+<p><strong>使用场景</strong></p>
+<p>获取信令/ICE 配置、加载 WASM、上传日志、网络质量和性能数据。</p>
+<p><strong>典型调用链</strong></p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">enterRoom
+  → schedule(joinParams)
+  → FormData / URLSearchParams
+  → 主备 HTTP 请求竞速
+  → 保存 signal URL、ICE 和策略
+</code></pre>
+</div><p><strong>深入阅读</strong></p>
+<p>见 <a href="10-Auxiliary-Browser-APIs.html">辅助浏览器 API</a>。</p>
+<h2 id="9-worker-web-streams-与-encoded-transform">9. Worker、Web Streams 与 Encoded Transform<a class="heading-anchor" href="#9-worker-web-streams-与-encoded-transform" aria-label="链接到本节">#</a></h2>
+<p><strong>API 是什么</strong></p>
+<p>Dedicated Worker 承载后台定时器、黑帧检测和 <code>RTCRtpScriptTransform</code>；Readable/Writable/TransformStream 连接音频 PCM、编码帧和处理器。</p>
+<p><strong>源码位置</strong></p>
+<p>通用 Worker/Streams 工具分布于 L16800—L17400 和媒体资源层；SPC encoded transform 主要位于 L45900—L49400。</p>
+<p><strong>实际参数</strong></p>
+<ul>
+<li>Worker 多通过 Blob URL 动态创建，创建后立即 revoke URL。</li>
+<li>旧路径使用 <code>sender/receiver.createEncodedStreams()</code>。</li>
+<li>新路径把 <code>new RTCRtpScriptTransform(worker, options)</code> 赋给 sender/receiver 的 <code>transform</code>。</li>
+</ul>
+<p><strong>使用场景</strong></p>
+<p>SEI 注入/提取、编码帧管线、黑帧检测、AudioWorklet PCM、页面隐藏时稳定定时。</p>
+<p><strong>典型调用链</strong></p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">RTCRtpSender encoded readable
+  → TransformStream(SEI / frame processor)
+  → encoded writable
+</code></pre>
+</div><p><strong>深入阅读</strong></p>
+<p>见 <a href="08-Worker-Streams-and-Encoded-Processing.html">Worker、Streams 与编码帧处理</a>。</p>
+<h2 id="10-webcodecs-mediacapabilities-与-webassembly">10. WebCodecs、MediaCapabilities 与 WebAssembly<a class="heading-anchor" href="#10-webcodecs-mediacapabilities-与-webassembly" aria-label="链接到本节">#</a></h2>
+<p><strong>API 是什么</strong></p>
+<p>WebCodecs 提供浏览器级编解码器和编码块；MediaCapabilities 查询支持性、流畅性和功耗；WebAssembly 加载自定义音视频处理实现。</p>
+<p><strong>源码位置</strong></p>
+<p>能力检测集中于 L15000—L16400；实际 AudioDecoder、自定义视频解码器和 WASM 加载位于媒体处理模块。</p>
+<p><strong>实际参数</strong></p>
+<ul>
+<li>codec 检测没有只依赖 <code>isConfigSupported()</code>；当前源码直接执行 configure、单帧 encode/decode、flush，并以实际 output 判断。</li>
+<li>MediaCapabilities 传入 codec、尺寸、码率和帧率。</li>
+<li>WASM 优先 <code>instantiateStreaming</code>，失败时下载 ArrayBuffer 后 <code>instantiate</code>。</li>
+</ul>
+<p><strong>使用场景</strong></p>
+<p>区分“API 存在”“浏览器宣告 codec”“配置可接受”和“真实数据可解码”；为自定义音频/视频处理选择 WebCodecs、WASM 或 WebRTC 原生路径。</p>
+<p><strong>典型调用链</strong></p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">能力检测
+  → 选择 WebCodecs / WASM / 原生 WebRTC
+  → configure / instantiate
+  → 处理帧
+  → close / 恢复原轨道
+</code></pre>
+</div><p><strong>深入阅读</strong></p>
+<p>见 <a href="09-WebCodecs-and-WebAssembly.html">WebCodecs 与 WebAssembly</a>。</p>
+<h2 id="11-navigator-permissions-与页面状态">11. Navigator、Permissions 与页面状态<a class="heading-anchor" href="#11-navigator-permissions-与页面状态" aria-label="链接到本节">#</a></h2>
+<p><strong>API 是什么</strong></p>
+<p>Navigator 提供 UA、Client Hints、网络类型、硬件能力、语言和权限；DOM/Observer 提供页面可见性、视图交叉、页面退出和自动播放交互。</p>
+<p><strong>源码位置</strong></p>
+<p>浏览器检测和权限工具主要位于公共工具与媒体资源层；视图自动订阅和页面生命周期在 SDK/Room 层继续使用。</p>
+<p><strong>实际参数</strong></p>
+<ul>
+<li><code>permissions.query({name})</code> 查询摄像头/麦克风权限。</li>
+<li><code>userAgentData.getHighEntropyValues()</code> 获取平台和版本信息。</li>
+<li><code>IntersectionObserver</code> 观察远端视图可见性。</li>
+<li><code>document.visibilityState</code>、<code>pagehide</code> 控制定时器、上报和退出收尾。</li>
+</ul>
+<p><strong>使用场景</strong></p>
+<p>浏览器兼容分支、设备权限提示、网络类型更新、按可见性订阅、后台调度和页面退出释放。</p>
+<p><strong>典型调用链</strong></p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">远端 view 进入/离开可见区域
+  → IntersectionObserver callback
+  → 合并状态变化
+  → subscribe / unsubscribe
+</code></pre>
+</div><p><strong>深入阅读</strong></p>
+<p>见 <a href="10-Auxiliary-Browser-APIs.html">辅助浏览器 API</a>。</p>
+<h2 id="12-storage-performance-与定时器">12. Storage、Performance 与定时器<a class="heading-anchor" href="#12-storage-performance-与定时器" aria-label="链接到本节">#</a></h2>
+<p><strong>API 是什么</strong></p>
+<p><code>localStorage</code> 和 <code>sessionStorage</code> 保存日志/配置和会话数据；Performance API 记录耗时和资源下载；timer、RAF、idle callback 和 Worker timer 负责调度。</p>
+<p><strong>源码位置</strong></p>
+<p>这些 API 分散在公共工具、日志、播放器、房间和网络质量模块。</p>
+<p><strong>实际参数</strong></p>
+<ul>
+<li>Storage 使用前先检测可写性并捕获配额/隐私模式异常。</li>
+<li><code>performance.now()</code> 用于连接和方法耗时。</li>
+<li><code>PerformanceResourceTiming</code> 用于资源下载诊断。</li>
+<li><code>setTimeout/setInterval</code> 用于 RPC、连接、重连、Stats 和播放超时。</li>
+</ul>
+<p><strong>使用场景</strong></p>
+<p>日志缓存、跨刷新诊断、连接耗时、网络质量采样、重试退避和渲染调度。</p>
+<p><strong>典型调用链</strong></p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">周期 Stats / 心跳 / 重试任务
+  → 页面可见时普通 timer
+  → 需要后台稳定时 Worker timer
+  → close/reset 清理 task
+</code></pre>
+</div><p><strong>深入阅读</strong></p>
+<p>见 <a href="10-Auxiliary-Browser-APIs.html">辅助浏览器 API</a>。</p>
+<h2 id="13-二进制-文本编码与安全边界">13. 二进制、文本编码与安全边界<a class="heading-anchor" href="#13-二进制-文本编码与安全边界" aria-label="链接到本节">#</a></h2>
+<p><strong>API 是什么</strong></p>
+<p><code>ArrayBuffer</code>、TypedArray、DataView、TextEncoder/TextDecoder 和 Base64 API 用于自定义消息、上报包、TLV/类 Protobuf 和 H.264 SEI。</p>
+<p><strong>源码位置</strong></p>
+<p>公共二进制工具和协议解析主要位于 L23000—L33000；信令自定义消息和 encoded frame 处理继续调用。</p>
+<p><strong>实际参数</strong></p>
+<ul>
+<li>DataView 明确读写大小端整数。</li>
+<li>TextEncoder/TextDecoder 处理 UTF-8。</li>
+<li><code>btoa/atob</code> 把业务字节数组放入 JSON 信令。</li>
+<li>当前可定位的随机序号/标识路径仍有 <code>Math.random()</code>；未形成明确的正式业务 <code>crypto.getRandomValues()</code> 调用链。</li>
+</ul>
+<p><strong>使用场景</strong></p>
+<p>信令消息封装、日志压缩、自定义消息、SEI、WASM 内存和 Transferable 数据。</p>
+<p><strong>典型调用链</strong></p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">Uint8Array payload
+  → base64
+  → WebSocket JSON command
+  → 服务端/远端反向解码
+</code></pre>
+</div><p><strong>深入阅读</strong></p>
+<p>见 <a href="10-Auxiliary-Browser-APIs.html">辅助浏览器 API</a>。</p>
+<h2 id="14-仅检测或没有正式使用的-api">14. 仅检测或没有正式使用的 API<a class="heading-anchor" href="#14-仅检测或没有正式使用的-api" aria-label="链接到本节">#</a></h2>
+<p>必须把“存在性检测”与“正式处理链”区分开：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>API</th>
+<th>当前文件中的状态</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>MediaRecorder</code></td>
+<td>未发现正式录制链</td>
+</tr>
+<tr>
+<td>IndexedDB</td>
+<td>未发现使用</td>
+</tr>
+<tr>
+<td>ServiceWorker / SharedWorker</td>
+<td>未发现使用</td>
+</tr>
+<tr>
+<td>EventSource</td>
+<td>未发现使用</td>
+</tr>
+<tr>
+<td>WebTransport</td>
+<td>主要是能力检测，没有正式传输链</td>
+</tr>
+<tr>
+<td>多数 WebCodecs Encoder/Decoder</td>
+<td>部分只做能力检测；实际 AudioDecoder 和自定义视频解码路径除外</td>
+</tr>
+<tr>
+<td>DataChannel</td>
+<td>实现存在，但当前 Room 构造路径没有启用自定义消息 DataChannel</td>
+</tr>
+</tbody></table></div>
+<p>深入审计还补出了第一版全景容易漏掉的 API。它们已经分别进入专题，但在全景层要先标明性质：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>补充 API</th>
+<th>性质</th>
+<th>实际场景</th>
+<th>深入章节</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>CompressionStream</code>、<code>Response(stream)</code></td>
+<td>正式辅助业务</td>
+<td>大于 2800 字符的日志 JSON gzip，上报失败时回退原文</td>
+<td>10</td>
+</tr>
+<tr>
+<td><code>MediaStreamTrackProcessor</code></td>
+<td>正式可选诊断</td>
+<td>把视频 Track 转成 VideoFrame readable，转移给黑帧 Worker</td>
+<td>08</td>
+</tr>
+<tr>
+<td><code>MediaStreamTrackGenerator</code></td>
+<td>正式解码输出分支</td>
+<td>把自定义解码 VideoFrame 写回新视频 Track</td>
+<td>08</td>
+</tr>
+<tr>
+<td><code>PressureObserver</code></td>
+<td>可选诊断</td>
+<td>每 2000 ms 采样 CPU pressure，失败不影响通话</td>
+<td>10</td>
+</tr>
+<tr>
+<td><code>CropTarget.fromElement/cropTo</code></td>
+<td>正式可选采集</td>
+<td>屏幕选择完成后再裁剪到 DOM Element</td>
+<td>04</td>
+</tr>
+<tr>
+<td><code>MessageChannel</code></td>
+<td>基础库兼容层</td>
+<td>setImmediate fallback，不是 RTC 信令通道</td>
+<td>10</td>
+</tr>
+<tr>
+<td><code>MutationObserver</code>、<code>queueMicrotask</code></td>
+<td>基础库兼容层</td>
+<td>microtask 调度 fallback，不是媒体观察器</td>
+<td>10</td>
+</tr>
+<tr>
+<td><code>requestIdleCallback/cancelIdleCallback</code></td>
+<td>正式任务调度</td>
+<td>idle 周期任务；不支持时退回 setTimeout</td>
+<td>10</td>
+</tr>
+<tr>
+<td><code>Response.clone/json/arrayBuffer/blob</code></td>
+<td>正式网络/压缩链</td>
+<td>HTTP 响应双路径解析、压缩流收集</td>
+<td>10</td>
+</tr>
+<tr>
+<td><code>EncodedAudioChunk</code></td>
+<td>正式降级解码</td>
+<td>WebRTC encoded Opus 帧转换成 WebCodecs 输入</td>
+<td>09</td>
+</tr>
+</tbody></table></div>
+<p>“补出 API”不等于它们同等重要。正文按业务阶段讲清楚，完整命中和兼容层位置仍放附录 A。</p>
+<h2 id="15-从全景地图进入下一层">15. 从全景地图进入下一层<a class="heading-anchor" href="#15-从全景地图进入下一层" aria-label="链接到本节">#</a></h2>
+<p>优先阅读两条主干：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">媒体面：RTCPeerConnection → MediaDevices → Track → Audio / Player / Worker
+控制面：HTTP 调度 → WebSocket → Room 命令 → PC 发布订阅和恢复
+</code></pre>
+</div><p>完整 API 出现位置见 <a href="Appendix-A-WebAPI-Occurrences.html">附录 A</a>，不要把附录中的机械命中数量直接当成正式业务调用次数。</p>
+
+      <nav class="page-pagination" aria-label="上一篇和下一篇">
+        <a class="previous" href="00-Reading-Guide-and-Source-Map.html"><span>上一篇</span>00 阅读说明与源码地图</a>
+        <a class="next" href="02-RTCPeerConnection-usage-analysis.html"><span>下一篇</span>02 RTCPeerConnection 使用分析</a>
+      </nav>
+    </article>
+    
+    <nav class="page-toc" aria-label="本页目录">
+      <h2>本页目录</h2>
+      <a class="toc-depth-2" href="#1-webrtc-核心-api">1. WebRTC 核心 API</a><a class="toc-depth-2" href="#2-mediadevices-与媒体采集">2. MediaDevices 与媒体采集</a><a class="toc-depth-2" href="#3-mediastream-与-mediastreamtrack">3. MediaStream 与 MediaStreamTrack</a><a class="toc-depth-2" href="#4-web-audio">4. Web Audio</a><a class="toc-depth-2" href="#5-htmlmediaelement-播放">5. HTMLMediaElement 播放</a><a class="toc-depth-2" href="#6-canvas-webgl-与视频帧">6. Canvas、WebGL 与视频帧</a><a class="toc-depth-2" href="#7-websocket-信令">7. WebSocket 信令</a><a class="toc-depth-2" href="#8-http-url-与上报">8. HTTP、URL 与上报</a><a class="toc-depth-2" href="#9-worker-web-streams-与-encoded-transform">9. Worker、Web Streams 与 Encoded Transform</a><a class="toc-depth-2" href="#10-webcodecs-mediacapabilities-与-webassembly">10. WebCodecs、MediaCapabilities 与 WebAssembly</a><a class="toc-depth-2" href="#11-navigator-permissions-与页面状态">11. Navigator、Permissions 与页面状态</a><a class="toc-depth-2" href="#12-storage-performance-与定时器">12. Storage、Performance 与定时器</a><a class="toc-depth-2" href="#13-二进制-文本编码与安全边界">13. 二进制、文本编码与安全边界</a><a class="toc-depth-2" href="#14-仅检测或没有正式使用的-api">14. 仅检测或没有正式使用的 API</a><a class="toc-depth-2" href="#15-从全景地图进入下一层">15. 从全景地图进入下一层</a>
+    </nav>
+  </main>
+  <button type="button" class="back-to-top" aria-label="回到顶部">↑</button>
+</body>
+</html>

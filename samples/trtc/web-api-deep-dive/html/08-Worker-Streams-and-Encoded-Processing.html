@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="TRTC 反混淆源码浏览器 Web API 深度分析：08 Worker、Streams 与编码帧处理">
+  <title>08 Worker、Streams 与编码帧处理 · TRTC Web API 深度学习</title>
+  <link rel="stylesheet" href="assets/docs.css">
+  <script>try{const t=localStorage.getItem('trtc-docs-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+  <script src="assets/search-index.js" defer></script>
+  <script src="assets/mermaid.min.js" defer></script>
+  <script src="assets/docs.js" defer></script>
+</head>
+<body data-page="08-Worker-Streams-and-Encoded-Processing.html">
+  <header class="topbar">
+    <button type="button" class="icon-button nav-toggle" aria-label="打开目录" aria-expanded="false">☰</button>
+    <a class="brand" href="index.html">TRTC Web API 深度学习</a>
+    <div class="search-shell">
+      <label class="sr-only" for="global-search">搜索全部文档</label>
+      <input id="global-search" type="search" autocomplete="off" placeholder="搜索 API、方法、事件…" aria-controls="search-results">
+      <kbd>/</kbd>
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
+    <a class="source-link" href="../08-Worker-Streams-and-Encoded-Processing.md">Markdown</a>
+    <a class="source-link" href="../../trtc.deobfuscated.js">源码</a>
+    <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
+  </header>
+
+  <aside class="sidebar" aria-label="文档目录">
+    
+    <section class="nav-group">
+      <h2>按顺序阅读</h2>
+      
+        <a class="nav-link" href="index.html">
+          文档首页
+        </a>
+        <a class="nav-link" href="00-Reading-Guide-and-Source-Map.html">
+          00 阅读说明与源码地图
+        </a>
+        <a class="nav-link" href="01-Browser-API-Panorama.html">
+          01 浏览器 API 全景
+        </a>
+        <a class="nav-link" href="02-RTCPeerConnection-usage-analysis.html">
+          02 RTCPeerConnection
+        </a>
+        <a class="nav-link" href="03-WebSocket-usage-analysis.html">
+          03 WebSocket 信令
+        </a>
+        <a class="nav-link" href="04-MediaDevices-and-Capture.html">
+          04 MediaDevices 与采集
+        </a>
+        <a class="nav-link" href="05-MediaStreamTrack-Lifecycle.html">
+          05 Track 生命周期
+        </a>
+        <a class="nav-link" href="06-Web-Audio-usage-analysis.html">
+          06 Web Audio
+        </a>
+        <a class="nav-link" href="07-Media-Playback-and-Rendering.html">
+          07 播放与渲染
+        </a>
+        <a class="nav-link active" href="08-Worker-Streams-and-Encoded-Processing.html">
+          08 Worker 与编码帧
+        </a>
+        <a class="nav-link" href="09-WebCodecs-and-WebAssembly.html">
+          09 WebCodecs 与 WASM
+        </a>
+        <a class="nav-link" href="10-Auxiliary-Browser-APIs.html">
+          10 辅助浏览器 API
+        </a>
+        <a class="nav-link" href="11-End-to-End-Business-Flows.html">
+          11 端到端业务流程
+        </a>
+    </section>
+    <section class="nav-group">
+      <h2>附录（按需查询）</h2>
+      
+        <a class="nav-link" href="Appendix-A-WebAPI-Occurrences.html">
+          A Web API 出现位置
+        </a>
+        <a class="nav-link" href="Appendix-B-Source-Method-Index.html">
+          B 源码方法索引
+        </a>
+        <a class="nav-link" href="Appendix-C-Event-Index.html">
+          C 事件索引
+        </a>
+        <a class="nav-link" href="Appendix-D-Method-Adjacency-Index.html">
+          D 方法调用邻接
+        </a>
+        <a class="nav-link" href="Appendix-E-Public-API-Call-Chains.html">
+          E 公开 API 调用链
+        </a>
+        <a class="nav-link" href="Appendix-F-Visual-Call-Flows.html">
+          F 流程图与时序图
+        </a>
+    </section>
+  </aside>
+  <div class="sidebar-backdrop" hidden></div>
+
+  <main class="layout">
+    <article class="doc-content">
+      <h1 id="08-worker-streams-与编码帧处理">08 Worker、Streams 与编码帧处理<a class="heading-anchor" href="#08-worker-streams-与编码帧处理" aria-label="链接到本节">#</a></h1>
+<blockquote>
+<p>本文沿“能力选择 → 创建 Worker → 建立 Stream 管线 → 处理中止 → 最终释放”说明后台与编码帧能力。</p>
+</blockquote>
+<h2 id="1-本章结论">1. 本章结论<a class="heading-anchor" href="#1-本章结论" aria-label="链接到本节">#</a></h2>
+<p>源码中的 Worker 不是一个统一线程池，而是服务三类独立任务：</p>
+<ol>
+<li>页面隐藏时仍希望稳定运行的定时任务。</li>
+<li>视频黑帧/像素检测等重计算。</li>
+<li><code>RTCRtpScriptTransform</code> 编码帧处理。</li>
+</ol>
+<p>Web Streams 则把 AudioWorklet PCM、encoded frame 和处理器连接成可中止的管线。旧 <code>createEncodedStreams()</code> 与新 <code>RTCRtpScriptTransform</code> 是两套互斥或择优路径。</p>
+<h2 id="2-能力选择">2. 能力选择<a class="heading-anchor" href="#2-能力选择" aria-label="链接到本节">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>能力</th>
+<th>检查</th>
+<th>选择意义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Dedicated Worker</td>
+<td><code>Worker</code>、Blob URL</td>
+<td>能否把任务移出主线程</td>
+</tr>
+<tr>
+<td>Web Streams</td>
+<td>Readable/Writable/TransformStream</td>
+<td>能否使用 pipe 管线</td>
+</tr>
+<tr>
+<td>旧 Insertable Streams</td>
+<td>sender/receiver <code>createEncodedStreams</code></td>
+<td>主线程或自管 TransformStream 处理编码帧</td>
+</tr>
+<tr>
+<td>Script Transform</td>
+<td><code>RTCRtpScriptTransform</code></td>
+<td>在 Worker 的 <code>onrtctransform</code> 中处理编码帧</td>
+</tr>
+<tr>
+<td>Track Processor/Generator</td>
+<td>对应构造器存在性</td>
+<td>原始视频帧与 Track 之间桥接</td>
+</tr>
+</tbody></table></div>
+<p>源码除特性检测外还结合浏览器版本门槛，避免“属性存在但目标版本不可用”的假阳性。</p>
+<h2 id="3-动态-worker-的创建">3. 动态 Worker 的创建<a class="heading-anchor" href="#3-动态-worker-的创建" aria-label="链接到本节">#</a></h2>
+<p>多处 Worker 通过源码字符串创建：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">worker source string
+  → new Blob([source], {type:&#39;text/javascript&#39;})
+  → URL.createObjectURL(blob)
+  → new Worker(url)
+  → URL.revokeObjectURL(url)
+</code></pre>
+</div><p>立即 revoke URL 不会终止已经创建的 Worker；最终仍需要 <code>worker.terminate()</code> 或让 Worker 自己退出。</p>
+<p>动态源码便于把处理器打包到单文件 SDK，但会受到 CSP <code>blob:</code> worker-src 限制。</p>
+<h2 id="4-worker-定时器">4. Worker 定时器<a class="heading-anchor" href="#4-worker-定时器" aria-label="链接到本节">#</a></h2>
+<p>页面隐藏时，主线程 <code>setInterval</code> 可能被强烈节流。源码通过 Worker 消息维持任务：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">main: postMessage({type:&#39;start&#39;, taskId, delay})
+  → worker: setInterval(...)
+  → worker: postMessage({type:&#39;tick&#39;, taskId})
+  → main: dispatch callback
+</code></pre>
+</div><p>停止时必须按 taskId 清 Worker 内 timer，并清主线程 callback Map；只删除主线程回调会让 Worker timer 继续运行。</p>
+<h2 id="5-web-streams-管线">5. Web Streams 管线<a class="heading-anchor" href="#5-web-streams-管线" aria-label="链接到本节">#</a></h2>
+<p>基本模型：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">ReadableStream
+  → pipeThrough(new TransformStream(transformer))
+  → pipeTo(WritableStream)
+</code></pre>
+</div><p>管线需要明确：</p>
+<ul>
+<li>backpressure 由哪一层控制。</li>
+<li>transform 抛错后是否允许媒体继续。</li>
+<li>abort/cancel 是否真正传入 pipe 调用。</li>
+<li>Track/PC 重建时旧 readable 是否自然结束。</li>
+</ul>
+<h2 id="6-audioworklet-pcm">6. AudioWorklet PCM<a class="heading-anchor" href="#6-audioworklet-pcm" aria-label="链接到本节">#</a></h2>
+<p>AudioWorklet 通过 MessagePort 或内部桥接把 PCM/音量数据送到主线程，再转换为 ReadableStream 供处理器消费。</p>
+<p>生命周期包括：</p>
+<ul>
+<li>加载 Worklet module。</li>
+<li>创建 node 和 port listener。</li>
+<li>订阅 PCM 数据。</li>
+<li>结束时关闭 port/订阅并 disconnect node。</li>
+</ul>
+<p>PCM 流和 WebRTC encoded frame 不是同一层：前者是音频采样，后者已经过编解码器。</p>
+<h2 id="7-黑帧检测-worker">7. 黑帧检测 Worker<a class="heading-anchor" href="#7-黑帧检测-worker" aria-label="链接到本节">#</a></h2>
+<p>典型链路：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">MediaStreamTrackProcessor readable
+  → reader.read() 得到 VideoFrame
+  → OffscreenCanvas.drawImage(frame)
+  → getImageData()
+  → 采样像素计算黑色比例
+  → frame.close()
+</code></pre>
+</div><p>每次读取的 VideoFrame 都必须 close；reader、Track 和 Worker 也要在停止检测时释放。像素采样用于诊断，不应阻塞正式播放或发布。</p>
+<h2 id="8-旧-createencodedstreams-路径">8. 旧 <code>createEncodedStreams()</code> 路径<a class="heading-anchor" href="#8-旧-createencodedstreams-路径" aria-label="链接到本节">#</a></h2>
+<p>发送端：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">sender.createEncodedStreams()
+  → readable encoded frames
+  → TransformStream(SEI/自定义处理)
+  → writable back to sender
+</code></pre>
+</div><p>接收端同样从 receiver 取得 readable/writable。常见用途是：</p>
+<ul>
+<li>H.264 SEI 注入和读取。</li>
+<li>NTP/房间信息等旁路数据。</li>
+<li>编码帧级诊断或扩展处理。</li>
+</ul>
+<p>encoded frame 位于编解码器与 SRTP 网络层之间，不是原始 Canvas/PCM 帧。</p>
+<h2 id="9-rtcrtpscripttransform-路径">9. <code>RTCRtpScriptTransform</code> 路径<a class="heading-anchor" href="#9-rtcrtpscripttransform-路径" aria-label="链接到本节">#</a></h2>
+<p>主线程：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">worker = new Worker(blobUrl)
+sender.transform = new RTCRtpScriptTransform(worker, options)
+</code></pre>
+</div><p>Worker：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">self.onrtctransform = event =&gt; {
+  const {readable, writable, options} = event.transformer;
+  readable.pipeThrough(transform).pipeTo(writable);
+}
+</code></pre>
+</div><p>控制消息通过 <code>worker.postMessage()</code> 更新 SEI 列表或运行参数。必须区分“创建 transform 时的 options”和后续控制消息。</p>
+<h2 id="10-abortcontroller-的真实接入">10. AbortController 的真实接入<a class="heading-anchor" href="#10-abortcontroller-的真实接入" aria-label="链接到本节">#</a></h2>
+<p>源码为 encoded pipe 保存 AbortController，并在同 key 重建时 abort 旧 controller。但只有把 <code>controller.signal</code> 正确传给 <code>pipeTo/pipeThrough</code> 或处理器，abort 才能实际中止管线。</p>
+<p>SPC <code>reset()</code> 重建 PC 时没有像最终 <code>close()</code> 一样完整遍历并清空 controller Map。旧 PC close 后流通常会结束，但多次重连可能保留旧 Map 项；这是需要运行验证和后续补强的资源风险。</p>
+<h2 id="11-trackprocessor-generator-桥接">11. TrackProcessor/Generator 桥接<a class="heading-anchor" href="#11-trackprocessor-generator-桥接" aria-label="链接到本节">#</a></h2>
+<p>支持时可以把 Track 变成 VideoFrame 流，再把处理后帧写入 Generator 形成新 Track：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">MediaStreamTrackProcessor(track).readable
+  → frame transform
+  → MediaStreamTrackGenerator.writable
+  → processed MediaStreamTrack
+</code></pre>
+</div><p>这与 Canvas <code>captureStream()</code> 是两种输出处理视频的路径。Generator 路径必须保证每个不再使用的 VideoFrame close。</p>
+<h2 id="12-错误与降级">12. 错误与降级<a class="heading-anchor" href="#12-错误与降级" aria-label="链接到本节">#</a></h2>
+<ul>
+<li>Worker 创建/CSP 失败：回退主线程或不启用可选处理。</li>
+<li>encoded transform 失败：优先保持原始媒体通话，除非能力本身是强制安全要求。</li>
+<li>黑帧检测失败：停止诊断，不应关闭远端 Track。</li>
+<li>pipe reject：记录原因并清理 controller/readers，避免无观察 Promise。</li>
+</ul>
+<h2 id="13-最终释放">13. 最终释放<a class="heading-anchor" href="#13-最终释放" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">停止业务处理
+  → abort/cancel Streams
+  → release reader/writer lock
+  → 关闭 VideoFrame
+  → 清 MessagePort listener
+  → 停 Worker timer
+  → worker.terminate()
+  → 清 controller/task Map
+</code></pre>
+</div><p>当前 <code>SignalTransport.close()</code> 能处理中止管线和事件，但源码表面未看到 ScriptTransform Worker 的显式 <code>terminate()</code>；最终实现应补充或通过运行时证明 Worker 会被安全回收。</p>
+<h2 id="14-api-参数与本项目实参">14. API 参数与本项目实参<a class="heading-anchor" href="#14-api-参数与本项目实参" aria-label="链接到本节">#</a></h2>
+<h3 id="14-1-动态-worker-的四步参数链">14.1 动态 Worker 的四步参数链<a class="heading-anchor" href="#14-1-动态-worker-的四步参数链" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/Blob/Blob" target="_blank" rel="noreferrer">Blob()</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/URL/createObjectURL_static" target="_blank" rel="noreferrer">URL.createObjectURL()</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/Worker/Worker" target="_blank" rel="noreferrer">Worker()</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/URL/revokeObjectURL_static" target="_blank" rel="noreferrer">URL.revokeObjectURL()</a></p>
+<p>Script Transform 和黑帧检测都使用同一模式：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const blob = new Blob([workerSource], { type: &#39;text/javascript&#39; });
+const workerURL = URL.createObjectURL(blob);
+const worker = new Worker(workerURL);
+URL.revokeObjectURL(workerURL);
+</code></pre>
+</div><p>每一步的参数不能合并理解：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>API</th>
+<th>参数</th>
+<th>本项目实参</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>new Blob(blobParts, options)</code></td>
+<td><code>blobParts</code></td>
+<td><code>[workerSource]</code>，数组中是一整段字符串代码</td>
+<td>把内存中的 JS 文本变成 Blob 内容</td>
+</tr>
+<tr>
+<td>同上</td>
+<td><code>options.type</code></td>
+<td><code>&#39;text/javascript&#39;</code> 或 <code>&#39;application/javascript&#39;</code></td>
+<td>只声明 MIME 类型；不会执行代码</td>
+</tr>
+<tr>
+<td>同上</td>
+<td><code>options.endings</code></td>
+<td><code>&#39;transparent&#39;</code> / <code>&#39;native&#39;</code></td>
+<td>未传，默认 <code>&#39;transparent&#39;</code></td>
+</tr>
+<tr>
+<td><code>URL.createObjectURL(object)</code></td>
+<td><code>object</code></td>
+<td>上一步 Blob</td>
+<td>得到当前 document 生命周期内可加载的 <code>blob:</code> URL</td>
+</tr>
+<tr>
+<td><code>new Worker(scriptURL, options?)</code></td>
+<td><code>scriptURL</code></td>
+<td>上一步 blob URL</td>
+<td>立即开始加载独立 Worker</td>
+</tr>
+<tr>
+<td>同上</td>
+<td><code>options.type</code></td>
+<td><code>&#39;classic&#39;</code> / <code>&#39;module&#39;</code></td>
+<td>未传，所以是 classic worker；源码使用 <code>importScripts</code>/拼接脚本也与 classic 一致</td>
+</tr>
+<tr>
+<td>同上</td>
+<td><code>options.credentials/name</code></td>
+<td>模块凭据模式/调试名称</td>
+<td>未传</td>
+</tr>
+<tr>
+<td><code>URL.revokeObjectURL(url)</code></td>
+<td><code>url</code></td>
+<td>同一个 blob URL</td>
+<td>Worker 构造后立即撤销 URL 映射；已开始加载的 Worker 继续运行</td>
+</tr>
+</tbody></table></div>
+<p>撤销 URL 只释放 URL 映射，不等于 <code>worker.terminate()</code>。最终销毁仍应显式终止 Worker；当前 Script Transform/共享 timer 的个别路径需要特别核对这一点。</p>
+<h3 id="14-2-worker-postmessage-message-transfer">14.2 <code>worker.postMessage(message, transfer?)</code><a class="heading-anchor" href="#14-2-worker-postmessage-message-transfer" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/Worker/postMessage" target="_blank" rel="noreferrer">Worker.postMessage()</a></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>含义</th>
+<th>本项目实例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>message</code></td>
+<td>经 structured clone 复制/转移的任意可克隆数据</td>
+<td>timer <code>{taskId,delay,type}</code>；黑帧 <code>{type,trackId,timeout,readable}</code>；transform 控制 <code>{type:&#39;sei&#39;,data,...}</code></td>
+</tr>
+<tr>
+<td><code>transfer</code></td>
+<td>可选 transferable 数组；所有权转移而非复制</td>
+<td>黑帧检测传 <code>[processor.readable]</code>；AudioWorklet/MessageChannel 传 <code>[port]</code>；PCM 数据传 <code>[typedArray.buffer]</code></td>
+</tr>
+</tbody></table></div>
+<p>黑帧检测完整调用（L47686—L47694）：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const processor = new MediaStreamTrackProcessor({ track });
+worker.postMessage(
+  { type: &#39;addTrack&#39;, trackId: track.id, timeout, readable: processor.readable },
+  [processor.readable]
+);
+</code></pre>
+</div><p><code>readable</code> 同时出现在 message 字段和 transfer list：字段决定 Worker 从 <code>event.data.readable</code> 取到它，transfer list 决定 stream 所有权转入 Worker。转移后主线程不能再按原方式读取该 stream。</p>
+<h3 id="14-3-new-mediastreamtrackprocessor-options">14.3 <code>new MediaStreamTrackProcessor(options)</code><a class="heading-anchor" href="#14-3-new-mediastreamtrackprocessor-options" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamTrackProcessor/MediaStreamTrackProcessor" target="_blank" rel="noreferrer">MediaStreamTrackProcessor()</a></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>option</th>
+<th>含义</th>
+<th>本项目传值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>track</code></td>
+<td>必填的输入 MediaStreamTrack</td>
+<td>黑帧检测传远端/本地待检查视频 Track <code>e</code></td>
+</tr>
+<tr>
+<td><code>maxBufferSize</code></td>
+<td>部分实现支持的最大排队帧数</td>
+<td>未传，使用实现默认</td>
+</tr>
+</tbody></table></div>
+<p>构造后 <code>processor.readable</code> 输出 <code>VideoFrame</code>。Worker 内部调用 <code>readable.getReader()</code>，循环 <code>reader.read()</code> 得到 <code>{done,value}</code>；<code>value</code> 画到 OffscreenCanvas 后必须 <code>value.close()</code>。</p>
+<h3 id="14-4-new-mediastreamtrackgenerator-options-与-writer">14.4 <code>new MediaStreamTrackGenerator(options)</code> 与 writer<a class="heading-anchor" href="#14-4-new-mediastreamtrackgenerator-options-与-writer" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamTrackGenerator" target="_blank" rel="noreferrer">MediaStreamTrackGenerator</a></p>
+<p>源码 L43953—L43958：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const generator = new MediaStreamTrackGenerator({ kind: &#39;video&#39; });
+const writer = generator.writable.getWriter();
+
+wrappedTrack.setInputMediaStreamTrack(generator);
+decoder.on(&#39;videoFrame&#39;, frame =&gt; writer.write(frame));
+</code></pre>
+</div><p><code>options.kind</code> 必填，本项目固定 <code>&#39;video&#39;</code>。生成器本身表现为 MediaStreamTrack，同时暴露 WritableStream。<code>getWriter()</code> 无参数并锁定 writable；<code>writer.write(frame)</code> 的唯一参数是 VideoFrame，返回 Promise。调用方必须处理背压/拒绝，并在结束时 <code>writer.close()</code> 或 <code>writer.abort()</code>、释放锁；当前片段没有展示完整 writer 释放，是需要在销毁链核查的点。</p>
+<h3 id="14-5-new-readablestream-underlyingsource-strategy">14.5 <code>new ReadableStream(underlyingSource, strategy?)</code><a class="heading-anchor" href="#14-5-new-readablestream-underlyingsource-strategy" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream/ReadableStream" target="_blank" rel="noreferrer">ReadableStream()</a></p>
+<p>项目自建 stream 时主要只传第一个对象：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">new ReadableStream({
+  start(controller) {
+    source = new GU(input, controller.enqueue.bind(controller),
+                          controller.error.bind(controller),
+                          controller.close.bind(controller));
+  },
+  cancel(reason) { /* 断开节点/关闭 port */ }
+});
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>underlyingSource 字段</th>
+<th>标准含义</th>
+<th>本项目使用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>start(controller)</code></td>
+<td>构造时调用，可同步/异步入队</td>
+<td>保存 controller 的 <code>enqueue/error/close</code> 给音频抓取器</td>
+</tr>
+<tr>
+<td><code>pull(controller)</code></td>
+<td>队列需要更多数据时调用</td>
+<td>这些路径未定义，数据由外部事件主动 push</td>
+</tr>
+<tr>
+<td><code>cancel(reason)</code></td>
+<td>consumer 取消时释放 source</td>
+<td>断开 AudioNode、关闭 MessagePort 等</td>
+</tr>
+<tr>
+<td><code>type</code></td>
+<td>byte stream 可用 <code>&#39;bytes&#39;</code></td>
+<td>未传，普通对象 stream</td>
+</tr>
+<tr>
+<td><code>strategy.highWaterMark/size</code></td>
+<td>背压阈值和单项大小算法</td>
+<td>未传，使用默认策略</td>
+</tr>
+</tbody></table></div>
+<h3 id="14-6-new-writablestream-underlyingsink-strategy">14.6 <code>new WritableStream(underlyingSink, strategy?)</code><a class="heading-anchor" href="#14-6-new-writablestream-underlyingsink-strategy" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/WritableStream/WritableStream" target="_blank" rel="noreferrer">WritableStream()</a></p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">new WritableStream({
+  write(chunk) { observer.next(chunk); }
+});
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>sink 方法</th>
+<th>参数</th>
+<th>本项目行为</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>start(controller)</code></td>
+<td>error controller</td>
+<td>多数路径未定义</td>
+</tr>
+<tr>
+<td><code>write(chunk, controller)</code></td>
+<td>上游每个 chunk</td>
+<td>PCM 抓取把 <code>chunk</code> 追加到数组；Observable 桥把它转成 next</td>
+</tr>
+<tr>
+<td><code>close()</code></td>
+<td>无</td>
+<td>可在正常完成时收尾；片段未自定义</td>
+</tr>
+<tr>
+<td><code>abort(reason)</code></td>
+<td>中止原因</td>
+<td>片段未自定义，交给 stream 默认状态机</td>
+</tr>
+</tbody></table></div>
+<p>第二个 queuing strategy 未传，因此没有自定义 highWaterMark/size。对高频帧，如果 write 返回的 Promise 长期未完成，<code>pipeTo()</code> 会自然传播背压。</p>
+<h3 id="14-7-new-transformstream-transformer-writablestrategy-readablestrategy">14.7 <code>new TransformStream(transformer, writableStrategy?, readableStrategy?)</code><a class="heading-anchor" href="#14-7-new-transformstream-transformer-writablestrategy-readablestrategy" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/TransformStream/TransformStream" target="_blank" rel="noreferrer">TransformStream()</a></p>
+<p>编码帧路径只传 transformer：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">new TransformStream({
+  transform(frame, controller) {
+    const output = wrappedTrack.encodeFrame(frame);
+    controller.enqueue(output || frame);
+  }
+});
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>transformer 字段</th>
+<th>含义</th>
+<th>本项目使用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>start(controller)</code></td>
+<td>初始化转换器</td>
+<td>未定义</td>
+</tr>
+<tr>
+<td><code>transform(chunk, controller)</code></td>
+<td>转换每个 chunk</td>
+<td>注入/解析 SEI、音频 NTP、公开编码帧回调；不处理时原帧 enqueue</td>
+</tr>
+<tr>
+<td><code>flush(controller)</code></td>
+<td>上游关闭后冲刷缓存</td>
+<td>未定义</td>
+</tr>
+<tr>
+<td><code>readableType/writableType</code></td>
+<td>保留扩展字段</td>
+<td>未传</td>
+</tr>
+</tbody></table></div>
+<p>两侧 strategy 也未传。transform 回调如果既不 enqueue 也不抛错，相当于丢弃该帧；所以源码在没有处理器时明确 <code>enqueue(frame)</code>。</p>
+<h3 id="14-8-pipethrough-transform-options-与-pipeto-destination-options">14.8 <code>pipeThrough(transform, options?)</code> 与 <code>pipeTo(destination, options?)</code><a class="heading-anchor" href="#14-8-pipethrough-transform-options-与-pipeto-destination-options" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream/pipeThrough" target="_blank" rel="noreferrer">pipeThrough()</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream/pipeTo" target="_blank" rel="noreferrer">pipeTo()</a></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>options 字段</th>
+<th>类型/默认</th>
+<th>含义</th>
+<th>本项目</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>preventClose</code></td>
+<td>boolean，默认 false</td>
+<td>上游关闭时不关闭目标</td>
+<td>未设置</td>
+</tr>
+<tr>
+<td><code>preventAbort</code></td>
+<td>boolean，默认 false</td>
+<td>上游报错时不 abort 目标</td>
+<td>未设置</td>
+</tr>
+<tr>
+<td><code>preventCancel</code></td>
+<td>boolean，默认 false</td>
+<td>目标报错时不 cancel 上游</td>
+<td>未设置</td>
+</tr>
+<tr>
+<td><code>signal</code></td>
+<td><code>AbortSignal</code></td>
+<td>外部中止整个 pipe</td>
+<td>通过 AbortController 对象的 <code>.signal</code> 属性提供</td>
+</tr>
+</tbody></table></div>
+<p>编码发送路径的源码形态是：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const controller = new AbortController();
+readable
+  .pipeThrough(transformStream, controller)
+  .pipeTo(writable, controller)
+  .catch(handlePipeError);
+</code></pre>
+</div><p>标准第二参数需要一个 options 对象；<code>AbortController</code> 实例本身正好暴露 <code>signal</code> 属性，所以这里结构上等价于传 <code>{signal: controller.signal}</code>，其余 prevent* 字段缺失并采用 false。代码随后把 controller 按 sender/receiver 键保存，释放时调用 <code>controller.abort(&#39;destroy&#39;)</code>。</p>
+<h3 id="14-9-new-abortcontroller-与-abort-reason">14.9 <code>new AbortController()</code> 与 <code>abort(reason?)</code><a class="heading-anchor" href="#14-9-new-abortcontroller-与-abort-reason" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/AbortController/AbortController" target="_blank" rel="noreferrer">AbortController()</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/AbortController/abort" target="_blank" rel="noreferrer">abort()</a></p>
+<p>构造器无参数，生成只读 <code>signal</code>。<code>abort(reason?)</code> 的 reason 可为任意值；项目常传 <code>&#39;destroy&#39;</code>、<code>&#39;cancelled&#39;</code>、<code>&#39;timeout&#39;</code>、<code>&#39;download&#39;</code>，用于 catch 时区分正常释放和异常。</p>
+<p>同一 sender/receiver 已存在 controller 时源码拒绝重复建 pipe；这防止一个 encoded stream 被多次消费。重建 PC 时必须同时删除旧 Map 项，否则即使旧 stream 已自然结束，Map 仍可能阻止新对象或积累引用。</p>
+<h3 id="14-10-new-rtcrtpscripttransform-worker-options-transfer">14.10 <code>new RTCRtpScriptTransform(worker, options, transfer?)</code><a class="heading-anchor" href="#14-10-new-rtcrtpscripttransform-worker-options-transfer" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/RTCRtpScriptTransform/RTCRtpScriptTransform" target="_blank" rel="noreferrer">RTCRtpScriptTransform()</a></p>
+<p>发送端：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">sender.transform = new RTCRtpScriptTransform(worker, {
+  isReceiver: false,
+  isAudio: mediaType === 1,
+  isMain: mediaType !== 2,
+  isSmall: mediaType === 8
+});
+</code></pre>
+</div><p>接收端：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">receiver.transform = new RTCRtpScriptTransform(worker, {
+  isReceiver: true,
+  isAudio,
+  userId: this.userId,
+  streamType
+});
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>标准含义</th>
+<th>本项目实参</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>worker</code></td>
+<td>处理 encoded frames 的 Worker</td>
+<td>房间级 <code>scriptTransformWorker</code>，由动态 Blob 脚本创建</td>
+</tr>
+<tr>
+<td><code>options</code></td>
+<td>structured-clone 到 Worker 的 <code>event.transformer.options</code></td>
+<td>项目自定义路由元数据，决定发送/接收、音视频、主辅/小流和用户</td>
+</tr>
+<tr>
+<td><code>transfer</code></td>
+<td>可选 transferable 列表</td>
+<td>未传</td>
+</tr>
+</tbody></table></div>
+<p>Worker 中 <code>self.onrtctransform</code> 从 <code>event.transformer</code> 取 <code>readable/writable/options</code>，再按 options 选择管线。options 不是浏览器预定义字段；字段名和语义完全由本项目 Worker 代码约定。</p>
+<h3 id="14-11-worker-终止与-reader-writer-释放">14.11 Worker 终止与 reader/writer 释放<a class="heading-anchor" href="#14-11-worker-终止与-reader-writer-释放" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/Worker/terminate" target="_blank" rel="noreferrer">Worker.terminate()</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/ReadableStreamDefaultReader/cancel" target="_blank" rel="noreferrer">ReadableStreamDefaultReader.cancel()</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/ReadableStreamDefaultReader/releaseLock" target="_blank" rel="noreferrer">releaseLock()</a></p>
+<ul>
+<li><code>worker.terminate()</code> 无参数，立即终止 Worker，不等待 finally；适合最终销毁，不适合希望 worker 自己 flush 的场景。</li>
+<li><code>reader.cancel(reason?)</code> 告诉 source 不再需要数据；黑帧 Worker 传 <code>&#39;timeout&#39;/&#39;black&#39;/&#39;error&#39;</code> 等项目原因。</li>
+<li><code>reader.releaseLock()</code> / <code>writer.releaseLock()</code> 无参数，只释放锁，不自动 cancel/close stream。</li>
+</ul>
+<p>当前黑帧 Worker 会 cancel reader、清 timer 和 Map；Script Transform 的正文源码主要依赖 pipe abort/PC close。最终文档把未见明确 <code>terminate()</code> 的路径列为资源核查点，而不把“撤销 blob URL”误写成 Worker 已释放。</p>
+<h2 id="15-事实与边界">15. 事实与边界<a class="heading-anchor" href="#15-事实与边界" aria-label="链接到本节">#</a></h2>
+<h3 id="可以直接确认">可以直接确认<a class="heading-anchor" href="#可以直接确认" aria-label="链接到本节">#</a></h3>
+<ul>
+<li>旧 Insertable Streams 和 Script Transform 两套路径同时存在。</li>
+<li>Worker 用于定时、黑帧和编码帧处理。</li>
+<li>encoded 管线与 PC/Sender/Receiver 生命周期绑定。</li>
+<li>黑帧路径显式处理 VideoFrame 和 OffscreenCanvas。</li>
+</ul>
+<h3 id="合理推断">合理推断<a class="heading-anchor" href="#合理推断" aria-label="链接到本节">#</a></h3>
+<ul>
+<li>Script Transform 用于把编码帧处理移出主线程并适配新版浏览器接口。</li>
+<li>Worker timer 用于降低页面隐藏节流对心跳/采样的影响。</li>
+</ul>
+<h3 id="不能确认">不能确认<a class="heading-anchor" href="#不能确认" aria-label="链接到本节">#</a></h3>
+<ul>
+<li>每个浏览器版本的 encoded frame 格式和 Worker 回收行为，需要真实运行验证。</li>
+</ul>
+
+      <nav class="page-pagination" aria-label="上一篇和下一篇">
+        <a class="previous" href="07-Media-Playback-and-Rendering.html"><span>上一篇</span>07 媒体播放与渲染</a>
+        <a class="next" href="09-WebCodecs-and-WebAssembly.html"><span>下一篇</span>09 WebCodecs 与 WebAssembly</a>
+      </nav>
+    </article>
+    
+    <nav class="page-toc" aria-label="本页目录">
+      <h2>本页目录</h2>
+      <a class="toc-depth-2" href="#1-本章结论">1. 本章结论</a><a class="toc-depth-2" href="#2-能力选择">2. 能力选择</a><a class="toc-depth-2" href="#3-动态-worker-的创建">3. 动态 Worker 的创建</a><a class="toc-depth-2" href="#4-worker-定时器">4. Worker 定时器</a><a class="toc-depth-2" href="#5-web-streams-管线">5. Web Streams 管线</a><a class="toc-depth-2" href="#6-audioworklet-pcm">6. AudioWorklet PCM</a><a class="toc-depth-2" href="#7-黑帧检测-worker">7. 黑帧检测 Worker</a><a class="toc-depth-2" href="#8-旧-createencodedstreams-路径">8. 旧 createEncodedStreams() 路径</a><a class="toc-depth-2" href="#9-rtcrtpscripttransform-路径">9. RTCRtpScriptTransform 路径</a><a class="toc-depth-2" href="#10-abortcontroller-的真实接入">10. AbortController 的真实接入</a><a class="toc-depth-2" href="#11-trackprocessor-generator-桥接">11. TrackProcessor/Generator 桥接</a><a class="toc-depth-2" href="#12-错误与降级">12. 错误与降级</a><a class="toc-depth-2" href="#13-最终释放">13. 最终释放</a><a class="toc-depth-2" href="#14-api-参数与本项目实参">14. API 参数与本项目实参</a><a class="toc-depth-3" href="#14-1-动态-worker-的四步参数链">14.1 动态 Worker 的四步参数链</a><a class="toc-depth-3" href="#14-2-worker-postmessage-message-transfer">14.2 worker.postMessage(message, transfer?)</a><a class="toc-depth-3" href="#14-3-new-mediastreamtrackprocessor-options">14.3 new MediaStreamTrackProcessor(options)</a><a class="toc-depth-3" href="#14-4-new-mediastreamtrackgenerator-options-与-writer">14.4 new MediaStreamTrackGenerator(options) 与 writer</a><a class="toc-depth-3" href="#14-5-new-readablestream-underlyingsource-strategy">14.5 new ReadableStream(underlyingSource, strategy?)</a><a class="toc-depth-3" href="#14-6-new-writablestream-underlyingsink-strategy">14.6 new WritableStream(underlyingSink, strategy?)</a><a class="toc-depth-3" href="#14-7-new-transformstream-transformer-writablestrategy-readablestrategy">14.7 new TransformStream(transformer, writableStrategy?, readableStrategy?)</a><a class="toc-depth-3" href="#14-8-pipethrough-transform-options-与-pipeto-destination-options">14.8 pipeThrough(transform, options?) 与 pipeTo(destination, options?)</a><a class="toc-depth-3" href="#14-9-new-abortcontroller-与-abort-reason">14.9 new AbortController() 与 abort(reason?)</a><a class="toc-depth-3" href="#14-10-new-rtcrtpscripttransform-worker-options-transfer">14.10 new RTCRtpScriptTransform(worker, options, transfer?)</a><a class="toc-depth-3" href="#14-11-worker-终止与-reader-writer-释放">14.11 Worker 终止与 reader/writer 释放</a><a class="toc-depth-2" href="#15-事实与边界">15. 事实与边界</a><a class="toc-depth-3" href="#可以直接确认">可以直接确认</a><a class="toc-depth-3" href="#合理推断">合理推断</a><a class="toc-depth-3" href="#不能确认">不能确认</a>
+    </nav>
+  </main>
+  <button type="button" class="back-to-top" aria-label="回到顶部">↑</button>
+</body>
+</html>

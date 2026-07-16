@@ -1,0 +1,780 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="TRTC 反混淆源码浏览器 Web API 深度分析：10 辅助浏览器 API">
+  <title>10 辅助浏览器 API · TRTC Web API 深度学习</title>
+  <link rel="stylesheet" href="assets/docs.css">
+  <script>try{const t=localStorage.getItem('trtc-docs-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+  <script src="assets/search-index.js" defer></script>
+  <script src="assets/mermaid.min.js" defer></script>
+  <script src="assets/docs.js" defer></script>
+</head>
+<body data-page="10-Auxiliary-Browser-APIs.html">
+  <header class="topbar">
+    <button type="button" class="icon-button nav-toggle" aria-label="打开目录" aria-expanded="false">☰</button>
+    <a class="brand" href="index.html">TRTC Web API 深度学习</a>
+    <div class="search-shell">
+      <label class="sr-only" for="global-search">搜索全部文档</label>
+      <input id="global-search" type="search" autocomplete="off" placeholder="搜索 API、方法、事件…" aria-controls="search-results">
+      <kbd>/</kbd>
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
+    <a class="source-link" href="../10-Auxiliary-Browser-APIs.md">Markdown</a>
+    <a class="source-link" href="../../trtc.deobfuscated.js">源码</a>
+    <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
+  </header>
+
+  <aside class="sidebar" aria-label="文档目录">
+    
+    <section class="nav-group">
+      <h2>按顺序阅读</h2>
+      
+        <a class="nav-link" href="index.html">
+          文档首页
+        </a>
+        <a class="nav-link" href="00-Reading-Guide-and-Source-Map.html">
+          00 阅读说明与源码地图
+        </a>
+        <a class="nav-link" href="01-Browser-API-Panorama.html">
+          01 浏览器 API 全景
+        </a>
+        <a class="nav-link" href="02-RTCPeerConnection-usage-analysis.html">
+          02 RTCPeerConnection
+        </a>
+        <a class="nav-link" href="03-WebSocket-usage-analysis.html">
+          03 WebSocket 信令
+        </a>
+        <a class="nav-link" href="04-MediaDevices-and-Capture.html">
+          04 MediaDevices 与采集
+        </a>
+        <a class="nav-link" href="05-MediaStreamTrack-Lifecycle.html">
+          05 Track 生命周期
+        </a>
+        <a class="nav-link" href="06-Web-Audio-usage-analysis.html">
+          06 Web Audio
+        </a>
+        <a class="nav-link" href="07-Media-Playback-and-Rendering.html">
+          07 播放与渲染
+        </a>
+        <a class="nav-link" href="08-Worker-Streams-and-Encoded-Processing.html">
+          08 Worker 与编码帧
+        </a>
+        <a class="nav-link" href="09-WebCodecs-and-WebAssembly.html">
+          09 WebCodecs 与 WASM
+        </a>
+        <a class="nav-link active" href="10-Auxiliary-Browser-APIs.html">
+          10 辅助浏览器 API
+        </a>
+        <a class="nav-link" href="11-End-to-End-Business-Flows.html">
+          11 端到端业务流程
+        </a>
+    </section>
+    <section class="nav-group">
+      <h2>附录（按需查询）</h2>
+      
+        <a class="nav-link" href="Appendix-A-WebAPI-Occurrences.html">
+          A Web API 出现位置
+        </a>
+        <a class="nav-link" href="Appendix-B-Source-Method-Index.html">
+          B 源码方法索引
+        </a>
+        <a class="nav-link" href="Appendix-C-Event-Index.html">
+          C 事件索引
+        </a>
+        <a class="nav-link" href="Appendix-D-Method-Adjacency-Index.html">
+          D 方法调用邻接
+        </a>
+        <a class="nav-link" href="Appendix-E-Public-API-Call-Chains.html">
+          E 公开 API 调用链
+        </a>
+        <a class="nav-link" href="Appendix-F-Visual-Call-Flows.html">
+          F 流程图与时序图
+        </a>
+    </section>
+  </aside>
+  <div class="sidebar-backdrop" hidden></div>
+
+  <main class="layout">
+    <article class="doc-content">
+      <h1 id="10-辅助浏览器-api">10 辅助浏览器 API<a class="heading-anchor" href="#10-辅助浏览器-api" aria-label="链接到本节">#</a></h1>
+<blockquote>
+<p>本文集中说明不直接承载 RTP 媒体、但决定调度、环境、上报、协议和页面生命周期的浏览器能力。</p>
+</blockquote>
+<h2 id="1-本章结论">1. 本章结论<a class="heading-anchor" href="#1-本章结论" aria-label="链接到本节">#</a></h2>
+<p>这些 API 可以按职责分成五组：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>组</th>
+<th>API</th>
+<th>主要用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>网络与资源</td>
+<td>fetch、XHR、FormData、URLSearchParams、sendBeacon</td>
+<td>调度、下载、上报</td>
+</tr>
+<tr>
+<td>环境与权限</td>
+<td>Navigator、UA Client Hints、Permissions、Network Information</td>
+<td>兼容和策略</td>
+</tr>
+<tr>
+<td>页面与视图</td>
+<td>visibility、pagehide、IntersectionObserver、DOM</td>
+<td>自动订阅和退出收尾</td>
+</tr>
+<tr>
+<td>缓存与性能</td>
+<td>local/sessionStorage、Performance</td>
+<td>日志、配置和诊断</td>
+</tr>
+<tr>
+<td>协议与字节</td>
+<td>ArrayBuffer、TypedArray、DataView、TextEncoder、Base64</td>
+<td>消息、上报、SEI、WASM</td>
+</tr>
+</tbody></table></div>
+<p>这些能力失败时通常应该降级，不应直接中断已经建立的音视频通话。</p>
+<h2 id="2-http-请求封装">2. HTTP 请求封装<a class="heading-anchor" href="#2-http-请求封装" aria-label="链接到本节">#</a></h2>
+<p>公共请求工具优先使用 <code>fetch</code>，兼容场景降级 XHR：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">sendHttpRequest(options)
+  ├─ fetch available → fetch(url, {method, body, priority})
+  └─ fallback → xhr.timeout + xhr.open(method,url,true) + xhr.send(body)
+</code></pre>
+</div><p>当前封装实际只统一 method、body 和响应解析。<code>timeout</code> 只在 XHR 分支生效；fetch 分支没有传 AbortSignal，也没有显式检查 <code>response.ok</code>。源码没有接收或设置 headers。后文会把这些事实与理想封装要求分开说明。</p>
+<h2 id="3-房间调度">3. 房间调度<a class="heading-anchor" href="#3-房间调度" aria-label="链接到本节">#</a></h2>
+<p>进房前先通过 HTTP 获取：</p>
+<ul>
+<li>主、备信令地址。</li>
+<li>ICE/TURN 信息。</li>
+<li>SPC/MPC 和 codec 策略。</li>
+<li>keepAlive、优先级和网络配置。</li>
+</ul>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">enterRoom params
+  → FormData 或 URLSearchParams
+  → 主备调度地址请求/竞速
+  → 解析 schedule result
+  → SignalChannel + Room 配置
+</code></pre>
+</div><p>调度成功只表示获得连接信息，不表示 WebSocket、join 或媒体连接完成。</p>
+<h2 id="4-资源下载">4. 资源下载<a class="heading-anchor" href="#4-资源下载" aria-label="链接到本节">#</a></h2>
+<p>WASM、模型、配置和其他资源可能通过统一 connection manager 下载。需要记录：</p>
+<ul>
+<li>DNS/TCP/TLS/TTFB/下载耗时（浏览器可用时）。</li>
+<li>Content-Type 和内容长度。</li>
+<li>取消与超时。</li>
+<li>多地址回退。</li>
+<li>缓存命中与重复请求合并。</li>
+</ul>
+<p>下载 Promise 的消费者仍负责解释内容和释放解码/实例资源。</p>
+<h2 id="5-gzip-blob-与上报">5. gzip、Blob 与上报<a class="heading-anchor" href="#5-gzip-blob-与上报" aria-label="链接到本节">#</a></h2>
+<p>日志或二进制报告可能先编码/压缩，再使用 fetch/XHR/sendBeacon：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">JSON/text
+  → TextEncoder / gzip
+  → Blob 或 Uint8Array
+  → sendBeacon / fetch keepalive / normal request
+</code></pre>
+</div><p><code>sendBeacon()</code> 适合页面退出时的小型可靠上报，不提供普通 fetch 那样的响应读取能力，也受浏览器队列大小限制。</p>
+<h2 id="6-页面退出收尾">6. 页面退出收尾<a class="heading-anchor" href="#6-页面退出收尾" aria-label="链接到本节">#</a></h2>
+<p><code>pagehide</code> 比只监听 unload 更适合现代页面生命周期。退出时通常：</p>
+<ul>
+<li>尝试发送必要 leave/日志上报。</li>
+<li>停止可延后的任务。</li>
+<li>不执行阻塞式同步网络请求。</li>
+<li>区分 bfcache 场景和真正销毁。</li>
+</ul>
+<p>页面事件不是 SDK <code>destroy()</code> 的替代；应用仍应在可控生命周期显式释放。</p>
+<h2 id="7-storage">7. Storage<a class="heading-anchor" href="#7-storage" aria-label="链接到本节">#</a></h2>
+<p>使用 local/sessionStorage 前先做可用性检测，因为隐私模式、配额和策略可能让属性存在但写入抛错。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>存储</th>
+<th>典型用途</th>
+<th>生命周期</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>localStorage</td>
+<td>跨刷新日志/配置/诊断</td>
+<td>持久化，需容量和隐私控制</td>
+</tr>
+<tr>
+<td>sessionStorage</td>
+<td>当前标签页会话数据</td>
+<td>页面会话级</td>
+</tr>
+</tbody></table></div>
+<p>不能保存 userSig、token、鉴权头等敏感信息；日志缓存也应有上限和淘汰策略。</p>
+<h2 id="8-performance">8. Performance<a class="heading-anchor" href="#8-performance" aria-label="链接到本节">#</a></h2>
+<ul>
+<li><code>performance.now()</code> 记录连接、方法和重连耗时。</li>
+<li>PerformanceResourceTiming 辅助定位资源下载阶段。</li>
+<li>时间戳用于 Stats 差分时要统一单位和采样周期。</li>
+</ul>
+<p>性能记录失败不应改变业务 Promise 的成功/失败结果。</p>
+<h2 id="9-ua-与-client-hints">9. UA 与 Client Hints<a class="heading-anchor" href="#9-ua-与-client-hints" aria-label="链接到本节">#</a></h2>
+<p>源码同时使用 <code>navigator.userAgent</code> 和 <code>userAgentData.getHighEntropyValues()</code>：</p>
+<ul>
+<li>UA 用于旧浏览器和特殊 WebView 分支。</li>
+<li>Client Hints 获取平台、架构和更细版本。</li>
+<li>iPadOS 等环境还结合触摸点、平台和屏幕特征。</li>
+</ul>
+<p>优先做 API 特性检测；UA 只用于无法通过能力判断的已知兼容问题。</p>
+<h2 id="10-network-information">10. Network Information<a class="heading-anchor" href="#10-network-information" aria-label="链接到本节">#</a></h2>
+<p><code>navigator.connection</code> 可提供 type/effectiveType/downlink/rtt 等浏览器估计，并监听网络类型变化。</p>
+<p>它不是 WebRTC 真实路径：</p>
+<ul>
+<li>真实 Candidate 类型、协议和地址应从 PC Stats 获取。</li>
+<li>真实媒体 RTT、丢包和码率应从 RTP/remote-inbound/candidate-pair 获取。</li>
+<li>Network Information 只作为环境提示和上报维度。</li>
+</ul>
+<h2 id="11-permissions">11. Permissions<a class="heading-anchor" href="#11-permissions" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">navigator.permissions.query({name:&#39;camera&#39;|&#39;microphone&#39;})
+  → state = granted / prompt / denied
+  → 监听 change（支持时）
+</code></pre>
+</div><p>Permissions 查询不能替代 <code>getUserMedia()</code>：浏览器可能不支持某个 name，最终授权仍在采集调用中发生。</p>
+<h2 id="12-intersectionobserver-自动订阅">12. IntersectionObserver 自动订阅<a class="heading-anchor" href="#12-intersectionobserver-自动订阅" aria-label="链接到本节">#</a></h2>
+<p>远端视频视图可见性链：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">observe(view)
+  → IntersectionObserver callback
+  → 合并短时间可见性变化
+  → subscribe / unsubscribe 或播放策略调整
+</code></pre>
+</div><p>Observer 只表达 DOM 可见性，不代表用户业务一定希望退订；Demo/SDK 策略要明确。销毁 view 时必须 unobserve/disconnect。</p>
+<h2 id="13-页面可见性和任务调度">13. 页面可见性和任务调度<a class="heading-anchor" href="#13-页面可见性和任务调度" aria-label="链接到本节">#</a></h2>
+<p><code>document.visibilityState</code> 会影响：</p>
+<ul>
+<li>timer/Worker timer 选择。</li>
+<li>播放与渲染帧回调。</li>
+<li>Stats/日志调度。</li>
+<li>后台限制和恢复。</li>
+</ul>
+<p>任务调度同时使用 timer、RAF、idle callback 或 Worker。每个任务都应保存取消句柄，并由拥有它的对象清理。</p>
+<h2 id="14-其他-dom-能力">14. 其他 DOM 能力<a class="heading-anchor" href="#14-其他-dom-能力" aria-label="链接到本节">#</a></h2>
+<ul>
+<li><code>document.createElement()</code> 创建音视频、Canvas、自动播放提示等内部元素。</li>
+<li>CustomEvent/内部 EventEmitter 传递状态。</li>
+<li>Image 用于渲染素材或辅助资源。</li>
+<li>Compute Pressure 等能力主要是检测或可选诊断，不能写成正式核心链。</li>
+</ul>
+<h2 id="15-二进制对象的分工">15. 二进制对象的分工<a class="heading-anchor" href="#15-二进制对象的分工" aria-label="链接到本节">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>类型</th>
+<th>适合操作</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ArrayBuffer</td>
+<td>固定字节区和网络/WASM 载体</td>
+</tr>
+<tr>
+<td>Uint8Array 等 TypedArray</td>
+<td>按字节或数值数组访问</td>
+</tr>
+<tr>
+<td>DataView</td>
+<td>明确大小端读取不同宽度整数</td>
+</tr>
+<tr>
+<td>TextEncoder/TextDecoder</td>
+<td>UTF-8 文本与字节互转</td>
+</tr>
+<tr>
+<td>Blob</td>
+<td>上报、下载、动态 Worker/Object URL</td>
+</tr>
+</tbody></table></div>
+<p>TypedArray view 的 <code>byteOffset/byteLength</code> 可能不是整个底层 buffer，传输和合并时不能直接假设 <code>view.buffer</code> 只包含当前数据。</p>
+<h2 id="16-自定义二进制协议">16. 自定义二进制协议<a class="heading-anchor" href="#16-自定义二进制协议" aria-label="链接到本节">#</a></h2>
+<p>源码包含：</p>
+<ul>
+<li>大端整数读写。</li>
+<li>varint/类 Protobuf 编码。</li>
+<li>TLV/SignalPacket 解析。</li>
+<li>自定义上报包。</li>
+<li>H.264 SEI 字节操作。</li>
+<li>ArrayBuffer 合并和 Transferable。</li>
+</ul>
+<p>解析器必须在每次读取前检查剩余长度，避免损坏包导致越界或无限循环。</p>
+<h2 id="17-base64-自定义消息">17. Base64 自定义消息<a class="heading-anchor" href="#17-base64-自定义消息" aria-label="链接到本节">#</a></h2>
+<p>当前公开自定义消息路径：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">Uint8Array
+  → 字节转字符串/Base64
+  → WebSocket JSON data
+  → 接收端 Base64 解码
+  → Uint8Array
+</code></pre>
+</div><p>这不是二进制 WebSocket 帧，也不是当前启用的 SPC DataChannel。Base64 会增加体积，不适合高频大数据。</p>
+<h2 id="18-安全边界">18. 安全边界<a class="heading-anchor" href="#18-安全边界" aria-label="链接到本节">#</a></h2>
+<ul>
+<li>URL、日志和上报不得输出 userSig/token/credential。</li>
+<li>TURN username/credential 记录时必须隐藏。</li>
+<li>动态 Blob Worker 受 CSP 约束。</li>
+<li>Storage 不保存长期敏感凭证。</li>
+<li><code>Math.random()</code> 不适合安全 ID；需要不可预测值时使用 Web Crypto。</li>
+<li>解析外部二进制数据要限制长度、递归和分配。</li>
+</ul>
+<h2 id="19-释放与降级">19. 释放与降级<a class="heading-anchor" href="#19-释放与降级" aria-label="链接到本节">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>资源</th>
+<th>释放</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>fetch/XHR</td>
+<td>AbortController / xhr.abort，清 timeout</td>
+</tr>
+<tr>
+<td>Object URL</td>
+<td><code>URL.revokeObjectURL()</code></td>
+</tr>
+<tr>
+<td>Observer</td>
+<td>unobserve/disconnect</td>
+</tr>
+<tr>
+<td>DOM listener</td>
+<td>removeEventListener</td>
+</tr>
+<tr>
+<td>timer/RAF/idle</td>
+<td>clear/cancel</td>
+</tr>
+<tr>
+<td>Storage cache</td>
+<td>容量淘汰和业务清除</td>
+</tr>
+<tr>
+<td>ArrayBuffer/Frame</td>
+<td>清引用；可关闭对象显式 close</td>
+</tr>
+</tbody></table></div>
+<p>辅助 API 失败通常记录并降级：调度和鉴权属于进房前硬依赖；日志、性能、权限预查询、Observer 等通常不是通话硬依赖。</p>
+<h2 id="20-api-参数与本项目实参">20. API 参数与本项目实参<a class="heading-anchor" href="#20-api-参数与本项目实参" aria-label="链接到本节">#</a></h2>
+<h3 id="20-1-fetch-input-init">20.1 <code>fetch(input, init?)</code><a class="heading-anchor" href="#20-1-fetch-input-init" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/fetch" target="_blank" rel="noreferrer">fetch()</a></p>
+<p>公共包装器 L12918—L12938：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const { url, body, method = &#39;POST&#39;, timeout, priority } = requestOptions;
+
+return fetch(url, { method, body, priority })
+  .then(response =&gt; response.clone().json().then(
+    json =&gt; ({ data: json }),
+    () =&gt; response.arrayBuffer().then(parseFallback)
+  ));
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数/字段</th>
+<th>标准含义</th>
+<th>本项目怎样传</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>input</code></td>
+<td>URL 字符串、URL 或 Request</td>
+<td>直接传 <code>requestOptions.url</code> 字符串</td>
+</tr>
+<tr>
+<td><code>init.method</code></td>
+<td>HTTP 方法，默认 GET</td>
+<td>包装器默认 <code>&#39;POST&#39;</code>；调用方可覆盖</td>
+</tr>
+<tr>
+<td><code>init.body</code></td>
+<td>BodyInit，如 string、Blob、FormData、ArrayBuffer 等</td>
+<td>直接传 <code>requestOptions.body</code>；日志可为 JSON string 或压缩 ArrayBuffer</td>
+</tr>
+<tr>
+<td><code>init.priority</code></td>
+<td><code>&#39;high&#39;/&#39;low&#39;/&#39;auto&#39;</code> 的请求优先级提示，兼容性有限</td>
+<td>上报 fallback 传 <code>&#39;low&#39;</code>，其他调用可省略</td>
+</tr>
+<tr>
+<td><code>init.headers</code></td>
+<td>HeadersInit</td>
+<td>未传；包装器也没有从 options 解构 headers</td>
+</tr>
+<tr>
+<td><code>init.signal</code></td>
+<td>AbortSignal</td>
+<td>未传，因此 <code>requestOptions.timeout</code> 对 fetch 分支完全不生效</td>
+</tr>
+<tr>
+<td><code>init.credentials/mode/cache/redirect/referrerPolicy/integrity/keepalive</code></td>
+<td>凭据、CORS、缓存等策略</td>
+<td>均未传，使用浏览器默认</td>
+</tr>
+</tbody></table></div>
+<p><code>fetch()</code> 只在网络失败/中止等情况下 reject；HTTP 4xx/5xx 仍 resolve。当前源码没有检查 <code>response.ok/status</code>，所以会继续尝试解析错误响应体。这是本文件可直接确认的行为，不应写成“统一处理 HTTP 状态”。</p>
+<h3 id="20-2-response-解析链">20.2 Response 解析链<a class="heading-anchor" href="#20-2-response-解析链" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/Response/clone" target="_blank" rel="noreferrer">Response.clone()</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/Response/json" target="_blank" rel="noreferrer">json()</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/Response/arrayBuffer" target="_blank" rel="noreferrer">arrayBuffer()</a></p>
+<p>Response body 通常只能消费一次，所以源码先 <code>clone()</code>：clone 用于尝试 JSON，原 response 在 JSON 失败时再读 ArrayBuffer。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>API</th>
+<th>参数</th>
+<th>返回</th>
+<th>本项目后续</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>response.clone()</code></td>
+<td>无</td>
+<td>新 Response，共享/tee body stream</td>
+<td>clone 上调用 <code>json()</code></td>
+</tr>
+<tr>
+<td><code>response.json()</code></td>
+<td>无</td>
+<td>Promise，解析 JSON</td>
+<td>成功包装 <code>{data:jsonData}</code></td>
+</tr>
+<tr>
+<td><code>response.arrayBuffer()</code></td>
+<td>无</td>
+<td>Promise<ArrayBuffer></td>
+<td>先按自定义二进制头解析，再 TextDecoder，最后才保留原 buffer</td>
+</tr>
+</tbody></table></div>
+<p><code>json()</code> 失败不只表示“响应不是 JSON”，也可能是 body 解码/流错误；当前代码一律进入二进制/文本 fallback。</p>
+<h3 id="20-3-xhr-fallback-的每个参数">20.3 XHR fallback 的每个参数<a class="heading-anchor" href="#20-3-xhr-fallback-的每个参数" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/open" target="_blank" rel="noreferrer">XMLHttpRequest.open()</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/send" target="_blank" rel="noreferrer">send()</a></p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">xhr.timeout = timeout || 5000;
+xhr.open(method, url, true);
+xhr.send(body);
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>API 参数</th>
+<th>含义</th>
+<th>本项目实参</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>open(method, url, async, user?, password?)</code></td>
+<td>初始化请求</td>
+<td><code>method</code>、<code>url</code>、<code>true</code>；未传 user/password</td>
+</tr>
+<tr>
+<td><code>timeout</code> 属性</td>
+<td>超时毫秒数；0 表示不超时</td>
+<td>`requestOptions.timeout</td>
+</tr>
+<tr>
+<td><code>send(body?)</code></td>
+<td>发送 body</td>
+<td>同一个 <code>requestOptions.body</code></td>
+</tr>
+</tbody></table></div>
+<p>源码没有 <code>setRequestHeader()</code>、<code>responseType</code>、<code>withCredentials</code> 或独立 <code>ontimeout/onerror</code>。完成依赖 <code>readystatechange</code> 到 4；2xx 才 resolve，先 <code>JSON.parse(xhr.response)</code>，失败返回原字符串。</p>
+<h3 id="20-4-new-formdata-与-append-name-value-filename">20.4 <code>new FormData()</code> 与 <code>append(name, value, filename?)</code><a class="heading-anchor" href="#20-4-new-formdata-与-append-name-value-filename" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/FormData/FormData" target="_blank" rel="noreferrer">FormData()</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/FormData/append" target="_blank" rel="noreferrer">append()</a></p>
+<p>调度源码 L30764 起无参构造，然后逐项 append：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const form = new FormData();
+form.append(&#39;userId&#39;, String(userId));
+form.append(&#39;sdkAppId&#39;, String(sdkAppId));
+form.append(&#39;isStrGroupId&#39;, String(useStringRoomId));
+form.append(&#39;groupId&#39;, String(roomId));
+form.append(&#39;sdkVersion&#39;, sdkVersion);
+form.append(&#39;userSig&#39;, String(userSig));
+</code></pre>
+</div><p><code>append</code> 的 <code>name</code> 是 multipart 字段名，<code>value</code> 可为 string 或 Blob；本项目全部显式转 string。第三参数 <code>filename</code> 只对 Blob/File 有意义，本项目未传。可选 <code>model/osString/role/latencyLevel/frameWorkType</code> 只有有值时才 append。</p>
+<p>FormData 交给 fetch/XHR 时浏览器生成 multipart boundary；调用方不应手动设置一个不含 boundary 的 <code>Content-Type</code>。<code>userSig</code> 是敏感字段，禁止把完整 FormData 序列化到普通日志。</p>
+<h3 id="20-5-new-urlsearchparams-init">20.5 <code>new URLSearchParams(init)</code><a class="heading-anchor" href="#20-5-new-urlsearchparams-init" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams/URLSearchParams" target="_blank" rel="noreferrer">URLSearchParams()</a></p>
+<p><code>init</code> 可以是查询字符串、键值对象、pair iterable 或另一个 URLSearchParams。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>调用</th>
+<th>本项目用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>new URLSearchParams(location.search)</code></td>
+<td>读取 <code>trtc_env</code>、调试参数、WebSocket 的 <code>trtc_*</code> 透传项</td>
+</tr>
+<tr>
+<td><code>new URLSearchParams(object).toString()</code></td>
+<td>把日志上报参数对象编码为 query string</td>
+</tr>
+<tr>
+<td><code>.get(name)</code></td>
+<td>取第一个值，不存在返回 null</td>
+</tr>
+<tr>
+<td><code>.has(name)</code></td>
+<td>判断参数是否存在</td>
+</tr>
+</tbody></table></div>
+<p><code>toString()</code> 会进行 application/x-www-form-urlencoded 编码且不带开头 <code>?</code>，所以源码显式 <code>url + &#39;?&#39; + params.toString()</code>。WebSocket URL 的核心鉴权参数没有使用 URLSearchParams 构造，而是逐段 <code>encodeURIComponent()</code> 拼接。</p>
+<h3 id="20-6-compressionstream-format-与压缩结果读取">20.6 <code>CompressionStream(format)</code> 与压缩结果读取<a class="heading-anchor" href="#20-6-compressionstream-format-与压缩结果读取" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/CompressionStream/CompressionStream" target="_blank" rel="noreferrer">CompressionStream()</a></p>
+<p>构造器唯一参数 <code>format</code> 支持 <code>&#39;gzip&#39;</code>、<code>&#39;deflate&#39;</code>、<code>&#39;deflate-raw&#39;</code>；项目只传 <code>&#39;gzip&#39;</code>，且 JSON 字符串长度必须大于 2800：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const compressed = new Blob([jsonStr], { type: &#39;application/json&#39; })
+  .stream()
+  .pipeThrough(new CompressionStream(&#39;gzip&#39;));
+
+const buffer = await new Response(compressed).blob().then(b =&gt; b.arrayBuffer());
+</code></pre>
+</div><p><code>Blob.stream()</code> 无参数，返回字节 ReadableStream；<code>new Response(body)</code> 把压缩 stream 作为 body，其他 init 未传；<code>blob()</code> 与 <code>arrayBuffer()</code> 都无参数。任一步失败就退回原 JSON 字符串。是否压缩最终通过 URL query <code>gzip=1|0</code> 告知服务端。</p>
+<h3 id="20-7-navigator-sendbeacon-url-data">20.7 <code>navigator.sendBeacon(url, data?)</code><a class="heading-anchor" href="#20-7-navigator-sendbeacon-url-data" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/Navigator/sendBeacon" target="_blank" rel="noreferrer">sendBeacon()</a></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>含义</th>
+<th>本项目实参</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>url</code></td>
+<td>接收上报的 HTTP(S) URL</td>
+<td>logger URL，并拼 <code>gzip=Number(data instanceof ArrayBuffer)</code></td>
+</tr>
+<tr>
+<td><code>data</code></td>
+<td>可选 BodyInit</td>
+<td>原 JSON string、自定义二进制包或 gzip ArrayBuffer</td>
+</tr>
+</tbody></table></div>
+<p>返回 boolean，只表示浏览器是否成功把数据加入发送队列，不是服务器成功响应。源码以返回值 <code>o</code> 判断：false 时退回 <code>sendHttpRequest({url,body,priority:&#39;low&#39;})</code>；true 时不读任何响应。</p>
+<h3 id="20-8-storage-api-参数">20.8 Storage API 参数<a class="heading-anchor" href="#20-8-storage-api-参数" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/Storage" target="_blank" rel="noreferrer">Storage</a></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>API</th>
+<th>参数</th>
+<th>返回</th>
+<th>本项目使用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>getItem(key)</code></td>
+<td>string key</td>
+<td>string 或 null</td>
+<td>读取带前缀的 JSON 缓存、调试开关</td>
+</tr>
+<tr>
+<td><code>setItem(key,value)</code></td>
+<td>两个 string</td>
+<td>undefined，可能因配额/策略抛错</td>
+<td>queue flush 时 <code>JSON.stringify(value)</code></td>
+</tr>
+<tr>
+<td><code>removeItem(key)</code></td>
+<td>string key</td>
+<td>undefined</td>
+<td>删除过期项或指定缓存</td>
+</tr>
+<tr>
+<td><code>clear()</code></td>
+<td>无</td>
+<td>undefined</td>
+<td>包装器提供，但会清当前 origin 全部 localStorage，调用要谨慎</td>
+</tr>
+<tr>
+<td><code>key(index)</code></td>
+<td>数字索引</td>
+<td>key 或 null</td>
+<td>遍历过期项的兼容路径可能使用</td>
+</tr>
+</tbody></table></div>
+<p>本项目先做 <code>isLocalStorageAvailable()</code> 并全部 try/catch。sessionStorage 只读取调试插件配置。<code>Storage</code> 没有内建过期时间；源码把 <code>expiresIn</code> 写进 JSON，再自行扫描删除。</p>
+<h3 id="20-9-performance-now">20.9 <code>performance.now()</code><a class="heading-anchor" href="#20-9-performance-now" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/Performance/now" target="_blank" rel="noreferrer">performance.now()</a></p>
+<p>无参数，返回从 time origin 起的高精度毫秒数，适合计算同一上下文内耗时。包装器：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">return performance?.now
+  ? Math.floor(performance.now())
+  : Date.now();
+</code></pre>
+</div><p>项目向下取整成整数毫秒；不可用才回退 Unix epoch 毫秒。两种时间基准不同，因此只能对同一函数两次返回做差，不应把 fallback 与原生值混在绝对时间字段中。</p>
+<h3 id="20-10-gethighentropyvalues-hints">20.10 <code>getHighEntropyValues(hints)</code><a class="heading-anchor" href="#20-10-gethighentropyvalues-hints" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/NavigatorUAData/getHighEntropyValues" target="_blank" rel="noreferrer">NavigatorUAData.getHighEntropyValues()</a></p>
+<p>唯一参数是希望获取的 hint 名称数组。项目精确传：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">[
+  &#39;architecture&#39;,
+  &#39;bitness&#39;,
+  &#39;model&#39;,
+  &#39;platformVersion&#39;,
+  &#39;fullVersionList&#39;
+]
+</code></pre>
+</div><p>返回 Promise<UADataValues>。源码缓存第一次结果，并结合低熵的 <code>platform/mobile/brands</code> 形成日志字符串。浏览器可能因隐私预算、权限策略或不支持返回缺字段；代码逐字段判空，没有把它作为进房硬依赖。</p>
+<h3 id="20-11-network-information-事件参数">20.11 Network Information 事件参数<a class="heading-anchor" href="#20-11-network-information-事件参数" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/NetworkInformation" target="_blank" rel="noreferrer">NetworkInformation</a></p>
+<p>源码取得 <code>navigator.connection</code>，注册：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">connection?.addEventListener(&#39;typechange&#39;, onNetworkTypeChange);
+</code></pre>
+</div><p>事件名传 <code>&#39;typechange&#39;</code>，listener 是共享函数，第三个 options 未传。业务读取的 <code>type/effectiveType/downlink/rtt/saveData</code> 都是浏览器估计值；标准/实现更常见的通用事件是 <code>change</code>，源码使用 <code>typechange</code> 带有目标浏览器兼容假设。它不替代 PC Stats。</p>
+<h3 id="20-12-permissions-query-descriptor">20.12 <code>permissions.query(descriptor)</code><a class="heading-anchor" href="#20-12-permissions-query-descriptor" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/Permissions/query" target="_blank" rel="noreferrer">Permissions.query()</a></p>
+<p>唯一参数是 permission descriptor。项目封装 <code>get(name)</code> 直接传：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const status = await navigator.permissions.query({ name });
+status.addEventListener(&#39;change&#39;, this.permissionChangeHandler);
+</code></pre>
+</div><p>调用方 <code>name</code> 主要是 <code>&#39;camera&#39;</code> 或 <code>&#39;microphone&#39;</code>。返回 PermissionStatus 的 <code>state</code> 为 <code>&#39;granted&#39;/&#39;denied&#39;/&#39;prompt&#39;</code>。不同浏览器可能不接受这些 name，所以 catch 后记录并降级；查询结果不能代替 <code>getUserMedia()</code> 的实际授权。</p>
+<h3 id="20-13-new-intersectionobserver-callback-options">20.13 <code>new IntersectionObserver(callback, options)</code><a class="heading-anchor" href="#20-13-new-intersectionobserver-callback-options" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/IntersectionObserver/IntersectionObserver" target="_blank" rel="noreferrer">IntersectionObserver()</a></p>
+<p>源码 L35785—L35839：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">observer = new IntersectionObserver(entries =&gt; {
+  entries.forEach(entry =&gt; visibleMap.set(entry.target, entry.isIntersecting));
+  clearTimeout(debounceId);
+  debounceId = setTimeout(updateSubscription, 200);
+}, { root: viewRoot });
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数/option</th>
+<th>含义</th>
+<th>本项目实参</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>callback(entries, observer)</code></td>
+<td>交叉状态变化批次</td>
+<td>只声明 entries，读取 target/isIntersecting</td>
+</tr>
+<tr>
+<td><code>root</code></td>
+<td>作为视口的祖先 Element/Document；null 表示顶层 viewport</td>
+<td>公开 <code>viewRoot</code>，可为 undefined/null</td>
+</tr>
+<tr>
+<td><code>rootMargin</code></td>
+<td>扩缩 root 边界，默认 <code>0px</code></td>
+<td>未传</td>
+</tr>
+<tr>
+<td><code>threshold</code></td>
+<td>触发比例或数组，默认 <code>0</code></td>
+<td>未传，所以刚进入/离开即触发</td>
+</tr>
+<tr>
+<td><code>trackVisibility/delay/scrollMargin</code></td>
+<td>新/实验可见性参数</td>
+<td>未传</td>
+</tr>
+</tbody></table></div>
+<p><code>observe(element)</code> 的唯一参数是每个远端视频 view；<code>unobserve(element)</code> 移除单个旧 view；<code>disconnect()</code> 无参清全部；<code>takeRecords()</code> 无参同步取尚未派发的 entry。项目把多 view 结果聚合，并延迟 200 ms 后决定订阅/退订。</p>
+<h3 id="20-14-requestidlecallback-callback-options">20.14 <code>requestIdleCallback(callback, options?)</code><a class="heading-anchor" href="#20-14-requestidlecallback-callback-options" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/requestIdleCallback" target="_blank" rel="noreferrer">requestIdleCallback()</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/cancelIdleCallback" target="_blank" rel="noreferrer">cancelIdleCallback()</a></p>
+<p>任务调度器传：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">idleId = requestIdleCallback(callback, { timeout: task.delay });
+</code></pre>
+</div><p>callback 收到 <code>IdleDeadline</code>，标准字段是 <code>didTimeout</code> 和无参 <code>timeRemaining()</code>。项目 wrapper 的回调不读取 deadline，只用 idle 时机周期检查 <code>performanceNow()-last &gt;= delay</code>。<code>options.timeout</code> 保证长期没空闲时也触发。</p>
+<p>不支持原生 API 时 fallback 用 <code>setTimeout(callback,1000)</code> 并模拟 <code>{didTimeout:false,timeRemaining(){...}}</code>；由于 fallback 函数只声明一个参数，传入的 <code>{timeout}</code> 会被忽略。取消时 <code>cancelIdleCallback(id)</code> 传保存 id；fallback 内部转 <code>clearTimeout(id)</code>。</p>
+<h3 id="20-15-new-pressureobserver-callback-与-observe-source-options">20.15 <code>new PressureObserver(callback)</code> 与 <code>observe(source, options)</code><a class="heading-anchor" href="#20-15-new-pressureobserver-callback-与-observe-source-options" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/PressureObserver" target="_blank" rel="noreferrer">PressureObserver</a></p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">observer = new PressureObserver(this.onPressureChange);
+await observer.observe(&#39;cpu&#39;, { sampleInterval: 2000 });
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>含义</th>
+<th>本项目值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>constructor <code>callback(records, observer)</code></td>
+<td>接收压力记录批次</td>
+<td>已绑定的 <code>onPressureChange</code>；使用最后一条 record</td>
+</tr>
+<tr>
+<td><code>observe(source)</code></td>
+<td>压力源</td>
+<td><code>&#39;cpu&#39;</code></td>
+</tr>
+<tr>
+<td><code>options.sampleInterval</code></td>
+<td>最小采样间隔毫秒</td>
+<td><code>2000</code></td>
+</tr>
+</tbody></table></div>
+<p>记录 <code>state</code> 映射 nominal/fair/serious/critical。该 API 仍属可选能力：Android 被显式跳过，构造/observe 全部 catch，只上报检测启动失败，不阻断通话。</p>
+<h3 id="20-16-pagehide-与-visibilitychange">20.16 <code>pagehide</code> 与 <code>visibilitychange</code><a class="heading-anchor" href="#20-16-pagehide-与-visibilitychange" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/pagehide_event" target="_blank" rel="noreferrer">pagehide</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/Document/visibilitychange_event" target="_blank" rel="noreferrer">visibilitychange</a></p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">window.addEventListener(&#39;pagehide&#39;, this.handleUnload);
+document.addEventListener(&#39;visibilitychange&#39;, handler);
+</code></pre>
+</div><p>两者都传事件名和 listener，未传 options。当前 <code>handleUnload()</code> 不接收 PageTransitionEvent，也没有读取 <code>event.persisted</code>，所以 bfcache pagehide 与永久离开走同一条统计收尾。visibility handler 读取 <code>document.hidden/visibilityState</code>，在 RAF、timer、音频恢复间切换。</p>
+<h3 id="20-17-编码与-base64-参数">20.17 编码与 Base64 参数<a class="heading-anchor" href="#20-17-编码与-base64-参数" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/TextEncoder" target="_blank" rel="noreferrer">TextEncoder</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/TextDecoder/TextDecoder" target="_blank" rel="noreferrer">TextDecoder</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/btoa" target="_blank" rel="noreferrer">btoa()</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/atob" target="_blank" rel="noreferrer">atob()</a></p>
+<ul>
+<li><code>new TextEncoder()</code> 无参数，只编码 UTF-8；<code>encode(input)</code> 的 input 是 JS string，项目用于协议字符串和上报字段。</li>
+<li><code>new TextDecoder(label=&#39;utf-8&#39;, options?)</code> 项目无参，默认 UTF-8、非 fatal；<code>decode(input?)</code> 传 Uint8Array/ArrayBuffer。</li>
+<li><code>btoa(binaryString)</code> 唯一参数必须是每个码元都在 0..255 的二进制字符串。项目先 <code>new Uint8Array(buffer)</code>，再 <code>String.fromCharCode(...bytes)</code>。</li>
+<li><code>atob(base64)</code> 唯一参数是 Base64 字符串；项目把返回字符串逐字符 <code>charCodeAt(0)</code>，生成 Uint8Array.buffer。</li>
+</ul>
+<p>这条自定义消息路径不是直接编码 Unicode 文本，而是把任意字节转换为 Base64。超大数组使用展开运算符可能触及参数数量上限，因此不适合大 payload。</p>
+<h3 id="20-18-dataview-与-typedarray-的构造参数">20.18 DataView 与 TypedArray 的构造参数<a class="heading-anchor" href="#20-18-dataview-与-typedarray-的构造参数" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/DataView" target="_blank" rel="noreferrer">DataView()</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray" target="_blank" rel="noreferrer">TypedArray</a></p>
+<p><code>new DataView(buffer, byteOffset?, byteLength?)</code>：项目用它在同一 ArrayBuffer 上按协议偏移读写 8/16/32 位整数；<code>getUint16(offset, littleEndian?)</code> 等第二参数决定大小端，源码自定义协议多处显式按大端组织。</p>
+<p><code>new Uint8Array(buffer, byteOffset?, length?)</code>：buffer 可为 ArrayBuffer，也可传长度/数组；项目常用 <code>new Uint8Array(frame.data)</code>、<code>new Uint8Array(buffer)</code>。转移 <code>view.buffer</code> 前必须考虑 view 的 byteOffset/byteLength，不能默认底层 buffer 只含当前 view。</p>
+<h3 id="20-19-审计补出的-scheduler-api-业务与兼容层分开">20.19 审计补出的 Scheduler API：业务与兼容层分开<a class="heading-anchor" href="#20-19-审计补出的-scheduler-api-业务与兼容层分开" aria-label="链接到本节">#</a></h3>
+<p>深入搜索还发现 <code>MessageChannel</code>、<code>MutationObserver</code> 和 <code>queueMicrotask</code>，但它们位于基础库的 task/microtask shim（L2288—L2490），不是 RTC 正式业务策略：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">setImmediate fallback:
+  process.nextTick / Dispatch.now
+  → MessageChannel
+  → window.postMessage
+  → script.onreadystatechange
+  → setTimeout
+
+queueMicrotask fallback:
+  native queueMicrotask
+  → Promise.then / process.nextTick
+  → MutationObserver(characterData)
+  → setImmediate
+</code></pre>
+</div><ul>
+<li><code>new MessageChannel()</code> 无参数，源码用 <code>port2.postMessage(taskId)</code> 驱动 <code>port1.onmessage</code>。</li>
+<li><code>new MutationObserver(callback)</code> 的 callback 是 flush microtask queue；<code>observe(textNode,{characterData:true})</code> 只监听文本节点 data 翻转。</li>
+<li><code>queueMicrotask(callback)</code> 唯一参数是待排入 microtask 的函数。</li>
+</ul>
+<p>这些 API 应计入完整性附录，但主文必须标注“基础库调度兼容层”，不能写成房间、媒体或重连业务直接使用。</p>
+<h2 id="21-事实与边界">21. 事实与边界<a class="heading-anchor" href="#21-事实与边界" aria-label="链接到本节">#</a></h2>
+<h3 id="可以直接确认">可以直接确认<a class="heading-anchor" href="#可以直接确认" aria-label="链接到本节">#</a></h3>
+<ul>
+<li>HTTP 用于调度、下载和上报，WebSocket 用于房间信令。</li>
+<li>Storage 和 Performance 用于诊断与缓存，不承载媒体。</li>
+<li>页面可见性、Observer 和 Worker timer 影响调度策略。</li>
+<li>自定义消息使用 JSON + Base64 WebSocket 路径。</li>
+</ul>
+<h3 id="不能确认">不能确认<a class="heading-anchor" href="#不能确认" aria-label="链接到本节">#</a></h3>
+<ul>
+<li>服务端调度、上报和二进制协议的全部字段语义。</li>
+<li>浏览器隐私策略下所有 Navigator/Permissions 字段的稳定可用性。</li>
+</ul>
+
+      <nav class="page-pagination" aria-label="上一篇和下一篇">
+        <a class="previous" href="09-WebCodecs-and-WebAssembly.html"><span>上一篇</span>09 WebCodecs 与 WebAssembly</a>
+        <a class="next" href="11-End-to-End-Business-Flows.html"><span>下一篇</span>11 端到端业务流程</a>
+      </nav>
+    </article>
+    
+    <nav class="page-toc" aria-label="本页目录">
+      <h2>本页目录</h2>
+      <a class="toc-depth-2" href="#1-本章结论">1. 本章结论</a><a class="toc-depth-2" href="#2-http-请求封装">2. HTTP 请求封装</a><a class="toc-depth-2" href="#3-房间调度">3. 房间调度</a><a class="toc-depth-2" href="#4-资源下载">4. 资源下载</a><a class="toc-depth-2" href="#5-gzip-blob-与上报">5. gzip、Blob 与上报</a><a class="toc-depth-2" href="#6-页面退出收尾">6. 页面退出收尾</a><a class="toc-depth-2" href="#7-storage">7. Storage</a><a class="toc-depth-2" href="#8-performance">8. Performance</a><a class="toc-depth-2" href="#9-ua-与-client-hints">9. UA 与 Client Hints</a><a class="toc-depth-2" href="#10-network-information">10. Network Information</a><a class="toc-depth-2" href="#11-permissions">11. Permissions</a><a class="toc-depth-2" href="#12-intersectionobserver-自动订阅">12. IntersectionObserver 自动订阅</a><a class="toc-depth-2" href="#13-页面可见性和任务调度">13. 页面可见性和任务调度</a><a class="toc-depth-2" href="#14-其他-dom-能力">14. 其他 DOM 能力</a><a class="toc-depth-2" href="#15-二进制对象的分工">15. 二进制对象的分工</a><a class="toc-depth-2" href="#16-自定义二进制协议">16. 自定义二进制协议</a><a class="toc-depth-2" href="#17-base64-自定义消息">17. Base64 自定义消息</a><a class="toc-depth-2" href="#18-安全边界">18. 安全边界</a><a class="toc-depth-2" href="#19-释放与降级">19. 释放与降级</a><a class="toc-depth-2" href="#20-api-参数与本项目实参">20. API 参数与本项目实参</a><a class="toc-depth-3" href="#20-1-fetch-input-init">20.1 fetch(input, init?)</a><a class="toc-depth-3" href="#20-2-response-解析链">20.2 Response 解析链</a><a class="toc-depth-3" href="#20-3-xhr-fallback-的每个参数">20.3 XHR fallback 的每个参数</a><a class="toc-depth-3" href="#20-4-new-formdata-与-append-name-value-filename">20.4 new FormData() 与 append(name, value, filename?)</a><a class="toc-depth-3" href="#20-5-new-urlsearchparams-init">20.5 new URLSearchParams(init)</a><a class="toc-depth-3" href="#20-6-compressionstream-format-与压缩结果读取">20.6 CompressionStream(format) 与压缩结果读取</a><a class="toc-depth-3" href="#20-7-navigator-sendbeacon-url-data">20.7 navigator.sendBeacon(url, data?)</a><a class="toc-depth-3" href="#20-8-storage-api-参数">20.8 Storage API 参数</a><a class="toc-depth-3" href="#20-9-performance-now">20.9 performance.now()</a><a class="toc-depth-3" href="#20-10-gethighentropyvalues-hints">20.10 getHighEntropyValues(hints)</a><a class="toc-depth-3" href="#20-11-network-information-事件参数">20.11 Network Information 事件参数</a><a class="toc-depth-3" href="#20-12-permissions-query-descriptor">20.12 permissions.query(descriptor)</a><a class="toc-depth-3" href="#20-13-new-intersectionobserver-callback-options">20.13 new IntersectionObserver(callback, options)</a><a class="toc-depth-3" href="#20-14-requestidlecallback-callback-options">20.14 requestIdleCallback(callback, options?)</a><a class="toc-depth-3" href="#20-15-new-pressureobserver-callback-与-observe-source-options">20.15 new PressureObserver(callback) 与 observe(source, options)</a><a class="toc-depth-3" href="#20-16-pagehide-与-visibilitychange">20.16 pagehide 与 visibilitychange</a><a class="toc-depth-3" href="#20-17-编码与-base64-参数">20.17 编码与 Base64 参数</a><a class="toc-depth-3" href="#20-18-dataview-与-typedarray-的构造参数">20.18 DataView 与 TypedArray 的构造参数</a><a class="toc-depth-3" href="#20-19-审计补出的-scheduler-api-业务与兼容层分开">20.19 审计补出的 Scheduler API：业务与兼容层分开</a><a class="toc-depth-2" href="#21-事实与边界">21. 事实与边界</a><a class="toc-depth-3" href="#可以直接确认">可以直接确认</a><a class="toc-depth-3" href="#不能确认">不能确认</a>
+    </nav>
+  </main>
+  <button type="button" class="back-to-top" aria-label="回到顶部">↑</button>
+</body>
+</html>

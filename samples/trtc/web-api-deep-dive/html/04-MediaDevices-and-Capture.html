@@ -1,0 +1,812 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="TRTC 反混淆源码浏览器 Web API 深度分析：04 MediaDevices 与媒体采集">
+  <title>04 MediaDevices 与媒体采集 · TRTC Web API 深度学习</title>
+  <link rel="stylesheet" href="assets/docs.css">
+  <script>try{const t=localStorage.getItem('trtc-docs-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+  <script src="assets/search-index.js" defer></script>
+  <script src="assets/mermaid.min.js" defer></script>
+  <script src="assets/docs.js" defer></script>
+</head>
+<body data-page="04-MediaDevices-and-Capture.html">
+  <header class="topbar">
+    <button type="button" class="icon-button nav-toggle" aria-label="打开目录" aria-expanded="false">☰</button>
+    <a class="brand" href="index.html">TRTC Web API 深度学习</a>
+    <div class="search-shell">
+      <label class="sr-only" for="global-search">搜索全部文档</label>
+      <input id="global-search" type="search" autocomplete="off" placeholder="搜索 API、方法、事件…" aria-controls="search-results">
+      <kbd>/</kbd>
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
+    <a class="source-link" href="../04-MediaDevices-and-Capture.md">Markdown</a>
+    <a class="source-link" href="../../trtc.deobfuscated.js">源码</a>
+    <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
+  </header>
+
+  <aside class="sidebar" aria-label="文档目录">
+    
+    <section class="nav-group">
+      <h2>按顺序阅读</h2>
+      
+        <a class="nav-link" href="index.html">
+          文档首页
+        </a>
+        <a class="nav-link" href="00-Reading-Guide-and-Source-Map.html">
+          00 阅读说明与源码地图
+        </a>
+        <a class="nav-link" href="01-Browser-API-Panorama.html">
+          01 浏览器 API 全景
+        </a>
+        <a class="nav-link" href="02-RTCPeerConnection-usage-analysis.html">
+          02 RTCPeerConnection
+        </a>
+        <a class="nav-link" href="03-WebSocket-usage-analysis.html">
+          03 WebSocket 信令
+        </a>
+        <a class="nav-link active" href="04-MediaDevices-and-Capture.html">
+          04 MediaDevices 与采集
+        </a>
+        <a class="nav-link" href="05-MediaStreamTrack-Lifecycle.html">
+          05 Track 生命周期
+        </a>
+        <a class="nav-link" href="06-Web-Audio-usage-analysis.html">
+          06 Web Audio
+        </a>
+        <a class="nav-link" href="07-Media-Playback-and-Rendering.html">
+          07 播放与渲染
+        </a>
+        <a class="nav-link" href="08-Worker-Streams-and-Encoded-Processing.html">
+          08 Worker 与编码帧
+        </a>
+        <a class="nav-link" href="09-WebCodecs-and-WebAssembly.html">
+          09 WebCodecs 与 WASM
+        </a>
+        <a class="nav-link" href="10-Auxiliary-Browser-APIs.html">
+          10 辅助浏览器 API
+        </a>
+        <a class="nav-link" href="11-End-to-End-Business-Flows.html">
+          11 端到端业务流程
+        </a>
+    </section>
+    <section class="nav-group">
+      <h2>附录（按需查询）</h2>
+      
+        <a class="nav-link" href="Appendix-A-WebAPI-Occurrences.html">
+          A Web API 出现位置
+        </a>
+        <a class="nav-link" href="Appendix-B-Source-Method-Index.html">
+          B 源码方法索引
+        </a>
+        <a class="nav-link" href="Appendix-C-Event-Index.html">
+          C 事件索引
+        </a>
+        <a class="nav-link" href="Appendix-D-Method-Adjacency-Index.html">
+          D 方法调用邻接
+        </a>
+        <a class="nav-link" href="Appendix-E-Public-API-Call-Chains.html">
+          E 公开 API 调用链
+        </a>
+        <a class="nav-link" href="Appendix-F-Visual-Call-Flows.html">
+          F 流程图与时序图
+        </a>
+    </section>
+  </aside>
+  <div class="sidebar-backdrop" hidden></div>
+
+  <main class="layout">
+    <article class="doc-content">
+      <h1 id="04-mediadevices-与媒体采集">04 <code>MediaDevices</code> 与媒体采集<a class="heading-anchor" href="#04-mediadevices-与媒体采集" aria-label="链接到本节">#</a></h1>
+<blockquote>
+<p>本文沿“枚举 → 构造约束 → 采集 → 校验 → 发布 → 切换 → 停止”说明摄像头、麦克风和屏幕共享。</p>
+</blockquote>
+<h2 id="1-本章结论">1. 本章结论<a class="heading-anchor" href="#1-本章结论" aria-label="链接到本节">#</a></h2>
+<p>源码把采集分成三条入口：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>入口</th>
+<th>浏览器 API</th>
+<th>输出</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>摄像头/麦克风</td>
+<td><code>getUserMedia()</code></td>
+<td>本地 source MediaStreamTrack</td>
+</tr>
+<tr>
+<td>屏幕/窗口/标签页</td>
+<td><code>getDisplayMedia()</code></td>
+<td>屏幕视频和可选系统音频 Track</td>
+</tr>
+<tr>
+<td>自定义轨道</td>
+<td>调用方传入原生 Track</td>
+<td>跳过浏览器采集，只进入 Track 包装和发布</td>
+</tr>
+</tbody></table></div>
+<p>SDK 不会把一次失败直接视为最终失败。它会根据错误类型和浏览器兼容性逐级放宽约束；采集成功后再读取 <code>getSettings()</code>，因为浏览器实际采用的设备和规格可能与请求不同。</p>
+<h2 id="2-api-位置和职责">2. API、位置和职责<a class="heading-anchor" href="#2-api-位置和职责" aria-label="链接到本节">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>API</th>
+<th>主要用途</th>
+<th align="right">代表性源码区域</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>enumerateDevices()</code></td>
+<td>枚举摄像头、麦克风和扬声器</td>
+<td align="right">媒体设备管理与公开设备接口</td>
+</tr>
+<tr>
+<td><code>getUserMedia()</code></td>
+<td>摄像头/麦克风采集</td>
+<td align="right">Track capture 与兼容层</td>
+</tr>
+<tr>
+<td><code>getDisplayMedia()</code></td>
+<td>屏幕采集</td>
+<td align="right">ScreenTrack capture 与浏览器 Shim</td>
+</tr>
+<tr>
+<td><code>getSupportedConstraints()</code></td>
+<td>判断约束字段是否可用</td>
+<td align="right">约束构造前</td>
+</tr>
+<tr>
+<td><code>track.getCapabilities()</code></td>
+<td>查询设备可调范围</td>
+<td align="right">采集后、切换/约束前</td>
+</tr>
+<tr>
+<td><code>track.getSettings()</code></td>
+<td>读取实际设备和分辨率/帧率</td>
+<td align="right">采集、上报和 media settings</td>
+</tr>
+<tr>
+<td><code>track.applyConstraints()</code></td>
+<td>不重采集地更新约束</td>
+<td align="right">设备/规格更新和屏幕二次约束</td>
+</tr>
+</tbody></table></div>
+<p>完整出现位置见附录 A。</p>
+<h2 id="3-adapter-先统一浏览器差异">3. Adapter 先统一浏览器差异<a class="heading-anchor" href="#3-adapter-先统一浏览器差异" aria-label="链接到本节">#</a></h2>
+<p>采集业务调用前，Adapter 可能已经修改：</p>
+<ul>
+<li>旧 Chrome/Firefox 的音频约束字段名。</li>
+<li>Safari 的空对象和 <code>undefined</code> 约束清理。</li>
+<li>legacy <code>navigator.getUserMedia</code> 到 Promise 风格的统一。</li>
+<li>缺少原生 <code>getDisplayMedia()</code> 时，通过外部 sourceId 和 <code>getUserMedia()</code> 模拟屏幕采集。</li>
+</ul>
+<p>因此业务里的标准调用不代表目标浏览器原生就完整支持该参数。最终仍要结合 <code>getSupportedConstraints()</code>、错误类型和 <code>getSettings()</code> 判断。</p>
+<h2 id="4-设备枚举完整链">4. 设备枚举完整链<a class="heading-anchor" href="#4-设备枚举完整链" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">公开设备查询
+  → navigator.mediaDevices.enumerateDevices()
+  → 按 kind 分类 videoinput / audioinput / audiooutput
+  → 过滤或标记默认设备
+  → 生成 SDK 设备对象
+</code></pre>
+</div><p>浏览器在未授权前可能返回空 <code>label</code>，这不代表没有设备。设备枚举还受到以下条件影响：</p>
+<ul>
+<li>页面必须处于安全上下文。</li>
+<li>浏览器可能隐藏非默认设备，直到成功授权采集。</li>
+<li><code>audiooutput</code> 和 <code>setSinkId()</code> 不是所有浏览器都支持。</li>
+<li>设备拔插后旧 deviceId 可能失效。</li>
+</ul>
+<h2 id="5-摄像头约束从哪里来">5. 摄像头约束从哪里来<a class="heading-anchor" href="#5-摄像头约束从哪里来" aria-label="链接到本节">#</a></h2>
+<p>公开 <code>startLocalVideo()</code> 的主要输入会分流到不同层：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>用户参数</th>
+<th>最终位置</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>cameraId</code></td>
+<td><code>getUserMedia.video.deviceId</code></td>
+</tr>
+<tr>
+<td><code>useFrontCamera</code></td>
+<td><code>facingMode</code></td>
+</tr>
+<tr>
+<td>profile width/height/frameRate</td>
+<td>视频采集约束</td>
+</tr>
+<tr>
+<td>profile bitrate</td>
+<td>sender parameters 或 SDP，不属于 gUM</td>
+</tr>
+<tr>
+<td>mirror/fillMode/rotation</td>
+<td>Player 或 Canvas，不属于 gUM</td>
+</tr>
+<tr>
+<td>自定义 <code>videoTrack</code></td>
+<td>跳过摄像头采集</td>
+</tr>
+</tbody></table></div>
+<p>典型约束形态：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">{
+  video: {
+    deviceId: { exact: cameraId },
+    width: { ideal: width },
+    height: { ideal: height },
+    frameRate: { ideal: frameRate },
+    facingMode: useFrontCamera ? &#39;user&#39; : &#39;environment&#39;
+  }
+}
+</code></pre>
+</div><p>源码会根据入口和兼容分支使用 exact、ideal 或普通值，不能假定所有字段都严格满足。</p>
+<h2 id="6-麦克风约束从哪里来">6. 麦克风约束从哪里来<a class="heading-anchor" href="#6-麦克风约束从哪里来" aria-label="链接到本节">#</a></h2>
+<p>音频约束除 <code>deviceId</code> 外，还可能包含：</p>
+<ul>
+<li><code>echoCancellation</code></li>
+<li><code>noiseSuppression</code></li>
+<li><code>autoGainControl</code></li>
+<li><code>channelCount</code></li>
+<li><code>sampleRate</code></li>
+<li>浏览器或 SDK 扩展字段</li>
+</ul>
+<p>采集约束只决定浏览器 source track。后续 Web Audio、AI 降噪、Gain 和音量检测属于处理管线，不能全部归因于 <code>getUserMedia()</code>。</p>
+<h2 id="7-getusermedia-的逐级降级">7. <code>getUserMedia()</code> 的逐级降级<a class="heading-anchor" href="#7-getusermedia-的逐级降级" aria-label="链接到本节">#</a></h2>
+<p>采集工具不会对所有错误统一重试。典型判断是：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">getUserMedia(strict constraints)
+  ├─ 成功 → 校验 tracks → 读取 settings
+  └─ 失败
+       ├─ OverconstrainedError → 放宽具体约束
+       ├─ 浏览器不支持字段 → 删除兼容性字段
+       ├─ 精确 deviceId 失效 → 选择默认设备或重新枚举
+       └─ NotAllowed / Security / NotReadable → 包装并上抛
+</code></pre>
+</div><p>权限拒绝、非安全上下文、设备被系统占用等错误不能靠反复放宽尺寸解决。重试必须保留错误语义。</p>
+<h2 id="8-自定义轨道分支">8. 自定义轨道分支<a class="heading-anchor" href="#8-自定义轨道分支" aria-label="链接到本节">#</a></h2>
+<p>调用方传入原生 <code>MediaStreamTrack</code> 时：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">custom track
+  → 校验 kind 和 readyState
+  → Track.setInputMediaStreamTrack()
+  → 可选处理管线
+  → 发布或本地播放
+</code></pre>
+</div><p>该分支不调用 <code>getUserMedia()</code>，因此：</p>
+<ul>
+<li>SDK 不拥有外部采集设备的创建过程。</li>
+<li>是否在 <code>close()</code> 时停止外部 Track，必须按 Track 包装的所有权约定处理。</li>
+<li>cameraId、facingMode 等采集选项不再生效。</li>
+</ul>
+<h2 id="9-采集后的校验">9. 采集后的校验<a class="heading-anchor" href="#9-采集后的校验" aria-label="链接到本节">#</a></h2>
+<p>采集 Promise resolve 后仍要检查：</p>
+<ol>
+<li>MediaStream 是否包含期望 kind 的 Track。</li>
+<li>Track 是否已 <code>ended</code>。</li>
+<li><code>getSettings()</code> 中的 deviceId、width、height、frameRate、sampleRate 等实际值。</li>
+<li>浏览器是否返回了与目标设备不同的默认设备。</li>
+</ol>
+<p>后续 SDK media settings 和上报应优先使用实际 settings；无法读取时才回退 profile。</p>
+<h2 id="10-屏幕共享的约束和能力">10. 屏幕共享的约束和能力<a class="heading-anchor" href="#10-屏幕共享的约束和能力" aria-label="链接到本节">#</a></h2>
+<p>屏幕采集不是普通摄像头采集的别名。它还涉及：</p>
+<ul>
+<li><code>displaySurface</code> 和浏览器选择器。</li>
+<li>系统音频是否可选。</li>
+<li>当前标签页 Capture Handle。</li>
+<li>CropTarget/区域裁剪。</li>
+<li>用户从浏览器 UI 点击“停止共享”触发的 <code>ended</code>。</li>
+</ul>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">startScreenShare(options)
+  → 检查 getDisplayMedia / 兼容路径
+  → 构造 display constraints
+  → navigator.mediaDevices.getDisplayMedia()
+  → 校验 video track
+  → 可选 applyConstraints / cropTo
+  → 可选额外 getUserMedia() 采集麦克风
+  → ScreenTrack.setInputMediaStreamTrack()
+</code></pre>
+</div><h2 id="11-系统音频和额外麦克风是两条来源">11. 系统音频和额外麦克风是两条来源<a class="heading-anchor" href="#11-系统音频和额外麦克风是两条来源" aria-label="链接到本节">#</a></h2>
+<p><code>getDisplayMedia({audio:true})</code> 返回的音频是浏览器/操作系统允许共享的系统或标签页音频；“同时采集麦克风”通常需要额外调用一次 <code>getUserMedia({audio:...})</code>。</p>
+<p>两条轨道后续可以：</p>
+<ul>
+<li>分别发布。</li>
+<li>进入 Web Audio 混音后输出一条 Track。</li>
+<li>在不支持系统音频时只保留麦克风。</li>
+</ul>
+<p>不能把 <code>audio:true</code> 解释成所有浏览器都会返回系统声音。</p>
+<h2 id="12-屏幕区域裁剪">12. 屏幕区域裁剪<a class="heading-anchor" href="#12-屏幕区域裁剪" aria-label="链接到本节">#</a></h2>
+<p>支持 Region Capture 时，典型握手为：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">目标 DOM element
+  → CropTarget.fromElement(element)
+  → screenVideoTrack.cropTo(cropTarget)
+</code></pre>
+</div><p>这是采集后的 Track 操作，不是 <code>getDisplayMedia()</code> 的普通 width/height 约束。能力不存在或调用失败时应继续使用完整屏幕 Track，而不是中断整个通话。</p>
+<h2 id="13-设备切换和重采集">13. 设备切换和重采集<a class="heading-anchor" href="#13-设备切换和重采集" aria-label="链接到本节">#</a></h2>
+<p>设备切换有两种路径：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>路径</th>
+<th>适合场景</th>
+<th>后续动作</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>applyConstraints({deviceId})</code></td>
+<td>浏览器和当前 Track 支持无缝切换</td>
+<td>重新读取 settings；必要时通知 sender 参数</td>
+</tr>
+<tr>
+<td>重新 <code>getUserMedia()</code></td>
+<td>applyConstraints 不支持或失败</td>
+<td>新 Track 接入处理管线，sender replaceTrack，最后停旧 Track</td>
+</tr>
+</tbody></table></div>
+<p>安全交接顺序是：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">先采集并验证新 Track
+  → 替换 Track 包装输入/处理输出
+  → sender.replaceTrack(newOutTrack)
+  → Player 切换
+  → 再 stop 旧 source/out Track
+</code></pre>
+</div><p>过早停止旧 Track 会造成可感知黑屏或静音。</p>
+<h2 id="14-ended-拔插和恢复">14. <code>ended</code>、拔插和恢复<a class="heading-anchor" href="#14-ended-拔插和恢复" aria-label="链接到本节">#</a></h2>
+<ul>
+<li>屏幕 Track <code>ended</code> 通常表示用户从浏览器共享 UI 主动停止。</li>
+<li>摄像头/麦克风设备拔出可能触发 ended、mute 或设备列表变化。</li>
+<li><code>muted</code> 不等于 <code>ended</code>，短暂没有媒体数据时不应立即销毁。</li>
+<li>自动恢复前必须判断用户是否已经主动 stop/close，避免停止后又重新拉起权限请求。</li>
+</ul>
+<h2 id="15-停止和释放">15. 停止和释放<a class="heading-anchor" href="#15-停止和释放" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">停止本地媒体
+  → Room.unpublish / sender.replaceTrack(null)
+  → 停 Player 和处理管线
+  → 解绑 ended/mute/unmute/devicechange
+  → sourceTrack.stop()
+  → 清 MediaStream 和 Track 引用
+</code></pre>
+</div><p><code>RTCPeerConnection.close()</code>、<code>removeTrack()</code> 或 <code>replaceTrack(null)</code> 都不会自动关闭摄像头、麦克风或屏幕采集。真正拥有 source track 的 Track/Manager 必须显式 <code>stop()</code>。</p>
+<h2 id="16-api-参数与本项目实参">16. API 参数与本项目实参<a class="heading-anchor" href="#16-api-参数与本项目实参" aria-label="链接到本节">#</a></h2>
+<h3 id="16-1-enumeratedevices">16.1 <code>enumerateDevices()</code><a class="heading-anchor" href="#16-1-enumeratedevices" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/enumerateDevices" target="_blank" rel="noreferrer">enumerateDevices()</a></p>
+<p>该方法没有参数，返回 <code>Promise&lt;MediaDeviceInfo[]&gt;</code>。每个结果主要包含 <code>kind</code>、<code>deviceId</code>、<code>groupId</code>、<code>label</code>；输入设备在支持时可能是带 <code>getCapabilities()</code> 的 <code>InputDeviceInfo</code>。</p>
+<p>源码 L19283—L19345 的包装入口是 <code>handleEncryption(mode = 0)</code>。<code>mode</code> 是 SDK 自己的参数，不会传给浏览器：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th align="right"><code>mode</code></th>
+<th>SDK 行为</th>
+<th>原生 API 实参</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="right"><code>0</code></td>
+<td>只枚举一次，不主动申请权限补 label</td>
+<td><code>enumerateDevices()</code> 无参</td>
+</tr>
+<tr>
+<td align="right"><code>1</code></td>
+<td>若发现未授权的空标识设备，只临时申请音频权限</td>
+<td><code>getUserMedia({audio:true, video:false})</code>，之后再次无参枚举</td>
+</tr>
+<tr>
+<td align="right"><code>2</code></td>
+<td>若发现未授权的空标识设备，只临时申请视频权限</td>
+<td><code>getUserMedia({audio:false, video:true})</code>，之后再次无参枚举</td>
+</tr>
+<tr>
+<td align="right">其他非零值</td>
+<td>按缺失类型申请音频和/或视频</td>
+<td>动态 <code>{audio:boolean, video:boolean}</code></td>
+</tr>
+</tbody></table></div>
+<p>实际源码：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">let devices = await navigator.mediaDevices.enumerateDevices();
+const permissionProbe = { audio: false, video: false };
+
+// 根据空 deviceId/groupId 和 mode 决定 true/false
+stream = await navigator.mediaDevices.getUserMedia(permissionProbe);
+devices = await navigator.mediaDevices.enumerateDevices();
+stream?.getTracks().forEach(track =&gt; track.stop());
+</code></pre>
+</div><p>第二次枚举的目的只是让授权后的 <code>label/deviceId</code> 可见；临时流立即停止，不进入发布链。</p>
+<h3 id="16-2-getusermedia-constraints-的顶层参数">16.2 <code>getUserMedia(constraints)</code> 的顶层参数<a class="heading-anchor" href="#16-2-getusermedia-constraints-的顶层参数" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia" target="_blank" rel="noreferrer">getUserMedia()</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/MediaTrackConstraints" target="_blank" rel="noreferrer">MediaTrackConstraints</a></p>
+<p><code>constraints</code> 必填，结构是 <code>{audio, video}</code>：每项可以是 <code>false</code>、<code>true</code> 或约束对象。两项都缺失/为 <code>false</code> 会拒绝。返回 <code>Promise&lt;MediaStream&gt;</code>。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>值</th>
+<th>含义</th>
+<th>本项目使用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>false</code></td>
+<td>不请求该媒体类型</td>
+<td>只采麦克风时 <code>video:false</code>；只采摄像头时可令 <code>audio:false</code></td>
+</tr>
+<tr>
+<td><code>true</code></td>
+<td>请求该类型，接受浏览器默认设备和默认规格</td>
+<td>最后一次降级的 <code>useTrueAsConstraint</code> 分支；枚举前权限探测</td>
+</tr>
+<tr>
+<td>约束对象</td>
+<td>请求该类型，并给设备选择算法必需或偏好条件</td>
+<td>正常摄像头/麦克风采集</td>
+</tr>
+</tbody></table></div>
+<p>源码 L20280—L20315 先由 SDK 配置 <code>e</code> 构造真正的浏览器参数 <code>t</code>：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const t = {
+  audio: isAudioConstraintsValid(e),
+  video: isVideoConstraintsValid(e)
+};
+
+const stream = await navigator.mediaDevices.getUserMedia(t);
+</code></pre>
+</div><p>因此公开配置 <code>e.cameraId/e.width/...</code> 并不是直接原样传入；两个 builder 会删除空字段、决定 <code>exact/ideal/max</code>，重试时还会改变形态。</p>
+<h3 id="16-3-约束值的三种表达方式">16.3 约束值的三种表达方式<a class="heading-anchor" href="#16-3-约束值的三种表达方式" aria-label="链接到本节">#</a></h3>
+<p>媒体约束中的单个字段可以是普通值，也可以是约束对象：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>写法</th>
+<th>选择语义</th>
+<th>失败表现</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>field: value</code></td>
+<td>普通请求；浏览器尽量匹配</td>
+<td>通常可选择近似值</td>
+</tr>
+<tr>
+<td><code>field: {ideal: value}</code></td>
+<td>偏好值，不要求必须满足</td>
+<td>不匹配时可选择其他值</td>
+</tr>
+<tr>
+<td><code>field: {exact: value}</code> 或 <code>{min,max}</code></td>
+<td>强制约束</td>
+<td>无设备满足时可抛 <code>OverconstrainedError</code></td>
+</tr>
+</tbody></table></div>
+<p>本项目第一次通常对明确的 <code>deviceId</code> 使用 <code>{exact:id}</code>，对分辨率使用 <code>{ideal,max}</code>；失败后依次去掉 max、去掉 exact、只保留 deviceId，最后降级为 <code>true</code>。所以日志中同一次公开调用可能出现多组不同的 <code>getUserMedia</code> 实参。</p>
+<h3 id="16-4-音频约束-每个字段怎样生成">16.4 音频约束：每个字段怎样生成<a class="heading-anchor" href="#16-4-音频约束-每个字段怎样生成" aria-label="链接到本节">#</a></h3>
+<p><code>isAudioConstraintsValid(e)</code>（L20362—L20402）生成的对象：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const audio = {
+  echoCancellation: true,
+  noiseSuppression: true,
+  autoGainControl: true,
+  sampleRate: e.sampleRate
+};
+
+audio.deviceId = e.useExactDeviceId
+  ? { exact: e.microphoneId }
+  : e.microphoneId;
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>浏览器字段</th>
+<th>类型/可选值</th>
+<th>含义</th>
+<th>SDK 来源与实际规则</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>deviceId</code></td>
+<td><code>string</code> 或 <code>ConstrainDOMString</code></td>
+<td>选择输入设备</td>
+<td><code>e.microphoneId</code>；首次可包装 <code>{exact:...}</code>，exact 失败后改普通字符串</td>
+</tr>
+<tr>
+<td><code>echoCancellation</code></td>
+<td><code>boolean</code>，部分实现还支持枚举字符串</td>
+<td>请求浏览器回声消除</td>
+<td>默认 <code>true</code>；公开值是 boolean、<code>&#39;remote-only&#39;</code> 或 <code>&#39;all&#39;</code> 时覆盖</td>
+</tr>
+<tr>
+<td><code>noiseSuppression</code></td>
+<td><code>boolean</code></td>
+<td>请求浏览器噪声抑制</td>
+<td>默认 <code>true</code>；源码仅在公开值明确为 <code>false</code> 时覆盖为 <code>false</code></td>
+</tr>
+<tr>
+<td><code>autoGainControl</code></td>
+<td><code>boolean</code></td>
+<td>请求自动增益</td>
+<td>默认 <code>true</code>；源码仅在公开值明确为 <code>false</code> 时覆盖为 <code>false</code></td>
+</tr>
+<tr>
+<td><code>sampleRate</code></td>
+<td>number 或数值约束</td>
+<td>期望采样率，浏览器可能不精确满足</td>
+<td>直接来自 <code>e.sampleRate</code>；空值会在清理逻辑中被忽略</td>
+</tr>
+<tr>
+<td><code>channelCount</code></td>
+<td>number 或数值约束</td>
+<td>期望声道数</td>
+<td>只有 <code>e.channelCount</code> 是 number 时才加入</td>
+</tr>
+</tbody></table></div>
+<p><code>echoCancellation/noiseSuppression/autoGainControl</code> 只控制浏览器 source track。后面的 AudioWorklet、AI 降噪和 Gain 不是这些字段的“实现细节”，而是独立处理链。</p>
+<h3 id="16-5-视频约束-每个字段怎样生成">16.5 视频约束：每个字段怎样生成<a class="heading-anchor" href="#16-5-视频约束-每个字段怎样生成" aria-label="链接到本节">#</a></h3>
+<p><code>isVideoConstraintsValid(e)</code>（L20404—L20428）实际构造：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">if (e.cameraId) {
+  video.deviceId = e.useExactDeviceId ? { exact: e.cameraId } : e.cameraId;
+} else if (e.facingMode) {
+  video.facingMode = e.facingMode;
+}
+
+video.width  = { ideal: e.width,  max: e.width  };
+video.height = { ideal: e.height, max: e.height };
+video.frameRate = e.frameRate;
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>浏览器字段</th>
+<th>类型/常用可选值</th>
+<th>含义</th>
+<th>SDK 来源与分支</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>deviceId</code></td>
+<td>string / <code>{exact,ideal}</code></td>
+<td>指定摄像头</td>
+<td>有 <code>cameraId</code> 时使用；与 <code>facingMode</code> 二选一，优先 cameraId</td>
+</tr>
+<tr>
+<td><code>facingMode</code></td>
+<td>常见 <code>&#39;user&#39;</code>、<code>&#39;environment&#39;</code>、<code>&#39;left&#39;</code>、<code>&#39;right&#39;</code>，也可 exact/ideal</td>
+<td>偏好前后摄像头</td>
+<td>只有没有 cameraId 时才传 <code>e.facingMode</code></td>
+</tr>
+<tr>
+<td><code>width</code></td>
+<td>number / <code>{min,max,exact,ideal}</code></td>
+<td>采集帧宽度</td>
+<td>通常 <code>{ideal:width,max:width}</code>；重试会去掉 max；Firefox 极低分辨率兼容分支直接传 number</td>
+</tr>
+<tr>
+<td><code>height</code></td>
+<td>同 width</td>
+<td>采集帧高度</td>
+<td>与 width 同步构造</td>
+</tr>
+<tr>
+<td><code>frameRate</code></td>
+<td>number / 数值约束</td>
+<td>目标帧率</td>
+<td>直接传 <code>e.frameRate</code>；第一次重试可能降到 10 或 5</td>
+</tr>
+</tbody></table></div>
+<p>profile 中的 <code>bitrate</code> 不会进入 <code>getUserMedia()</code>；它后续进入 <code>RTCRtpSender.setParameters()</code> 或 SDP。镜像、旋转和填充也不属于采集约束。</p>
+<h3 id="16-6-重试时浏览器实际收到什么">16.6 重试时浏览器实际收到什么<a class="heading-anchor" href="#16-6-重试时浏览器实际收到什么" aria-label="链接到本节">#</a></h3>
+<p>采集包装器最多重试 3 次，间隔 500 ms，只对 <code>NotReadableError</code>、<code>OverconstrainedError</code>、<code>AbortError</code> 放宽：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th align="right">尝试</th>
+<th>SDK 标志变化</th>
+<th>浏览器约束变化</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="right">初始</td>
+<td><code>useExactDeviceId</code> 通常为真，<code>maxResolution</code> 为真</td>
+<td>精确 deviceId；宽高 <code>ideal + max</code></td>
+</tr>
+<tr>
+<td align="right">第 1 次重试</td>
+<td><code>maxResolution=false</code>；帧率可能降至 10/5；<code>useExactDeviceId=false</code></td>
+<td>去掉 width/height.max；deviceId 从 <code>{exact:id}</code> 变普通字符串</td>
+</tr>
+<tr>
+<td align="right">第 2 次重试</td>
+<td><code>useDeviceIdOnly=true</code></td>
+<td>只保留 deviceId，去掉尺寸和 3A 等附加约束</td>
+</tr>
+<tr>
+<td align="right">第 3 次重试</td>
+<td><code>useTrueAsConstraint=true</code></td>
+<td>对请求类型最终传 <code>true</code>，让浏览器选默认设备</td>
+</tr>
+</tbody></table></div>
+<p><code>NotAllowedError</code>、<code>SecurityError</code>、无设备等不进入这条放宽链，而是保留 name、message 和 <code>constraint</code> 包装为 SDK 初始化错误。</p>
+<h3 id="16-7-getdisplaymedia-options">16.7 <code>getDisplayMedia(options)</code><a class="heading-anchor" href="#16-7-getdisplaymedia-options" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getDisplayMedia" target="_blank" rel="noreferrer">getDisplayMedia()</a></p>
+<p>源码 L26979—L27004 传入的顶层对象是：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const options = {
+  preferCurrentTab   : e.preferDisplaySurface === &#39;current-tab&#39; || Boolean(e.captureElement),
+  systemAudio        : &#39;include&#39;,
+  selfBrowserSurface : &#39;include&#39;,
+  surfaceSwitching   : &#39;include&#39;,
+  video: {
+    width          : isSafari ? { max: e.width } : { ideal: e.width, max: e.width },
+    height         : isSafari ? { max: e.height } : { ideal: e.height, max: e.height },
+    frameRate      : e.frameRate,
+    displaySurface : e.preferDisplaySurface || &#39;monitor&#39;
+  }
+};
+
+if (e.systemAudio) {
+  options.audio = {
+    echoCancellation: e.echoCancellation ?? true,
+    noiseSuppression: e.noiseSuppression ?? false,
+    autoGainControl: e.autoGainControl ?? false,
+    sampleRate: 48000
+  };
+}
+</code></pre>
+</div><p>顶层参数逐项解释：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型/可选值</th>
+<th>含义</th>
+<th>本项目传值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>video</code></td>
+<td>必须是 truthy 或约束对象，不能是 <code>false</code></td>
+<td>请求被共享的画面</td>
+<td>始终传对象</td>
+</tr>
+<tr>
+<td><code>audio</code></td>
+<td>boolean 或音频约束，可省略</td>
+<td>请求与共享表面关联的音频</td>
+<td>仅 <code>e.systemAudio</code> 为真时加入对象</td>
+</tr>
+<tr>
+<td><code>preferCurrentTab</code></td>
+<td>boolean，实验性提示</td>
+<td>是否把当前标签页作为醒目选择</td>
+<td>选择 current-tab 或启用元素裁剪时为 <code>true</code></td>
+</tr>
+<tr>
+<td><code>systemAudio</code></td>
+<td><code>&#39;include&#39;</code> / <code>&#39;exclude&#39;</code>，提示项</td>
+<td>是否向用户提供系统音频选项</td>
+<td>顶层固定传 <code>&#39;include&#39;</code>；但只有 <code>options.audio</code> 存在时才真正请求音频 Track</td>
+</tr>
+<tr>
+<td><code>selfBrowserSurface</code></td>
+<td><code>&#39;include&#39;</code> / <code>&#39;exclude&#39;</code>，提示项</td>
+<td>是否允许选择当前页面</td>
+<td>固定 <code>&#39;include&#39;</code></td>
+</tr>
+<tr>
+<td><code>surfaceSwitching</code></td>
+<td><code>&#39;include&#39;</code> / <code>&#39;exclude&#39;</code>，提示项</td>
+<td>是否允许浏览器提供共享表面切换控件</td>
+<td>固定 <code>&#39;include&#39;</code></td>
+</tr>
+<tr>
+<td><code>monitorTypeSurfaces</code></td>
+<td><code>&#39;include&#39;</code> / <code>&#39;exclude&#39;</code>，实验性</td>
+<td>是否在选择器中提供整屏</td>
+<td>未传</td>
+</tr>
+<tr>
+<td><code>controller</code></td>
+<td><code>CaptureController</code>，实验性</td>
+<td>允许额外控制捕获会话</td>
+<td>未传</td>
+</tr>
+</tbody></table></div>
+<p><code>video</code> 子字段：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>含义</th>
+<th>本项目来源</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>displaySurface</code></td>
+<td>希望的表面类型，常见 <code>monitor</code>、<code>window</code>、<code>browser</code></td>
+<td><code>e.preferDisplaySurface</code>，无值时 <code>&#39;monitor&#39;</code>；这是提示，用户仍必须在选择器确认</td>
+</tr>
+<tr>
+<td><code>width/height</code></td>
+<td>希望的输出尺寸</td>
+<td>Safari 只传 <code>{max}</code>，其他浏览器传 <code>{ideal,max}</code></td>
+</tr>
+<tr>
+<td><code>frameRate</code></td>
+<td>希望的帧率</td>
+<td>直接传 <code>e.frameRate</code></td>
+</tr>
+</tbody></table></div>
+<p>浏览器必须每次弹出用户选择；这些选项不能替用户静默固定某个屏幕。</p>
+<h3 id="16-8-屏幕采集后的-applyconstraints-constraints">16.8 屏幕采集后的 <code>applyConstraints(constraints)</code><a class="heading-anchor" href="#16-8-屏幕采集后的-applyconstraints-constraints" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamTrack/applyConstraints" target="_blank" rel="noreferrer">applyConstraints()</a></p>
+<p>屏幕视频 Track 取得后，源码还会再传一次：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">await screenVideoTrack.applyConstraints({
+  frameRate: { min: e.frameRate, ideal: e.frameRate },
+  width: e.width,
+  height: e.height
+});
+</code></pre>
+</div><p>这与 <code>getDisplayMedia(options)</code> 不是重复：前者先决定用户共享哪个表面，后者对已经得到的 Track 请求输出规格。这里 <code>frameRate.min</code> 是强制下限，可能导致 <code>OverconstrainedError</code>；所以源码用 <code>try/catch</code> 记录 warning 并继续使用已获得的屏幕 Track。</p>
+<p>摄像头 <code>applyProfile()</code> 则传普通 <code>{width,height,frameRate}</code>；音频 <code>update3A()</code> 先取 <code>track.getConstraints()</code>，修改三个 3A 字段后把完整对象传回。Chrome 分支更倾向重新采集，Firefox/Safari 才直接 apply。</p>
+<h3 id="16-9-getsupportedconstraints-getcapabilities-getsettings">16.9 <code>getSupportedConstraints()</code>、<code>getCapabilities()</code>、<code>getSettings()</code><a class="heading-anchor" href="#16-9-getsupportedconstraints-getcapabilities-getsettings" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getSupportedConstraints" target="_blank" rel="noreferrer">getSupportedConstraints()</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamTrack/getCapabilities" target="_blank" rel="noreferrer">getCapabilities()</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamTrack/getSettings" target="_blank" rel="noreferrer">getSettings()</a></p>
+<p>三个方法都没有参数，但回答的问题不同：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>API</th>
+<th>返回</th>
+<th>回答的问题</th>
+<th>本项目用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>mediaDevices.getSupportedConstraints()</code></td>
+<td>支持字段名的布尔字典</td>
+<td>浏览器识不识别某类约束字段</td>
+<td>Adapter 判断 <code>facingMode</code>、<code>autoGainControl</code> 等是否需要转换</td>
+</tr>
+<tr>
+<td><code>track.getCapabilities()</code></td>
+<td>当前 Track 可调范围/枚举值</td>
+<td>这个具体设备最多能做到什么</td>
+<td>采集成功后记录 width/height/frameRate、3A 等能力，并校验 echoCancellation 请求值</td>
+</tr>
+<tr>
+<td><code>track.getSettings()</code></td>
+<td>当前实际采用值</td>
+<td>浏览器最后真正给了什么</td>
+<td>更新 deviceId、宽高、帧率、声道数、首帧尺寸和上报</td>
+</tr>
+</tbody></table></div>
+<p>它们都不会修改 Track。不能用 capabilities 当成实际值，也不能用 supportedConstraints 推断当前摄像头一定支持某个分辨率。</p>
+<h3 id="16-10-区域裁剪参数">16.10 区域裁剪参数<a class="heading-anchor" href="#16-10-区域裁剪参数" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/CropTarget/fromElement" target="_blank" rel="noreferrer">CropTarget.fromElement()</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/BrowserCaptureMediaStreamTrack/cropTo" target="_blank" rel="noreferrer">BrowserCaptureMediaStreamTrack.cropTo()</a></p>
+<p>当公开配置带 <code>captureElement</code> 时，源码先验证窗口存在 <code>CropTarget</code>、静态方法 <code>fromElement</code> 和 Track 的 <code>cropTo</code>，再执行：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const target = await CropTarget.fromElement(e.captureElement);
+await screenVideoTrack.cropTo(target);
+</code></pre>
+</div><p><code>fromElement(element)</code> 的唯一参数是要生成裁剪目标的 DOM Element；<code>cropTo(target)</code> 的唯一参数是返回的 <code>CropTarget</code>，传 <code>null</code> 通常表示恢复不裁剪，但本项目没有使用 <code>null</code> 分支。源码还检查 capture handle，只有句柄匹配 SDK 预期值才裁剪。</p>
+<h2 id="17-事实与边界">17. 事实与边界<a class="heading-anchor" href="#17-事实与边界" aria-label="链接到本节">#</a></h2>
+<h3 id="可以直接确认">可以直接确认<a class="heading-anchor" href="#可以直接确认" aria-label="链接到本节">#</a></h3>
+<ul>
+<li>摄像头/麦克风和屏幕使用不同采集入口。</li>
+<li>约束会按错误和支持性降级。</li>
+<li>采集后使用 settings 确认实际规格。</li>
+<li>屏幕系统音频与额外麦克风是不同来源。</li>
+<li>自定义 Track 可以跳过原生采集。</li>
+</ul>
+<h3 id="仅凭当前-js-不能确认">仅凭当前 JS 不能确认<a class="heading-anchor" href="#仅凭当前-js-不能确认" aria-label="链接到本节">#</a></h3>
+<ul>
+<li>每个目标浏览器/操作系统组合的屏幕音频选择器行为。</li>
+<li>私有浏览器约束在所有内核版本中的真实效果。</li>
+<li>用户实际授权选择了哪个窗口或标签页，除非浏览器通过 settings/Capture Handle 暴露。</li>
+</ul>
+
+      <nav class="page-pagination" aria-label="上一篇和下一篇">
+        <a class="previous" href="03-WebSocket-usage-analysis.html"><span>上一篇</span>03 WebSocket 信令分析</a>
+        <a class="next" href="05-MediaStreamTrack-Lifecycle.html"><span>下一篇</span>05 MediaStreamTrack 生命周期</a>
+      </nav>
+    </article>
+    
+    <nav class="page-toc" aria-label="本页目录">
+      <h2>本页目录</h2>
+      <a class="toc-depth-2" href="#1-本章结论">1. 本章结论</a><a class="toc-depth-2" href="#2-api-位置和职责">2. API、位置和职责</a><a class="toc-depth-2" href="#3-adapter-先统一浏览器差异">3. Adapter 先统一浏览器差异</a><a class="toc-depth-2" href="#4-设备枚举完整链">4. 设备枚举完整链</a><a class="toc-depth-2" href="#5-摄像头约束从哪里来">5. 摄像头约束从哪里来</a><a class="toc-depth-2" href="#6-麦克风约束从哪里来">6. 麦克风约束从哪里来</a><a class="toc-depth-2" href="#7-getusermedia-的逐级降级">7. getUserMedia() 的逐级降级</a><a class="toc-depth-2" href="#8-自定义轨道分支">8. 自定义轨道分支</a><a class="toc-depth-2" href="#9-采集后的校验">9. 采集后的校验</a><a class="toc-depth-2" href="#10-屏幕共享的约束和能力">10. 屏幕共享的约束和能力</a><a class="toc-depth-2" href="#11-系统音频和额外麦克风是两条来源">11. 系统音频和额外麦克风是两条来源</a><a class="toc-depth-2" href="#12-屏幕区域裁剪">12. 屏幕区域裁剪</a><a class="toc-depth-2" href="#13-设备切换和重采集">13. 设备切换和重采集</a><a class="toc-depth-2" href="#14-ended-拔插和恢复">14. ended 、拔插和恢复</a><a class="toc-depth-2" href="#15-停止和释放">15. 停止和释放</a><a class="toc-depth-2" href="#16-api-参数与本项目实参">16. API 参数与本项目实参</a><a class="toc-depth-3" href="#16-1-enumeratedevices">16.1 enumerateDevices()</a><a class="toc-depth-3" href="#16-2-getusermedia-constraints-的顶层参数">16.2 getUserMedia(constraints) 的顶层参数</a><a class="toc-depth-3" href="#16-3-约束值的三种表达方式">16.3 约束值的三种表达方式</a><a class="toc-depth-3" href="#16-4-音频约束-每个字段怎样生成">16.4 音频约束：每个字段怎样生成</a><a class="toc-depth-3" href="#16-5-视频约束-每个字段怎样生成">16.5 视频约束：每个字段怎样生成</a><a class="toc-depth-3" href="#16-6-重试时浏览器实际收到什么">16.6 重试时浏览器实际收到什么</a><a class="toc-depth-3" href="#16-7-getdisplaymedia-options">16.7 getDisplayMedia(options)</a><a class="toc-depth-3" href="#16-8-屏幕采集后的-applyconstraints-constraints">16.8 屏幕采集后的 applyConstraints(constraints)</a><a class="toc-depth-3" href="#16-9-getsupportedconstraints-getcapabilities-getsettings">16.9 getSupportedConstraints() 、 getCapabilities() 、 getSettings()</a><a class="toc-depth-3" href="#16-10-区域裁剪参数">16.10 区域裁剪参数</a><a class="toc-depth-2" href="#17-事实与边界">17. 事实与边界</a><a class="toc-depth-3" href="#可以直接确认">可以直接确认</a><a class="toc-depth-3" href="#仅凭当前-js-不能确认">仅凭当前 JS 不能确认</a>
+    </nav>
+  </main>
+  <button type="button" class="back-to-top" aria-label="回到顶部">↑</button>
+</body>
+</html>

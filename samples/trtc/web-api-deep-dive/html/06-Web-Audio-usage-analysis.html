@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="TRTC 反混淆源码浏览器 Web API 深度分析：06 Web Audio 使用分析">
+  <title>06 Web Audio 使用分析 · TRTC Web API 深度学习</title>
+  <link rel="stylesheet" href="assets/docs.css">
+  <script>try{const t=localStorage.getItem('trtc-docs-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+  <script src="assets/search-index.js" defer></script>
+  <script src="assets/mermaid.min.js" defer></script>
+  <script src="assets/docs.js" defer></script>
+</head>
+<body data-page="06-Web-Audio-usage-analysis.html">
+  <header class="topbar">
+    <button type="button" class="icon-button nav-toggle" aria-label="打开目录" aria-expanded="false">☰</button>
+    <a class="brand" href="index.html">TRTC Web API 深度学习</a>
+    <div class="search-shell">
+      <label class="sr-only" for="global-search">搜索全部文档</label>
+      <input id="global-search" type="search" autocomplete="off" placeholder="搜索 API、方法、事件…" aria-controls="search-results">
+      <kbd>/</kbd>
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
+    <a class="source-link" href="../06-Web-Audio-usage-analysis.md">Markdown</a>
+    <a class="source-link" href="../../trtc.deobfuscated.js">源码</a>
+    <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
+  </header>
+
+  <aside class="sidebar" aria-label="文档目录">
+    
+    <section class="nav-group">
+      <h2>按顺序阅读</h2>
+      
+        <a class="nav-link" href="index.html">
+          文档首页
+        </a>
+        <a class="nav-link" href="00-Reading-Guide-and-Source-Map.html">
+          00 阅读说明与源码地图
+        </a>
+        <a class="nav-link" href="01-Browser-API-Panorama.html">
+          01 浏览器 API 全景
+        </a>
+        <a class="nav-link" href="02-RTCPeerConnection-usage-analysis.html">
+          02 RTCPeerConnection
+        </a>
+        <a class="nav-link" href="03-WebSocket-usage-analysis.html">
+          03 WebSocket 信令
+        </a>
+        <a class="nav-link" href="04-MediaDevices-and-Capture.html">
+          04 MediaDevices 与采集
+        </a>
+        <a class="nav-link" href="05-MediaStreamTrack-Lifecycle.html">
+          05 Track 生命周期
+        </a>
+        <a class="nav-link active" href="06-Web-Audio-usage-analysis.html">
+          06 Web Audio
+        </a>
+        <a class="nav-link" href="07-Media-Playback-and-Rendering.html">
+          07 播放与渲染
+        </a>
+        <a class="nav-link" href="08-Worker-Streams-and-Encoded-Processing.html">
+          08 Worker 与编码帧
+        </a>
+        <a class="nav-link" href="09-WebCodecs-and-WebAssembly.html">
+          09 WebCodecs 与 WASM
+        </a>
+        <a class="nav-link" href="10-Auxiliary-Browser-APIs.html">
+          10 辅助浏览器 API
+        </a>
+        <a class="nav-link" href="11-End-to-End-Business-Flows.html">
+          11 端到端业务流程
+        </a>
+    </section>
+    <section class="nav-group">
+      <h2>附录（按需查询）</h2>
+      
+        <a class="nav-link" href="Appendix-A-WebAPI-Occurrences.html">
+          A Web API 出现位置
+        </a>
+        <a class="nav-link" href="Appendix-B-Source-Method-Index.html">
+          B 源码方法索引
+        </a>
+        <a class="nav-link" href="Appendix-C-Event-Index.html">
+          C 事件索引
+        </a>
+        <a class="nav-link" href="Appendix-D-Method-Adjacency-Index.html">
+          D 方法调用邻接
+        </a>
+        <a class="nav-link" href="Appendix-E-Public-API-Call-Chains.html">
+          E 公开 API 调用链
+        </a>
+        <a class="nav-link" href="Appendix-F-Visual-Call-Flows.html">
+          F 流程图与时序图
+        </a>
+    </section>
+  </aside>
+  <div class="sidebar-backdrop" hidden></div>
+
+  <main class="layout">
+    <article class="doc-content">
+      <h1 id="06-web-audio-使用分析">06 Web Audio 使用分析<a class="heading-anchor" href="#06-web-audio-使用分析" aria-label="链接到本节">#</a></h1>
+<blockquote>
+<p>本文沿“Context → 输入 → 处理图 → 输出 → 播放恢复 → 释放”说明 SDK 的音频处理。</p>
+</blockquote>
+<h2 id="1-本章结论">1. 本章结论<a class="heading-anchor" href="#1-本章结论" aria-label="链接到本节">#</a></h2>
+<p>Web Audio 在源码中承担四种职责：</p>
+<ol>
+<li>把麦克风或远端 Track 接入 AudioNode 图。</li>
+<li>执行音量、混音、耳返、降噪/AEC 参考等处理。</li>
+<li>通过 MediaStreamDestination 重新生成可发布 Track。</li>
+<li>在浏览器自动播放限制下恢复 AudioContext 和媒体元素。</li>
+</ol>
+<p>AudioContext、AudioNode、原生 Track 和 Player 分属不同资源层，必须分别关闭。</p>
+<h2 id="2-audiocontext-的创建和状态">2. AudioContext 的创建和状态<a class="heading-anchor" href="#2-audiocontext-的创建和状态" aria-label="链接到本节">#</a></h2>
+<p>源码优先使用标准 <code>AudioContext</code>，旧 Safari 可由 Adapter 映射 <code>webkitAudioContext</code>。</p>
+<p>关键状态：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>状态</th>
+<th>含义</th>
+<th>SDK 动作</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>suspended</code></td>
+<td>尚未获得播放手势或被浏览器暂停</td>
+<td>用户交互后 <code>resume()</code></td>
+</tr>
+<tr>
+<td><code>running</code></td>
+<td>AudioNode 图正常推进</td>
+<td>正常采集、处理或播放</td>
+</tr>
+<tr>
+<td><code>closed</code></td>
+<td>已永久关闭</td>
+<td>不能再次 resume，需要新建</td>
+</tr>
+</tbody></table></div>
+<p>多个 Track 可以共享上下文，但共享意味着最终 close 必须由 AudioContext 管理器统一决定，单个 Track 不应随意关闭全局 Context。</p>
+<h2 id="3-输入怎样进入处理图">3. 输入怎样进入处理图<a class="heading-anchor" href="#3-输入怎样进入处理图" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">MediaStreamTrack
+  → new MediaStream([track])
+  → audioContext.createMediaStreamSource(stream)
+  → source AudioNode
+</code></pre>
+</div><p>输入可能来自：</p>
+<ul>
+<li>本地麦克风 source track。</li>
+<li>屏幕系统音频。</li>
+<li>背景音乐或 URL 媒体元素。</li>
+<li>远端接收 Track。</li>
+<li>AI 降噪或其他处理器的中间输出。</li>
+</ul>
+<p>创建 source node 后仍要保存 Track 与 Node 的对应关系，换轨时才能只替换目标输入。</p>
+<h2 id="4-audiopipeline-的主干">4. AudioPipeline 的主干<a class="heading-anchor" href="#4-audiopipeline-的主干" aria-label="链接到本节">#</a></h2>
+<p>典型处理图：</p>
+<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">flowchart LR
+    Track[&quot;source track&quot;] --&gt; Source[&quot;MediaStreamAudioSourceNode&quot;]
+    Source --&gt; Processor[&quot;Worklet / processor / AI NS&quot;]
+    Processor --&gt; Gain[&quot;GainNode&quot;]
+    Gain --&gt; Meter[&quot;Analyser / volume worklet&quot;]
+    Meter --&gt; Destination[&quot;MediaStreamDestination&quot;]
+    Destination --&gt; Out[&quot;outMediaTrack&quot;]</pre></div>
+<p>实际分支可跳过某些节点。处理图包装需要支持：</p>
+<ul>
+<li>动态 connect/disconnect。</li>
+<li>换输入而尽量保留后续节点。</li>
+<li>节点失败时回退原始 Track，让通话继续。</li>
+<li>close 时按所有权释放 Worklet、port、listener 和 Node。</li>
+</ul>
+<h2 id="5-输出重新变成可发布-track">5. 输出重新变成可发布 Track<a class="heading-anchor" href="#5-输出重新变成可发布-track" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">audioContext.createMediaStreamDestination()
+  → destination.stream.getAudioTracks()[0]
+  → LocalAudioTrack.outMediaTrack
+  → RTCRtpSender.replaceTrack(outMediaTrack)
+</code></pre>
+</div><p>这解释了为什么麦克风 source track 和 sender track 可能不是同一个对象。停止麦克风时，必须同时处理 source 和 destination Track。</p>
+<h2 id="6-音量检测的两条路径">6. 音量检测的两条路径<a class="heading-anchor" href="#6-音量检测的两条路径" aria-label="链接到本节">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>路径</th>
+<th>输入/输出</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>AnalyserNode</code></td>
+<td><code>getByteTimeDomainData()</code> 等</td>
+<td>简单、兼容广，通常在主线程采样</td>
+</tr>
+<tr>
+<td>AudioWorklet</td>
+<td>PCM/音量经 <code>MessagePort</code> 或 Stream 输出</td>
+<td>更稳定地运行在音频渲染线程，生命周期更复杂</td>
+</tr>
+</tbody></table></div>
+<p>音量值不是 Stats 的网络音量，也不是浏览器媒体元素 <code>volume</code>；它来自 PCM 或波形采样。</p>
+<p>采样器必须避免：</p>
+<ul>
+<li>重复创建 timer。</li>
+<li>Track ended 后仍轮询。</li>
+<li>Worklet port listener 未解绑。</li>
+<li>页面隐藏后主线程 timer 大幅漂移。</li>
+</ul>
+<h2 id="7-gain-混音和耳返">7. Gain、混音和耳返<a class="heading-anchor" href="#7-gain-混音和耳返" aria-label="链接到本节">#</a></h2>
+<ul>
+<li><code>GainNode.gain</code> 控制处理图增益，不等同于发送端编码码率。</li>
+<li>多个 source 可以连接到同一 destination 完成混音。</li>
+<li>耳返把本地处理结果连接到播放 destination，同时要防止回声路径。</li>
+<li>AEC 参考需要明确哪一路是扬声器播放参考，不能简单把所有节点相连。</li>
+</ul>
+<p>节点图动态变化时，先 connect 新路径，再 disconnect 旧路径可以降低音频间断；但要避免同一路重复连接造成音量叠加。</p>
+<h2 id="8-播放器怎样接入-audiocontext">8. 播放器怎样接入 AudioContext<a class="heading-anchor" href="#8-播放器怎样接入-audiocontext" aria-label="链接到本节">#</a></h2>
+<p>音频可以直接由 <code>&lt;audio srcObject&gt;</code> 播放，也可以先进入 Web Audio：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">remote track
+  ├─ HTMLAudioElement 直接播放
+  └─ MediaStreamSource → gain/processor → audioContext.destination
+</code></pre>
+</div><p>是否使用 Web Audio 取决于音量、输出、混音和处理需求。<code>setSinkId()</code> 属于媒体元素输出设备能力，AudioContext destination 的输出设备控制受浏览器支持限制，不能混为一谈。</p>
+<h2 id="9-自动播放恢复有两层">9. 自动播放恢复有两层<a class="heading-anchor" href="#9-自动播放恢复有两层" aria-label="链接到本节">#</a></h2>
+<p>浏览器可能同时阻止：</p>
+<ol>
+<li><code>AudioContext</code> 从 suspended 进入 running。</li>
+<li><code>HTMLMediaElement.play()</code> Promise。</li>
+</ol>
+<p>恢复流程应在真实用户手势中同时尝试：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">user click/touch
+  → audioContext.resume()
+  → 对待播放 audio/video 再次 play()
+  → 成功后移除交互提示和一次性 listener
+</code></pre>
+</div><p>只 resume Context 不能保证媒体元素播放；只重试 play 也不能保证处理图推进。</p>
+<h2 id="10-状态与错误">10. 状态与错误<a class="heading-anchor" href="#10-状态与错误" aria-label="链接到本节">#</a></h2>
+<ul>
+<li><code>NotAllowedError</code> 通常表示自动播放或权限限制，不应无限后台重试。</li>
+<li>Worklet 加载失败时应保留原始 Track 或兼容处理路径。</li>
+<li>Context closed 后调用 resume 是逻辑错误，需要重新创建资源。</li>
+<li>Node disconnect 通常允许重复调用，但 wrapper 状态必须防止重复业务事件。</li>
+</ul>
+<h2 id="11-释放顺序">11. 释放顺序<a class="heading-anchor" href="#11-释放顺序" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">停止发布/播放
+  → 解绑音量和 port listener
+  → 停 Worklet/processor 任务
+  → disconnect source/processor/gain/analyser/destination
+  → stop 独立生成的 destination track
+  → 清 MediaStream 和 Node 引用
+  → 若无人使用，再由管理器 close AudioContext
+</code></pre>
+</div><p>只 <code>track.stop()</code> 不会自动断开所有 AudioNode；只 <code>disconnect()</code> 也不会停止原生采集设备。</p>
+<h2 id="12-api-参数与本项目实参">12. API 参数与本项目实参<a class="heading-anchor" href="#12-api-参数与本项目实参" aria-label="链接到本节">#</a></h2>
+<h3 id="12-1-new-audiocontext-options">12.1 <code>new AudioContext(options)</code><a class="heading-anchor" href="#12-1-new-audiocontext-options" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/AudioContext/AudioContext" target="_blank" rel="noreferrer">AudioContext()</a></p>
+<p>源码 L18454—L18492 先按 <code>AudioContext → webkitAudioContext → mozAudioContext</code> 选择构造器，再创建全局单例：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">IV = new AudioContextClass({ sampleRate: 48000 });
+IV.onstatechange = () =&gt; {
+  logger.info(`context state: ${IV.state}`);
+  observableCreate();
+};
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>option</th>
+<th>标准含义/可选值</th>
+<th>本项目传值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>latencyHint</code></td>
+<td><code>&#39;interactive&#39;</code>、<code>&#39;balanced&#39;</code>、<code>&#39;playback&#39;</code> 或期望秒数；提示浏览器在延迟和功耗间取舍</td>
+<td>未传，使用浏览器默认</td>
+</tr>
+<tr>
+<td><code>sampleRate</code></td>
+<td>目标采样率，必须是实现支持的值</td>
+<td>固定 <code>48000</code> Hz，与 WebRTC 常用音频时钟和屏幕音频约束一致</td>
+</tr>
+<tr>
+<td><code>sinkId</code></td>
+<td>支持浏览器可指定输出设备或静音 sink</td>
+<td>构造时未传；播放器输出设备另走 <code>setSinkId()</code></td>
+</tr>
+<tr>
+<td><code>renderSizeHint</code></td>
+<td>新/实验选项，用于提示渲染 quantum 大小</td>
+<td>未传</td>
+</tr>
+</tbody></table></div>
+<p>构造器可能因不支持采样率、资源上限或缺少实现而抛错，所以源码捕获后每 1000 ms 重试。该单例由所有音频 Track、Player 和混音图共享，不是每条 Track 一个 Context。</p>
+<h3 id="12-2-audiocontext-resume-与-suspend">12.2 <code>audioContext.resume()</code> 与 <code>suspend()</code><a class="heading-anchor" href="#12-2-audiocontext-resume-与-suspend" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/AudioContext/resume" target="_blank" rel="noreferrer">resume()</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/AudioContext/suspend" target="_blank" rel="noreferrer">suspend()</a></p>
+<p>两个方法都无参数并返回 Promise。</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">if (context.state === &#39;running&#39;) return resolve();
+context.resume().then(resolve, reject);
+</code></pre>
+</div><p>本项目对 <code>resume()</code> 做 1 秒节流：距上次调用不足 1 秒时，先清旧 timer，再 <code>setTimeout(..., 1000)</code>；成功后不返回新 Track，只表示渲染时钟恢复。失败会监听 <code>visibilitychange</code>，并保留 click 恢复入口。</p>
+<p>当检测到 <code>state===&#39;running&#39;</code> 但 <code>currentTime</code> 长时间不增长时，源码调用无参 <code>suspend()</code>，等待状态机随后重新 resume。这是修复“假 running”，不是用户暂停播放。</p>
+<h3 id="12-3-createmediastreamsource-stream">12.3 <code>createMediaStreamSource(stream)</code><a class="heading-anchor" href="#12-3-createmediastreamsource-stream" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/AudioContext/createMediaStreamSource" target="_blank" rel="noreferrer">createMediaStreamSource()</a></p>
+<p>唯一参数必须是 <code>MediaStream</code>。项目持有的输入通常是单条 <code>MediaStreamTrack</code>，所以先包装：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">sourceNode = audioCtx.createMediaStreamSource(
+  new MediaStream([sourceTrack])
+);
+</code></pre>
+</div><p>这里 <code>sourceTrack</code> 是麦克风、屏幕音频、远端音频或调用方自定义音频 Track。临时 MediaStream 只为满足 Web Audio API 参数类型；节点读取的仍是同一条原生 Track，没有 clone，也不会接管其 stop 生命周期。</p>
+<h3 id="12-4-createmediaelementsource-element">12.4 <code>createMediaElementSource(element)</code><a class="heading-anchor" href="#12-4-createmediaelementsource-element" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/AudioContext/createMediaElementSource" target="_blank" rel="noreferrer">createMediaElementSource()</a></p>
+<p>唯一参数是 <code>HTMLMediaElement</code>。<code>getOrCreateAudioNode(source)</code> 在 <code>source instanceof HTMLAudioElement</code> 时传入这个元素；否则若是 <code>MediaStreamTrack</code> 才走上一节。创建后元素的音频被路由到 AudioContext 图，必须把节点继续连接到 destination 才能听见。</p>
+<p>项目用 <code>WeakMap</code> 以 source 对象为键缓存节点，因为同一个 media element 通常不能在同一 Context 中重复创建多个 <code>MediaElementAudioSourceNode</code>。</p>
+<h3 id="12-5-createmediastreamdestination">12.5 <code>createMediaStreamDestination()</code><a class="heading-anchor" href="#12-5-createmediastreamdestination" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/AudioContext/createMediaStreamDestination" target="_blank" rel="noreferrer">createMediaStreamDestination()</a></p>
+<p>该方法没有参数，返回 <code>MediaStreamAudioDestinationNode</code>。其 <code>stream</code> 属性包含处理后的音频 Track：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">this.destination = audioContext.createMediaStreamDestination();
+this.destination.channelCount = 1;
+
+get mixTrack() {
+  return this.destination.stream.getAudioTracks()[0];
+}
+</code></pre>
+</div><p>因此 Web Audio 图的“输出”不是扬声器，而是一个新的可发布 Track。项目将 destination 声道数设为 1；混音后的 <code>mixTrack</code> 随后进入 Track 包装，再进入 sender <code>replaceTrack()</code>。</p>
+<h3 id="12-6-creategain-与-gain-value">12.6 <code>createGain()</code> 与 <code>gain.value</code><a class="heading-anchor" href="#12-6-creategain-与-gain-value" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/BaseAudioContext/createGain" target="_blank" rel="noreferrer">createGain()</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/GainNode/gain" target="_blank" rel="noreferrer">GainNode.gain</a></p>
+<p><code>createGain()</code> 无参数，返回 <code>GainNode</code>；增益通过 <code>gain</code> 这个 <code>AudioParam</code> 设置。源码：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">if (volume !== 1) {
+  gainNode ||= audioContext.createGain();
+  gainNode.gain.value = volume;
+} else {
+  deleteGainNode();
+}
+</code></pre>
+</div><p><code>volume</code> 是 SDK 归一化后的线性倍率，不是 dB。<code>1</code> 表示原幅度并直接删除多余节点；<code>0</code> 静音；大于 <code>1</code> 会放大并可能削波。耳返也创建独立 GainNode，把公开耳返音量写入 <code>gain.value</code>。</p>
+<p>项目使用直接赋 <code>value</code>，没有调用 <code>setValueAtTime()</code> 或 ramp，因此这是立即变化，不是平滑渐变。</p>
+<h3 id="12-7-audionode-connect-destination-output-input">12.7 <code>AudioNode.connect(destination, output?, input?)</code><a class="heading-anchor" href="#12-7-audionode-connect-destination-output-input" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/AudioNode/connect" target="_blank" rel="noreferrer">connect()</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/AudioNode/disconnect" target="_blank" rel="noreferrer">disconnect()</a></p>
+<p>包装层 <code>_connect(e, t=0)</code> 最终执行：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">(this.node2 || this.node).connect(destinationNode, 0, inputIndex);
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>标准含义</th>
+<th>本项目传值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>destination</code></td>
+<td>目标 <code>AudioNode</code> 或 <code>AudioParam</code></td>
+<td>包装对象下一节点的原生 node</td>
+</tr>
+<tr>
+<td><code>output</code></td>
+<td>源节点输出口索引，默认 <code>0</code></td>
+<td>固定 <code>0</code></td>
+</tr>
+<tr>
+<td><code>input</code></td>
+<td>目标节点输入口索引，默认 <code>0</code></td>
+<td><code>pipeTo(next, index)</code> 保存的 index；AEC 混音支路显式用 <code>1</code>，主链用 <code>0</code></td>
+</tr>
+</tbody></table></div>
+<p>主链是 <code>source → aec → denoiser → voiceChanger → gain → destination</code>；静音参考支路是 <code>silentNode → mixNode → aec(input 1)</code>。这里的第二路输入是图拓扑参数，不是声道号。</p>
+<p><code>disconnect(destination)</code> 的参数是之前连接的目标节点。项目遍历 <code>connectedNodes</code> 精确断开，再清 Set；不是无参断开全部，以免误伤同一个源的其他有效分支。</p>
+<h3 id="12-8-audioworklet-addmodule-moduleurl-options">12.8 <code>audioWorklet.addModule(moduleURL, options?)</code><a class="heading-anchor" href="#12-8-audioworklet-addmodule-moduleurl-options" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/Worklet/addModule" target="_blank" rel="noreferrer">AudioWorklet.addModule()</a></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>含义</th>
+<th>本项目传值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>moduleURL</code></td>
+<td>包含 <code>registerProcessor()</code> 的脚本 URL</td>
+<td><code>URL.createObjectURL(new Blob([processorCode], {type:&#39;application/javascript&#39;}))</code> 产生的 blob URL</td>
+</tr>
+<tr>
+<td><code>options.credentials</code></td>
+<td><code>&#39;omit&#39;</code>、<code>&#39;same-origin&#39;</code>、<code>&#39;include&#39;</code>，控制跨源凭据</td>
+<td>未传；blob URL 不需要跨源凭据</td>
+</tr>
+</tbody></table></div>
+<p>返回 Promise；成功后才能创建相同 processor name 的 AudioWorkletNode。失败就降级到 ScriptProcessor，不把整条通话判失败。</p>
+<h3 id="12-9-new-audioworkletnode-context-name-options">12.9 <code>new AudioWorkletNode(context, name, options?)</code><a class="heading-anchor" href="#12-9-new-audioworkletnode-context-name-options" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/AudioWorkletNode/AudioWorkletNode" target="_blank" rel="noreferrer">AudioWorkletNode()</a></p>
+<p>音量检测实例的原生调用是：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">new AudioWorkletNode(audioContext, &#39;volume-meter&#39;);
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>含义</th>
+<th>本项目实参</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>context</code></td>
+<td>已注册模块的 AudioContext</td>
+<td>全局音频 context</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>processor 在 <code>registerProcessor(name, class)</code> 中注册的名称</td>
+<td>固定 <code>&#39;volume-meter&#39;</code></td>
+</tr>
+<tr>
+<td><code>options.numberOfInputs/numberOfOutputs/outputChannelCount</code></td>
+<td>节点 I/O 布局</td>
+<td>未传，使用 processor/浏览器默认</td>
+</tr>
+<tr>
+<td><code>options.parameterData</code></td>
+<td>AudioParam 初始值</td>
+<td>未传</td>
+</tr>
+<tr>
+<td><code>options.processorOptions</code></td>
+<td>结构化克隆给 processor 构造器的自定义数据</td>
+<td>未传</td>
+</tr>
+<tr>
+<td><code>options.channelCount/channelCountMode/channelInterpretation</code></td>
+<td>声道处理策略</td>
+<td>未传</td>
+</tr>
+</tbody></table></div>
+<p>节点的 <code>port.onmessage</code> 接收 worklet 回传对象；源码读取 <code>event.data.volume</code>、<code>volumeDb</code>、<code>cacheLen</code>、<code>outputLen</code>。这一步没有额外 API 参数，但字段是项目自定义消息协议，不属于 Web Audio 标准字段。</p>
+<h3 id="12-10-createanalyser-与-getbytetimedomaindata-array">12.10 <code>createAnalyser()</code> 与 <code>getByteTimeDomainData(array)</code><a class="heading-anchor" href="#12-10-createanalyser-与-getbytetimedomaindata-array" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/BaseAudioContext/createAnalyser" target="_blank" rel="noreferrer">createAnalyser()</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/AnalyserNode/getByteTimeDomainData" target="_blank" rel="noreferrer">getByteTimeDomainData()</a></p>
+<p><code>createAnalyser()</code> 无参数。包装器默认 <code>fftSize=256</code>，设置后按 <code>frequencyBinCount</code> 创建 <code>Uint8Array</code>：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">analyser.fftSize = 256;
+dataArray = new Uint8Array(analyser.frequencyBinCount);
+analyser.getByteTimeDomainData(dataArray);
+</code></pre>
+</div><p><code>getByteTimeDomainData(array)</code> 的唯一参数是由调用方提供并被原地写入的 <code>Uint8Array</code>；没有返回新数组。项目用最大样本值近似音量，也用数组生成波形路径。<code>fftSize</code> 必须是允许的 2 次幂范围；本项目固定 256。</p>
+<h3 id="12-11-createscriptprocessor-buffersize-inputchannels-outputchannels-fallback">12.11 <code>createScriptProcessor(bufferSize, inputChannels, outputChannels)</code> fallback<a class="heading-anchor" href="#12-11-createscriptprocessor-buffersize-inputchannels-outputchannels-fallback" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/BaseAudioContext/createScriptProcessor" target="_blank" rel="noreferrer">createScriptProcessor()</a></p>
+<p>这是已废弃的兼容 API，仅在 AudioWorklet 初始化失败时使用：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">audioContext.createScriptProcessor(2048, 1, 1);
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th align="right">本项目值</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>bufferSize</code></td>
+<td align="right"><code>2048</code> 帧</td>
+<td>每次 <code>audioprocess</code> 回调的缓冲大小；越大越稳但延迟更高</td>
+</tr>
+<tr>
+<td><code>numberOfInputChannels</code></td>
+<td align="right"><code>1</code></td>
+<td>单声道输入</td>
+</tr>
+<tr>
+<td><code>numberOfOutputChannels</code></td>
+<td align="right"><code>1</code></td>
+<td>单声道输出</td>
+</tr>
+</tbody></table></div>
+<p>回调读取 <code>event.inputBuffer.getChannelData(0)</code>；参数 <code>0</code> 是第一声道，返回 <code>Float32Array</code>。项目计算均方根音量。销毁时将 <code>onaudioprocess=null</code>，避免继续持有实例回调。</p>
+<h3 id="12-12-释放边界">12.12 释放边界<a class="heading-anchor" href="#12-12-释放边界" aria-label="链接到本节">#</a></h3>
+<p>原生 <code>AudioContext.close()</code> 无参数并返回 Promise，但当前全局单例在普通 Track close 中没有关闭，因为其他 Track/Player 仍可能共用。单条 Track 的释放只删除/断开自己创建的 nodes、port 监听和处理器引用。若在单 Track stop 时关闭全局 Context，会同时破坏其他音频链。</p>
+<h2 id="13-事实与边界">13. 事实与边界<a class="heading-anchor" href="#13-事实与边界" aria-label="链接到本节">#</a></h2>
+<h3 id="可以直接确认">可以直接确认<a class="heading-anchor" href="#可以直接确认" aria-label="链接到本节">#</a></h3>
+<ul>
+<li>source Track 可以经 AudioNode 图产生独立 out Track。</li>
+<li>音量检测同时存在 Analyser 和 Worklet 路径。</li>
+<li>自动播放恢复同时涉及 Context 和媒体元素。</li>
+<li>音频管线失败时应尽量回退，保证通话继续。</li>
+</ul>
+<h3 id="合理推断">合理推断<a class="heading-anchor" href="#合理推断" aria-label="链接到本节">#</a></h3>
+<ul>
+<li>全局 Context/Manager 用于减少多 Track 重复创建音频上下文。</li>
+<li>动态节点包装是为了在设备切换和处理器开关时保留稳定输出。</li>
+</ul>
+<h3 id="不能确认">不能确认<a class="heading-anchor" href="#不能确认" aria-label="链接到本节">#</a></h3>
+<ul>
+<li>浏览器内部 AEC、AGC、NS 与 SDK 自定义处理的精确组合效果，需要真实设备和声学环境验证。</li>
+</ul>
+
+      <nav class="page-pagination" aria-label="上一篇和下一篇">
+        <a class="previous" href="05-MediaStreamTrack-Lifecycle.html"><span>上一篇</span>05 MediaStreamTrack 生命周期</a>
+        <a class="next" href="07-Media-Playback-and-Rendering.html"><span>下一篇</span>07 媒体播放与渲染</a>
+      </nav>
+    </article>
+    
+    <nav class="page-toc" aria-label="本页目录">
+      <h2>本页目录</h2>
+      <a class="toc-depth-2" href="#1-本章结论">1. 本章结论</a><a class="toc-depth-2" href="#2-audiocontext-的创建和状态">2. AudioContext 的创建和状态</a><a class="toc-depth-2" href="#3-输入怎样进入处理图">3. 输入怎样进入处理图</a><a class="toc-depth-2" href="#4-audiopipeline-的主干">4. AudioPipeline 的主干</a><a class="toc-depth-2" href="#5-输出重新变成可发布-track">5. 输出重新变成可发布 Track</a><a class="toc-depth-2" href="#6-音量检测的两条路径">6. 音量检测的两条路径</a><a class="toc-depth-2" href="#7-gain-混音和耳返">7. Gain、混音和耳返</a><a class="toc-depth-2" href="#8-播放器怎样接入-audiocontext">8. 播放器怎样接入 AudioContext</a><a class="toc-depth-2" href="#9-自动播放恢复有两层">9. 自动播放恢复有两层</a><a class="toc-depth-2" href="#10-状态与错误">10. 状态与错误</a><a class="toc-depth-2" href="#11-释放顺序">11. 释放顺序</a><a class="toc-depth-2" href="#12-api-参数与本项目实参">12. API 参数与本项目实参</a><a class="toc-depth-3" href="#12-1-new-audiocontext-options">12.1 new AudioContext(options)</a><a class="toc-depth-3" href="#12-2-audiocontext-resume-与-suspend">12.2 audioContext.resume() 与 suspend()</a><a class="toc-depth-3" href="#12-3-createmediastreamsource-stream">12.3 createMediaStreamSource(stream)</a><a class="toc-depth-3" href="#12-4-createmediaelementsource-element">12.4 createMediaElementSource(element)</a><a class="toc-depth-3" href="#12-5-createmediastreamdestination">12.5 createMediaStreamDestination()</a><a class="toc-depth-3" href="#12-6-creategain-与-gain-value">12.6 createGain() 与 gain.value</a><a class="toc-depth-3" href="#12-7-audionode-connect-destination-output-input">12.7 AudioNode.connect(destination, output?, input?)</a><a class="toc-depth-3" href="#12-8-audioworklet-addmodule-moduleurl-options">12.8 audioWorklet.addModule(moduleURL, options?)</a><a class="toc-depth-3" href="#12-9-new-audioworkletnode-context-name-options">12.9 new AudioWorkletNode(context, name, options?)</a><a class="toc-depth-3" href="#12-10-createanalyser-与-getbytetimedomaindata-array">12.10 createAnalyser() 与 getByteTimeDomainData(array)</a><a class="toc-depth-3" href="#12-11-createscriptprocessor-buffersize-inputchannels-outputchannels-fallback">12.11 createScriptProcessor(bufferSize, inputChannels, outputChannels) fallback</a><a class="toc-depth-3" href="#12-12-释放边界">12.12 释放边界</a><a class="toc-depth-2" href="#13-事实与边界">13. 事实与边界</a><a class="toc-depth-3" href="#可以直接确认">可以直接确认</a><a class="toc-depth-3" href="#合理推断">合理推断</a><a class="toc-depth-3" href="#不能确认">不能确认</a>
+    </nav>
+  </main>
+  <button type="button" class="back-to-top" aria-label="回到顶部">↑</button>
+</body>
+</html>

@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="TRTC 反混淆源码浏览器 Web API 深度分析：附录 F 流程图与时序图">
+  <title>附录 F 流程图与时序图 · TRTC Web API 深度学习</title>
+  <link rel="stylesheet" href="assets/docs.css">
+  <script>try{const t=localStorage.getItem('trtc-docs-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+  <script src="assets/search-index.js" defer></script>
+  <script src="assets/mermaid.min.js" defer></script>
+  <script src="assets/docs.js" defer></script>
+</head>
+<body data-page="Appendix-F-Visual-Call-Flows.html">
+  <header class="topbar">
+    <button type="button" class="icon-button nav-toggle" aria-label="打开目录" aria-expanded="false">☰</button>
+    <a class="brand" href="index.html">TRTC Web API 深度学习</a>
+    <div class="search-shell">
+      <label class="sr-only" for="global-search">搜索全部文档</label>
+      <input id="global-search" type="search" autocomplete="off" placeholder="搜索 API、方法、事件…" aria-controls="search-results">
+      <kbd>/</kbd>
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
+    <a class="source-link" href="../Appendix-F-Visual-Call-Flows.md">Markdown</a>
+    <a class="source-link" href="../../trtc.deobfuscated.js">源码</a>
+    <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
+  </header>
+
+  <aside class="sidebar" aria-label="文档目录">
+    
+    <section class="nav-group">
+      <h2>按顺序阅读</h2>
+      
+        <a class="nav-link" href="index.html">
+          文档首页
+        </a>
+        <a class="nav-link" href="00-Reading-Guide-and-Source-Map.html">
+          00 阅读说明与源码地图
+        </a>
+        <a class="nav-link" href="01-Browser-API-Panorama.html">
+          01 浏览器 API 全景
+        </a>
+        <a class="nav-link" href="02-RTCPeerConnection-usage-analysis.html">
+          02 RTCPeerConnection
+        </a>
+        <a class="nav-link" href="03-WebSocket-usage-analysis.html">
+          03 WebSocket 信令
+        </a>
+        <a class="nav-link" href="04-MediaDevices-and-Capture.html">
+          04 MediaDevices 与采集
+        </a>
+        <a class="nav-link" href="05-MediaStreamTrack-Lifecycle.html">
+          05 Track 生命周期
+        </a>
+        <a class="nav-link" href="06-Web-Audio-usage-analysis.html">
+          06 Web Audio
+        </a>
+        <a class="nav-link" href="07-Media-Playback-and-Rendering.html">
+          07 播放与渲染
+        </a>
+        <a class="nav-link" href="08-Worker-Streams-and-Encoded-Processing.html">
+          08 Worker 与编码帧
+        </a>
+        <a class="nav-link" href="09-WebCodecs-and-WebAssembly.html">
+          09 WebCodecs 与 WASM
+        </a>
+        <a class="nav-link" href="10-Auxiliary-Browser-APIs.html">
+          10 辅助浏览器 API
+        </a>
+        <a class="nav-link" href="11-End-to-End-Business-Flows.html">
+          11 端到端业务流程
+        </a>
+    </section>
+    <section class="nav-group">
+      <h2>附录（按需查询）</h2>
+      
+        <a class="nav-link" href="Appendix-A-WebAPI-Occurrences.html">
+          A Web API 出现位置
+        </a>
+        <a class="nav-link" href="Appendix-B-Source-Method-Index.html">
+          B 源码方法索引
+        </a>
+        <a class="nav-link" href="Appendix-C-Event-Index.html">
+          C 事件索引
+        </a>
+        <a class="nav-link" href="Appendix-D-Method-Adjacency-Index.html">
+          D 方法调用邻接
+        </a>
+        <a class="nav-link" href="Appendix-E-Public-API-Call-Chains.html">
+          E 公开 API 调用链
+        </a>
+        <a class="nav-link active" href="Appendix-F-Visual-Call-Flows.html">
+          F 流程图与时序图
+        </a>
+    </section>
+  </aside>
+  <div class="sidebar-backdrop" hidden></div>
+
+  <main class="layout">
+    <article class="doc-content">
+      <h1 id="附录-f-流程图与时序图">附录 F 流程图与时序图<a class="heading-anchor" href="#附录-f-流程图与时序图" aria-label="链接到本节">#</a></h1>
+<blockquote>
+<p>本附录集中保留跨对象和跨 Promise 的完整 Mermaid 图；顺序文字解释见主线 <code>11-End-to-End-Business-Flows.md</code>。</p>
+</blockquote>
+<blockquote>
+<p>本文把跨对象、跨 Promise 和跨浏览器事件的链路画成 Mermaid 图。图中方法名和 Web API 均来自 <code>trtc.deobfuscated.js</code>；细节、参数和异常边界仍以对应专项为准。</p>
+</blockquote>
+<h2 id="1-总体分层-公开-api-怎样走到浏览器">1. 总体分层：公开 API 怎样走到浏览器<a class="heading-anchor" href="#1-总体分层-公开-api-怎样走到浏览器" aria-label="链接到本节">#</a></h2>
+<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">flowchart TB
+    Caller[&quot;业务调用者&quot;] --&gt; Decorator[&quot;校验 / 去重 / 合并 / 防抖 / 限频装饰器&quot;]
+    Decorator --&gt; Facade[&quot;TRTCSdk 门面方法 L34100-L36520&quot;]
+    Facade --&gt; Room[&quot;TRTCRoom 房间编排&quot;]
+    Facade --&gt; Track[&quot;Local / Remote Track&quot;]
+    Facade --&gt; Plugin[&quot;Plugin 实例&quot;]
+
+    Room --&gt; Schedule[&quot;Fetch / XHR 调度&quot;]
+    Room --&gt; Signal[&quot;WebSocket 信令&quot;]
+    Room --&gt; RTC[&quot;MPC / SPC RTCPeerConnection&quot;]
+    Track --&gt; Capture[&quot;MediaDevices / MediaStreamTrack&quot;]
+    Track --&gt; Audio[&quot;Web Audio&quot;]
+    Track --&gt; Player[&quot;HTMLMediaElement / Canvas / WebGL&quot;]
+    Plugin --&gt; Advanced[&quot;Worker / Streams / WebCodecs / WASM&quot;]
+    RTC --&gt; Advanced
+
+    Schedule --&gt; InternalEvent[&quot;Room / Track 内部事件&quot;]
+    Signal --&gt; InternalEvent
+    RTC --&gt; InternalEvent
+    Capture --&gt; InternalEvent
+    Audio --&gt; InternalEvent
+    Player --&gt; InternalEvent
+    Advanced --&gt; InternalEvent
+    InternalEvent --&gt; PublicEvent[&quot;TRTC.EVENT 对外事件&quot;]
+    PublicEvent --&gt; Caller</pre></div>
+<p>阅读要点：门面方法往往不直接出现 Web API；它先把参数交给 Room、Track、Player 或 Plugin。浏览器事件又沿相反方向逐级转成 SDK 事件。</p>
+<h2 id="2-进入房间-六个不同的完成点">2. 进入房间：六个不同的完成点<a class="heading-anchor" href="#2-进入房间-六个不同的完成点" aria-label="链接到本节">#</a></h2>
+<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">sequenceDiagram
+    autonumber
+    actor App as 业务代码
+    participant SDK as TRTCSdk.enterRoom
+    participant Room as TRTCRoom
+    participant HTTP as Fetch / XHR
+    participant Signal as SignalChannel Xj
+    participant WS as WebSocket
+    participant PC as RTCPeerConnection
+    participant Player as RemoteTrack / Player
+
+    App-&gt;&gt;SDK: enterRoom(params)
+    SDK-&gt;&gt;Room: join(roomParams, scene)
+    opt 需要调度
+        Room-&gt;&gt;HTTP: schedule()
+        HTTP--&gt;&gt;Room: domains / ICE servers / policy
+    end
+    Room-&gt;&gt;Signal: initialize + connect
+    Signal-&gt;&gt;WS: new WebSocket(mainUrl)
+    Signal-&gt;&gt;WS: new WebSocket(backupUrl)
+    WS--&gt;&gt;Signal: open
+    Note over Signal,WS: 完成点 1：WebSocket OPEN
+    WS--&gt;&gt;Signal: CHANNEL_SETUP_RESULT
+    Note over Signal,WS: 完成点 2：应用信道 setup
+    Room-&gt;&gt;Signal: sendWaitForResponse(join)
+    Signal-&gt;&gt;WS: send(JSON envelope)
+    WS--&gt;&gt;Signal: JOIN_ROOM_RESULT
+    Signal--&gt;&gt;Room: tinyId / ability / relay
+    Note over Room,Signal: 完成点 3：进房 RPC
+    Room-&gt;&gt;PC: initialize / connect / publish / subscribe
+    PC--&gt;&gt;Room: connectionstatechange connected
+    Note over Room,PC: 完成点 4：媒体连接
+    PC--&gt;&gt;Room: track event
+    Note over Room,PC: 完成点 5：远端 Track 到达
+    Room-&gt;&gt;Player: play(view)
+    Player--&gt;&gt;SDK: first-video-frame
+    SDK--&gt;&gt;App: FIRST_VIDEO_FRAME
+    Note over App,Player: 完成点 6：用户看到首帧</pre></div>
+<p><code>enterRoom()</code> 的 Promise 成功不能替代 PC connected 或首帧事件。详细信令阶段见 <code>03-WebSocket-usage-analysis.md</code>，媒体阶段见 <code>02-RTCPeerConnection-usage-analysis.md</code>。</p>
+<h2 id="3-websocket-主备竞速和清理">3. WebSocket 主备竞速和清理<a class="heading-anchor" href="#3-websocket-主备竞速和清理" aria-label="链接到本节">#</a></h2>
+<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">sequenceDiagram
+    autonumber
+    participant X as Xj.connect
+    participant M as 主 WebSocket
+    participant B as 备 WebSocket
+    participant P as promiseAny
+
+    par 主地址
+        X-&gt;&gt;M: connectWS(mainUrl, timeout)
+    and 备地址
+        X-&gt;&gt;B: connectWS(backupUrl, timeout)
+    end
+    alt 主地址先 open
+        M--&gt;&gt;P: resolve(main)
+        P--&gt;&gt;X: socketInUse = main
+        X-&gt;&gt;B: unbind + close(1000)
+    else 备地址先 open
+        B--&gt;&gt;P: resolve(backup)
+        P--&gt;&gt;X: socketInUse = backup
+        X-&gt;&gt;M: unbind + close(1000)
+    else 两条都失败或超时
+        M--&gt;&gt;P: reject
+        B--&gt;&gt;P: reject
+        P--&gt;&gt;X: Aggregate failure
+        X-&gt;&gt;X: retry decorator + refresh URL
+    end
+    X-&gt;&gt;X: bind close / error / message</pre></div>
+<p>临时 <code>onopen/onclose/onerror</code> 只负责单次建连 Promise；选出连接后再换成长生命周期 <code>addEventListener</code>，关闭时使用同一绑定函数对称解绑。</p>
+<h2 id="4-websocket-rpc-先监听响应-再发送请求">4. WebSocket RPC：先监听响应，再发送请求<a class="heading-anchor" href="#4-websocket-rpc-先监听响应-再发送请求" aria-label="链接到本节">#</a></h2>
+<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">sequenceDiagram
+    autonumber
+    participant Caller as Room / Transport
+    participant RPC as sendWaitForResponse
+    participant EE as Signal EventEmitter
+    participant WS as WebSocket
+    participant Timer as timeout timer
+
+    Caller-&gt;&gt;RPC: options command / responseEvent / timeout
+    RPC-&gt;&gt;EE: once(responseEvent, seqMatcher)
+    RPC-&gt;&gt;EE: once(disconnect/error, reject)
+    RPC-&gt;&gt;Timer: setTimeout(reject)
+    RPC-&gt;&gt;WS: send(JSON.stringify(envelope))
+    WS--&gt;&gt;EE: message -&gt; JSON.parse -&gt; emit(event)
+    alt seq 和结果匹配
+        EE--&gt;&gt;RPC: resolve(response)
+        RPC-&gt;&gt;Timer: clearTimeout
+        RPC-&gt;&gt;EE: remove pending listeners
+        RPC--&gt;&gt;Caller: Promise resolved
+    else 业务错误
+        EE--&gt;&gt;RPC: reject(RtcError)
+    else timeout / disconnect
+        Timer--&gt;&gt;RPC: reject
+        RPC--&gt;&gt;Caller: retry policy 或上抛
+    end</pre></div>
+<p>先注册监听再 <code>send()</code> 可避免极快响应在 listener 建立前到达。RPC 完成后必须同时清 timer 和事件监听。</p>
+<h2 id="5-websocket-重连-会话恢复和重新进房">5. WebSocket 重连、会话恢复和重新进房<a class="heading-anchor" href="#5-websocket-重连-会话恢复和重新进房" aria-label="链接到本节">#</a></h2>
+<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">stateDiagram-v2
+    [*] --&gt; DISCONNECTED
+    DISCONNECTED --&gt; CONNECTING: connect()
+    CONNECTING --&gt; CONNECTED: WebSocket open
+    CONNECTING --&gt; CONNECTING: connect retry
+    CONNECTED --&gt; CONNECTED: message 更新 lastActiveTime
+    CONNECTED --&gt; RECONNECTING: abnormal close / startReconnection
+    RECONNECTING --&gt; CONNECTED: 新 socket + reconnect RPC 成功
+    RECONNECTING --&gt; REJOINING: 旧会话恢复失败
+    REJOINING --&gt; CONNECTED: Room.reJoin 成功
+    REJOINING --&gt; DISCONNECTED: 重试耗尽
+    CONNECTED --&gt; KEEP_ALIVE: exitRoom 且 keepAlive 可用
+    KEEP_ALIVE --&gt; CONNECTED: 后续 join 复用
+    KEEP_ALIVE --&gt; DISCONNECTED: idle timer / close
+    CONNECTED --&gt; DISCONNECTED: close(1000)</pre></div>
+<p><code>isOnline</code> 不是 Ping/Pong；它要求状态为 CONNECTED 且最近 12 秒内收到过服务端消息。</p>
+<h2 id="6-本地麦克风-捕获-处理-播放参考和发布">6. 本地麦克风：捕获、处理、播放参考和发布<a class="heading-anchor" href="#6-本地麦克风-捕获-处理-播放参考和发布" aria-label="链接到本节">#</a></h2>
+<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">sequenceDiagram
+    autonumber
+    actor App as 业务代码
+    participant SDK as startLocalAudio
+    participant LAT as LocalAudioTrack
+    participant MD as navigator.mediaDevices
+    participant WA as Web Audio
+    participant Room as TRTCRoom
+    participant Sender as RTCRtpSender
+    participant Signal as WebSocket
+
+    App-&gt;&gt;SDK: startLocalAudio(config)
+    SDK-&gt;&gt;LAT: new + profile / volume / 3A
+    LAT-&gt;&gt;MD: getUserMedia({audio: constraints})
+    MD--&gt;&gt;LAT: MediaStreamTrack
+    LAT-&gt;&gt;WA: createMediaStreamSource(track)
+    WA-&gt;&gt;WA: processor / gain / analyser / destination
+    WA--&gt;&gt;LAT: outMediaTrack
+    opt publish=true 且已进房
+        SDK-&gt;&gt;Room: publish(LocalAudioTrack)
+        Room-&gt;&gt;Sender: addTrack / replaceTrack / setParameters
+        Room-&gt;&gt;Signal: publish / publish-change RPC
+    end
+    SDK-&gt;&gt;WA: ear monitor muted / volume
+    SDK--&gt;&gt;App: publish/player/device events</pre></div>
+<p><code>microphoneId</code> 进入 <code>deviceId</code> 约束；<code>audioTrack</code> 走 custom source；3A 字段进入 getUserMedia 或后续更新分支。</p>
+<h2 id="7-本地摄像头更新决策">7. 本地摄像头更新决策<a class="heading-anchor" href="#7-本地摄像头更新决策" aria-label="链接到本节">#</a></h2>
+<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">flowchart TD
+    Update[&quot;updateLocalVideo(config)&quot;] --&gt; Capturing{&quot;当前 capture=true?&quot;}
+    Capturing -- 是 --&gt; StopCapture{&quot;新 capture=false?&quot;}
+    StopCapture -- 是 --&gt; Stop[&quot;stopCapture()&quot;]
+    StopCapture -- 否 --&gt; Source{&quot;输入源变化?&quot;}
+    Source -- cameraId --&gt; SwitchId[&quot;switchDevice(cameraId)&quot;]
+    Source -- useFrontCamera --&gt; SwitchFacing[&quot;switchDevice(user/environment)&quot;]
+    Source -- videoTrack --&gt; Custom[&quot;setInputMediaStreamTrack(custom)&quot;]
+    Source -- 无 --&gt; Profile
+    Capturing -- 否 --&gt; StartCapture{&quot;新 capture=true?&quot;}
+    StartCapture -- 是 --&gt; Merge[&quot;合并旧/新 deviceId、facingMode、customSource&quot;]
+    Merge --&gt; GUM[&quot;capture() -&gt; getUserMedia()&quot;]
+    StartCapture -- 否 --&gt; Profile[&quot;profile / contentHint / small / rotation&quot;]
+    SwitchId --&gt; Profile
+    SwitchFacing --&gt; Profile
+    Custom --&gt; Profile
+    Stop --&gt; Profile
+    GUM --&gt; Profile
+    Profile --&gt; Apply[&quot;applyConstraints 或重采集；sender.setParameters&quot;]
+    Apply --&gt; Publish{&quot;publish 变化?&quot;}
+    Publish -- 发布 --&gt; Pub[&quot;Room.publish&quot;]
+    Publish -- 取消 --&gt; Unpub[&quot;Room.unpublish&quot;]
+    Publish -- 不变 --&gt; Play
+    Pub --&gt; Play[&quot;更新 view / objectFit / mirror&quot;]
+    Unpub --&gt; Play
+    Play --&gt; Save[&quot;deepMerge 保存增量配置&quot;]</pre></div>
+<p>设备切换、采集约束、编码码率和播放样式是四类不同更新，不应统一理解为 <code>applyConstraints()</code>。</p>
+<h2 id="8-屏幕共享-浏览器停止按钮也是入口">8. 屏幕共享：浏览器停止按钮也是入口<a class="heading-anchor" href="#8-屏幕共享-浏览器停止按钮也是入口" aria-label="链接到本节">#</a></h2>
+<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">sequenceDiagram
+    autonumber
+    actor App as 业务代码
+    participant SDK as startScreenShare
+    participant Screen as ScreenTrack
+    participant MD as getDisplayMedia
+    participant Video as Screen VideoTrack
+    participant Audio as Optional AudioTrack
+    participant Room as TRTCRoom
+
+    App-&gt;&gt;SDK: startScreenShare(config)
+    SDK-&gt;&gt;Screen: capture(displayConfig)
+    Screen-&gt;&gt;MD: navigator.mediaDevices.getDisplayMedia()
+    MD--&gt;&gt;Screen: MediaStream(video + optional audio)
+    Screen-&gt;&gt;Video: applyConstraints / contentHint / optional cropTo
+    Screen-&gt;&gt;Video: addEventListener(&#39;ended&#39;, handler)
+    opt 存在共享音频
+        Screen-&gt;&gt;Audio: setInputMediaStreamTrack
+        SDK-&gt;&gt;Audio: enabled = !muteSystemAudio
+    end
+    opt publish=true
+        SDK-&gt;&gt;Room: publish(video + optional audio)
+    end
+    alt 应用主动停止
+        App-&gt;&gt;SDK: stopScreenShare()
+    else 用户点击浏览器停止共享
+        Video--&gt;&gt;SDK: ended event
+        SDK--&gt;&gt;App: SCREEN_SHARE_STOPPED
+    end
+    SDK-&gt;&gt;Room: unpublish tracks
+    SDK-&gt;&gt;Video: stop + close
+    SDK-&gt;&gt;Audio: stop + close + removeInput</pre></div>
+<p>共享目标、系统音频是否返回和用户授权由浏览器决定，<code>preferDisplaySurface</code> 只是偏好提示。</p>
+<h2 id="9-远端视频-订阅成功到首帧之间还有四步">9. 远端视频：订阅成功到首帧之间还有四步<a class="heading-anchor" href="#9-远端视频-订阅成功到首帧之间还有四步" aria-label="链接到本节">#</a></h2>
+<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">sequenceDiagram
+    autonumber
+    actor App as 业务代码
+    participant SDK as startRemoteVideo
+    participant Room as TRTCRoom
+    participant Signal as WebSocket
+    participant PC as RTCPeerConnection
+    participant RT as RemoteVideoTrack
+    participant View as HTMLVideoElement / Canvas
+
+    App-&gt;&gt;SDK: startRemoteVideo(userId, streamType, view)
+    SDK-&gt;&gt;Room: subscribe(RemoteTrack)
+    Room-&gt;&gt;Signal: subscribe / changeType RPC
+    Room-&gt;&gt;PC: 激活 transceiver / 更新 SDP
+    Signal--&gt;&gt;Room: subscribe result
+    Note over Room,PC: 订阅信令成功
+    PC--&gt;&gt;RT: track event + receiver track
+    Note over PC,RT: 媒体 Track 到达
+    RT-&gt;&gt;RT: decoder / transform / outMediaTrack
+    Note over RT: 解码可用
+    RT-&gt;&gt;View: srcObject 或 Canvas/WebGL render
+    View--&gt;&gt;RT: loaded / playing / first frame
+    RT--&gt;&gt;SDK: first-video-frame
+    SDK--&gt;&gt;App: FIRST_VIDEO_FRAME</pre></div>
+<p>订阅 RPC、<code>track</code> 事件、解码、<code>play()</code> 和首帧应分别记录，排障时不能只看一个“subscribe success”。</p>
+<h2 id="10-可见性驱动订阅">10. 可见性驱动订阅<a class="heading-anchor" href="#10-可见性驱动订阅" aria-label="链接到本节">#</a></h2>
+<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">flowchart TD
+    Config[&quot;start/updateRemoteVideo&quot;] --&gt; Enable{&quot;receiveWhenViewVisible?&quot;}
+    Enable -- 否 --&gt; Disconnect[&quot;observer.disconnect()&quot;]
+    Disconnect --&gt; Ensure[&quot;未订阅则 Room.subscribe&quot;]
+    Enable -- 是 --&gt; IO[&quot;new IntersectionObserver(callback, {root})&quot;]
+    IO --&gt; Entries[&quot;更新 visibleViewMap&quot;]
+    Entries --&gt; Debounce[&quot;clearTimeout + window.setTimeout(200ms)&quot;]
+    Debounce --&gt; Any{&quot;任一 view 可见?&quot;}
+    Any -- 是 --&gt; Sub[&quot;未订阅 -&gt; Room.subscribe&quot;]
+    Any -- 否 --&gt; Unsub[&quot;已订阅 -&gt; Room.unsubscribe&quot;]
+    Config --&gt; Diff[&quot;view 集合差分&quot;]
+    Diff --&gt; Observe[&quot;新增 observe；移除 unobserve&quot;]
+    Observe --&gt; Records[&quot;takeRecords() 合并待处理记录&quot;]</pre></div>
+<p>200 ms 合并窗口用于降低滚动和布局抖动造成的频繁订阅信令。</p>
+<h2 id="11-mediastreamtrack-生命周期">11. MediaStreamTrack 生命周期<a class="heading-anchor" href="#11-mediastreamtrack-生命周期" aria-label="链接到本节">#</a></h2>
+<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">stateDiagram-v2
+    [*] --&gt; EMPTY
+    EMPTY --&gt; CAPTURING: capture / getUserMedia
+    CAPTURING --&gt; READY: sourceTrack accepted
+    CAPTURING --&gt; ERROR: DOMException / device error
+    READY --&gt; PUBLISHED: Room.publish
+    PUBLISHED --&gt; READY: Room.unpublish
+    READY --&gt; SWITCHING: switchDevice / recapture
+    PUBLISHED --&gt; SWITCHING: switchDevice / custom source
+    SWITCHING --&gt; READY: replace input succeeds
+    SWITCHING --&gt; ERROR: replacement fails
+    READY --&gt; ENDED: browser track ended
+    PUBLISHED --&gt; ENDED: device removed / screen stopped
+    ENDED --&gt; CAPTURING: auto recapture policy
+    READY --&gt; CLOSED: close
+    PUBLISHED --&gt; CLOSED: unpublish then close
+    ERROR --&gt; CLOSED: cleanup
+    CLOSED --&gt; [*]</pre></div>
+<p><code>mute</code>/<code>enabled=false</code> 不等于 <code>ended</code>，player stop 不等于 source Track stop，sender <code>replaceTrack(null)</code> 也不一定停止原 Track；资源所有者必须分别处理。</p>
+<h2 id="12-web-audio-处理图">12. Web Audio 处理图<a class="heading-anchor" href="#12-web-audio-处理图" aria-label="链接到本节">#</a></h2>
+<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">flowchart TB
+    SourceTrack[&quot;麦克风/共享/远端 MediaStreamTrack&quot;] --&gt; MS[&quot;AudioContext.createMediaStreamSource&quot;]
+    MS --&gt; Split[&quot;ChannelSplitter / Merger（按需）&quot;]
+    Split --&gt; Processor[&quot;AudioWorkletNode 或 ScriptProcessor&quot;]
+    Processor --&gt; Gain[&quot;GainNode：capture/play volume&quot;]
+    Gain --&gt; Analyse[&quot;Analyser / 音量评估&quot;]
+    Gain --&gt; Destination[&quot;createMediaStreamDestination&quot;]
+    Destination --&gt; OutTrack[&quot;outMediaTrack&quot;]
+    OutTrack --&gt; Sender[&quot;RTCRtpSender&quot;]
+    Gain --&gt; Element[&quot;HTMLAudioElement / 耳返&quot;]
+    Processor --&gt; PCM[&quot;audio-frame 事件&quot;]
+    Abort[&quot;off(audio-frame) / close&quot;] --&gt; Processor
+    Abort --&gt; Gain
+    Abort --&gt; MS</pre></div>
+<p>实际节点会按浏览器能力、插件和是否需要 processed track 增减；关闭时应解绑 port/message、disconnect nodes，并终止相应 Track。</p>
+<h2 id="13-自动播放恢复">13. 自动播放恢复<a class="heading-anchor" href="#13-自动播放恢复" aria-label="链接到本节">#</a></h2>
+<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">stateDiagram-v2
+    [*] --&gt; IDLE
+    IDLE --&gt; PLAY_REQUESTED: Track.play
+    PLAY_REQUESTED --&gt; PLAYING: mediaElement.play resolved
+    PLAY_REQUESTED --&gt; BLOCKED: NotAllowedError / PLAY_NOT_ALLOWED
+    BLOCKED --&gt; SDK_EVENT: emit autoplay-failed
+    BLOCKED --&gt; DIALOG: enableAutoPlayDialog
+    SDK_EVENT --&gt; USER_GESTURE: resume callback
+    DIALOG --&gt; USER_GESTURE: click confirm
+    USER_GESTURE --&gt; CONTEXT_RESUME: AudioContext.resume
+    CONTEXT_RESUME --&gt; PLAY_REQUESTED: retry play
+    PLAYING --&gt; PAUSED: Track.stop / element.pause
+    PAUSED --&gt; PLAY_REQUESTED: replay</pre></div>
+<p>恢复动作必须发生在用户手势调用栈中；只用定时器重试通常不能解除浏览器自动播放限制。</p>
+<h2 id="14-视频渲染分支">14. 视频渲染分支<a class="heading-anchor" href="#14-视频渲染分支" aria-label="链接到本节">#</a></h2>
+<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">flowchart TD
+    Track[&quot;Video MediaStreamTrack&quot;] --&gt; Mode{&quot;渲染模式 / 插件 / 能力&quot;}
+    Mode -- 原生 --&gt; Video[&quot;HTMLVideoElement.srcObject&quot;]
+    Video --&gt; Play[&quot;play + loadedmetadata + resize&quot;]
+    Mode -- Canvas 2D --&gt; Canvas[&quot;drawImage / putImageData&quot;]
+    Canvas --&gt; RAF[&quot;requestAnimationFrame / video frame callback&quot;]
+    Mode -- WebGL --&gt; GL[&quot;shader + texture + drawArrays&quot;]
+    GL --&gt; Context{&quot;context lost?&quot;}
+    Context -- 是 --&gt; Restore[&quot;contextlost/contextrestored 清理重建&quot;]
+    Mode -- Worker --&gt; Offscreen[&quot;OffscreenCanvas.transferControlToOffscreen&quot;]
+    Offscreen --&gt; Worker[&quot;postMessage frame/control&quot;]
+    Video --&gt; Snapshot[&quot;drawImage -&gt; toDataURL(&#39;image/png&#39;)&quot;]
+    Canvas --&gt; Snapshot</pre></div>
+<p>镜像、旋转、裁剪、alpha 和多画面组合在不同分支中落到 CSS、Canvas 坐标或 WebGL shader，不能只从 <code>fillMode</code> 推断最终实现。</p>
+<h2 id="15-encoded-transform-与-worker">15. Encoded Transform 与 Worker<a class="heading-anchor" href="#15-encoded-transform-与-worker" aria-label="链接到本节">#</a></h2>
+<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">flowchart TB
+    Encoder[&quot;浏览器 RTP Encoder&quot;] --&gt; Readable[&quot;sender readable encoded frames&quot;]
+    Readable --&gt; Path{&quot;能力分支&quot;}
+    Path -- 旧 API --&gt; CES[&quot;sender.createEncodedStreams()&quot;]
+    CES --&gt; Transform[&quot;TransformStream / pipeThrough&quot;]
+    Path -- 新 API --&gt; Script[&quot;RTCRtpScriptTransform(worker, options)&quot;]
+    Transform --&gt; WorkerLogic[&quot;SEI / 加密 / 编码处理&quot;]
+    Script --&gt; WorkerLogic
+    WorkerLogic --&gt; Writable[&quot;sender writable&quot;]
+    Writable --&gt; Network[&quot;SRTP / 网络&quot;]
+
+    Network --&gt; Receiver[&quot;浏览器 RTP Receiver&quot;]
+    Receiver --&gt; RTransform[&quot;receiver transform&quot;]
+    RTransform --&gt; Parse[&quot;SEI / 解密 / 解码前处理&quot;]
+    Parse --&gt; Decoder[&quot;浏览器 Decoder&quot;]
+
+    Abort[&quot;AbortController / PC close&quot;] --&gt; Transform
+    Abort --&gt; RTransform</pre></div>
+<p>旧 <code>createEncodedStreams()</code> 和新 <code>RTCRtpScriptTransform</code> 是两套分支；不能在同一个 sender/receiver 上无条件同时安装。</p>
+<h2 id="16-webcodecs-wasm-插件管线">16. WebCodecs / WASM 插件管线<a class="heading-anchor" href="#16-webcodecs-wasm-插件管线" aria-label="链接到本节">#</a></h2>
+<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">flowchart TB
+    Input[&quot;Track / encoded frame / resource&quot;] --&gt; Capability{&quot;WebCodecs 支持且配置可用?&quot;}
+    Capability -- 是 --&gt; Decoder[&quot;VideoDecoder / AudioDecoder.configure&quot;]
+    Decoder --&gt; Frame[&quot;VideoFrame / AudioData&quot;]
+    Frame --&gt; Process[&quot;处理 / Canvas / Audio pipeline&quot;]
+    Process --&gt; Encoder[&quot;VideoEncoder / AudioEncoder&quot;]
+    Encoder --&gt; Output[&quot;EncodedVideoChunk / EncodedAudioChunk&quot;]
+    Capability -- 否 --&gt; WASM[&quot;下载 WASM / WebAssembly.instantiate&quot;]
+    WASM --&gt; Memory[&quot;TypedArray / WASM memory&quot;]
+    Memory --&gt; Process
+    Capability -- 都不可用 --&gt; Fallback[&quot;原始 Track / 浏览器编解码回退&quot;]
+    Close[&quot;plugin.stop/destroy&quot;] --&gt; Decoder
+    Close --&gt; Encoder
+    Close --&gt; WASM</pre></div>
+<p>具体插件是否选 WebCodecs、WASM 或原生 Track 由插件实现、codec、浏览器和 feature flag 共同决定。</p>
+<h2 id="17-权限-设备枚举和设备变化">17. 权限、设备枚举和设备变化<a class="heading-anchor" href="#17-权限-设备枚举和设备变化" aria-label="链接到本节">#</a></h2>
+<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">sequenceDiagram
+    autonumber
+    actor App as 业务代码
+    participant TRTC as TRTC 静态 API
+    participant PM as PermissionManager
+    participant Perm as navigator.permissions
+    participant MD as navigator.mediaDevices
+    participant SDK as SDK instances
+
+    App-&gt;&gt;TRTC: getPermissions({request, types})
+    opt request=true
+        TRTC-&gt;&gt;PM: request(camera/microphone)
+        PM-&gt;&gt;MD: getUserMedia 最小权限请求
+        MD--&gt;&gt;PM: stream 或 DOMException
+        PM-&gt;&gt;PM: stop 临时 tracks
+    end
+    PM-&gt;&gt;Perm: query({name})（支持时）
+    Perm--&gt;&gt;PM: PermissionStatus
+    PM--&gt;&gt;App: camera / microphone state
+    App-&gt;&gt;TRTC: getCameraList/getMicrophoneList/getSpeakerList
+    TRTC-&gt;&gt;MD: enumerateDevices()
+    MD--&gt;&gt;App: MediaDeviceInfo[]
+    MD--&gt;&gt;SDK: devicechange
+    SDK-&gt;&gt;MD: enumerateDevices 再比较
+    SDK--&gt;&gt;App: DEVICE_CHANGED add/remove/active</pre></div>
+<p>授权前设备 label/deviceId 的可见程度受浏览器隐私策略影响；<code>devicechange</code> 本身不携带完整差异，需要重新枚举并比较。</p>
+<h2 id="18-退出房间与销毁的差异">18. 退出房间与销毁的差异<a class="heading-anchor" href="#18-退出房间与销毁的差异" aria-label="链接到本节">#</a></h2>
+<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">flowchart TD
+    Exit[&quot;exitRoom()&quot;] --&gt; Leave[&quot;Room.leave()&quot;]
+    Leave --&gt; LeaveMsg[&quot;WebSocket send leave&quot;]
+    Leave --&gt; Reset[&quot;Room.reset(true)&quot;]
+    Reset --&gt; Timers[&quot;stop heartbeat / sync timers&quot;]
+    Reset --&gt; PCs[&quot;close uplink/downlink/single PC&quot;]
+    Reset --&gt; SignalKeep{&quot;keepAlive 且 socket 健康?&quot;}
+    SignalKeep -- 是 --&gt; Keep[&quot;暂留 SignalChannel&quot;]
+    SignalKeep -- 否 --&gt; CloseWS[&quot;SignalChannel.close()&quot;]
+    Reset --&gt; Remote[&quot;清 remote tracks/maps/players&quot;]
+    Remote --&gt; Preserve[&quot;保留本地 Audio/Video/Screen Track&quot;]
+
+    Destroy[&quot;destroy()&quot;] --&gt; Plugins[&quot;plugin.destroy&quot;]
+    Destroy --&gt; RoomDestroy[&quot;Room.destroy&quot;]
+    RoomDestroy --&gt; Abort[&quot;reject pending join / abort tasks&quot;]
+    RoomDestroy --&gt; AllConn[&quot;WebSocket.close + PC.close&quot;]
+    Destroy --&gt; StopLocal[&quot;stopLocalAudio/Video/ScreenShare&quot;]
+    StopLocal --&gt; TrackStop[&quot;MediaStreamTrack.stop&quot;]
+    StopLocal --&gt; AudioClose[&quot;AudioNode disconnect / Worklet stop&quot;]
+    StopLocal --&gt; PlayerClose[&quot;pause / srcObject=null / canvas-worker cleanup&quot;]</pre></div>
+<p><code>exitRoom()</code> 为再次进房保留本地采集；<code>destroy()</code> 使实例失效并释放本地资源。门面 <code>destroy()</code> 是同步方法，不返回等待所有异步 stop 完成的 Promise。</p>
+<h2 id="19-图与详细文档的对应关系">19. 图与详细文档的对应关系<a class="heading-anchor" href="#19-图与详细文档的对应关系" aria-label="链接到本节">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>图</th>
+<th>继续阅读</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>进入房间、主备信令、RPC、重连</td>
+<td><code>03-WebSocket-usage-analysis.md</code>、<code>Appendix-E-Public-API-Call-Chains.md</code></td>
+</tr>
+<tr>
+<td>MPC/SPC、订阅、Encoded Transform</td>
+<td><code>02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>麦克风、摄像头、权限</td>
+<td><code>04-MediaDevices-and-Capture.md</code></td>
+</tr>
+<tr>
+<td>屏幕共享</td>
+<td><code>04-MediaDevices-and-Capture.md</code></td>
+</tr>
+<tr>
+<td>Track 状态和释放</td>
+<td><code>05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>Web Audio、自动播放</td>
+<td><code>06-Web-Audio-usage-analysis.md</code>、<code>07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>Canvas/WebGL</td>
+<td><code>07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>Worker/Streams、WebCodecs/WASM</td>
+<td><code>08-Worker-Streams-and-Encoded-Processing.md</code>、<code>09-WebCodecs-and-WebAssembly.md</code></td>
+</tr>
+<tr>
+<td>权限、DOM、计时器</td>
+<td><code>10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+</tbody></table></div>
+
+      <nav class="page-pagination" aria-label="上一篇和下一篇">
+        <a class="previous" href="Appendix-E-Public-API-Call-Chains.html"><span>上一篇</span>附录 E 公开 API 调用链</a>
+        <span></span>
+      </nav>
+    </article>
+    
+    <nav class="page-toc" aria-label="本页目录">
+      <h2>本页目录</h2>
+      <a class="toc-depth-2" href="#1-总体分层-公开-api-怎样走到浏览器">1. 总体分层：公开 API 怎样走到浏览器</a><a class="toc-depth-2" href="#2-进入房间-六个不同的完成点">2. 进入房间：六个不同的完成点</a><a class="toc-depth-2" href="#3-websocket-主备竞速和清理">3. WebSocket 主备竞速和清理</a><a class="toc-depth-2" href="#4-websocket-rpc-先监听响应-再发送请求">4. WebSocket RPC：先监听响应，再发送请求</a><a class="toc-depth-2" href="#5-websocket-重连-会话恢复和重新进房">5. WebSocket 重连、会话恢复和重新进房</a><a class="toc-depth-2" href="#6-本地麦克风-捕获-处理-播放参考和发布">6. 本地麦克风：捕获、处理、播放参考和发布</a><a class="toc-depth-2" href="#7-本地摄像头更新决策">7. 本地摄像头更新决策</a><a class="toc-depth-2" href="#8-屏幕共享-浏览器停止按钮也是入口">8. 屏幕共享：浏览器停止按钮也是入口</a><a class="toc-depth-2" href="#9-远端视频-订阅成功到首帧之间还有四步">9. 远端视频：订阅成功到首帧之间还有四步</a><a class="toc-depth-2" href="#10-可见性驱动订阅">10. 可见性驱动订阅</a><a class="toc-depth-2" href="#11-mediastreamtrack-生命周期">11. MediaStreamTrack 生命周期</a><a class="toc-depth-2" href="#12-web-audio-处理图">12. Web Audio 处理图</a><a class="toc-depth-2" href="#13-自动播放恢复">13. 自动播放恢复</a><a class="toc-depth-2" href="#14-视频渲染分支">14. 视频渲染分支</a><a class="toc-depth-2" href="#15-encoded-transform-与-worker">15. Encoded Transform 与 Worker</a><a class="toc-depth-2" href="#16-webcodecs-wasm-插件管线">16. WebCodecs / WASM 插件管线</a><a class="toc-depth-2" href="#17-权限-设备枚举和设备变化">17. 权限、设备枚举和设备变化</a><a class="toc-depth-2" href="#18-退出房间与销毁的差异">18. 退出房间与销毁的差异</a><a class="toc-depth-2" href="#19-图与详细文档的对应关系">19. 图与详细文档的对应关系</a>
+    </nav>
+  </main>
+  <button type="button" class="back-to-top" aria-label="回到顶部">↑</button>
+</body>
+</html>

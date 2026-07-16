@@ -1,0 +1,2354 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="TRTC 反混淆源码浏览器 Web API 深度分析：附录 C 事件索引">
+  <title>附录 C 事件索引 · TRTC Web API 深度学习</title>
+  <link rel="stylesheet" href="assets/docs.css">
+  <script>try{const t=localStorage.getItem('trtc-docs-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+  <script src="assets/search-index.js" defer></script>
+  <script src="assets/mermaid.min.js" defer></script>
+  <script src="assets/docs.js" defer></script>
+</head>
+<body data-page="Appendix-C-Event-Index.html">
+  <header class="topbar">
+    <button type="button" class="icon-button nav-toggle" aria-label="打开目录" aria-expanded="false">☰</button>
+    <a class="brand" href="index.html">TRTC Web API 深度学习</a>
+    <div class="search-shell">
+      <label class="sr-only" for="global-search">搜索全部文档</label>
+      <input id="global-search" type="search" autocomplete="off" placeholder="搜索 API、方法、事件…" aria-controls="search-results">
+      <kbd>/</kbd>
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
+    <a class="source-link" href="../Appendix-C-Event-Index.md">Markdown</a>
+    <a class="source-link" href="../../trtc.deobfuscated.js">源码</a>
+    <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
+  </header>
+
+  <aside class="sidebar" aria-label="文档目录">
+    
+    <section class="nav-group">
+      <h2>按顺序阅读</h2>
+      
+        <a class="nav-link" href="index.html">
+          文档首页
+        </a>
+        <a class="nav-link" href="00-Reading-Guide-and-Source-Map.html">
+          00 阅读说明与源码地图
+        </a>
+        <a class="nav-link" href="01-Browser-API-Panorama.html">
+          01 浏览器 API 全景
+        </a>
+        <a class="nav-link" href="02-RTCPeerConnection-usage-analysis.html">
+          02 RTCPeerConnection
+        </a>
+        <a class="nav-link" href="03-WebSocket-usage-analysis.html">
+          03 WebSocket 信令
+        </a>
+        <a class="nav-link" href="04-MediaDevices-and-Capture.html">
+          04 MediaDevices 与采集
+        </a>
+        <a class="nav-link" href="05-MediaStreamTrack-Lifecycle.html">
+          05 Track 生命周期
+        </a>
+        <a class="nav-link" href="06-Web-Audio-usage-analysis.html">
+          06 Web Audio
+        </a>
+        <a class="nav-link" href="07-Media-Playback-and-Rendering.html">
+          07 播放与渲染
+        </a>
+        <a class="nav-link" href="08-Worker-Streams-and-Encoded-Processing.html">
+          08 Worker 与编码帧
+        </a>
+        <a class="nav-link" href="09-WebCodecs-and-WebAssembly.html">
+          09 WebCodecs 与 WASM
+        </a>
+        <a class="nav-link" href="10-Auxiliary-Browser-APIs.html">
+          10 辅助浏览器 API
+        </a>
+        <a class="nav-link" href="11-End-to-End-Business-Flows.html">
+          11 端到端业务流程
+        </a>
+    </section>
+    <section class="nav-group">
+      <h2>附录（按需查询）</h2>
+      
+        <a class="nav-link" href="Appendix-A-WebAPI-Occurrences.html">
+          A Web API 出现位置
+        </a>
+        <a class="nav-link" href="Appendix-B-Source-Method-Index.html">
+          B 源码方法索引
+        </a>
+        <a class="nav-link active" href="Appendix-C-Event-Index.html">
+          C 事件索引
+        </a>
+        <a class="nav-link" href="Appendix-D-Method-Adjacency-Index.html">
+          D 方法调用邻接
+        </a>
+        <a class="nav-link" href="Appendix-E-Public-API-Call-Chains.html">
+          E 公开 API 调用链
+        </a>
+        <a class="nav-link" href="Appendix-F-Visual-Call-Flows.html">
+          F 流程图与时序图
+        </a>
+    </section>
+  </aside>
+  <div class="sidebar-backdrop" hidden></div>
+
+  <main class="layout">
+    <article class="doc-content">
+      <h1 id="附录-c-事件索引">附录 C 事件索引<a class="heading-anchor" href="#附录-c-事件索引" aria-label="链接到本节">#</a></h1>
+<blockquote>
+<p>本附录覆盖 EventTarget、DOM <code>on*</code> 属性和 SDK EventEmitter；事件的业务语义和生命周期以主线专题为准。
+同时覆盖浏览器 EventTarget、DOM <code>on*</code> 属性和 SDK EventEmitter。事件参数若使用常量，索引保留常量表达式；其实际字符串值和 payload 结构在所属专项展开。
+共识别 <strong>318</strong> 组“操作 + 事件表达式”。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>事件操作</th>
+<th>事件名/表达式</th>
+<th>出现行号</th>
+<th>典型所在方法</th>
+<th>子系统/专项</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;1&#39;</code></td>
+<td>L23495, L28917, L45744</td>
+<td><code>recapture — 重新捕获屏幕/设备；addUser — 方法；onHeartbeatReport — 心跳上报数据回调</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md / 10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;113&#39;</code></td>
+<td>L34793</td>
+<td><code>startLocalAudio — 采集本地麦克风音频并推送到房间</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;114&#39;</code></td>
+<td>L34835</td>
+<td><code>stopLocalAudio — 停止本地麦克风音频采集并取消推送</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;115&#39;</code></td>
+<td>L35595</td>
+<td><code>_doStartRemoteAudio — 内部：执行远端音频播放逻辑</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;116&#39;</code></td>
+<td>L35626</td>
+<td><code>_stopRemoteAudio — 内部：停止远端音频播放</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;155&#39;</code></td>
+<td>L18499, L18513</td>
+<td><code>observableCreate — 源码命名函数</code></td>
+<td><code>07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;156&#39;</code></td>
+<td>L28397</td>
+<td><code>play — 播放本地流（渲染到指定 DOM 元素）</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;157&#39;</code></td>
+<td>L28513</td>
+<td><code>stop — 停止本地流播放</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;2&#39;</code></td>
+<td>L23367, L28940</td>
+<td><code>updateDeviceIdInUse — 更新当前使用的设备 ID；deleteUser — 方法</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;262&#39;</code></td>
+<td>L39804, L40073</td>
+<td><code>getSenderStats — 获取发送端统计；getReceiverStats — 获取接收端统计</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;263&#39;</code></td>
+<td>L39827, L39840</td>
+<td><code>getSenderStats — 获取发送端统计</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;265&#39;</code></td>
+<td>L31962</td>
+<td><code>initWorkletNode — 方法</code></td>
+<td><code>08-Worker-Streams-and-Encoded-Processing.md / 09-WebCodecs-and-WebAssembly.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;266&#39;</code></td>
+<td>L13834, L13847</td>
+<td><code>构造函数；handleUploadFailed — 处理日志上传失败</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;3&#39;</code></td>
+<td>L29009</td>
+<td><code>setRemotePublishedUserList — 设置远端已发布用户列表</code></td>
+<td><code>08-Worker-Streams-and-Encoded-Processing.md / 09-WebCodecs-and-WebAssembly.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;4&#39;</code></td>
+<td>L23201, L23569, L23587, L23614</td>
+<td><code>publish — 发布本地音视频流到房间；success — 操作成功回调；fail — 操作失败回调</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;5&#39;</code></td>
+<td>L23502, L28936, L28981</td>
+<td><code>recapture — 重新捕获屏幕/设备；deleteUser — 方法；setRemotePublishedUserList — 设置远端已发布用户列表</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;6&#39;</code></td>
+<td>L23301, L28938, L28983, L29004, L29010</td>
+<td><code>asyncGeneratorWrap — 方法；deleteUser — 方法；setRemotePublishedUserList — 设置远端已发布用户列表</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md / 08-Worker-Streams-and-Encoded-Processing.md / 09-WebCodecs-and-WebAssembly.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;61&#39;</code></td>
+<td>L51755</td>
+<td><code>success — 操作成功回调</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;7&#39;</code></td>
+<td>L23458, L28991</td>
+<td><code>onTrackEnded — 轨道结束回调；setRemotePublishedUserList — 设置远端已发布用户列表</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;audio-frame&#39;</code></td>
+<td>L27691, L27707, L27735</td>
+<td><code>handleLocalTrackStarted — 本地轨道开始回调；handleRemoteTrackStarted — 远端轨道开始回调</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;audio-frame-with-ntp&#39;</code></td>
+<td>L28140</td>
+<td><code>decodeFrame — 解码视频帧</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;audio-volume&#39;</code></td>
+<td>L50840</td>
+<td><code>enableAudioVolumeEvaluation — 开启/关闭音量回调通知（设置回调间隔，单位 ms）</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;banned&#39;</code></td>
+<td>L50035</td>
+<td><code>initialize — 初始化本地流，获取摄像头/麦克风权限并创建 MediaStream</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;closed&#39;</code></td>
+<td>L37455, L47518</td>
+<td><code>close — 关闭本地流并释放所有轨道</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;connection-state-changed&#39;</code></td>
+<td>L37541, L37941, L37942, L38593, L38595, L38596, L38598, L38698, L38699, L38840, L47532, L47935, L47937, L47938, L47940, L48359, L48901, L48902</td>
+<td><code>emitConnectionStateChangedEvent — 发射连接状态变化事件；publishByTransceiver — 通过 addTransceiver API 推流；unpublish — 取消发布本地音视频流</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;custom-message&#39;</code></td>
+<td>L49980</td>
+<td><code>initialize — 初始化本地流，获取摄像头/麦克风权限并创建 MediaStream</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;data_channel_msg&#39;</code></td>
+<td>L46243</td>
+<td><code>initialize — 初始化本地流，获取摄像头/麦克风权限并创建 MediaStream</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;decode-downgrade-state-changed&#39;</code></td>
+<td>L28562</td>
+<td><code>onDecodeDowngradeStateChanged — 解码降级状态变化回调</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;decode-failed&#39;</code></td>
+<td>L27986</td>
+<td><code>reportDecodeResult — 方法</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;disconnect&#39;</code></td>
+<td>L25911</td>
+<td><code>disconnect — 断开 WebSocket 信令连接</code></td>
+<td><code>07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;dump&#39;</code></td>
+<td>L46150, L49754</td>
+<td><code>initScriptTransformWorker — 初始化脚本转换 Worker；initSinglePC — 初始化单 RTCPeerConnection 模式（主播推流）</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md / 03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;error&#39;</code></td>
+<td>L20177, L37521, L37723, L44135, L44146, L46453, L49998, L50312, L50583</td>
+<td><code>handleAutoPlayFailed — 处理自动播放失败（用户交互后恢复）；onConnectionStateChange — 连接状态变化回调；beforeReconnect — 重连前处理；initializeGlVideoContext — 初始化 WebGL 视频渲染上下文；reconnect — 重新建立信令连接；另 3 个</code></td>
+<td><code>04-MediaDevices-and-Capture.md / 05-MediaStreamTrack-Lifecycle.md / 02-RTCPeerConnection-usage-analysis.md / 10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md / 02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md / 03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;firewall-restriction&#39;</code></td>
+<td>L37661, L50320, L50576</td>
+<td><code>waitForPeerConnectionConnected — 等待 PeerConnection 连接成功；installDownlinkEvents — 安装下行连接的事件监听；_initUplinkConnection — 初始化上行推流连接</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;first-video-frame&#39;</code></td>
+<td>L20209, L28374</td>
+<td><code>s — 内部函数；构造函数</code></td>
+<td><code>04-MediaDevices-and-Capture.md / 05-MediaStreamTrack-Lifecycle.md / 05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;input-media-track-changed&#39;</code></td>
+<td>L20094</td>
+<td><code>setInputMediaStreamTrack — 设置输入 MediaStreamTrack</code></td>
+<td><code>04-MediaDevices-and-Capture.md / 05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;local-publish-flag-changed&#39;</code></td>
+<td>L50244, L50261</td>
+<td><code>onPublishedUserList — 收到已发布用户列表后的处理</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;media-connection-state-changed&#39;</code></td>
+<td>L50316, L50572</td>
+<td><code>installDownlinkEvents — 安装下行连接的事件监听；_initUplinkConnection — 初始化上行推流连接</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;message&#39;</code></td>
+<td>L49510, L49548</td>
+<td><code>onReceiveMsg — 收到消息回调；emitMessage — 发射消息事件</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;network-quality&#39;</code></td>
+<td>L49988</td>
+<td><code>initialize — 初始化本地流，获取摄像头/麦克风权限并创建 MediaStream</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;ntp-time-updated&#39;</code></td>
+<td>L51557</td>
+<td><code>startUpdateNTPTime — 启动 NTP 时间同步</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;output-media-track-changed&#39;</code></td>
+<td>L20117</td>
+<td><code>setOutputMediaStreamTrack — 设置输出 MediaStreamTrack</code></td>
+<td><code>04-MediaDevices-and-Capture.md / 05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;output-track-changed&#39;</code></td>
+<td>L44324</td>
+<td><code>_setMainOutput — 方法</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;peer-join&#39;</code></td>
+<td>L49690</td>
+<td><code>join — 加入 TRTC 房间，初始化连接并开始信令通信</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;peer-leave&#39;</code></td>
+<td>L49694</td>
+<td><code>join — 加入 TRTC 房间，初始化连接并开始信令通信</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;permission-state-change&#39;</code></td>
+<td>L34051</td>
+<td><code>构造函数</code></td>
+<td><code>08-Worker-Streams-and-Encoded-Processing.md / 09-WebCodecs-and-WebAssembly.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;player-state-changed&#39;</code></td>
+<td>L19786</td>
+<td><code>构造函数</code></td>
+<td><code>04-MediaDevices-and-Capture.md / 05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;rejectionHandled&#39;</code></td>
+<td>L2691</td>
+<td><code>zh — 源码命名函数</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;remote-publish-changed&#39;</code></td>
+<td>L28015</td>
+<td><code>onFlagChanged — 标志位变化回调</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;remote-publish-state-changed&#39;</code></td>
+<td>L49703</td>
+<td><code>join — 加入 TRTC 房间，初始化连接并开始信令通信</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;remote-published&#39;</code></td>
+<td>L50292</td>
+<td><code>createDownlinkConnection — 创建下行拉流连接（接收远端流）</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;remote-unpublished&#39;</code></td>
+<td>L50301</td>
+<td><code>closeDownLinkConnection — 关闭指定下行连接</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;render&#39;</code></td>
+<td>L26549, L44360, L44397</td>
+<td><code>构造函数；update — 方法</code></td>
+<td><code>07-Media-Playback-and-Rendering.md / 10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;sei-message&#39;</code></td>
+<td>L46149, L49753</td>
+<td><code>initScriptTransformWorker — 初始化脚本转换 Worker；initSinglePC — 初始化单 RTCPeerConnection 模式（主播推流）</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md / 03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;signal-connection-state-changed&#39;</code></td>
+<td>L49994</td>
+<td><code>initialize — 初始化本地流，获取摄像头/麦克风权限并创建 MediaStream</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;spc-reconnected&#39;</code></td>
+<td>L46427</td>
+<td><code>reconnect — 重新建立信令连接</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;state-changed&#39;</code></td>
+<td>L32837</td>
+<td><code>onPressureChange — 网络压力变化回调</code></td>
+<td><code>08-Worker-Streams-and-Encoded-Processing.md / 09-WebCodecs-and-WebAssembly.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;subscribe-small-video-changed&#39;</code></td>
+<td>L51332</td>
+<td><code>changeType — 修改订阅流类型（大小流切换）</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;track&#39;</code></td>
+<td>L46227</td>
+<td><code>initialize — 初始化本地流，获取摄像头/麦克风权限并创建 MediaStream</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>&#39;unhandledRejection&#39;</code></td>
+<td>L2673</td>
+<td><code>Jh — 源码命名函数</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Bx.ERROR</code></td>
+<td>L17720, L17754</td>
+<td><code>handleElementEvent — 处理 DOM 元素事件；replayByRecreateMediaStream — 重新播放（重建 MediaStream）</code></td>
+<td><code>07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Bx.LOADED_DATA</code></td>
+<td>L17724</td>
+<td><code>handleElementEvent — 处理 DOM 元素事件</code></td>
+<td><code>07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Bx.LOADED_META_DATA</code></td>
+<td>L17727</td>
+<td><code>handleElementEvent — 处理 DOM 元素事件</code></td>
+<td><code>07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Bx.MEDIA_TRACK_CHANGED</code></td>
+<td>L18355, L19605, L19646</td>
+<td><code>setTrack — 方法</code></td>
+<td><code>07-Media-Playback-and-Rendering.md / 04-MediaDevices-and-Capture.md / 05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Bx.PLAYER_STATE_CHANGED</code></td>
+<td>L17877, L17894, L17910</td>
+<td><code>success — 操作成功回调</code></td>
+<td><code>07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Bx.RESIZE</code></td>
+<td>L18264</td>
+<td><code>handleElementEvent — 处理 DOM 元素事件</code></td>
+<td><code>07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Bx.TIME_UPDATE</code></td>
+<td>L19499</td>
+<td><code>initializeElement — 方法</code></td>
+<td><code>04-MediaDevices-and-Capture.md / 05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.AUDIO_LEVEL_INTERVAL</code></td>
+<td>L50815</td>
+<td><code>enableAudioVolumeEvaluation — 开启/关闭音量回调通知（设置回调间隔，单位 ms）</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.AUTOPLAY_DIALOG_CLICK_CONFIRM</code></td>
+<td>L18069</td>
+<td><code>onConfirm — 确认按钮回调</code></td>
+<td><code>07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.HEARTBEAT_REPORT</code></td>
+<td>L50204</td>
+<td><code>doHeartbeat — 执行一次心跳检测并上报状态</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.JOIN_FAILED</code></td>
+<td>L51696</td>
+<td><code>onError — 错误处理回调</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.JOIN_RECEIVED_CMD_RES</code></td>
+<td>L49834</td>
+<td><code>asyncGeneratorWrap — 方法</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.JOIN_SCHEDULE_SUCCESS</code></td>
+<td>L45303</td>
+<td><code>schedule — 调度任务</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.JOIN_SEND_CMD</code></td>
+<td>L49824</td>
+<td><code>asyncGeneratorWrap — 方法</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.JOIN_SIGNAL_CONNECTION_END</code></td>
+<td>L49785, L50069, L50073</td>
+<td><code>asyncGeneratorWrap — 方法；initialize — 初始化本地流，获取摄像头/麦克风权限并创建 MediaStream</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.JOIN_SIGNAL_CONNECTION_START</code></td>
+<td>L50071</td>
+<td><code>initialize — 初始化本地流，获取摄像头/麦克风权限并创建 MediaStream</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.JOIN_START</code></td>
+<td>L51657</td>
+<td><code>onError — 错误处理回调</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.JOIN_SUCCESS</code></td>
+<td>L51684</td>
+<td><code>onError — 错误处理回调</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.LEAVE_SEND_CMD</code></td>
+<td>L50098</td>
+<td><code>leave — 离开当前房间</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.LEAVE_START</code></td>
+<td>L51725</td>
+<td><code>success — 操作成功回调</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.LEAVE_SUCCESS</code></td>
+<td>L51727</td>
+<td><code>success — 操作成功回调</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.LOCAL_TRACK_CAPTURE_FAILED</code></td>
+<td>L23157</td>
+<td><code>capture — 捕获当前帧</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.LOCAL_TRACK_CAPTURE_START</code></td>
+<td>L23140</td>
+<td><code>capture — 捕获当前帧</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.LOCAL_TRACK_CAPTURE_SUCCESS</code></td>
+<td>L23150</td>
+<td><code>capture — 捕获当前帧</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.LOCAL_TRACK_PUBLISHED</code></td>
+<td>L23568</td>
+<td><code>success — 操作成功回调</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.LOCAL_TRACK_RECAPTURE</code></td>
+<td>L23496, L23503</td>
+<td><code>recapture — 重新捕获屏幕/设备</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.LOCAL_TRACK_REPLACED</code></td>
+<td>L50664</td>
+<td><code>replaceTrack — 替换本地流中的指定轨道</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.LOCAL_TRACK_UNPUBLISHED</code></td>
+<td>L23322</td>
+<td><code>unpublish — 取消发布本地音视频流</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.LOG</code></td>
+<td>L14066</td>
+<td><code>addLogToQueue — 方法</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.NETWORK_QUALITY</code></td>
+<td>L41083</td>
+<td><code>start — 启动组件/模块（开始工作流程）</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.PEER_CONNECTION_STATE_CHANGED</code></td>
+<td>L37535, L47526</td>
+<td><code>emitConnectionStateChangedEvent — 发射连接状态变化事件</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.PLAYER_STATE_CHANGED</code></td>
+<td>L19785</td>
+<td><code>构造函数</code></td>
+<td><code>04-MediaDevices-and-Capture.md / 05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.PLAY_TRACK_START</code></td>
+<td>L19893</td>
+<td><code>play — 播放本地流（渲染到指定 DOM 元素）</code></td>
+<td><code>04-MediaDevices-and-Capture.md / 05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.PUBLISH_FAILED</code></td>
+<td>L51776</td>
+<td><code>onError — 错误处理回调</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.RECEIVED_PUBLISHED_USER_LIST</code></td>
+<td>L50259</td>
+<td><code>onPublishedUserList — 收到已发布用户列表后的处理</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.REMOTE_PUBLISH_STATE_CHANGED</code></td>
+<td>L49702</td>
+<td><code>join — 加入 TRTC 房间，初始化连接并开始信令通信</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.REMOTE_TRACK_SUBSCRIBED</code></td>
+<td>L28045</td>
+<td><code>success — 操作成功回调</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.REMOTE_TRACK_UNSUBSCRIBED</code></td>
+<td>L28063</td>
+<td><code>success — 操作成功回调</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.ROOM_DESTROY</code></td>
+<td>L45263</td>
+<td><code>destroy — 销毁 SDK 实例，释放所有资源（房间、轨道、连接等）</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.SEND_FIRST_VIDEO_FRAME</code></td>
+<td>L39567, L48647</td>
+<td><code>handleConnectionStateChange — 处理连接状态变化</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.SIGNAL_CONNECTION_STATE_CHANGED</code></td>
+<td>L49993</td>
+<td><code>initialize — 初始化本地流，获取摄像头/麦克风权限并创建 MediaStream</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.SINGLE_CONNECTION_STAT</code></td>
+<td>L46526</td>
+<td><code>onConnectionStateChange — 连接状态变化回调</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.SPC_RECONNECTED</code></td>
+<td>L46426</td>
+<td><code>reconnect — 重新建立信令连接</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.SUBSCRIBE_FAILED</code></td>
+<td>L51859</td>
+<td><code>onError — 错误处理回调</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.SUBSCRIBE_START</code></td>
+<td>L50734</td>
+<td><code>subscribe — 订阅远端用户的音视频流</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.SUBSCRIBE_SUCCESS</code></td>
+<td>L50745</td>
+<td><code>subscribe — 订阅远端用户的音视频流</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.SWITCH_DEVICE_SUCCESS</code></td>
+<td>L23772, L24517</td>
+<td><code>switchDevice — 切换采集设备</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.SWITCH_ROOM_FAILED</code></td>
+<td>L51486</td>
+<td><code>switchRoom — 切换房间，保持当前已发布的音视频流不变，直接切换到目标房间</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.SWITCH_ROOM_START</code></td>
+<td>L51469</td>
+<td><code>switchRoom — 切换房间，保持当前已发布的音视频流不变，直接切换到目标房间</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.SWITCH_ROOM_SUCCESS</code></td>
+<td>L51490</td>
+<td><code>switchRoom — 切换房间，保持当前已发布的音视频流不变，直接切换到目标房间</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.UNSUBSCRIBE_SUCCESS</code></td>
+<td>L50797</td>
+<td><code>unsubscribe — 取消订阅远端用户的音视频流</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>Events.VIDEO_LOADED_DATA</code></td>
+<td>L19810</td>
+<td><code>构造函数</code></td>
+<td><code>04-MediaDevices-and-Capture.md / 05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>FSM.STATECHANGED</code></td>
+<td>L16867</td>
+<td><code>dispatchStateChange — 内部函数</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>IH.UNAVAILABLE</code></td>
+<td>L26079</td>
+<td><code>success — 操作成功回调</code></td>
+<td><code>07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>MSG_TYPE_1</code></td>
+<td>L37030</td>
+<td><code>onmessage — 收到消息事件回调</code></td>
+<td><code>03-WebSocket-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>MSG_TYPE_2</code></td>
+<td>L37327</td>
+<td><code>emitConnectionStateChanged — 发射连接状态变化事件</code></td>
+<td><code>03-WebSocket-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>MSG_TYPE_3) : e === &#39;DISCONNECTED&#39; &amp;&amp; this.emit(MSG_TYPE_6</code></td>
+<td>L37329</td>
+<td><code>emitConnectionStateChanged — 发射连接状态变化事件</code></td>
+<td><code>03-WebSocket-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>MSG_TYPE_5</code></td>
+<td>L36985, L36999, L37042</td>
+<td><code>onclose — 连接关闭事件回调；onerror — 连接错误事件回调；onmessage — 收到消息事件回调</code></td>
+<td><code>03-WebSocket-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>MSG_TYPE_7</code></td>
+<td>L37270</td>
+<td><code>close — 关闭本地流并释放所有轨道</code></td>
+<td><code>03-WebSocket-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>MSG_TYPE_8</code></td>
+<td>L37008</td>
+<td><code>onmessage — 收到消息事件回调</code></td>
+<td><code>03-WebSocket-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>String(a</code></td>
+<td>L37063</td>
+<td><code>onmessage — 收到消息事件回调</code></td>
+<td><code>03-WebSocket-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>XJ.CONNECTION_STATE_CHANGED</code></td>
+<td>L46556</td>
+<td><code>emitConnectionStateChangedEvent — 发射连接状态变化事件</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>XJ.FIREWALL_RESTRICTION</code></td>
+<td>L46642</td>
+<td><code>waitForPeerConnectionConnected — 等待 PeerConnection 连接成功</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>a</code></td>
+<td>L37060</td>
+<td><code>onmessage — 收到消息事件回调</code></td>
+<td><code>03-WebSocket-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>a ? transportWrapper.REMOTE_VIDEO_AVAILABLE : transportWrapper.REMOTE_VIDEO_UNAVAILABLE</code></td>
+<td>L34383</td>
+<td><code>_listenEvents — 内部：监听房间层事件并转发为 SDK 对外事件</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>dH.RENDER</code></td>
+<td>L25334</td>
+<td><code>render — 渲染视频帧到画布</code></td>
+<td><code>07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>e</code></td>
+<td>L35420</td>
+<td><code>emit — 触发事件通知所有注册的监听器</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>e ? &#39;mute&#39; : &#39;unmute&#39;</code></td>
+<td>L20043</td>
+<td><code>setMute — 设置静音状态</code></td>
+<td><code>04-MediaDevices-and-Capture.md / 05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>e ? Events.TRACK_MUTED : Events.TRACK_UNMUTED</code></td>
+<td>L20044</td>
+<td><code>setMute — 设置静音状态</code></td>
+<td><code>04-MediaDevices-and-Capture.md / 05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>e.EVENT_NETWORK_QUALITY</code></td>
+<td>L41103</td>
+<td><code>start — 启动组件/模块（开始工作流程）</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>e.RENDER</code></td>
+<td>L25204, L25206</td>
+<td><code>draw2d — 2D 绘制</code></td>
+<td><code>07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>i</code></td>
+<td>L19182, L19191</td>
+<td><code>update — 方法</code></td>
+<td><code>06-Web-Audio-usage-analysis.md / 04-MediaDevices-and-Capture.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>i.hasAuxiliary ? transportWrapper.REMOTE_VIDEO_AVAILABLE : transportWrapper.REMOTE_VIDEO_UNAVAILABLE</code></td>
+<td>L34394</td>
+<td><code>_listenEvents — 内部：监听房间层事件并转发为 SDK 对外事件</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>s ? transportWrapper.REMOTE_AUDIO_AVAILABLE : transportWrapper.REMOTE_AUDIO_UNAVAILABLE</code></td>
+<td>L34389</td>
+<td><code>_listenEvents — 内部：监听房间层事件并转发为 SDK 对外事件</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>stateStr</code></td>
+<td>L16866</td>
+<td><code>dispatchStateChange — 内部函数</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>t.kind === StreamConstants.AUDIO ? transportWrapper.AUDIO_PLAY_STATE_CHANGED : transportWrapper.V...</code></td>
+<td>L34348</td>
+<td><code>_listenEvents — 内部：监听房间层事件并转发为 SDK 对外事件</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>transportWrapper.AUDIO_FRAME</code></td>
+<td>L33902, L33913, L34477</td>
+<td><code>enableAudioFrameEvent — 启用音频帧事件通知；_listenEvents — 内部：监听房间层事件并转发为 SDK 对外事件</code></td>
+<td><code>08-Worker-Streams-and-Encoded-Processing.md / 09-WebCodecs-and-WebAssembly.md / 00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>transportWrapper.AUDIO_PLAY_STATE_CHANGED</code></td>
+<td>L34787</td>
+<td><code>startLocalAudio — 采集本地麦克风音频并推送到房间</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>transportWrapper.AUDIO_VOLUME</code></td>
+<td>L34221</td>
+<td><code>构造函数</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>transportWrapper.AUTOPLAY_FAILED</code></td>
+<td>L32308, L34353</td>
+<td><code>handleAutoPlayFailed — 处理自动播放失败（用户交互后恢复）；_listenEvents — 内部：监听房间层事件并转发为 SDK 对外事件</code></td>
+<td><code>08-Worker-Streams-and-Encoded-Processing.md / 09-WebCodecs-and-WebAssembly.md / 00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>transportWrapper.CONNECTION_STATE_CHANGED</code></td>
+<td>L34329</td>
+<td><code>_listenEvents — 内部：监听房间层事件并转发为 SDK 对外事件</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>transportWrapper.CUSTOM_MESSAGE</code></td>
+<td>L34468</td>
+<td><code>_listenEvents — 内部：监听房间层事件并转发为 SDK 对外事件</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>transportWrapper.DEVICE_CHANGED</code></td>
+<td>L34482, L34486, L34490, L34494, L34502, L34509, L34518, L34525, L34772, L34893, L35534, L35929, L35935, L36079</td>
+<td><code>_listenEvents — 内部：监听房间层事件并转发为 SDK 对外事件；asyncGeneratorWrap — 方法；startLocalAudio — 采集本地麦克风音频并推送到房间；startLocalVideo — 采集本地摄像头视频并推送到房间；setCurrentSpeaker — 设置扬声器设备（音频输出设备 ID）；另 2 个</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>transportWrapper.ERROR</code></td>
+<td>L34324, L34405, L34768, L34889, L35181, L35570</td>
+<td><code>_listenEvents — 内部：监听房间层事件并转发为 SDK 对外事件；startLocalAudio — 采集本地麦克风音频并推送到房间；startLocalVideo — 采集本地摄像头视频并推送到房间；startRemoteVideo — 开始播放远端视频（触发订阅远端流）；_doStartRemoteAudio — 内部：执行远端音频播放逻辑</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>transportWrapper.FIRST_VIDEO_FRAME</code></td>
+<td>L34473, L34885, L35046</td>
+<td><code>_listenEvents — 内部：监听房间层事件并转发为 SDK 对外事件；startLocalVideo — 采集本地摄像头视频并推送到房间；stopLocalVideo — 停止本地摄像头视频采集并取消推送</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>transportWrapper.KICKED_OUT</code></td>
+<td>L34317</td>
+<td><code>_listenEvents — 内部：监听房间层事件并转发为 SDK 对外事件</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>transportWrapper.LAYER_DATA</code></td>
+<td>L34470</td>
+<td><code>_listenEvents — 内部：监听房间层事件并转发为 SDK 对外事件</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>transportWrapper.NETWORK_QUALITY</code></td>
+<td>L34336</td>
+<td><code>_listenEvents — 内部：监听房间层事件并转发为 SDK 对外事件</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>transportWrapper.PERMISSION_STATE_CHANGE</code></td>
+<td>L34530</td>
+<td><code>_listenEvents — 内部：监听房间层事件并转发为 SDK 对外事件</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>transportWrapper.PUBLISH_STATE_CHANGED</code></td>
+<td>L34778, L34899, L35042</td>
+<td><code>startLocalAudio — 采集本地麦克风音频并推送到房间；startLocalVideo — 采集本地摄像头视频并推送到房间；stopLocalVideo — 停止本地摄像头视频采集并取消推送</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>transportWrapper.REMOTE_USER_ENTER</code></td>
+<td>L34306</td>
+<td><code>_listenEvents — 内部：监听房间层事件并转发为 SDK 对外事件</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>transportWrapper.REMOTE_USER_EXIT</code></td>
+<td>L34310</td>
+<td><code>_listenEvents — 内部：监听房间层事件并转发为 SDK 对外事件</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>transportWrapper.SCREEN_SHARE_STOPPED</code></td>
+<td>L35072</td>
+<td><code>stopLocalVideo — 停止本地摄像头视频采集并取消推送</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>transportWrapper.SEI_MESSAGE</code></td>
+<td>L33034, L34401</td>
+<td><code>decode — 解码视频/音频数据；_listenEvents — 内部：监听房间层事件并转发为 SDK 对外事件</code></td>
+<td><code>08-Worker-Streams-and-Encoded-Processing.md / 09-WebCodecs-and-WebAssembly.md / 00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>transportWrapper.STATISTICS</code></td>
+<td>L34464</td>
+<td><code>_listenEvents — 内部：监听房间层事件并转发为 SDK 对外事件</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>transportWrapper.TRACK</code></td>
+<td>L35757</td>
+<td><code>_emitTrackEvent — 内部：向外部发射轨道状态事件</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>transportWrapper.VIDEO_DECODE_DOWNGRADE_STATE_CHANGED</code></td>
+<td>L35659</td>
+<td><code>_enableVideoDecodeFallback — 内部：切换视频解码降级策略（软解/硬解）</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>transportWrapper.VIDEO_PLAY_STATE_CHANGED</code></td>
+<td>L34908, L35088</td>
+<td><code>startLocalVideo — 采集本地摄像头视频并推送到房间；stopLocalVideo — 停止本地摄像头视频采集并取消推送</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.emit</td>
+<td><code>transportWrapper.VIDEO_SIZE_CHANGED</code></td>
+<td>L34912, L35185</td>
+<td><code>startLocalVideo — 采集本地摄像头视频并推送到房间；startRemoteVideo — 开始播放远端视频（触发订阅远端流）</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;&quot;</code></td>
+<td>L15229</td>
+<td><code>CATCH_HANDLER_ERROR — 方法</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;&quot;.concat(t</code></td>
+<td>L29621</td>
+<td><code>EVENT_HANDLER_ERROR — 方法</code></td>
+<td><code>08-Worker-Streams-and-Encoded-Processing.md / 09-WebCodecs-and-WebAssembly.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;1&#39;</code></td>
+<td>L45925, L49688</td>
+<td><code>构造函数；join — 加入 TRTC 房间，初始化连接并开始信令通信</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md / 03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;102&#39;</code></td>
+<td>L15363, L35936</td>
+<td><code>构造函数；_initActiveSpeaker — 内部：初始化活跃发言人检测逻辑</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md / 00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;103&#39;</code></td>
+<td>L15369</td>
+<td><code>构造函数</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;104&#39;</code></td>
+<td>L32014</td>
+<td><code>installEvent — 安装单个事件监听器</code></td>
+<td><code>08-Worker-Streams-and-Encoded-Processing.md / 09-WebCodecs-and-WebAssembly.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;113&#39;</code></td>
+<td>L27756</td>
+<td><code>installEvent — 安装单个事件监听器</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;114&#39;</code></td>
+<td>L27757, L32015</td>
+<td><code>installEvent — 安装单个事件监听器</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md / 08-Worker-Streams-and-Encoded-Processing.md / 09-WebCodecs-and-WebAssembly.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;115&#39;</code></td>
+<td>L27758</td>
+<td><code>installEvent — 安装单个事件监听器</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;116&#39;</code></td>
+<td>L27759</td>
+<td><code>installEvent — 安装单个事件监听器</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;154&#39;</code></td>
+<td>L32305</td>
+<td><code>handleAutoPlayFailed — 处理自动播放失败（用户交互后恢复）</code></td>
+<td><code>08-Worker-Streams-and-Encoded-Processing.md / 09-WebCodecs-and-WebAssembly.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;2&#39;</code></td>
+<td>L34770, L34891, L49692</td>
+<td><code>startLocalAudio — 采集本地麦克风音频并推送到房间；startLocalVideo — 采集本地摄像头视频并推送到房间；join — 加入 TRTC 房间，初始化连接并开始信令通信</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md / 03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;201&#39;</code></td>
+<td>L30906</td>
+<td><code>generateRoomConfig — 内部函数</code></td>
+<td><code>08-Worker-Streams-and-Encoded-Processing.md / 09-WebCodecs-and-WebAssembly.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;202&#39;</code></td>
+<td>L30910</td>
+<td><code>generateRoomConfig — 内部函数</code></td>
+<td><code>08-Worker-Streams-and-Encoded-Processing.md / 09-WebCodecs-and-WebAssembly.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;22&#39;</code></td>
+<td>L13829</td>
+<td><code>构造函数</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;262&#39;</code></td>
+<td>L45697</td>
+<td><code>构造函数</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;266&#39;</code></td>
+<td>L13836, L15375</td>
+<td><code>构造函数</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;28&#39;</code></td>
+<td>L30903</td>
+<td><code>generateRoomConfig — 内部函数</code></td>
+<td><code>08-Worker-Streams-and-Encoded-Processing.md / 09-WebCodecs-and-WebAssembly.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;3&#39;</code></td>
+<td>L49696</td>
+<td><code>join — 加入 TRTC 房间，初始化连接并开始信令通信</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;4&#39;</code></td>
+<td>L34774, L34895, L35038</td>
+<td><code>startLocalAudio — 采集本地麦克风音频并推送到房间；startLocalVideo — 采集本地摄像头视频并推送到房间；stopLocalVideo — 停止本地摄像头视频采集并取消推送</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;5&#39;</code></td>
+<td>L34766, L34887, L49697</td>
+<td><code>startLocalAudio — 采集本地麦克风音频并推送到房间；startLocalVideo — 采集本地摄像头视频并推送到房间；join — 加入 TRTC 房间，初始化连接并开始信令通信</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md / 03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;6&#39;</code></td>
+<td>L34780, L34901, L49698</td>
+<td><code>startLocalAudio — 采集本地麦克风音频并推送到房间；startLocalVideo — 采集本地摄像头视频并推送到房间；join — 加入 TRTC 房间，初始化连接并开始信令通信</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md / 03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;63&#39;</code></td>
+<td>L30904</td>
+<td><code>generateRoomConfig — 内部函数</code></td>
+<td><code>08-Worker-Streams-and-Encoded-Processing.md / 09-WebCodecs-and-WebAssembly.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;7&#39;</code></td>
+<td>L24623</td>
+<td><code>fallbackProfile — 降级编码 Profile</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;84&#39;</code></td>
+<td>L30905</td>
+<td><code>generateRoomConfig — 内部函数</code></td>
+<td><code>08-Worker-Streams-and-Encoded-Processing.md / 09-WebCodecs-and-WebAssembly.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;audio-volume&#39;</code></td>
+<td>L34176</td>
+<td><code>构造函数</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;audioInputAdded&#39;</code></td>
+<td>L23818</td>
+<td><code>handleMicrophoneRemoved — 麦克风拔出事件回调</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;audioInputRemoved&#39;</code></td>
+<td>L23792</td>
+<td><code>listenDeviceChange — 监听设备插拔事件</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;closed&#39;</code></td>
+<td>L38480, L39679, L49410</td>
+<td><code>n — 源码命名函数</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;connection-state-changed&#39;</code></td>
+<td>L37665, L38572, L47895, L50314, L50570</td>
+<td><code>waitForPeerConnectionConnected — 等待 PeerConnection 连接成功；installEvents — 安装事件监听器；installDownlinkEvents — 安装下行连接的事件监听；_initUplinkConnection — 初始化上行推流连接</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md / 03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;decode-failed&#39;</code></td>
+<td>L35179, L35568, L48878</td>
+<td><code>startRemoteVideo — 开始播放远端视频（触发订阅远端流）；_doStartRemoteAudio — 内部：执行远端音频播放逻辑；installEvents — 安装事件监听器</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md / 02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;disconnect&#39;</code></td>
+<td>L24886</td>
+<td><code>构造函数</code></td>
+<td><code>07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;dump&#39;</code></td>
+<td>L49754</td>
+<td><code>initSinglePC — 初始化单 RTCPeerConnection 模式（主播推流）</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;error&#39;</code></td>
+<td>L34223, L43923, L50307, L50578</td>
+<td><code>构造函数；asyncGeneratorWrap — 方法；installDownlinkEvents — 安装下行连接的事件监听；_initUplinkConnection — 初始化上行推流连接</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md / 10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md / 03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;firewall-restriction&#39;</code></td>
+<td>L50318, L50574</td>
+<td><code>installDownlinkEvents — 安装下行连接的事件监听；_initUplinkConnection — 初始化上行推流连接</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;heartbeat-report&#39;</code></td>
+<td>L28470, L45710, L47675</td>
+<td><code>useCanvasPlayer — 使用 Canvas 播放器；onVideoCodecChanged — 视频编码器切换回调；start — 启动组件/模块（开始工作流程）</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md / 10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md / 02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;input-media-track-changed&#39;</code></td>
+<td>L24304, L27697</td>
+<td><code>构造函数；handleLocalTrackStarted — 本地轨道开始回调</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;message&#39;</code></td>
+<td>L49978</td>
+<td><code>initialize — 初始化本地流，获取摄像头/麦克风权限并创建 MediaStream</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;mute&#39;</code></td>
+<td>L38764, L48288</td>
+<td><code>installTrackMuteEvents — 安装轨道静音状态事件监听器</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;output-media-track-changed&#39;</code></td>
+<td>L26689, L35745</td>
+<td><code>addCameraSource — 添加摄像头源；_listenOutputTrackChanged — 内部：监听输出轨道切换事件</code></td>
+<td><code>07-Media-Playback-and-Rendering.md / 00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;peer-join&#39;</code></td>
+<td>L49520</td>
+<td><code>onReceiveMsg — 收到消息回调</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;peer-leave&#39;</code></td>
+<td>L49446</td>
+<td><code>构造函数</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;publish&#39;</code></td>
+<td>L24305</td>
+<td><code>构造函数</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;sei-message&#39;</code></td>
+<td>L49753</td>
+<td><code>initSinglePC — 初始化单 RTCPeerConnection 模式（主播推流）</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;spc-reconnected&#39;</code></td>
+<td>L47906, L48877</td>
+<td><code>installSPCEvents — 安装单连接模式事件监听器；installEvents — 安装事件监听器</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;track&#39;</code></td>
+<td>L48875</td>
+<td><code>installEvents — 安装事件监听器</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;unmute&#39;</code></td>
+<td>L38765, L48289</td>
+<td><code>installTrackMuteEvents — 安装轨道静音状态事件监听器</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;video-size-changed&#39;</code></td>
+<td>L35183</td>
+<td><code>startRemoteVideo — 开始播放远端视频（触发订阅远端流）</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;videoCodecInfo&#39;</code></td>
+<td>L43941</td>
+<td><code>asyncGeneratorWrap — 方法</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;videoFrame&#39;</code></td>
+<td>L43905, L43942, L43958, L43966</td>
+<td><code>asyncGeneratorWrap — 方法</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;videoInputAdded&#39;</code></td>
+<td>L24688</td>
+<td><code>handleCameraRemoved — 摄像头拔出事件回调</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>&#39;videoInputRemoved&#39;</code></td>
+<td>L24664</td>
+<td><code>listenDeviceChange — 监听设备插拔事件</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>Bx.ERROR</code></td>
+<td>L19833</td>
+<td><code>构造函数</code></td>
+<td><code>04-MediaDevices-and-Capture.md / 05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>Bx.LOADED_DATA</code></td>
+<td>L19808</td>
+<td><code>构造函数</code></td>
+<td><code>04-MediaDevices-and-Capture.md / 05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>Bx.LOADED_META_DATA</code></td>
+<td>L19812</td>
+<td><code>构造函数</code></td>
+<td><code>04-MediaDevices-and-Capture.md / 05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>Bx.MEDIA_TRACK_CHANGED</code></td>
+<td>L19816</td>
+<td><code>构造函数</code></td>
+<td><code>04-MediaDevices-and-Capture.md / 05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>Bx.PLAYER_STATE_CHANGED</code></td>
+<td>L19782</td>
+<td><code>构造函数</code></td>
+<td><code>04-MediaDevices-and-Capture.md / 05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>Bx.RESIZE</code></td>
+<td>L19822</td>
+<td><code>构造函数</code></td>
+<td><code>04-MediaDevices-and-Capture.md / 05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>Events.AUDIO_CONTEXT_LONG_SUSPENDED</code></td>
+<td>L23666</td>
+<td><code>构造函数</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>Events.AUDIO_LEVEL_INTERVAL</code></td>
+<td>L18986</td>
+<td><code>构造函数</code></td>
+<td><code>06-Web-Audio-usage-analysis.md / 04-MediaDevices-and-Capture.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>Events.AUTOPLAY_DIALOG_CLICK_CONFIRM</code></td>
+<td>L17651</td>
+<td><code>bindAutoPlayEvent — 绑定自动播放事件</code></td>
+<td><code>07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>Events.JOIN_SCHEDULE_SUCCESS</code></td>
+<td>L13877</td>
+<td><code>installEvents — 安装事件监听器</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>Events.JOIN_START</code></td>
+<td>L13887</td>
+<td><code>installEvents — 安装事件监听器</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>Events.JOIN_SUCCESS</code></td>
+<td>L28726</td>
+<td><code>validateSingleParamRule — 内部函数</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>Events.LEAVE_START</code></td>
+<td>L28732</td>
+<td><code>validateSingleParamRule — 内部函数</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>Events.LEAVE_SUCCESS</code></td>
+<td>L13893, L36496, L37665, L46655</td>
+<td><code>installEvents — 安装事件监听器；构造函数；waitForPeerConnectionConnected — 等待 PeerConnection 连接成功</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md / 00-Reading-Guide-and-Source-Map.md / 02-RTCPeerConnection-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>Events.LOCAL_TRACK_PUBLISHED</code></td>
+<td>L28738</td>
+<td><code>validateSingleParamRule — 内部函数</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>Events.LOCAL_TRACK_RECAPTURE</code></td>
+<td>L28867</td>
+<td><code>validateSingleParamRule — 内部函数</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>Events.LOCAL_TRACK_REPLACED</code></td>
+<td>L28802</td>
+<td><code>validateSingleParamRule — 内部函数</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>Events.LOCAL_TRACK_UNPUBLISHED</code></td>
+<td>L28749</td>
+<td><code>validateSingleParamRule — 内部函数</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>Events.PEER_CONNECTION_STATE_CHANGED</code></td>
+<td>L28826</td>
+<td><code>validateSingleParamRule — 内部函数</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>Events.REMOTE_TRACK_SUBSCRIBED</code></td>
+<td>L28778</td>
+<td><code>validateSingleParamRule — 内部函数</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>Events.REMOTE_TRACK_UNSUBSCRIBED</code></td>
+<td>L28787</td>
+<td><code>validateSingleParamRule — 内部函数</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>Events.ROOM_DESTROY</code></td>
+<td>L29034</td>
+<td><code>createRateLimitDecorator — 内部函数</code></td>
+<td><code>08-Worker-Streams-and-Encoded-Processing.md / 09-WebCodecs-and-WebAssembly.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>Events.SIGNAL_CONNECTION_STATE_CHANGED</code></td>
+<td>L28808</td>
+<td><code>validateSingleParamRule — 内部函数</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>Events.SWITCH_DEVICE_SUCCESS</code></td>
+<td>L23628, L28796</td>
+<td><code>fail — 操作失败回调；validateSingleParamRule — 内部函数</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>Events.SWITCH_ROOM_SUCCESS</code></td>
+<td>L36497</td>
+<td><code>构造函数</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>Events.TRACK_MUTED</code></td>
+<td>L28760</td>
+<td><code>validateSingleParamRule — 内部函数</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>Events.TRACK_UNMUTED</code></td>
+<td>L28769</td>
+<td><code>validateSingleParamRule — 内部函数</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>Events.VIDEO_CODEC_IMPLEMENTATION_CHANGED</code></td>
+<td>L28845</td>
+<td><code>validateSingleParamRule — 内部函数</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>MSG_TYPE_2</code></td>
+<td>L40870</td>
+<td><code>initialize — 初始化本地流，获取摄像头/麦克风权限并创建 MediaStream</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>XJ.CONNECTION_STATE_CHANGED</code></td>
+<td>L46656, L49917</td>
+<td><code>waitForPeerConnectionConnected — 等待 PeerConnection 连接成功；reJoin — 断开后重新加入房间</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md / 03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>_j.JOIN_ROOM_RESULT</code></td>
+<td>L37318</td>
+<td><code>stopKeepAliveIn — 停止内部保活机制</code></td>
+<td><code>03-WebSocket-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>_j.RECEIVE_CUSTOM_MSG</code></td>
+<td>L49445</td>
+<td><code>构造函数</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>_j.UPLINK_NETWORK_STATS</code></td>
+<td>L40866</td>
+<td><code>initialize — 初始化本地流，获取摄像头/麦克风权限并创建 MediaStream</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>dH.RENDER</code></td>
+<td>L26547, L44356, L44393</td>
+<td><code>构造函数；update — 方法</code></td>
+<td><code>07-Media-Playback-and-Rendering.md / 10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>e</code></td>
+<td>L17212, L35396, L37740, L41328</td>
+<td><code>createEventDispatcher — 内部函数；on — 注册事件监听器；addEvent — 添加事件</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md / 00-Reading-Guide-and-Source-Map.md / 02-RTCPeerConnection-usage-analysis.md / 10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>fJ.EVENT_NETWORK_QUALITY</code></td>
+<td>L49984</td>
+<td><code>initialize — 初始化本地流，获取摄像头/麦克风权限并创建 MediaStream</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>n</code></td>
+<td>L37190</td>
+<td><code>sendWaitForResponse — 发送请求并等待响应</code></td>
+<td><code>03-WebSocket-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>receiverWrapper.UNAVAILABLE</code></td>
+<td>L43935, L44131, L44273</td>
+<td><code>asyncGeneratorWrap — 方法；initializeGlVideoContext — 初始化 WebGL 视频渲染上下文；setSmallVideo — 设置小流视频轨道</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>t</code></td>
+<td>L21771, L42337, L42551</td>
+<td><code>fromEventObservable — 内部函数；installEvents — 安装事件监听器</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md / 10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.on</td>
+<td><code>transportWrapper.SEI_MESSAGE</code></td>
+<td>L34533</td>
+<td><code>_listenEvents — 内部：监听房间层事件并转发为 SDK 对外事件</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.once</td>
+<td><code>&#39;banned&#39;</code></td>
+<td>L41336</td>
+<td><code>installEvents — 安装事件监听器</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.once</td>
+<td><code>&#39;error&#39;</code></td>
+<td>L46672, L49755</td>
+<td><code>waitForReconnected — 等待重连完成；initSinglePC — 初始化单 RTCPeerConnection 模式（主播推流）</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md / 03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.once</td>
+<td><code>&#39;first-video-frame&#39;</code></td>
+<td>L28372, L34883, L35044</td>
+<td><code>构造函数；startLocalVideo — 采集本地摄像头视频并推送到房间；stopLocalVideo — 停止本地摄像头视频采集并取消推送</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md / 00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.once</td>
+<td><code>&#39;input-media-track-changed&#39;</code></td>
+<td>L27915</td>
+<td><code>waitHasMediaTrack — 等待媒体轨道就绪</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.once</td>
+<td><code>&#39;spc-reconnected&#39;</code></td>
+<td>L46672</td>
+<td><code>waitForReconnected — 等待重连完成</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.once</td>
+<td><code>Events.JOIN_RECEIVED_CMD_RES</code></td>
+<td>L45170, L45296</td>
+<td><code>setProxyServer — 设置代理服务器；schedule — 调度任务</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.once</td>
+<td><code>Events.LOCAL_TRACK_CAPTURE_SUCCESS</code></td>
+<td>L20171</td>
+<td><code>handleAutoPlayFailed — 处理自动播放失败（用户交互后恢复）</code></td>
+<td><code>04-MediaDevices-and-Capture.md / 05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.once</td>
+<td><code>MSG_TYPE_1</code></td>
+<td>L50067</td>
+<td><code>initialize — 初始化本地流，获取摄像头/麦克风权限并创建 MediaStream</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.once</td>
+<td><code>MSG_TYPE_3</code></td>
+<td>L37733, L46404</td>
+<td><code>beforeReconnect — 重连前处理；reconnect — 重新建立信令连接</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.once</td>
+<td><code>MSG_TYPE_5</code></td>
+<td>L49783</td>
+<td><code>asyncGeneratorWrap — 方法</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.once</td>
+<td><code>MSG_TYPE_7</code></td>
+<td>L37173</td>
+<td><code>sendWaitForResponse — 发送请求并等待响应</code></td>
+<td><code>03-WebSocket-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.once</td>
+<td><code>MSG_TYPE_8</code></td>
+<td>L37211</td>
+<td><code>sendWaitForResponseWithRetry — 发送请求并等待响应（带重试）</code></td>
+<td><code>03-WebSocket-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventEmitter.once</td>
+<td><code>_j.JOIN_ROOM_RESULT</code></td>
+<td>L49826</td>
+<td><code>asyncGeneratorWrap — 方法</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.addEventListener</td>
+<td><code>&#39;addstream&#39;</code></td>
+<td>L7067, L8234</td>
+<td><code>RTCPeerConnection.prototype.setRemoteDescription — 设置远端 SDP 描述（跨浏览器适配）；XC — 源码命名函数</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.addEventListener</td>
+<td><code>&#39;addtrack&#39;</code></td>
+<td>L7036</td>
+<td><code>RTCPeerConnection.prototype.setRemoteDescription — 设置远端 SDP 描述（跨浏览器适配）</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.addEventListener</td>
+<td><code>&#39;change&#39;</code></td>
+<td>L34080</td>
+<td><code>get — HTTP GET 请求便捷封装</code></td>
+<td><code>08-Worker-Streams-and-Encoded-Processing.md / 09-WebCodecs-and-WebAssembly.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.addEventListener</td>
+<td><code>&#39;click&#39;</code></td>
+<td>L18502, L18539, L20170</td>
+<td><code>observableCreate — 源码命名函数；resumeAudioContext — 内部函数；handleAutoPlayFailed — 处理自动播放失败（用户交互后恢复）</code></td>
+<td><code>07-Media-Playback-and-Rendering.md / 04-MediaDevices-and-Capture.md / 05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.addEventListener</td>
+<td><code>&#39;close&#39;</code></td>
+<td>L36931</td>
+<td><code>bindSocket — 绑定 WebSocket 实例到连接管理器</code></td>
+<td><code>03-WebSocket-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.addEventListener</td>
+<td><code>&#39;connectionstatechange&#39;</code></td>
+<td>L9335</td>
+<td><code>pb — 源码命名函数</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.addEventListener</td>
+<td><code>&#39;contextlost&#39;</code></td>
+<td>L26108</td>
+<td><code>create — 方法</code></td>
+<td><code>07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.addEventListener</td>
+<td><code>&#39;contextrestored&#39;</code></td>
+<td>L26112</td>
+<td><code>create — 方法</code></td>
+<td><code>07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.addEventListener</td>
+<td><code>&#39;devicechange&#39;</code></td>
+<td>L19220</td>
+<td><code>构造函数</code></td>
+<td><code>06-Web-Audio-usage-analysis.md / 04-MediaDevices-and-Capture.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.addEventListener</td>
+<td><code>&#39;error&#39;</code></td>
+<td>L36932</td>
+<td><code>bindSocket — 绑定 WebSocket 实例到连接管理器</code></td>
+<td><code>03-WebSocket-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.addEventListener</td>
+<td><code>&#39;icecandidate&#39;</code></td>
+<td>L16119, L16120</td>
+<td><code>asyncGeneratorWrap — 方法</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.addEventListener</td>
+<td><code>&#39;iceconnectionstatechange&#39;</code></td>
+<td>L9362</td>
+<td><code>pb — 源码命名函数</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.addEventListener</td>
+<td><code>&#39;message&#39;</code></td>
+<td>L2373, L36933</td>
+<td><code>nu — 源码命名函数；bindSocket — 绑定 WebSocket 实例到连接管理器</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md / 03-WebSocket-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.addEventListener</td>
+<td><code>&#39;pagehide&#39;</code></td>
+<td>L41335</td>
+<td><code>installEvents — 安装事件监听器</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.addEventListener</td>
+<td><code>&#39;track&#39;</code></td>
+<td>L7021</td>
+<td><code>kC — 源码命名函数</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.addEventListener</td>
+<td><code>&#39;typechange&#39;</code></td>
+<td>L12095</td>
+<td><code>getNetworkType — 检测当前网络类型（wifi/4g/3g/ethernet 等）</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.addEventListener</td>
+<td><code>&#39;visibilitychange&#39;</code></td>
+<td>L17150, L18536, L19693, L20512, L25364, L42759</td>
+<td><code>n — 内部函数；resumeAudioContext — 内部函数；setVolume — 设置音量；AU — 源码命名函数；update — 方法；另 1 个</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md / 07-Media-Playback-and-Rendering.md / 04-MediaDevices-and-Capture.md / 05-MediaStreamTrack-Lifecycle.md / 00-Reading-Guide-and-Source-Map.md / 07-Media-Playback-and-Rendering.md / 10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.addEventListener</td>
+<td><code>&#39;webglcontextlost&#39;</code></td>
+<td>L25968</td>
+<td><code>create — 方法</code></td>
+<td><code>07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.addEventListener</td>
+<td><code>StreamConstants.ENDED</code></td>
+<td>L23108, L35070</td>
+<td><code>installTrackEvent — 安装轨道事件监听器；stopLocalVideo — 停止本地摄像头视频采集并取消推送</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md / 00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.addEventListener</td>
+<td><code>StreamConstants.MUTE</code></td>
+<td>L23106</td>
+<td><code>installTrackEvent — 安装轨道事件监听器</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.addEventListener</td>
+<td><code>StreamConstants.UNMUTE</code></td>
+<td>L23107</td>
+<td><code>installTrackEvent — 安装轨道事件监听器</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.addEventListener</td>
+<td><code>e</code></td>
+<td>L17211</td>
+<td><code>createEventDispatcher — 内部函数</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.addEventListener</td>
+<td><code>t</code></td>
+<td>L6702, L21789</td>
+<td><code>fC — 源码命名函数；fromEventObservable — 内部函数</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.removeEventListener</td>
+<td><code>&#39;addstream&#39;</code></td>
+<td>L8232</td>
+<td><code>XC — 源码命名函数</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.removeEventListener</td>
+<td><code>&#39;change&#39;</code></td>
+<td>L34102</td>
+<td><code>destroy — 销毁 SDK 实例，释放所有资源（房间、轨道、连接等）</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.removeEventListener</td>
+<td><code>&#39;click&#39;</code></td>
+<td>L18515, L20161</td>
+<td><code>observableCreate — 源码命名函数；i — 源码命名函数</code></td>
+<td><code>07-Media-Playback-and-Rendering.md / 04-MediaDevices-and-Capture.md / 05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.removeEventListener</td>
+<td><code>&#39;close&#39;</code></td>
+<td>L36939</td>
+<td><code>unbindSocket — 解绑 WebSocket 实例</code></td>
+<td><code>03-WebSocket-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.removeEventListener</td>
+<td><code>&#39;connectionstatechange&#39;</code></td>
+<td>L9333</td>
+<td><code>pb — 源码命名函数</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.removeEventListener</td>
+<td><code>&#39;error&#39;</code></td>
+<td>L36940</td>
+<td><code>unbindSocket — 解绑 WebSocket 实例</code></td>
+<td><code>03-WebSocket-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.removeEventListener</td>
+<td><code>&#39;message&#39;</code></td>
+<td>L36941</td>
+<td><code>unbindSocket — 解绑 WebSocket 实例</code></td>
+<td><code>03-WebSocket-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.removeEventListener</td>
+<td><code>&#39;pagehide&#39;</code></td>
+<td>L41398</td>
+<td><code>uninstallEvents — 卸载事件监听器集合</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.removeEventListener</td>
+<td><code>&#39;track&#39;</code></td>
+<td>L7020, L8233, L47234</td>
+<td><code>kC — 源码命名函数；XC — 源码命名函数；reset — 重置房间状态（清理所有内部数据）</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.removeEventListener</td>
+<td><code>&#39;visibilitychange&#39;</code></td>
+<td>L17170, L18514, L25362, L25385, L42800</td>
+<td><code>e 类 — e；observableCreate — 源码命名函数；update — 方法；close — 关闭本地流并释放所有轨道；onRemoteVideoPlayEnd — 远端视频播放结束回调</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md / 07-Media-Playback-and-Rendering.md / 07-Media-Playback-and-Rendering.md / 10-Auxiliary-Browser-APIs.md / 10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.removeEventListener</td>
+<td><code>StreamConstants.ENDED</code></td>
+<td>L23118</td>
+<td><code>uninstallTrackEvent — 卸载轨道事件监听器</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.removeEventListener</td>
+<td><code>StreamConstants.MUTE</code></td>
+<td>L23116</td>
+<td><code>uninstallTrackEvent — 卸载轨道事件监听器</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.removeEventListener</td>
+<td><code>StreamConstants.UNMUTE</code></td>
+<td>L23117</td>
+<td><code>uninstallTrackEvent — 卸载轨道事件监听器</code></td>
+<td><code>05-MediaStreamTrack-Lifecycle.md</code></td>
+</tr>
+<tr>
+<td>EventTarget.removeEventListener</td>
+<td><code>t</code></td>
+<td>L6701, L21790</td>
+<td><code>fC — 源码命名函数；fromEventObservable — 内部函数</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 00-Reading-Guide-and-Source-Map.md</code></td>
+</tr>
+<tr>
+<td>事件属性</td>
+<td><code>onaudioprocess</code></td>
+<td>L19046, L19065</td>
+<td><code>initScriptProcessor — 初始化 ScriptProcessor 音频处理；destroy — 销毁 SDK 实例，释放所有资源（房间、轨道、连接等）</code></td>
+<td><code>06-Web-Audio-usage-analysis.md / 04-MediaDevices-and-Capture.md</code></td>
+</tr>
+<tr>
+<td>事件属性</td>
+<td><code>once</code></td>
+<td>L9685, L9825</td>
+<td><code>o — 内部函数；c.prototype.once — 原型方法</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md</code></td>
+</tr>
+<tr>
+<td>事件属性</td>
+<td><code>onclick</code></td>
+<td>L18022, L18028, L18033, L18048, L18049</td>
+<td><code>createDiaLog — 创建弹窗；addDiaLog — 添加弹窗</code></td>
+<td><code>07-Media-Playback-and-Rendering.md</code></td>
+</tr>
+<tr>
+<td>事件属性</td>
+<td><code>onclose</code></td>
+<td>L36810, L36913, L36924, L37088, L46235</td>
+<td><code>构造函数；connectWS — 建立 WebSocket 连接；startReconnection — 开始重连流程；initialize — 初始化本地流，获取摄像头/麦克风权限并创建 MediaStream</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>事件属性</td>
+<td><code>onconnectionstatechange</code></td>
+<td>L37448, L37468, L46226, L47365</td>
+<td><code>initialize — 初始化本地流，获取摄像头/麦克风权限并创建 MediaStream；closePeerConnection — 关闭并清理 RTCPeerConnection 连接；removeRTCListener — 移除 RTC 监听器</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>事件属性</td>
+<td><code>ondurationchange</code></td>
+<td>L32075</td>
+<td><code>updateListener — 更新事件监听</code></td>
+<td><code>08-Worker-Streams-and-Encoded-Processing.md / 09-WebCodecs-and-WebAssembly.md</code></td>
+</tr>
+<tr>
+<td>事件属性</td>
+<td><code>onended</code></td>
+<td>L32090</td>
+<td><code>updateListener — 更新事件监听</code></td>
+<td><code>08-Worker-Streams-and-Encoded-Processing.md / 09-WebCodecs-and-WebAssembly.md</code></td>
+</tr>
+<tr>
+<td>事件属性</td>
+<td><code>onerror</code></td>
+<td>L12519, L12642, L17772, L17795, L31080, L31164, L36809, L36914, L36924, L46152, L46245, L47606</td>
+<td><code>asyncGeneratorWrap — 方法；loadVideo — 加载视频元素；doReplayByRecreateMediaStream — 通过重建 MediaStream 重新播放；downloadWithXHR — 使用 XMLHttpRequest 下载；loadScript — 加载外部脚本；另 5 个</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md / 07-Media-Playback-and-Rendering.md / 08-Worker-Streams-and-Encoded-Processing.md / 09-WebCodecs-and-WebAssembly.md / 03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>事件属性</td>
+<td><code>oniceconnectionstatechange</code></td>
+<td>L46205, L47364</td>
+<td><code>initialize — 初始化本地流，获取摄像头/麦克风权限并创建 MediaStream；removeRTCListener — 移除 RTC 监听器</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>事件属性</td>
+<td><code>onload</code></td>
+<td>L12518, L31070, L31158</td>
+<td><code>asyncGeneratorWrap — 方法；downloadWithXHR — 使用 XMLHttpRequest 下载；loadScript — 加载外部脚本</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md / 08-Worker-Streams-and-Encoded-Processing.md / 09-WebCodecs-and-WebAssembly.md</code></td>
+</tr>
+<tr>
+<td>事件属性</td>
+<td><code>onmessage</code></td>
+<td>L2371, L17068, L17074, L19003, L19022, L19067, L27231, L27255, L31837, L31838, L31938, L32700, L32768, L36808, L46106, L46147, L46239, L47598, L47608</td>
+<td><code>nu — 源码命名函数；e 类 — e；preload — 预加载资源；initAudioWorklet — 初始化 AudioWorklet（音量检测等）；destroy — 销毁 SDK 实例，释放所有资源（房间、轨道、连接等）；另 7 个</code></td>
+<td><code>00-Reading-Guide-and-Source-Map.md / 10-Auxiliary-Browser-APIs.md / 06-Web-Audio-usage-analysis.md / 04-MediaDevices-and-Capture.md / 07-Media-Playback-and-Rendering.md / 08-Worker-Streams-and-Encoded-Processing.md / 09-WebCodecs-and-WebAssembly.md / 03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>事件属性</td>
+<td><code>onopen</code></td>
+<td>L36915, L36924, L46231</td>
+<td><code>connectWS — 建立 WebSocket 连接；initialize — 初始化本地流，获取摄像头/麦克风权限并创建 MediaStream</code></td>
+<td><code>03-WebSocket-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>事件属性</td>
+<td><code>onreadystatechange</code></td>
+<td>L12941</td>
+<td><code>sendHttpRequest — 内部函数</code></td>
+<td><code>10-Auxiliary-Browser-APIs.md</code></td>
+</tr>
+<tr>
+<td>事件属性</td>
+<td><code>onrtctransform</code></td>
+<td>L46119</td>
+<td><code>initScriptTransformWorker — 初始化脚本转换 Worker</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>事件属性</td>
+<td><code>onsignalingstatechange</code></td>
+<td>L46219, L47366</td>
+<td><code>initialize — 初始化本地流，获取摄像头/麦克风权限并创建 MediaStream；removeRTCListener — 移除 RTC 监听器</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>事件属性</td>
+<td><code>onstatechange</code></td>
+<td>L18475, L46260, L47368</td>
+<td><code>initAudioWorklet — 内部函数；initialize — 初始化本地流，获取摄像头/麦克风权限并创建 MediaStream；removeRTCListener — 移除 RTC 监听器</code></td>
+<td><code>07-Media-Playback-and-Rendering.md / 02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+<tr>
+<td>事件属性</td>
+<td><code>ontimeupdate</code></td>
+<td>L19499, L32085</td>
+<td><code>initializeElement — 方法；updateListener — 更新事件监听</code></td>
+<td><code>04-MediaDevices-and-Capture.md / 05-MediaStreamTrack-Lifecycle.md / 08-Worker-Streams-and-Encoded-Processing.md / 09-WebCodecs-and-WebAssembly.md</code></td>
+</tr>
+<tr>
+<td>事件属性</td>
+<td><code>ontrack</code></td>
+<td>L37907, L46227, L47367</td>
+<td><code>initialize — 初始化本地流，获取摄像头/麦克风权限并创建 MediaStream；removeRTCListener — 移除 RTC 监听器</code></td>
+<td><code>02-RTCPeerConnection-usage-analysis.md / 02-RTCPeerConnection-usage-analysis.md / 08-Worker-Streams-and-Encoded-Processing.md</code></td>
+</tr>
+</tbody></table></div>
+</blockquote>
+
+      <nav class="page-pagination" aria-label="上一篇和下一篇">
+        <a class="previous" href="Appendix-B-Source-Method-Index.html"><span>上一篇</span>附录 B 源码方法索引</a>
+        <a class="next" href="Appendix-D-Method-Adjacency-Index.html"><span>下一篇</span>附录 D 方法调用邻接</a>
+      </nav>
+    </article>
+    
+  </main>
+  <button type="button" class="back-to-top" aria-label="回到顶部">↑</button>
+</body>
+</html>

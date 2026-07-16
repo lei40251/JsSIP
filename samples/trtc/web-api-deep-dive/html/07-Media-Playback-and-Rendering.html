@@ -1,0 +1,650 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="TRTC 反混淆源码浏览器 Web API 深度分析：07 媒体播放与渲染">
+  <title>07 媒体播放与渲染 · TRTC Web API 深度学习</title>
+  <link rel="stylesheet" href="assets/docs.css">
+  <script>try{const t=localStorage.getItem('trtc-docs-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+  <script src="assets/search-index.js" defer></script>
+  <script src="assets/mermaid.min.js" defer></script>
+  <script src="assets/docs.js" defer></script>
+</head>
+<body data-page="07-Media-Playback-and-Rendering.html">
+  <header class="topbar">
+    <button type="button" class="icon-button nav-toggle" aria-label="打开目录" aria-expanded="false">☰</button>
+    <a class="brand" href="index.html">TRTC Web API 深度学习</a>
+    <div class="search-shell">
+      <label class="sr-only" for="global-search">搜索全部文档</label>
+      <input id="global-search" type="search" autocomplete="off" placeholder="搜索 API、方法、事件…" aria-controls="search-results">
+      <kbd>/</kbd>
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
+    <a class="source-link" href="../07-Media-Playback-and-Rendering.md">Markdown</a>
+    <a class="source-link" href="../../trtc.deobfuscated.js">源码</a>
+    <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
+  </header>
+
+  <aside class="sidebar" aria-label="文档目录">
+    
+    <section class="nav-group">
+      <h2>按顺序阅读</h2>
+      
+        <a class="nav-link" href="index.html">
+          文档首页
+        </a>
+        <a class="nav-link" href="00-Reading-Guide-and-Source-Map.html">
+          00 阅读说明与源码地图
+        </a>
+        <a class="nav-link" href="01-Browser-API-Panorama.html">
+          01 浏览器 API 全景
+        </a>
+        <a class="nav-link" href="02-RTCPeerConnection-usage-analysis.html">
+          02 RTCPeerConnection
+        </a>
+        <a class="nav-link" href="03-WebSocket-usage-analysis.html">
+          03 WebSocket 信令
+        </a>
+        <a class="nav-link" href="04-MediaDevices-and-Capture.html">
+          04 MediaDevices 与采集
+        </a>
+        <a class="nav-link" href="05-MediaStreamTrack-Lifecycle.html">
+          05 Track 生命周期
+        </a>
+        <a class="nav-link" href="06-Web-Audio-usage-analysis.html">
+          06 Web Audio
+        </a>
+        <a class="nav-link active" href="07-Media-Playback-and-Rendering.html">
+          07 播放与渲染
+        </a>
+        <a class="nav-link" href="08-Worker-Streams-and-Encoded-Processing.html">
+          08 Worker 与编码帧
+        </a>
+        <a class="nav-link" href="09-WebCodecs-and-WebAssembly.html">
+          09 WebCodecs 与 WASM
+        </a>
+        <a class="nav-link" href="10-Auxiliary-Browser-APIs.html">
+          10 辅助浏览器 API
+        </a>
+        <a class="nav-link" href="11-End-to-End-Business-Flows.html">
+          11 端到端业务流程
+        </a>
+    </section>
+    <section class="nav-group">
+      <h2>附录（按需查询）</h2>
+      
+        <a class="nav-link" href="Appendix-A-WebAPI-Occurrences.html">
+          A Web API 出现位置
+        </a>
+        <a class="nav-link" href="Appendix-B-Source-Method-Index.html">
+          B 源码方法索引
+        </a>
+        <a class="nav-link" href="Appendix-C-Event-Index.html">
+          C 事件索引
+        </a>
+        <a class="nav-link" href="Appendix-D-Method-Adjacency-Index.html">
+          D 方法调用邻接
+        </a>
+        <a class="nav-link" href="Appendix-E-Public-API-Call-Chains.html">
+          E 公开 API 调用链
+        </a>
+        <a class="nav-link" href="Appendix-F-Visual-Call-Flows.html">
+          F 流程图与时序图
+        </a>
+    </section>
+  </aside>
+  <div class="sidebar-backdrop" hidden></div>
+
+  <main class="layout">
+    <article class="doc-content">
+      <h1 id="07-媒体播放与渲染">07 媒体播放与渲染<a class="heading-anchor" href="#07-媒体播放与渲染" aria-label="链接到本节">#</a></h1>
+<blockquote>
+<p>本文沿“Track 到达 → 选择播放器 → 帧驱动 → 画面处理 → 输出/截图 → 停止”说明媒体呈现。</p>
+</blockquote>
+<h2 id="1-本章结论">1. 本章结论<a class="heading-anchor" href="#1-本章结论" aria-label="链接到本节">#</a></h2>
+<p>源码存在两类视频呈现路径：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">原生播放：Track → HTMLVideoElement
+处理渲染：Track → hidden video/frame source → Canvas2D/WebGL → canvas
+</code></pre>
+</div><p>音频主要通过 HTMLAudioElement 或 Web Audio 播放。Player 负责绑定和呈现 Track，但通常不拥有本地采集源；清理 Player 不等于停止摄像头或 receiver。</p>
+<h2 id="2-player-的统一职责">2. Player 的统一职责<a class="heading-anchor" href="#2-player-的统一职责" aria-label="链接到本节">#</a></h2>
+<p>Player 基类主要维护：</p>
+<ul>
+<li>当前 Track/MediaStream。</li>
+<li>播放目标元素或容器。</li>
+<li>play/pause/playing/error 等状态。</li>
+<li>自动播放失败和恢复。</li>
+<li>帧率、尺寸和首帧信息。</li>
+<li>stop 与最终销毁。</li>
+</ul>
+<p>播放器状态与 Track 状态不同：Track 可能 live，但媒体元素因自动播放被阻止；元素可能 playing，但网络 Stats 已经没有新帧。</p>
+<h2 id="3-htmlvideoelement-路径">3. HTMLVideoElement 路径<a class="heading-anchor" href="#3-htmlvideoelement-路径" aria-label="链接到本节">#</a></h2>
+<p>典型创建和播放：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">document.createElement(&#39;video&#39;)
+  → autoplay = true
+  → playsInline = true
+  → muted 按本地预览/业务设置
+  → srcObject = new MediaStream([videoTrack])
+  → append 到目标容器
+  → video.play()
+</code></pre>
+</div><p>主要参数和职责：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数/属性</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>playsInline</code></td>
+<td>避免移动端强制全屏</td>
+</tr>
+<tr>
+<td><code>muted</code></td>
+<td>本地预览或自动播放兼容</td>
+</tr>
+<tr>
+<td><code>srcObject</code></td>
+<td>绑定 MediaStream</td>
+</tr>
+<tr>
+<td>object-fit</td>
+<td>fillMode，不影响采集尺寸</td>
+</tr>
+<tr>
+<td>CSS transform</td>
+<td>mirror/简单旋转</td>
+</tr>
+<tr>
+<td><code>requestVideoFrameCallback</code></td>
+<td>按真实视频帧驱动尺寸、首帧或渲染</td>
+</tr>
+</tbody></table></div>
+<h2 id="4-htmlaudioelement-路径">4. HTMLAudioElement 路径<a class="heading-anchor" href="#4-htmlaudioelement-路径" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">audioTrack 或 URL
+  → HTMLAudioElement.srcObject / src
+  → volume
+  → 可选 setSinkId(deviceId)
+  → play()
+</code></pre>
+</div><p><code>setSinkId()</code> 失败通常不应停止接收；可以继续使用系统默认输出并上报兼容信息。</p>
+<p>背景音乐可能使用双元素或独立播放对象，以便切换、循环和淡入淡出，不应与远端通话音频的 Track 生命周期混在一起。</p>
+<h2 id="5-媒体元素事件到-sdk-状态">5. 媒体元素事件到 SDK 状态<a class="heading-anchor" href="#5-媒体元素事件到-sdk-状态" aria-label="链接到本节">#</a></h2>
+<p>常见事件包括：</p>
+<ul>
+<li><code>loadedmetadata</code></li>
+<li><code>playing</code></li>
+<li><code>pause</code></li>
+<li><code>ended</code></li>
+<li><code>error</code></li>
+<li><code>resize</code></li>
+</ul>
+<p>事件处理必须绑定当前元素/Track 版本。换轨或换容器后，旧元素晚到的事件不能覆盖新播放器状态。</p>
+<h2 id="6-自动播放失败">6. 自动播放失败<a class="heading-anchor" href="#6-自动播放失败" aria-label="链接到本节">#</a></h2>
+<p><code>element.play()</code> 返回 Promise。遇到 <code>NotAllowedError</code> 时：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">记录待恢复 Player
+  → 展示用户交互提示
+  → 用户点击
+  → AudioContext.resume（如需要）
+  → element.play()
+  → 成功后清提示和 listener
+</code></pre>
+</div><p>自动播放提示属于 SDK 接入辅助，不代表媒体 Track 或 PC 失败。</p>
+<h2 id="7-为什么还需要-canvas-webgl">7. 为什么还需要 Canvas/WebGL<a class="heading-anchor" href="#7-为什么还需要-canvas-webgl" aria-label="链接到本节">#</a></h2>
+<p>原生 video 适合直接播放；以下需求需要处理渲染：</p>
+<ul>
+<li>多路合成。</li>
+<li>镜像、旋转、裁剪、透明度。</li>
+<li>水印、文字和图像叠加。</li>
+<li>截图和像素检测。</li>
+<li>把处理画面重新输出为可发布 Track。</li>
+<li>WebGL GPU shader 和纹理处理。</li>
+</ul>
+<h2 id="8-图像源怎样产生">8. 图像源怎样产生<a class="heading-anchor" href="#8-图像源怎样产生" aria-label="链接到本节">#</a></h2>
+<p>视频 Track 通常先绑定到隐藏 video，或通过支持的帧 API变成可绘制源：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">MediaStreamTrack
+  → hidden HTMLVideoElement / VideoFrame source
+  → requestVideoFrameCallback 或渲染 timer
+  → Canvas drawImage / WebGL texture upload
+</code></pre>
+</div><p>读取帧前必须处理视频尚无尺寸、readyState 不足和 Track ended。</p>
+<h2 id="9-canvas-2d-路径">9. Canvas 2D 路径<a class="heading-anchor" href="#9-canvas-2d-路径" aria-label="链接到本节">#</a></h2>
+<p>Canvas 2D 适合：</p>
+<ul>
+<li><code>drawImage()</code> 简单合成。</li>
+<li><code>getImageData()</code> 像素读取或黑帧判断。</li>
+<li><code>toDataURL()/toBlob()</code> 截图。</li>
+<li>文本、水印和基础变换。</li>
+</ul>
+<p>需要频繁读像素时可使用 <code>{willReadFrequently:true}</code>；否则浏览器可能在 GPU/CPU 间频繁搬运。</p>
+<h2 id="10-webgl2-路径">10. WebGL2 路径<a class="heading-anchor" href="#10-webgl2-路径" aria-label="链接到本节">#</a></h2>
+<p>WebGL2 渲染主链：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">创建 WebGL2 context
+  → 编译/link shader program
+  → 创建顶点/纹理坐标 buffer
+  → 创建 texture / framebuffer
+  → 每帧上传视频纹理
+  → 设置矩阵、alpha、旋转、镜像
+  → drawArrays/drawElements
+</code></pre>
+</div><p>需要处理：</p>
+<ul>
+<li>shader 编译或 program link 失败。</li>
+<li>context lost/restored。</li>
+<li>纹理、buffer、framebuffer 和 program 删除。</li>
+<li>Canvas 尺寸变化后的 viewport/FBO 重建。</li>
+</ul>
+<h2 id="11-帧驱动策略">11. 帧驱动策略<a class="heading-anchor" href="#11-帧驱动策略" aria-label="链接到本节">#</a></h2>
+<p>优先级通常是：</p>
+<ol>
+<li><code>requestVideoFrameCallback()</code>：跟随真实解码帧。</li>
+<li><code>requestAnimationFrame()</code>：跟随页面渲染帧率。</li>
+<li>timer/Worker timer：兼容或后台任务。</li>
+</ol>
+<p>播放器停止、Track 结束或页面销毁时必须取消对应 callback，否则隐藏元素和渲染上下文会继续被闭包引用。</p>
+<h2 id="12-canvas-capturestream-输出">12. <code>canvas.captureStream()</code> 输出<a class="heading-anchor" href="#12-canvas-capturestream-输出" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">Canvas renderer
+  → canvas.captureStream(targetFrameRate)
+  → outputStream.getVideoTracks()[0]
+  → LocalVideoTrack.outMediaTrack
+  → sender.replaceTrack(outTrack)
+</code></pre>
+</div><p>这条路径用于本地混流和视频处理。输出 Track 的尺寸来自 Canvas，不再直接等于摄像头 settings。</p>
+<h2 id="13-截图">13. 截图<a class="heading-anchor" href="#13-截图" aria-label="链接到本节">#</a></h2>
+<p>截图流程：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">确认当前视频帧和尺寸
+  → 画入临时或现有 Canvas
+  → toDataURL / toBlob
+  → 返回图片数据
+</code></pre>
+</div><p>跨域 URL 视频可能污染 Canvas；MediaStream 视频通常不受普通跨域图片规则影响，但外部叠加图像仍要满足 CORS。</p>
+<h2 id="14-容器和-track-切换">14. 容器和 Track 切换<a class="heading-anchor" href="#14-容器和-track-切换" aria-label="链接到本节">#</a></h2>
+<p>切换 view 时应：</p>
+<ul>
+<li>把元素从旧容器移到新容器或重建明确的新元素。</li>
+<li>保留当前 <code>srcObject</code> 和播放状态。</li>
+<li>解绑旧容器 Observer。</li>
+<li>防止同一个 Track 被多个不受控 Player 重复播放音频。</li>
+</ul>
+<p>换 Track 时先绑定新 Stream，再清旧 Stream，可减少黑屏窗口。</p>
+<h2 id="15-stop-与-destroy">15. stop 与 destroy<a class="heading-anchor" href="#15-stop-与-destroy" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">Player.stop()
+  → 取消帧 callback/timer
+  → pause media element
+  → srcObject = null / 清 src
+  → 解绑媒体事件
+  → 释放 Canvas/WebGL 资源
+  → 从 DOM 移除内部创建的元素
+</code></pre>
+</div><p>如果元素是调用方提供的容器或节点，只能清 SDK 自己绑定的资源，不能随意删除用户 DOM。</p>
+<p>Player 销毁通常不调用 sourceTrack.stop()；Track 是否停止由更上层资源所有者决定。</p>
+<h2 id="16-资源释放检查表">16. 资源释放检查表<a class="heading-anchor" href="#16-资源释放检查表" aria-label="链接到本节">#</a></h2>
+<ul>
+<li>media element 是否 pause 并清 <code>srcObject</code>。</li>
+<li><code>requestVideoFrameCallback</code>/RAF/timer 是否取消。</li>
+<li>Resize/Intersection Observer 是否断开。</li>
+<li>Canvas capture output Track 是否 stop。</li>
+<li>WebGL texture、buffer、framebuffer、program 是否 delete。</li>
+<li>context lost handler 是否解绑。</li>
+<li>Blob/Object URL 是否 revoke。</li>
+<li>自动播放恢复队列是否删除当前 Player。</li>
+</ul>
+<h2 id="17-api-参数与本项目实参">17. API 参数与本项目实参<a class="heading-anchor" href="#17-api-参数与本项目实参" aria-label="链接到本节">#</a></h2>
+<h3 id="17-1-document-createelement-tagname-options">17.1 <code>document.createElement(tagName, options?)</code><a class="heading-anchor" href="#17-1-document-createelement-tagname-options" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/Document/createElement" target="_blank" rel="noreferrer">createElement()</a></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>含义</th>
+<th>本项目实参</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>tagName</code></td>
+<td>要创建的 HTML 元素名</td>
+<td><code>&#39;video&#39;</code>、<code>&#39;audio&#39;</code>、<code>&#39;canvas&#39;</code>、<code>&#39;div&#39;</code> 等；媒体播放主路径创建 video/audio，截图和渲染创建 canvas</td>
+</tr>
+<tr>
+<td><code>options.is</code></td>
+<td>可选的 customized built-in element 名称</td>
+<td>未传</td>
+</tr>
+</tbody></table></div>
+<p>VideoPlayer 创建的 <code>&lt;video&gt;</code> 随后设置 <code>autoplay</code>、<code>playsinline</code>、<code>muted=true</code>，并将 Track 包装进 MediaStream 后赋给 <code>srcObject</code>。这一步是创建 UI 容器；真正开始解码/播放仍要调用 <code>play()</code>。</p>
+<h3 id="17-2-mediaelement-srcobject-mediaprovider">17.2 <code>mediaElement.srcObject = mediaProvider</code><a class="heading-anchor" href="#17-2-mediaelement-srcobject-mediaprovider" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/srcObject" target="_blank" rel="noreferrer">HTMLMediaElement.srcObject</a></p>
+<p>它是属性赋值，不是函数参数。项目给 Track 播放时传入的是：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">video.srcObject = new MediaStream([track]);
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>右侧值</th>
+<th>含义</th>
+<th>使用场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>new MediaStream([track])</code></td>
+<td>只含当前原生 Track 的流</td>
+<td>视频/音频 Track 首次绑定、换轨、Chrome 播放恢复</td>
+</tr>
+<tr>
+<td><code>null</code></td>
+<td>解绑当前媒体 provider</td>
+<td>stop、destroy、切 URL、重建 MediaStream 前</td>
+</tr>
+</tbody></table></div>
+<p>这里每次新建 MediaStream 是重建“容器”，不是 clone Track。Chrome 恢复路径先置 <code>null</code> 再创建新流，解决元素仍引用旧流状态的问题。</p>
+<p>URL 播放走不同路径：设置 <code>element.crossOrigin=&#39;anonymous&#39;</code> 和 <code>element.src=url</code>，不会再同时保留 Track；<code>setUrl()</code> 先解绑 Track 和 <code>srcObject</code>。</p>
+<h3 id="17-3-play-pause-及媒体属性">17.3 <code>play()</code>、<code>pause()</code> 及媒体属性<a class="heading-anchor" href="#17-3-play-pause-及媒体属性" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/play" target="_blank" rel="noreferrer">play()</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/pause" target="_blank" rel="noreferrer">pause()</a></p>
+<p>两个方法都无参数。<code>play()</code> 返回 Promise；<code>pause()</code> 返回 <code>undefined</code>。</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">await new Promise((resolve, reject) =&gt; {
+  this.element.play().then(resolve, reject);
+});
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项目写入</th>
+<th>类型/范围</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>muted</code></td>
+<td>boolean</td>
+<td>元素输出是否静音；本地视频元素固定 true，音频元素按播放器配置</td>
+</tr>
+<tr>
+<td><code>volume</code></td>
+<td><code>0..1</code></td>
+<td>元素播放音量；初始化时源码 <code>Math.min(Math.max(value,0),1)</code></td>
+</tr>
+<tr>
+<td><code>loop</code></td>
+<td>boolean</td>
+<td>URL/音乐播放结束后是否循环</td>
+</tr>
+<tr>
+<td><code>autoplay</code></td>
+<td>boolean/属性</td>
+<td>元素具备媒体后尝试自动播放，但仍受用户激活策略约束</td>
+</tr>
+<tr>
+<td><code>playsInline</code> / <code>playsinline</code></td>
+<td>boolean/属性</td>
+<td>移动端尽量内联而非强制全屏</td>
+</tr>
+<tr>
+<td><code>crossOrigin</code></td>
+<td><code>anonymous</code> 等</td>
+<td>URL 媒体的 CORS 模式；Track <code>srcObject</code> 路径不需要</td>
+</tr>
+</tbody></table></div>
+<p><code>NotAllowedError</code> 被包装为自动播放错误并引导用户点击恢复；<code>NotSupportedError</code> 在音乐路径会尝试重载资源。<code>pause()</code> 只是暂停元素时间推进，不停止 Track，也不取消订阅。</p>
+<h3 id="17-4-setsinkid-deviceid">17.4 <code>setSinkId(deviceId)</code><a class="heading-anchor" href="#17-4-setsinkid-deviceid" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/setSinkId" target="_blank" rel="noreferrer">setSinkId()</a></p>
+<p>唯一参数 <code>deviceId</code> 是 <code>enumerateDevices()</code> 返回的 <code>audiooutput</code> 设备 id；空字符串通常表示默认输出。返回 Promise。</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">setSinkId(deviceId) {
+  this._outputDeviceId = deviceId;
+  if (this.element &amp;&amp; this.element.sinkId !== deviceId) {
+    await this.element.setSinkId?.(deviceId);
+  }
+}
+</code></pre>
+</div><p>公开 speakerId 先保存，即使元素尚未创建；<code>play()</code> 创建元素后再补调用。可选链意味着不支持该 API 时不会直接调用，但也不表示设备切换成功。权限策略、设备不存在或系统拒绝时 Promise 可 reject。</p>
+<h3 id="17-5-requestvideoframecallback-callback">17.5 <code>requestVideoFrameCallback(callback)</code><a class="heading-anchor" href="#17-5-requestvideoframecallback-callback" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLVideoElement/requestVideoFrameCallback" target="_blank" rel="noreferrer">requestVideoFrameCallback()</a></p>
+<p>唯一参数是回调函数，返回 callback id。浏览器回调形态是 <code>callback(now, metadata)</code>：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">video.requestVideoFrameCallback((now, metadata) =&gt; {
+  stat.width = metadata.width;
+  stat.height = metadata.height;
+  stat.fps = Math.round(
+    (metadata.presentedFrames - previous.presentedFrames) /
+    (now - previousNow) * 1000
+  );
+});
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>回调值</th>
+<th>含义</th>
+<th>本项目用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>now</code></td>
+<td>与 performance timeline 同源的回调时间戳，毫秒</td>
+<td>与上次回调时间差计算 FPS</td>
+</tr>
+<tr>
+<td><code>metadata.width/height</code></td>
+<td>当前视频帧媒体像素尺寸</td>
+<td>更新播放器 stat</td>
+</tr>
+<tr>
+<td><code>metadata.presentedFrames</code></td>
+<td>已提交合成的帧总数</td>
+<td>计算两次采样间新增帧数</td>
+</tr>
+<tr>
+<td><code>metadata.presentationTime</code></td>
+<td>预期展示时间</td>
+<td>卡顿监控链使用</td>
+</tr>
+</tbody></table></div>
+<p>统计链不是每帧立即重复注册，而是在回调后通过 2000 ms timer 再注册，得到低频采样。渲染源链则在每帧回调中再次申请下一次回调。</p>
+<p><code>cancelVideoFrameCallback(id)</code> 的唯一参数是前一次返回的 id。Track 结束、源切换或隐藏页清理时项目传 <code>videoCallbackId</code>，避免旧源继续驱动渲染。</p>
+<h3 id="17-6-canvas-getcontext-contextid-options">17.6 <code>canvas.getContext(contextId, options?)</code><a class="heading-anchor" href="#17-6-canvas-getcontext-contextid-options" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/getContext" target="_blank" rel="noreferrer">getContext()</a></p>
+<p>2D 路径：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">canvas.getContext(&#39;2d&#39;, {
+  alpha: option.alpha,
+  willReadFrequently: option.willReadFrequently
+});
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>2D option</th>
+<th>含义</th>
+<th>本项目来源</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>alpha</code></td>
+<td>是否需要透明通道；false 可让浏览器优化为不透明画布</td>
+<td>创建 VideoContext 时的 <code>e.alpha</code></td>
+</tr>
+<tr>
+<td><code>willReadFrequently</code></td>
+<td>提示后续会频繁 <code>getImageData()</code>，浏览器可偏向 CPU 可读存储</td>
+<td><code>e.willReadFrequently</code>；黑帧/像素分析场景使用</td>
+</tr>
+</tbody></table></div>
+<p>WebGL2 路径把 <code>senderWrapper</code> 作为第二参数：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">canvas.getContext(&#39;webgl2&#39;, {
+  alpha: true,
+  antialias: false,
+  premultipliedAlpha: false,
+  preserveDrawingBuffer: false,
+  depth: false,
+  stencil: false,
+  failIfMajorPerformanceCaveat: true,
+  powerPreference: &#39;low-power&#39;
+});
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>WebGL attribute</th>
+<th align="right">本项目值</th>
+<th>影响</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>alpha</code></td>
+<td align="right">true</td>
+<td>默认 framebuffer 保留 alpha，用于透明视频/合成</td>
+</tr>
+<tr>
+<td><code>antialias</code></td>
+<td align="right">false</td>
+<td>不请求多重采样，降低开销</td>
+</tr>
+<tr>
+<td><code>premultipliedAlpha</code></td>
+<td align="right">false</td>
+<td>不假定颜色已预乘 alpha</td>
+</tr>
+<tr>
+<td><code>preserveDrawingBuffer</code></td>
+<td align="right">false</td>
+<td>展示后允许清空，提高性能；截图不能依赖旧 framebuffer 长期保留</td>
+</tr>
+<tr>
+<td><code>depth</code> / <code>stencil</code></td>
+<td align="right">false</td>
+<td>2D 视频合成不申请深度/模板缓冲</td>
+</tr>
+<tr>
+<td><code>failIfMajorPerformanceCaveat</code></td>
+<td align="right">true</td>
+<td>只有明显软件/低性能实现时允许创建失败并降级</td>
+</tr>
+<tr>
+<td><code>powerPreference</code></td>
+<td align="right"><code>&#39;low-power&#39;</code></td>
+<td>提示优先低功耗 GPU；只是提示，不保证设备选择</td>
+</tr>
+</tbody></table></div>
+<p>返回值可能是 <code>null</code>，源码会包装为 VIDEO_MANAGER_ERROR，而不是继续调用空 context。</p>
+<h3 id="17-7-drawimage-三种参数形态">17.7 <code>drawImage()</code> 三种参数形态<a class="heading-anchor" href="#17-7-drawimage-三种参数形态" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/drawImage" target="_blank" rel="noreferrer">drawImage()</a></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>形态</th>
+<th>参数含义</th>
+<th>本项目场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>drawImage(image, dx, dy)</code></td>
+<td>原尺寸画到目标位置</td>
+<td>截图：<code>drawImage(video,0,0)</code></td>
+</tr>
+<tr>
+<td><code>drawImage(image, dx, dy, dWidth, dHeight)</code></td>
+<td>缩放到目标矩形</td>
+<td>Canvas 视频渲染、黑帧检测</td>
+</tr>
+<tr>
+<td><code>drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight)</code></td>
+<td>先裁源矩形，再缩放到目标矩形</td>
+<td>fill/crop、混流布局、旋转前处理</td>
+</tr>
+</tbody></table></div>
+<p><code>image</code> 在项目中可以是 video、canvas、ImageBitmap、VideoFrame 或其他 CanvasImageSource。通用渲染器 L25201—L25208 根据是否给源裁剪参数选择 5 参数或 9 参数版本；若 source 是 <code>VideoFrame</code>，画完立即 <code>close()</code>，释放其媒体资源。</p>
+<h3 id="17-8-像素读写-getimagedata-与-putimagedata">17.8 像素读写：<code>getImageData()</code> 与 <code>putImageData()</code><a class="heading-anchor" href="#17-8-像素读写-getimagedata-与-putimagedata" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/getImageData" target="_blank" rel="noreferrer">getImageData()</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/putImageData" target="_blank" rel="noreferrer">putImageData()</a></p>
+<ul>
+<li><code>getImageData(sx, sy, sw, sh)</code>：项目黑帧检测传 <code>(0,0,canvas.width,canvas.height)</code>，读取整个 RGBA 区域；alpha 拼接传实际 <code>(0,0,width,height)</code>。</li>
+<li><code>putImageData(imageData, dx, dy)</code>：普通路径把 ImageData 放在目标 <code>(x,y)</code>。</li>
+<li>七参数 <code>putImageData(imageData, dx, dy, dirtyX, dirtyY, dirtyWidth, dirtyHeight)</code>：只更新 dirty rectangle；不会做缩放、旋转、混合和颜色转换。</li>
+</ul>
+<p>频繁读像素非常昂贵，这也是对应 2D context 使用 <code>willReadFrequently:true</code> 的原因。</p>
+<h3 id="17-9-canvas-capturestream-framerate">17.9 <code>canvas.captureStream(frameRate?)</code><a class="heading-anchor" href="#17-9-canvas-capturestream-framerate" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/captureStream" target="_blank" rel="noreferrer">captureStream()</a></p>
+<p>可选 <code>frameRate</code> 指定捕获帧率：省略时画布变化会产帧；传 <code>0</code> 时禁用自动捕获，需要 CanvasCaptureMediaStreamTrack 的 <code>requestFrame()</code> 主动产帧。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>调用</th>
+<th>本项目意图</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>canvas.captureStream(0)</code></td>
+<td>编码能力探测，创建可控的测试视频 Track</td>
+</tr>
+<tr>
+<td><code>canvas.captureStream()</code></td>
+<td>H.264 回环测试、Player canvas 模式、VideoContext destination，按画布更新产帧</td>
+</tr>
+</tbody></table></div>
+<p>返回 <code>MediaStream</code>；项目立即 <code>getVideoTracks()[0]</code> 取得 <code>CanvasCaptureMediaStreamTrack</code>。停止该 Track 不销毁 canvas，销毁 canvas 也要单独清 DOM/尺寸引用。</p>
+<h3 id="17-10-截图-todataurl-type-quality">17.10 截图 <code>toDataURL(type?, quality?)</code><a class="heading-anchor" href="#17-10-截图-todataurl-type-quality" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/toDataURL" target="_blank" rel="noreferrer">toDataURL()</a></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>含义</th>
+<th>本项目传值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>type</code></td>
+<td>MIME 类型，默认 <code>image/png</code></td>
+<td>显式 <code>&#39;image/png&#39;</code></td>
+</tr>
+<tr>
+<td><code>quality</code></td>
+<td>对 JPEG/WebP 等有意义的 <code>0..1</code> 质量值</td>
+<td>未传；PNG 无需质量参数</td>
+</tr>
+</tbody></table></div>
+<p>VideoPlayer 若已有 canvas，直接 <code>canvas.toDataURL(&#39;image/png&#39;)</code>；否则创建临时 canvas，尺寸取 <code>videoWidth/videoHeight</code>，先 <code>drawImage(video,0,0)</code> 再编码。跨源 URL 视频没有正确 CORS 时画布可能 tainted，调用会抛 <code>SecurityError</code>；<code>crossOrigin=&#39;anonymous&#39;</code> 只有服务端同时允许 CORS 才有效。</p>
+<h3 id="17-11-webgl-参数进入顺序">17.11 WebGL 参数进入顺序<a class="heading-anchor" href="#17-11-webgl-参数进入顺序" aria-label="链接到本节">#</a></h3>
+<p>WebGL 初始化不是只 <code>getContext()</code>：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">getContext(&#39;webgl2&#39;, attributes)
+  → createShader(VERTEX_SHADER / FRAGMENT_SHADER)
+  → shaderSource(shader, source)
+  → compileShader(shader)
+  → createProgram()
+  → attachShader(program, shader)
+  → linkProgram(program)
+  → getProgramParameter(program, LINK_STATUS)
+  → viewport(0, 0, width, height)
+  → drawArrays(TRIANGLE_STRIP, 0, 4)
+</code></pre>
+</div><p><code>viewport(x,y,width,height)</code> 在项目始终从 <code>(0,0)</code> 覆盖整张输出画布；<code>drawArrays(mode,first,count)</code> 传 <code>TRIANGLE_STRIP,0,4</code>，用四个顶点画满屏矩形。销毁时对应删除 shader、program、texture、buffer 和 framebuffer，context loss 时切错误/降级链。</p>
+<h2 id="18-事实与边界">18. 事实与边界<a class="heading-anchor" href="#18-事实与边界" aria-label="链接到本节">#</a></h2>
+<h3 id="可以直接确认">可以直接确认<a class="heading-anchor" href="#可以直接确认" aria-label="链接到本节">#</a></h3>
+<ul>
+<li>源码同时存在原生元素播放和 Canvas/WebGL 渲染路径。</li>
+<li><code>srcObject</code> 通过 MediaStream 包装单条 Track。</li>
+<li>Canvas 输出可以重新成为发布 Track。</li>
+<li>自动播放恢复需要用户交互，并与媒体连接状态分离。</li>
+</ul>
+<h3 id="合理推断">合理推断<a class="heading-anchor" href="#合理推断" aria-label="链接到本节">#</a></h3>
+<ul>
+<li>WebGL 用于需要高性能、多图层或 shader 的视频处理，2D 用于简单绘制和像素读取。</li>
+<li>Frame callback 优先是为了让处理节奏接近真实解码帧。</li>
+</ul>
+<h3 id="不能确认">不能确认<a class="heading-anchor" href="#不能确认" aria-label="链接到本节">#</a></h3>
+<ul>
+<li>各浏览器 GPU 驱动下的实际渲染性能、颜色空间和 context lost 频率，需要运行时验证。</li>
+</ul>
+
+      <nav class="page-pagination" aria-label="上一篇和下一篇">
+        <a class="previous" href="06-Web-Audio-usage-analysis.html"><span>上一篇</span>06 Web Audio 使用分析</a>
+        <a class="next" href="08-Worker-Streams-and-Encoded-Processing.html"><span>下一篇</span>08 Worker、Streams 与编码帧处理</a>
+      </nav>
+    </article>
+    
+    <nav class="page-toc" aria-label="本页目录">
+      <h2>本页目录</h2>
+      <a class="toc-depth-2" href="#1-本章结论">1. 本章结论</a><a class="toc-depth-2" href="#2-player-的统一职责">2. Player 的统一职责</a><a class="toc-depth-2" href="#3-htmlvideoelement-路径">3. HTMLVideoElement 路径</a><a class="toc-depth-2" href="#4-htmlaudioelement-路径">4. HTMLAudioElement 路径</a><a class="toc-depth-2" href="#5-媒体元素事件到-sdk-状态">5. 媒体元素事件到 SDK 状态</a><a class="toc-depth-2" href="#6-自动播放失败">6. 自动播放失败</a><a class="toc-depth-2" href="#7-为什么还需要-canvas-webgl">7. 为什么还需要 Canvas/WebGL</a><a class="toc-depth-2" href="#8-图像源怎样产生">8. 图像源怎样产生</a><a class="toc-depth-2" href="#9-canvas-2d-路径">9. Canvas 2D 路径</a><a class="toc-depth-2" href="#10-webgl2-路径">10. WebGL2 路径</a><a class="toc-depth-2" href="#11-帧驱动策略">11. 帧驱动策略</a><a class="toc-depth-2" href="#12-canvas-capturestream-输出">12. canvas.captureStream() 输出</a><a class="toc-depth-2" href="#13-截图">13. 截图</a><a class="toc-depth-2" href="#14-容器和-track-切换">14. 容器和 Track 切换</a><a class="toc-depth-2" href="#15-stop-与-destroy">15. stop 与 destroy</a><a class="toc-depth-2" href="#16-资源释放检查表">16. 资源释放检查表</a><a class="toc-depth-2" href="#17-api-参数与本项目实参">17. API 参数与本项目实参</a><a class="toc-depth-3" href="#17-1-document-createelement-tagname-options">17.1 document.createElement(tagName, options?)</a><a class="toc-depth-3" href="#17-2-mediaelement-srcobject-mediaprovider">17.2 mediaElement.srcObject = mediaProvider</a><a class="toc-depth-3" href="#17-3-play-pause-及媒体属性">17.3 play() 、 pause() 及媒体属性</a><a class="toc-depth-3" href="#17-4-setsinkid-deviceid">17.4 setSinkId(deviceId)</a><a class="toc-depth-3" href="#17-5-requestvideoframecallback-callback">17.5 requestVideoFrameCallback(callback)</a><a class="toc-depth-3" href="#17-6-canvas-getcontext-contextid-options">17.6 canvas.getContext(contextId, options?)</a><a class="toc-depth-3" href="#17-7-drawimage-三种参数形态">17.7 drawImage() 三种参数形态</a><a class="toc-depth-3" href="#17-8-像素读写-getimagedata-与-putimagedata">17.8 像素读写： getImageData() 与 putImageData()</a><a class="toc-depth-3" href="#17-9-canvas-capturestream-framerate">17.9 canvas.captureStream(frameRate?)</a><a class="toc-depth-3" href="#17-10-截图-todataurl-type-quality">17.10 截图 toDataURL(type?, quality?)</a><a class="toc-depth-3" href="#17-11-webgl-参数进入顺序">17.11 WebGL 参数进入顺序</a><a class="toc-depth-2" href="#18-事实与边界">18. 事实与边界</a><a class="toc-depth-3" href="#可以直接确认">可以直接确认</a><a class="toc-depth-3" href="#合理推断">合理推断</a><a class="toc-depth-3" href="#不能确认">不能确认</a>
+    </nav>
+  </main>
+  <button type="button" class="back-to-top" aria-label="回到顶部">↑</button>
+</body>
+</html>

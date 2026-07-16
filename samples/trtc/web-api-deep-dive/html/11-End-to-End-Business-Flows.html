@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="TRTC 反混淆源码浏览器 Web API 深度分析：11 端到端业务流程">
+  <title>11 端到端业务流程 · TRTC Web API 深度学习</title>
+  <link rel="stylesheet" href="assets/docs.css">
+  <script>try{const t=localStorage.getItem('trtc-docs-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+  <script src="assets/search-index.js" defer></script>
+  <script src="assets/mermaid.min.js" defer></script>
+  <script src="assets/docs.js" defer></script>
+</head>
+<body data-page="11-End-to-End-Business-Flows.html">
+  <header class="topbar">
+    <button type="button" class="icon-button nav-toggle" aria-label="打开目录" aria-expanded="false">☰</button>
+    <a class="brand" href="index.html">TRTC Web API 深度学习</a>
+    <div class="search-shell">
+      <label class="sr-only" for="global-search">搜索全部文档</label>
+      <input id="global-search" type="search" autocomplete="off" placeholder="搜索 API、方法、事件…" aria-controls="search-results">
+      <kbd>/</kbd>
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
+    <a class="source-link" href="../11-End-to-End-Business-Flows.md">Markdown</a>
+    <a class="source-link" href="../../trtc.deobfuscated.js">源码</a>
+    <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
+  </header>
+
+  <aside class="sidebar" aria-label="文档目录">
+    
+    <section class="nav-group">
+      <h2>按顺序阅读</h2>
+      
+        <a class="nav-link" href="index.html">
+          文档首页
+        </a>
+        <a class="nav-link" href="00-Reading-Guide-and-Source-Map.html">
+          00 阅读说明与源码地图
+        </a>
+        <a class="nav-link" href="01-Browser-API-Panorama.html">
+          01 浏览器 API 全景
+        </a>
+        <a class="nav-link" href="02-RTCPeerConnection-usage-analysis.html">
+          02 RTCPeerConnection
+        </a>
+        <a class="nav-link" href="03-WebSocket-usage-analysis.html">
+          03 WebSocket 信令
+        </a>
+        <a class="nav-link" href="04-MediaDevices-and-Capture.html">
+          04 MediaDevices 与采集
+        </a>
+        <a class="nav-link" href="05-MediaStreamTrack-Lifecycle.html">
+          05 Track 生命周期
+        </a>
+        <a class="nav-link" href="06-Web-Audio-usage-analysis.html">
+          06 Web Audio
+        </a>
+        <a class="nav-link" href="07-Media-Playback-and-Rendering.html">
+          07 播放与渲染
+        </a>
+        <a class="nav-link" href="08-Worker-Streams-and-Encoded-Processing.html">
+          08 Worker 与编码帧
+        </a>
+        <a class="nav-link" href="09-WebCodecs-and-WebAssembly.html">
+          09 WebCodecs 与 WASM
+        </a>
+        <a class="nav-link" href="10-Auxiliary-Browser-APIs.html">
+          10 辅助浏览器 API
+        </a>
+        <a class="nav-link active" href="11-End-to-End-Business-Flows.html">
+          11 端到端业务流程
+        </a>
+    </section>
+    <section class="nav-group">
+      <h2>附录（按需查询）</h2>
+      
+        <a class="nav-link" href="Appendix-A-WebAPI-Occurrences.html">
+          A Web API 出现位置
+        </a>
+        <a class="nav-link" href="Appendix-B-Source-Method-Index.html">
+          B 源码方法索引
+        </a>
+        <a class="nav-link" href="Appendix-C-Event-Index.html">
+          C 事件索引
+        </a>
+        <a class="nav-link" href="Appendix-D-Method-Adjacency-Index.html">
+          D 方法调用邻接
+        </a>
+        <a class="nav-link" href="Appendix-E-Public-API-Call-Chains.html">
+          E 公开 API 调用链
+        </a>
+        <a class="nav-link" href="Appendix-F-Visual-Call-Flows.html">
+          F 流程图与时序图
+        </a>
+    </section>
+  </aside>
+  <div class="sidebar-backdrop" hidden></div>
+
+  <main class="layout">
+    <article class="doc-content">
+      <h1 id="11-端到端业务流程">11 端到端业务流程<a class="heading-anchor" href="#11-端到端业务流程" aria-label="链接到本节">#</a></h1>
+<blockquote>
+<p>前面按浏览器 API 学习；本文反过来从用户动作出发，把公开 API、Room、Track、WebSocket、PeerConnection 和 Player 串成完整链路。</p>
+</blockquote>
+<h2 id="1-总体心智模型">1. 总体心智模型<a class="heading-anchor" href="#1-总体心智模型" aria-label="链接到本节">#</a></h2>
+<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">flowchart LR
+    App[&quot;应用调用&quot;] --&gt; SDK[&quot;SDK 门面&quot;]
+    SDK --&gt; Room[&quot;TRTCRoom&quot;]
+    SDK --&gt; Track[&quot;Local / Remote Track&quot;]
+    Room --&gt; HTTP[&quot;HTTP 调度&quot;]
+    Room --&gt; WS[&quot;WebSocket 信令&quot;]
+    Room --&gt; RTC[&quot;MPC / SPC&quot;]
+    Track --&gt; Capture[&quot;MediaDevices&quot;]
+    Track --&gt; Process[&quot;Audio / Canvas / Worker&quot;]
+    RTC --&gt; Track
+    Track --&gt; Player[&quot;HTMLMediaElement / Canvas / WebGL&quot;]
+    RTC --&gt; Stats[&quot;getStats&quot;]
+    Stats --&gt; Room</pre></div>
+<p>任何流程都要同时回答：</p>
+<ol>
+<li>谁拥有资源。</li>
+<li>当前 Promise 代表哪个完成点。</li>
+<li>失败发生在控制面还是媒体面。</li>
+<li>取消、重连和销毁由谁执行。</li>
+</ol>
+<h3 id="1-1-同一功能的参数必须按阶段追踪">1.1 同一功能的参数必须按阶段追踪<a class="heading-anchor" href="#1-1-同一功能的参数必须按阶段追踪" aria-label="链接到本节">#</a></h3>
+<p>业务功能通常不是只调用一次浏览器 API。阅读下面各流程时，要把参数放回它实际生效的阶段：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>功能</th>
+<th>公开配置</th>
+<th>创建/选择阶段</th>
+<th>运行时调整</th>
+<th>最终结果与下游</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>摄像头</td>
+<td>profile、cameraId、facingMode</td>
+<td><code>getUserMedia({video})</code></td>
+<td>换设备时 <code>applyConstraints()</code> 或重新采集</td>
+<td><code>getSettings()</code> → LocalVideoTrack → Sender/Player</td>
+</tr>
+<tr>
+<td>屏幕共享</td>
+<td>profile、系统音频、裁剪目标</td>
+<td><code>getDisplayMedia(options)</code> 决定选择器和初始采集</td>
+<td><code>applyConstraints({frameRate,width,height})</code>，可选 <code>cropTo()</code></td>
+<td><code>getSettings()</code> / <code>ended</code> → ScreenTrack → 辅流 Sender</td>
+</tr>
+<tr>
+<td>PeerConnection</td>
+<td>ICE、bundle、relay 策略</td>
+<td><code>new RTCPeerConnection(configuration)</code></td>
+<td><code>setConfiguration()</code>、<code>setParameters()</code>、<code>replaceTrack()</code></td>
+<td>connection state / <code>getStats()</code> → Room 重连与质量状态</td>
+</tr>
+<tr>
+<td>播放</td>
+<td>view、fillMode、mirror、音频输出设备</td>
+<td>创建 media/canvas 元素并绑定 <code>srcObject</code></td>
+<td><code>setSinkId()</code>、Canvas/WebGL 变换</td>
+<td><code>playing</code> / frame callback → 首帧与尺寸事件</td>
+</tr>
+</tbody></table></div>
+<p>“创建时传过”不等于“最终按该值生效”。约束可能被浏览器降级，Sender 参数也可能受 SDP 和远端能力限制，因此结果读取必须单列。</p>
+<h2 id="2-进房">2. 进房<a class="heading-anchor" href="#2-进房" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">SDK.enterRoom(params)
+  → 参数校验和实例状态检查
+  → TRTCRoom.join(joinParams)
+    → HTTP schedule
+      → 主备调度请求
+      → signal URL、ICE Server、SPC/MPC 策略
+    → Promise.all([
+         room.initialize(),
+         room.initSinglePC()
+       ])
+      → SignalChannel 主备 WebSocket 竞速
+      → SPC 可用时生成 origin Offer/client ability
+    → WebSocket join RPC
+    → 保存 tinyId、用户、ICE 和 server ability
+    → SPC connect 或准备 MPC
+  → 转发 ENTER_ROOM 等公开事件
+</code></pre>
+</div><p>这里至少有五个完成点：调度、WebSocket open、channel setup、join RPC、媒体 PC connected。<code>enterRoom()</code>/<code>join()</code> 的完成语义不能直接扩展为“所有媒体已经可用”。</p>
+<h2 id="3-启动本地麦克风">3. 启动本地麦克风<a class="heading-anchor" href="#3-启动本地麦克风" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">SDK.startLocalAudio(config)
+  → 创建 LocalAudioTrack
+  → 构造 audio constraints
+  → getUserMedia({audio})
+  → source audio track
+  → Web Audio pipeline（可选）
+  → out audio track
+  → 本地 Player/音量检测（可选）
+  → Room.publish(track)
+  → MPC/SPC sender replaceTrack/addTrack
+  → publish/publish_change 信令
+</code></pre>
+</div><p>关键边界：</p>
+<ul>
+<li>gUM 成功只代表采集成功。</li>
+<li>out track 可能不是 source track。</li>
+<li>publish Promise 还要结合 PC connected 和信令响应。</li>
+<li>停止时先退发布，再断处理图并停止 source/out Track。</li>
+</ul>
+<h2 id="4-启动本地摄像头">4. 启动本地摄像头<a class="heading-anchor" href="#4-启动本地摄像头" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">SDK.startLocalVideo(config)
+  → profile/cameraId/facingMode 转采集配置
+  → getUserMedia({video})
+  → getSettings/getCapabilities
+  → LocalVideoTrack.setInputMediaStreamTrack
+  → 本地预览
+  → 可选 Canvas/处理管线产生 out track
+  → Room.publish
+  → sender index 1（主流）/2（小流）
+</code></pre>
+</div><p>width/height/frameRate 进入采集；bitrate 进入 sender parameters/SDP；mirror、fillMode、rotation 进入 Player/Canvas。它们不是同一组浏览器参数。</p>
+<h2 id="5-屏幕共享">5. 屏幕共享<a class="heading-anchor" href="#5-屏幕共享" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">SDK.startScreenShare(options)
+  → getDisplayMedia constraints
+  → screen video + optional system audio
+  → 可选 CropTarget/cropTo
+  → 可选额外 getUserMedia 麦克风
+  → ScreenTrack / Audio mix
+  → 本地预览
+  → Room.publish(isAuxiliary=true)
+  → sender index 3（辅流）
+</code></pre>
+</div><p>浏览器 UI 的“停止共享”触发 Track ended，SDK 应进入与显式 stopScreenShare 对齐的退发布和释放流程，但要防止重复执行。</p>
+<p>这里最容易写错的是把两次约束合成一个 <code>{video: true}</code>。下面把源码中的混淆变量 <code>e</code>、<code>i</code>、<code>n</code> 改成可读名称，字段、条件和取值保持不变：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">// 第一次：构造选择界面参数并开始采集。
+const displayOptions = {
+  preferCurrentTab:
+    screenOptions.preferDisplaySurface === &#39;current-tab&#39; ||
+    Boolean(screenOptions.captureElement),
+  systemAudio: &quot;include&quot;,
+  selfBrowserSurface: &quot;include&quot;,
+  surfaceSwitching: &quot;include&quot;,
+  video: {
+    width: isSafari
+      ? { max: screenOptions.width }
+      : { ideal: screenOptions.width, max: screenOptions.width },
+    height: isSafari
+      ? { max: screenOptions.height }
+      : { ideal: screenOptions.height, max: screenOptions.height },
+    frameRate: screenOptions.frameRate,
+    displaySurface: screenOptions.preferDisplaySurface || &#39;monitor&#39;
+  }
+};
+
+if (screenOptions.systemAudio) {
+  displayOptions.audio = {
+    echoCancellation: screenOptions.echoCancellation ?? true,
+    noiseSuppression: screenOptions.noiseSuppression ?? false,
+    autoGainControl: screenOptions.autoGainControl ?? false,
+    sampleRate: 48000
+  };
+}
+
+const displayStream = await navigator.mediaDevices.getDisplayMedia(displayOptions);
+const screenVideoTrack = displayStream.getVideoTracks()[0];
+
+// 第二次：已经取得 Track 后，再约束真正用于发布的视频轨道。
+if (screenOptions.frameRate) {
+  try {
+    await screenVideoTrack.applyConstraints({
+      frameRate: {
+        min: screenOptions.frameRate,
+        ideal: screenOptions.frameRate
+      },
+      width: screenOptions.width,
+      height: screenOptions.height
+    });
+  } catch (error) {
+    logger.warn(`screen applyConstraints failed: ${error}`);
+  }
+}
+</code></pre>
+</div><p>两组参数含义不同：</p>
+<ul>
+<li><code>preferCurrentTab</code>、<code>selfBrowserSurface</code>、<code>surfaceSwitching</code>、<code>displaySurface</code> 影响选择界面或首选共享来源，并不直接保证最终选择结果。</li>
+<li><code>systemAudio: &quot;include&quot;</code> 表示选择器允许或提示共享系统音频；顶层 <code>audio</code> 仍决定 SDK 是否请求音频轨道以及请求哪些音频约束。</li>
+<li>第二次的 <code>applyConstraints()</code> 不会重新打开选择器，它只尝试调整已经获得的视频 Track。</li>
+<li><code>frameRate.min</code> 是最低可接受值，无法满足时 Promise 可以 reject；<code>ideal</code> 是偏好值。源码把二者都设为 <code>screenOptions.frameRate</code>，并把 <code>width</code>、<code>height</code> 再传一次。</li>
+<li>第二次约束失败只记录 warning，不丢弃已经获得的屏幕 Track；这是“优化输出规格失败”与“屏幕采集失败”的明确分界。</li>
+<li>随后还要用 <code>getSettings()</code> 看浏览器真正采用的尺寸、帧率和 <code>displaySurface</code>，并监听 <code>ended</code> 处理用户从浏览器 UI 停止共享。</li>
+</ul>
+<p>完整的逐字段来源和条件分支见 <a href="04-MediaDevices-and-Capture.html#16-7-getdisplaymedia-options">MediaDevices 与媒体采集：<code>getDisplayMedia()</code></a> 及其下一节。</p>
+<h2 id="6-mpc-首次发布">6. MPC 首次发布<a class="heading-anchor" href="#6-mpc-首次发布" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">Room.publish(track)
+  → 创建/取得 dJ uplink
+  → initialize 独立 PC
+  → 建固定 sender/transceiver 槽或 addTrack
+  → createOffer
+  → setLocalDescription
+  → WebSocket publish RPC 携 Offer
+  → setRemoteDescription(Answer)
+  → waitForPeerConnectionConnected
+  → Stats 记录 selected candidate
+</code></pre>
+</div><p>后续同槽换轨通常使用 <code>replaceTrack()</code> 和 publish_change；旧兼容路径可能需要更新 Offer。</p>
+<h2 id="7-spc-首次发布">7. SPC 首次发布<a class="heading-anchor" href="#7-spc-首次发布" aria-label="链接到本节">#</a></h2>
+<p>SPC 在进房阶段已经预建共享 PC 和四个上行槽：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th align="right">index</th>
+<th>kind</th>
+<th>语义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="right">0</td>
+<td>audio</td>
+<td>本地音频</td>
+</tr>
+<tr>
+<td align="right">1</td>
+<td>video</td>
+<td>主视频</td>
+</tr>
+<tr>
+<td align="right">2</td>
+<td>video</td>
+<td>小流</td>
+</tr>
+<tr>
+<td align="right">3</td>
+<td>video</td>
+<td>辅视频/屏幕</td>
+</tr>
+</tbody></table></div>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">Room.publish(track)
+  → wait SignalTransport connected
+  → UplinkTransport.publish
+  → sender.replaceTrack(outTrack)
+  → setParameters（码率/缩放/降级偏好）
+  → publish 状态信令
+</code></pre>
+</div><p>共享 PC 的所有者始终是 SignalTransport，UplinkTransport 关闭不能直接关闭 PC。</p>
+<h2 id="8-mpc-订阅远端用户">8. MPC 订阅远端用户<a class="heading-anchor" href="#8-mpc-订阅远端用户" aria-label="链接到本节">#</a></h2>
+<p>每个远端用户一个下行 PC：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">SDK.startRemoteVideo(userId, streamType, view)
+  → Room 合并该用户目标 subscribeState
+  → aJ.subscribe
+  → initialize 独立 PC
+  → audio/video/video recvonly transceivers
+  → createOffer + SDP 修正
+  → subscribe RPC
+  → setRemoteDescription(answer)
+  → ontrack
+  → RemoteTrack.setInputMediaStreamTrack
+  → waitHasMediaTrack / Player.play(view)
+</code></pre>
+</div><p>首次 Offer 已声明所需 m-line；后续大/小流或音频状态变化通常走 subscribe_change，完全退订才关闭该用户 PC。</p>
+<h2 id="9-spc-订阅远端用户">9. SPC 订阅远端用户<a class="heading-anchor" href="#9-spc-订阅远端用户" aria-label="链接到本节">#</a></h2>
+<p>共享 PC 从 index 4 开始，每个远端用户占 3 个下行槽：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">audio + big video + auxiliary video
+</code></pre>
+</div><div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">DownlinkTransport.doSubscribe
+  → 取得/新增三个 recvonly transceiver
+  → 写入 Answer 的 SSRC/MSID/MID
+  → 更新 user ↔ MID Map
+  → 多用户变更通过 queue 合并
+  → SignalTransport.updateSDP
+  → ontrack 按 stream/tinyId/MID 还原用户
+  → RemoteTrack + Player
+</code></pre>
+</div><p>SPC 的增量订阅会影响共享 SDP，因此失败可能触发整个 SPC 重建，而不只是某个用户连接。</p>
+<h2 id="10-远端首帧播放">10. 远端首帧播放<a class="heading-anchor" href="#10-远端首帧播放" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">subscribe response
+  → setRemoteDescription
+  → PC ontrack
+  → RemoteTrack 绑定 native track
+  → Player.srcObject / Canvas source
+  → play()
+  → loadedmetadata / playing / frame callback
+  → 首帧和尺寸可用
+</code></pre>
+</div><p>订阅信令成功、PC connected、track 到达和 <code>playing</code> 是四个不同阶段。自动播放被阻止时，媒体可能已正常接收，只需用户交互恢复 Player。</p>
+<h2 id="11-切换摄像头或麦克风">11. 切换摄像头或麦克风<a class="heading-anchor" href="#11-切换摄像头或麦克风" aria-label="链接到本节">#</a></h2>
+<p>优先尝试对现有 source track <code>applyConstraints({deviceId})</code>；不支持或失败时重新采集：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">new getUserMedia
+  → 验证 newSourceTrack/settings
+  → 接入处理管线得到 newOutTrack
+  → sender.replaceTrack(newOutTrack)
+  → Player 切换
+  → 更新 SDK settings/事件
+  → stop old tracks
+</code></pre>
+</div><p>切换成功不必然需要 SDP 重协商，但新 Track 超出现有协商范围时 replaceTrack 可能失败。</p>
+<h2 id="12-mute-unmute-与停止">12. mute、unmute 与停止<a class="heading-anchor" href="#12-mute-unmute-与停止" aria-label="链接到本节">#</a></h2>
+<p>三种动作要分开：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>动作</th>
+<th>可能实现</th>
+<th>是否释放设备</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>mute</td>
+<td><code>enabled=false</code>、replaceTrack(null)、业务 mute flag</td>
+<td>通常不释放</td>
+</tr>
+<tr>
+<td>unmute</td>
+<td>enabled 恢复或 replaceTrack(track)</td>
+<td>复用现有 Track</td>
+</tr>
+<tr>
+<td>stop</td>
+<td>unpublish + pipeline close + track.stop</td>
+<td>释放拥有的资源</td>
+</tr>
+</tbody></table></div>
+<p>UI 上同样显示“静音”，底层可能是不同状态；重连恢复时必须保存正确的目标发布状态。</p>
+<h2 id="13-网络质量与-stats">13. 网络质量与 Stats<a class="heading-anchor" href="#13-网络质量与-stats" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">周期 timer
+  → pc.getStats()
+  → 关联 inbound/outbound/remote-inbound/candidate-pair/codec
+  → 与上次累计值做差
+  → 码率、丢包、RTT、帧率、分辨率、卡顿
+  → Room 聚合和上报
+</code></pre>
+</div><p>MPC 分别采样各 PC；SPC 每周期可对共享 PC 采样一次，再按 SSRC/用户过滤。selected candidate pair 才代表真实网络路径，不能仅看配置中的 TURN Server。</p>
+<h2 id="14-websocket-断线恢复">14. WebSocket 断线恢复<a class="heading-anchor" href="#14-websocket-断线恢复" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">socket close/error
+  → SignalChannel 清当前连接
+  → 拒绝未完成 RPC
+  → 主备地址重新连接
+  → 恢复应用层信道
+  → Room 判断是否 reJoin
+  → 媒体连接等待信令后继续重连
+</code></pre>
+</div><p>已有媒体可能在 WebSocket 刚断时短暂继续，但无法可靠发布、订阅或重建；控制面恢复和媒体面恢复必须分别上报。</p>
+<h2 id="15-mpc-媒体重连">15. MPC 媒体重连<a class="heading-anchor" href="#15-mpc-媒体重连" aria-label="链接到本节">#</a></h2>
+<ul>
+<li>上行 <code>dJ</code>：退旧发布、关闭 PC、initialize、新建 Offer、恢复主/辅发布。</li>
+<li>下行 <code>aJ</code>：关闭该用户 PC、initialize、按保存的 subscribeState 重新订阅。</li>
+<li>各实例独立维护重连次数和 timer。</li>
+<li>信令不在线时等待 SignalChannel 恢复，不盲目重复建 PC。</li>
+</ul>
+<h2 id="16-spc-媒体重连与降级">16. SPC 媒体重连与降级<a class="heading-anchor" href="#16-spc-媒体重连与降级" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">SignalTransport failed/closed
+  → reset shared PC
+  → 选择备用 relay
+  → initialize
+  → REBUILD_PEER_CONNECTION RPC
+  → connect(new server ability)
+  → UplinkTransport 恢复发布
+  → 所有 DownlinkTransport 恢复订阅
+</code></pre>
+</div><p>初始化失败或不可恢复错误时可降级到 MPC：关闭共享 PC，创建 MPC 上行和每用户下行，并尽量复用现有 Track 包装和业务状态。</p>
+<h2 id="17-退出房间">17. 退出房间<a class="heading-anchor" href="#17-退出房间" aria-label="链接到本节">#</a></h2>
+<p><code>exitRoom()</code> 主要关闭房间资源：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">发送 leave（条件允许时）
+  → 停同步/心跳
+  → 关闭下行连接和 Player 订阅
+  → 关闭上行连接
+  → 清 Stats/网络质量/用户
+  → 关闭或按策略保留 SignalChannel
+  → 关闭 shared SPC
+</code></pre>
+</div><p>本地采集 Track 可以保留，以支持离房后预览或再次进房。这是 <code>exitRoom()</code> 与 <code>destroy()</code> 的关键区别。</p>
+<h2 id="18-销毁实例">18. 销毁实例<a class="heading-anchor" href="#18-销毁实例" aria-label="链接到本节">#</a></h2>
+<p><code>destroy()</code> 在退房基础上继续：</p>
+<ul>
+<li>停止本地摄像头、麦克风和屏幕 Track。</li>
+<li>关闭 Audio/Canvas/Worker pipeline。</li>
+<li>销毁 Player 和内部 DOM。</li>
+<li>解绑全局事件、Observer 和页面 listener。</li>
+<li>清 timer、pending Promise、Object URL 和 Map。</li>
+</ul>
+<p>销毁完成后实例不应再接收旧 Track、socket 或 Worker 的晚到事件。</p>
+<h2 id="19-四种典型故障组合">19. 四种典型故障组合<a class="heading-anchor" href="#19-四种典型故障组合" aria-label="链接到本节">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>控制面</th>
+<th>媒体面</th>
+<th>现象</th>
+<th>排查重点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>正常</td>
+<td>正常</td>
+<td>信令和媒体都可用</td>
+<td>正常 Stats/播放器</td>
+</tr>
+<tr>
+<td>正常</td>
+<td>失败</td>
+<td>可以发命令但无媒体</td>
+<td>ICE/DTLS、Candidate、firewall、codec</td>
+</tr>
+<tr>
+<td>失败</td>
+<td>暂时正常</td>
+<td>音视频可能短暂继续但无法控制</td>
+<td>WebSocket、调度、会话恢复</td>
+</tr>
+<tr>
+<td>失败</td>
+<td>失败</td>
+<td>完整掉线</td>
+<td>先恢复信令，再重建 MPC/SPC</td>
+</tr>
+</tbody></table></div>
+<h2 id="20-最终检查顺序">20. 最终检查顺序<a class="heading-anchor" href="#20-最终检查顺序" aria-label="链接到本节">#</a></h2>
+<p>排查任意流程时按以下顺序：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">公开 API 参数和前置状态
+  → HTTP/调度
+  → WebSocket open + 应用层会话
+  → Room 命令响应
+  → PC SDP/ICE/DTLS/connectionState
+  → Track 到达/采集
+  → Audio/Canvas pipeline
+  → Player playing/首帧
+  → Stats 真实数据
+  → close/reset 是否完整
+</code></pre>
+</div><p>完整公开 API 链见附录 E，集中流程图见附录 F。</p>
+
+      <nav class="page-pagination" aria-label="上一篇和下一篇">
+        <a class="previous" href="10-Auxiliary-Browser-APIs.html"><span>上一篇</span>10 辅助浏览器 API</a>
+        <a class="next" href="Appendix-A-WebAPI-Occurrences.html"><span>下一篇</span>附录 A Web API 出现位置</a>
+      </nav>
+    </article>
+    
+    <nav class="page-toc" aria-label="本页目录">
+      <h2>本页目录</h2>
+      <a class="toc-depth-2" href="#1-总体心智模型">1. 总体心智模型</a><a class="toc-depth-3" href="#1-1-同一功能的参数必须按阶段追踪">1.1 同一功能的参数必须按阶段追踪</a><a class="toc-depth-2" href="#2-进房">2. 进房</a><a class="toc-depth-2" href="#3-启动本地麦克风">3. 启动本地麦克风</a><a class="toc-depth-2" href="#4-启动本地摄像头">4. 启动本地摄像头</a><a class="toc-depth-2" href="#5-屏幕共享">5. 屏幕共享</a><a class="toc-depth-2" href="#6-mpc-首次发布">6. MPC 首次发布</a><a class="toc-depth-2" href="#7-spc-首次发布">7. SPC 首次发布</a><a class="toc-depth-2" href="#8-mpc-订阅远端用户">8. MPC 订阅远端用户</a><a class="toc-depth-2" href="#9-spc-订阅远端用户">9. SPC 订阅远端用户</a><a class="toc-depth-2" href="#10-远端首帧播放">10. 远端首帧播放</a><a class="toc-depth-2" href="#11-切换摄像头或麦克风">11. 切换摄像头或麦克风</a><a class="toc-depth-2" href="#12-mute-unmute-与停止">12. mute、unmute 与停止</a><a class="toc-depth-2" href="#13-网络质量与-stats">13. 网络质量与 Stats</a><a class="toc-depth-2" href="#14-websocket-断线恢复">14. WebSocket 断线恢复</a><a class="toc-depth-2" href="#15-mpc-媒体重连">15. MPC 媒体重连</a><a class="toc-depth-2" href="#16-spc-媒体重连与降级">16. SPC 媒体重连与降级</a><a class="toc-depth-2" href="#17-退出房间">17. 退出房间</a><a class="toc-depth-2" href="#18-销毁实例">18. 销毁实例</a><a class="toc-depth-2" href="#19-四种典型故障组合">19. 四种典型故障组合</a><a class="toc-depth-2" href="#20-最终检查顺序">20. 最终检查顺序</a>
+    </nav>
+  </main>
+  <button type="button" class="back-to-top" aria-label="回到顶部">↑</button>
+</body>
+</html>

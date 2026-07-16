@@ -1,0 +1,1353 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="TRTC 反混淆源码浏览器 Web API 深度分析：附录 E 公开 API 调用链">
+  <title>附录 E 公开 API 调用链 · TRTC Web API 深度学习</title>
+  <link rel="stylesheet" href="assets/docs.css">
+  <script>try{const t=localStorage.getItem('trtc-docs-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+  <script src="assets/search-index.js" defer></script>
+  <script src="assets/mermaid.min.js" defer></script>
+  <script src="assets/docs.js" defer></script>
+</head>
+<body data-page="Appendix-E-Public-API-Call-Chains.html">
+  <header class="topbar">
+    <button type="button" class="icon-button nav-toggle" aria-label="打开目录" aria-expanded="false">☰</button>
+    <a class="brand" href="index.html">TRTC Web API 深度学习</a>
+    <div class="search-shell">
+      <label class="sr-only" for="global-search">搜索全部文档</label>
+      <input id="global-search" type="search" autocomplete="off" placeholder="搜索 API、方法、事件…" aria-controls="search-results">
+      <kbd>/</kbd>
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
+    <a class="source-link" href="../Appendix-E-Public-API-Call-Chains.md">Markdown</a>
+    <a class="source-link" href="../../trtc.deobfuscated.js">源码</a>
+    <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
+  </header>
+
+  <aside class="sidebar" aria-label="文档目录">
+    
+    <section class="nav-group">
+      <h2>按顺序阅读</h2>
+      
+        <a class="nav-link" href="index.html">
+          文档首页
+        </a>
+        <a class="nav-link" href="00-Reading-Guide-and-Source-Map.html">
+          00 阅读说明与源码地图
+        </a>
+        <a class="nav-link" href="01-Browser-API-Panorama.html">
+          01 浏览器 API 全景
+        </a>
+        <a class="nav-link" href="02-RTCPeerConnection-usage-analysis.html">
+          02 RTCPeerConnection
+        </a>
+        <a class="nav-link" href="03-WebSocket-usage-analysis.html">
+          03 WebSocket 信令
+        </a>
+        <a class="nav-link" href="04-MediaDevices-and-Capture.html">
+          04 MediaDevices 与采集
+        </a>
+        <a class="nav-link" href="05-MediaStreamTrack-Lifecycle.html">
+          05 Track 生命周期
+        </a>
+        <a class="nav-link" href="06-Web-Audio-usage-analysis.html">
+          06 Web Audio
+        </a>
+        <a class="nav-link" href="07-Media-Playback-and-Rendering.html">
+          07 播放与渲染
+        </a>
+        <a class="nav-link" href="08-Worker-Streams-and-Encoded-Processing.html">
+          08 Worker 与编码帧
+        </a>
+        <a class="nav-link" href="09-WebCodecs-and-WebAssembly.html">
+          09 WebCodecs 与 WASM
+        </a>
+        <a class="nav-link" href="10-Auxiliary-Browser-APIs.html">
+          10 辅助浏览器 API
+        </a>
+        <a class="nav-link" href="11-End-to-End-Business-Flows.html">
+          11 端到端业务流程
+        </a>
+    </section>
+    <section class="nav-group">
+      <h2>附录（按需查询）</h2>
+      
+        <a class="nav-link" href="Appendix-A-WebAPI-Occurrences.html">
+          A Web API 出现位置
+        </a>
+        <a class="nav-link" href="Appendix-B-Source-Method-Index.html">
+          B 源码方法索引
+        </a>
+        <a class="nav-link" href="Appendix-C-Event-Index.html">
+          C 事件索引
+        </a>
+        <a class="nav-link" href="Appendix-D-Method-Adjacency-Index.html">
+          D 方法调用邻接
+        </a>
+        <a class="nav-link active" href="Appendix-E-Public-API-Call-Chains.html">
+          E 公开 API 调用链
+        </a>
+        <a class="nav-link" href="Appendix-F-Visual-Call-Flows.html">
+          F 流程图与时序图
+        </a>
+    </section>
+  </aside>
+  <div class="sidebar-backdrop" hidden></div>
+
+  <main class="layout">
+    <article class="doc-content">
+      <h1 id="附录-e-公开-api-调用链">附录 E 公开 API 调用链<a class="heading-anchor" href="#附录-e-公开-api-调用链" aria-label="链接到本节">#</a></h1>
+<blockquote>
+<p>本附录用于从公开方法反查参数、内部方法、浏览器 API、事件和释放位置。推荐先阅读主线，再按具体 API 查询。</p>
+</blockquote>
+<blockquote>
+<p>分析对象：<code>samples/trtc/trtc.deobfuscated.js</code>。</p>
+<p>目标：从任意一个公开方法出发，能继续找到参数经过哪些包装器、进入哪些内部方法、最终调用哪些浏览器 Web API、触发哪些事件，以及由谁释放资源。</p>
+</blockquote>
+<h2 id="1-先看真正的调用入口-方法体外还有装饰器">1. 先看真正的调用入口：方法体外还有装饰器<a class="heading-anchor" href="#1-先看真正的调用入口-方法体外还有装饰器" aria-label="链接到本节">#</a></h2>
+<p>公开方法并不是直接进入文件中看见的函数体。L36130-L36530 的 <code>applyDecorators(...)</code> 会在运行时替换原型方法，因此真实顺序是：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">调用者
+  → 参数校验
+  → 同类操作去重 / update 参数合并 / stop 状态钩子
+  → 防抖、限频或插件名解析
+  → 日志与错误转换
+  → 文件中可见的方法体
+  → Room / Track / Player / Plugin
+  → WebSocket、WebRTC、Media、DOM 等 Web API
+  → 浏览器事件反向进入 SDK EventEmitter
+</code></pre>
+</div><p>如果只读方法体，会漏掉以下实际行为：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>公开方法</th>
+<th>方法体外的关键行为</th>
+<th align="right">源码位置</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>enterRoom</code></td>
+<td>参数校验；相同房间调用去重；写入日志 userId/sdkAppId</td>
+<td align="right">L36148-L36180</td>
+</tr>
+<tr>
+<td><code>startLocalAudio</code></td>
+<td>参数校验；相同 microphoneId 的重复 start 合并</td>
+<td align="right">L36187-L36208</td>
+</tr>
+<tr>
+<td><code>updateLocalAudio</code></td>
+<td>update 合并；<code>captureVolume</code> 以 200 ms 防抖</td>
+<td align="right">L36210-L36234</td>
+</tr>
+<tr>
+<td><code>stopLocalAudio</code></td>
+<td>audio stop 状态钩子，避免重复停止</td>
+<td align="right">L36236</td>
+</tr>
+<tr>
+<td><code>startLocalVideo</code></td>
+<td>相同 cameraId 的重复 start 合并</td>
+<td align="right">L36237-L36258</td>
+</tr>
+<tr>
+<td><code>updateLocalVideo</code></td>
+<td>video update 合并</td>
+<td align="right">L36260</td>
+</tr>
+<tr>
+<td><code>startScreenShare</code></td>
+<td>同一 screen start 合并</td>
+<td align="right">L36262</td>
+</tr>
+<tr>
+<td><code>start/update/stopRemoteVideo</code></td>
+<td>以 <code>userId + streamType</code> 作为操作键</td>
+<td align="right">L36265-L36322</td>
+</tr>
+<tr>
+<td><code>stopRemoteVideo({userId:&#39;*&#39;})</code></td>
+<td>包装器遍历所有远端主流/辅流</td>
+<td align="right">L36293-L36320</td>
+</tr>
+<tr>
+<td><code>setRemoteAudioVolume</code></td>
+<td>以 userId 为键，200 ms 内只保留末次调用</td>
+<td align="right">L36325-L36372</td>
+</tr>
+<tr>
+<td><code>start/update/stopPlugin</code></td>
+<td>插件名称先解析为插件实例，再调用实例方法</td>
+<td align="right">L36374-L36446</td>
+</tr>
+<tr>
+<td><code>sendSEIMessage</code></td>
+<td>参数校验；每秒 30 次、每秒累计 8000 字节限频</td>
+<td align="right">L36473-L36490</td>
+</tr>
+<tr>
+<td><code>sendCustomMessage</code></td>
+<td>参数校验；每秒 30 次、每秒累计 8000 字节限频</td>
+<td align="right">L36492-L36495</td>
+</tr>
+</tbody></table></div>
+<p>反混淆文件中有少量形参重命名不完整，例如声明 <code>role</code> 后方法体仍出现 <code>e</code>，或 <code>catch (err)</code> 后读取另一短变量。应以装饰器规则、数据结构和下游调用共同确认语义，不能把短变量名当成可靠 API 名称。</p>
+<h2 id="2-公开-api-总表">2. 公开 API 总表<a class="heading-anchor" href="#2-公开-api-总表" aria-label="链接到本节">#</a></h2>
+<p>“直接 Web API”指门面方法自身能看到的调用；“最终 Web API”包含下游 Track、Room、Player 和 Transport。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>公开 API</th>
+<th align="right">门面行号</th>
+<th>主要内部链</th>
+<th>最终 Web API / 浏览器能力</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>TRTC.create</code> / <code>_create</code></td>
+<td align="right">L34250-L34297</td>
+<td>permission wrapper → <code>new TRTCSdk</code></td>
+<td><code>navigator.userAgent</code>、<code>hardwareConcurrency</code>、<code>deviceMemory</code>、UA Client Hints、WebGL GPU 查询、<code>location</code>、iframe 检测</td>
+</tr>
+<tr>
+<td><code>getNetworkTime</code></td>
+<td align="right">L34543</td>
+<td><code>getServerTime</code></td>
+<td>由 WebSocket NTP 同步值和计时器维护；调用本身不发网络请求</td>
+</tr>
+<tr>
+<td><code>use</code></td>
+<td align="right">L34549-L34579</td>
+<td><code>_use</code> → <code>new Plugin(context)</code></td>
+<td>取决于插件；可能使用 Worker/WASM/WebCodecs，不可从 <code>use</code> 一概而论</td>
+</tr>
+<tr>
+<td><code>enterRoom</code></td>
+<td align="right">L34581-L34628</td>
+<td><code>Room.join</code> → schedule → SignalChannel → MPC/SPC</td>
+<td>Fetch/XHR、WebSocket、RTCPeerConnection、计时器、Page Visibility</td>
+</tr>
+<tr>
+<td><code>exitRoom</code></td>
+<td align="right">L34631-L34637</td>
+<td><code>_exitRoom</code> → <code>Room.leave</code> → decorator <code>reset(true)</code></td>
+<td>WebSocket send/可选 close、PC close、timer clear；不停止本地采集 Track</td>
+</tr>
+<tr>
+<td><code>switchRoom</code></td>
+<td align="right">L34640-L34662</td>
+<td><code>Room.switchRoom</code>；失败则 exit + enter</td>
+<td>WebSocket RPC、PC 重建或更新、计时器</td>
+</tr>
+<tr>
+<td><code>switchRole</code></td>
+<td align="right">L34706-L34715</td>
+<td><code>Room.switchRole</code> → uplink close/create</td>
+<td>WebSocket RPC、RTCPeerConnection、sender/transceiver</td>
+</tr>
+<tr>
+<td><code>destroy</code></td>
+<td align="right">L34718-L34737</td>
+<td>plugin destroy → Room.destroy → stop local tracks</td>
+<td>WebSocket.close、PC.close、Track.stop、AudioNode/Player/Worker 清理</td>
+</tr>
+<tr>
+<td><code>startLocalAudio</code></td>
+<td align="right">L34740-L34796</td>
+<td>AudioTrack.capture → play → publish</td>
+<td>getUserMedia、MediaStreamTrack、Web Audio、HTMLAudioElement、RTCRtpSender</td>
+</tr>
+<tr>
+<td><code>updateLocalAudio</code></td>
+<td align="right">L34799-L34826</td>
+<td>switchDevice/custom track/update3A/play/publish</td>
+<td>getUserMedia 或 replace input、AudioNode、MediaStreamTrack、RTCRtpSender</td>
+</tr>
+<tr>
+<td><code>stopLocalAudio</code></td>
+<td align="right">L34829-L34843</td>
+<td>unpublish → Track.stop/close → manager remove</td>
+<td>sender/transceiver 更新、Track.stop、AudioNode.disconnect、media element cleanup</td>
+</tr>
+<tr>
+<td><code>startLocalVideo</code></td>
+<td align="right">L34846-L34996</td>
+<td>VideoTrack.capture → play → publish</td>
+<td>getUserMedia、Track settings/constraints、HTMLVideoElement/Canvas、RTCRtpSender</td>
+</tr>
+<tr>
+<td><code>updateLocalVideo</code></td>
+<td align="right">L34923-L34996</td>
+<td>switch/recapture/applyProfile/play/publish</td>
+<td>getUserMedia、applyConstraints、contentHint、replaceTrack、setParameters</td>
+</tr>
+<tr>
+<td><code>stopLocalVideo</code></td>
+<td align="right">L34999-L35011</td>
+<td>unpublish → stop/close</td>
+<td>sender/transceiver 更新、Track.stop、video/canvas cleanup</td>
+</tr>
+<tr>
+<td><code>startScreenShare</code></td>
+<td align="right">L35022-L35104</td>
+<td>ScreenTrack.capture → optional AudioTrack → publish/play</td>
+<td>getDisplayMedia、MediaStream、Track ended、Capture Handle/CropTarget、HTMLVideoElement</td>
+</tr>
+<tr>
+<td><code>updateScreenShare</code></td>
+<td align="right">L35107-L35152</td>
+<td>contentHint/mute/publish/play update</td>
+<td>Track.enabled/contentHint、sender/transceiver、HTML/Canvas player</td>
+</tr>
+<tr>
+<td><code>stopScreenShare</code></td>
+<td align="right">L35155-L35161</td>
+<td><code>_stopScreenShare</code></td>
+<td>unpublish、Track.stop、Audio pipeline/plugin cleanup</td>
+</tr>
+<tr>
+<td><code>startRemoteVideo</code></td>
+<td align="right">L35164-L35214</td>
+<td>Room.subscribe → RemoteTrack.play → observe view</td>
+<td>RTCPeerConnection track/receiver、HTMLVideoElement/Canvas/WebGL、IntersectionObserver</td>
+</tr>
+<tr>
+<td><code>updateRemoteVideo</code></td>
+<td align="right">L35217-L35255</td>
+<td>changeType/play update/observe view</td>
+<td>WebSocket subscribe RPC、media player、IntersectionObserver</td>
+</tr>
+<tr>
+<td><code>stopRemoteVideo</code></td>
+<td align="right">L35258-L35264</td>
+<td><code>_stopRemoteVideo</code> → unsubscribe/stop</td>
+<td>receiver/transceiver/PC subscription、player cleanup</td>
+</tr>
+<tr>
+<td><code>muteRemoteAudio</code></td>
+<td align="right">L35299-L35327</td>
+<td><code>_startRemoteAudio</code> 或 <code>_stopRemoteAudio</code></td>
+<td>PC subscribe/unsubscribe、HTMLAudioElement/Web Audio</td>
+</tr>
+<tr>
+<td><code>setRemoteAudioVolume</code></td>
+<td align="right">L35330-L35352</td>
+<td><code>_updateAudioPlayOption</code></td>
+<td>HTMLMediaElement.volume、AudioNode/GainNode 管线</td>
+</tr>
+<tr>
+<td><code>startPlugin</code></td>
+<td align="right">L35355-L35361</td>
+<td>plugin resolver → <code>plugin.start</code></td>
+<td>插件定义决定</td>
+</tr>
+<tr>
+<td><code>updatePlugin</code></td>
+<td align="right">L35364-L35370</td>
+<td>plugin resolver → <code>plugin.update</code></td>
+<td>插件定义决定</td>
+</tr>
+<tr>
+<td><code>stopPlugin</code></td>
+<td align="right">L35373-L35379</td>
+<td>plugin resolver → <code>plugin.stop</code></td>
+<td>插件定义决定；应释放插件持有的 Worker/Node/Codec</td>
+</tr>
+<tr>
+<td><code>enableAudioVolumeEvaluation</code></td>
+<td align="right">L35382-L35388</td>
+<td>Room interval → sender/receiver stats/audio level</td>
+<td>getStats、Web Audio 音量值、timer</td>
+</tr>
+<tr>
+<td><code>on</code> / <code>off</code></td>
+<td align="right">L35391-L35442</td>
+<td>EventEmitter；AUDIO_FRAME 有额外 PCM 管线</td>
+<td>AbortController、AudioWorklet/ScriptProcessor（仅音频帧事件）</td>
+</tr>
+<tr>
+<td><code>getAudioTrack</code></td>
+<td align="right">L35445-L35466</td>
+<td>选本地/远端 Track；可选 processed clone</td>
+<td>MediaStreamTrack.clone</td>
+</tr>
+<tr>
+<td><code>getVideoTrack</code></td>
+<td align="right">L35469-L35490</td>
+<td>选主流/辅流；可选 processed clone</td>
+<td>MediaStreamTrack.clone</td>
+</tr>
+<tr>
+<td><code>getVideoSnapshot</code></td>
+<td align="right">L35493-L35512</td>
+<td>Track.getVideoFrame → Player.getVideoFrame</td>
+<td>Canvas 2D drawImage、canvas.toDataURL(&#39;image/png&#39;)</td>
+</tr>
+<tr>
+<td><code>setCurrentSpeaker</code></td>
+<td align="right">L35526-L35544</td>
+<td>enumerate output → <code>_setCurrentSpeaker</code> → player</td>
+<td>enumerateDevices、HTMLMediaElement.setSinkId</td>
+</tr>
+<tr>
+<td><code>sendSEIMessage</code></td>
+<td align="right">L35991-L36002</td>
+<td>SEI plugin update → encoded frame pipeline</td>
+<td>RTCRtpScriptTransform/createEncodedStreams、Worker/Streams，视能力分支而定</td>
+</tr>
+<tr>
+<td><code>sendCustomMessage</code></td>
+<td align="right">L36005-L36010</td>
+<td>CustomMessageManager → SignalChannel.send</td>
+<td>Uint8Array、btoa、WebSocket；本实现不是业务 DataChannel 消息</td>
+</tr>
+<tr>
+<td><code>callExperimentalAPI</code></td>
+<td align="right">L36013-L36021</td>
+<td>registry <code>zG.call</code></td>
+<td>由实验 API 名称决定，不能推断固定 Web API</td>
+</tr>
+<tr>
+<td><code>TRTC.setLogLevel</code></td>
+<td align="right">L36023-L36025</td>
+<td>logger config/upload switch</td>
+<td>Console、网络日志上报、存储，取决于开关</td>
+</tr>
+<tr>
+<td><code>TRTC.isSupported</code></td>
+<td align="right">L36027-L36029</td>
+<td>capability detection</td>
+<td>navigator、MediaDevices、RTCPeerConnection、codec/graphics 能力探测</td>
+</tr>
+<tr>
+<td><code>TRTC.getPermissions</code></td>
+<td align="right">L36031-L36055</td>
+<td>permission manager request/get</td>
+<td>Permissions API、getUserMedia 授权探测</td>
+</tr>
+<tr>
+<td><code>TRTC.getCameraList</code></td>
+<td align="right">L36057-L36059</td>
+<td>device helper</td>
+<td>enumerateDevices；可选先请求权限</td>
+</tr>
+<tr>
+<td><code>TRTC.getMicrophoneList</code></td>
+<td align="right">L36061-L36063</td>
+<td>device helper</td>
+<td>enumerateDevices；可选先请求权限</td>
+</tr>
+<tr>
+<td><code>TRTC.getSpeakerList</code></td>
+<td align="right">L36065-L36067</td>
+<td>output device helper</td>
+<td>enumerateDevices；浏览器可能不暴露 audiooutput</td>
+</tr>
+<tr>
+<td><code>TRTC.setCurrentSpeaker</code></td>
+<td align="right">L36069-L36105</td>
+<td>遍历实例或 Android 输入路由兼容</td>
+<td>enumerateDevices、setSinkId；Android 分支可能通过切换输入设备实现路由</td>
+</tr>
+</tbody></table></div>
+<h2 id="3-房间生命周期">3. 房间生命周期<a class="heading-anchor" href="#3-房间生命周期" aria-label="链接到本节">#</a></h2>
+<h3 id="3-1-enterroom-params-的参数分流">3.1 <code>enterRoom(params)</code> 的参数分流<a class="heading-anchor" href="#3-1-enterroom-params-的参数分流" aria-label="链接到本节">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>门面处理</th>
+<th>下游用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>sdkAppId/userId/userSig</code></td>
+<td>原样进入 <code>roomParams</code></td>
+<td>调度、WebSocket URL/鉴权、join RPC</td>
+</tr>
+<tr>
+<td><code>roomId</code></td>
+<td>缺省转 0</td>
+<td>数字房间；与 <code>strRoomId</code> 二选一</td>
+</tr>
+<tr>
+<td><code>strRoomId</code></td>
+<td>缺省转空串</td>
+<td>字符串房间，并设置 <code>useStringRoomId</code></td>
+</tr>
+<tr>
+<td><code>scene</code></td>
+<td>默认 <code>rtc</code></td>
+<td>房间场景、角色/延迟/发布策略</td>
+</tr>
+<tr>
+<td><code>role</code></td>
+<td><code>audience → 21</code>，其他 → 20</td>
+<td>join 协议角色；随后决定是否创建上行</td>
+</tr>
+<tr>
+<td><code>enableAutoPlayDialog</code></td>
+<td>默认 true</td>
+<td>播放失败时是否创建交互恢复 UI</td>
+</tr>
+<tr>
+<td><code>autoReceiveAudio</code></td>
+<td>默认 true</td>
+<td>收到远端音频可用事件后是否自动订阅/播放</td>
+</tr>
+<tr>
+<td><code>autoReceiveVideo</code></td>
+<td>默认 false</td>
+<td>收到远端视频可用事件后是否自动订阅</td>
+</tr>
+<tr>
+<td><code>proxy</code></td>
+<td>传入 <code>setProxyServer</code>；对象形式还提取 TURN</td>
+<td>调度/信令代理、RTCConfiguration.iceServers/transport policy</td>
+</tr>
+<tr>
+<td><code>preferHW</code></td>
+<td>仅布尔值生效</td>
+<td>编解码实现偏好</td>
+</tr>
+<tr>
+<td><code>playoutDelay</code></td>
+<td>truthy 时写入 Room</td>
+<td>远端播放延迟策略</td>
+</tr>
+<tr>
+<td><code>jitterBufferDelay</code></td>
+<td>truthy 时写入 Room</td>
+<td>receiver jitter buffer 目标值</td>
+</tr>
+<tr>
+<td><code>privateMapKey/latencyLevel/businessInfo</code></td>
+<td>写入 join 数据</td>
+<td>服务端鉴权和房间策略</td>
+</tr>
+<tr>
+<td><code>useVp8/useH265</code></td>
+<td>写入 join 数据</td>
+<td>能力协商与 SDP codec 选择</td>
+</tr>
+<tr>
+<td><code>keepAlive</code></td>
+<td>写入 join 数据</td>
+<td>exit 后是否短时保留 SignalChannel</td>
+</tr>
+</tbody></table></div>
+<p>完整调用链：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">enterRoom(params)
+  → validation + same-room start hook
+  → Room.setProxyServer()/setTurnServer()（可选）
+  → Room.join(roomParams, scene, frameWorkType)
+    → join 状态装饰器: left → joining → joined
+    → schedule()（必要时）
+      → Fetch/XHR 获得 domains、ICE servers、自动配置
+    → SignalChannel.connect()
+      → 主/备 URL 各 new WebSocket(url)
+      → Promise-any 选择先成功的一条
+      → socket OPEN
+      → channel setup/join response（应用层成功）
+    → Room.doJoin()
+      → sendWaitForResponse(join envelope)
+      → 保存 tinyId、远端用户、能力与 relay 信息
+    → initSinglePC() 或按发布/订阅创建 MPC
+      → new RTCPeerConnection(configuration)
+      → transceiver/capability/SDP 流程
+    → startHeartbeat()/syncUserList()/network quality
+  → _checkTrackToPublish()
+    → 将进房前已采集且 publish=true 的本地 Track 发布
+  → AG.start() 全局监控
+</code></pre>
+</div><p>不要把以下状态合并成一个“连接成功”：</p>
+<ol>
+<li>HTTP 调度成功。</li>
+<li>WebSocket <code>open</code>。</li>
+<li>channel setup/join RPC 成功。</li>
+<li><code>RTCPeerConnection.connectionState === &#39;connected&#39;</code>。</li>
+<li>远端 <code>track</code> 到达。</li>
+<li>播放器首帧渲染。</li>
+</ol>
+<h3 id="3-2-exitroom-不等于停止本地摄像头-麦克风">3.2 <code>exitRoom()</code> 不等于停止本地摄像头/麦克风<a class="heading-anchor" href="#3-2-exitroom-不等于停止本地摄像头-麦克风" aria-label="链接到本节">#</a></h3>
+<p>实际链路：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">exitRoom()
+  → _exitRoom() 的 stop(&#39;room&#39;) 状态钩子
+  → Room.leave()
+    → 发送最后一次 heartbeat（失败忽略）
+    → SignalChannel.send(leave)
+    → leave 状态装饰器 success → Room.reset(true)
+      → stop heartbeat / user-list timer
+      → close downlink/uplink/single PC
+      → clear stats/user maps
+      → keepAlive=true 且 socket 健康：暂留 WebSocket
+        否则 SignalChannel.close()
+  → _clearRemoteTracks()
+</code></pre>
+</div><p><code>exitRoom()</code> 没有调用 <code>stopLocalAudio()</code>、<code>stopLocalVideo()</code> 或 <code>stopScreenShare()</code>。本地 Track 可以继续采集，并可在下次 <code>enterRoom()</code> 后由 <code>_checkTrackToPublish()</code> 重新发布。这是源码中有意保留的生命周期语义。</p>
+<h3 id="3-3-switchroom-params">3.3 <code>switchRoom(params)</code><a class="heading-anchor" href="#3-3-switchroom-params" aria-label="链接到本节">#</a></h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">switchRoom(params)
+  → validation + update key/cache
+  → Room.isSwitchRoomSupported()
+  → _clearRemoteTracks()
+  → Room.switchRoom(params)
+    → WebSocket switch-room RPC
+    → 更新 roomId/user map/RTC 订阅状态
+  → 超时或 switch-room 失败
+    → _rejoinRoom(params)
+      → exitRoom()
+      → 合并旧 enterRoomParams 与新房间参数
+      → enterRoom()
+</code></pre>
+</div><p>反混淆后的 catch 局部变量存在名称不一致，但回退意图和下游调用是明确的。</p>
+<h3 id="3-4-switchrole-role-config">3.4 <code>switchRole(role, config)</code><a class="heading-anchor" href="#3-4-switchrole-role-config" aria-label="链接到本节">#</a></h3>
+<ul>
+<li><code>privateMapKey</code> 和 <code>latencyLevel</code> 先更新到 Room。</li>
+<li>切到 <code>audience</code> 时，下游会关闭上行 PC。</li>
+<li>切到 <code>anchor</code> 后 <code>_checkTrackToPublish()</code> 会发布仍在持有的本地 Track。</li>
+<li>WebSocket 负责角色 RPC；WebRTC 负责实际上行 sender/transceiver 生命周期。</li>
+</ul>
+<h3 id="3-5-destroy-的精确语义">3.5 <code>destroy()</code> 的精确语义<a class="heading-anchor" href="#3-5-destroy-的精确语义" aria-label="链接到本节">#</a></h3>
+<p>源码中的门面 <code>destroy()</code> 是同步方法，顺序为：插件 <code>destroy</code> → 事件解绑 → <code>Room.destroy()</code> → 移出实例集合 → 停本地 Track。它不返回一个等待所有异步 stop 完成的 Promise。</p>
+<p>这和 <code>exitRoom()</code> 有三个区别：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th><code>exitRoom</code></th>
+<th><code>destroy</code></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>实例是否可再次进房</td>
+<td>可以</td>
+<td>不应再使用</td>
+</tr>
+<tr>
+<td>本地采集是否保留</td>
+<td>保留</td>
+<td>发起 stop/close</td>
+</tr>
+<tr>
+<td>Signal/PC/插件</td>
+<td>Room reset，keepAlive 可能暂留信令</td>
+<td>全部销毁，pending join 被 reject</td>
+</tr>
+</tbody></table></div>
+<h2 id="4-本地音频-api">4. 本地音频 API<a class="heading-anchor" href="#4-本地音频-api" aria-label="链接到本节">#</a></h2>
+<h3 id="4-1-startlocalaudio-config-publish-true">4.1 <code>startLocalAudio(config = {publish:true})</code><a class="heading-anchor" href="#4-1-startlocalaudio-config-publish-true" aria-label="链接到本节">#</a></h3>
+<p>参数到内部对象的映射：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>内部动作</th>
+<th>最终 Web API 参数/属性</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>publish</code></td>
+<td>默认 true；已进房则 <code>Room.publish</code></td>
+<td>sender/transceiver + publish RPC</td>
+</tr>
+<tr>
+<td><code>mute</code></td>
+<td>capture 后 <code>Track.setMute</code></td>
+<td>通常控制 Track.enabled 或发布 mute flag</td>
+</tr>
+<tr>
+<td><code>option.microphoneId</code></td>
+<td><code>captureConfig.deviceId</code></td>
+<td>getUserMedia audio <code>deviceId</code> constraint</td>
+</tr>
+<tr>
+<td><code>option.audioTrack</code></td>
+<td><code>customSource</code></td>
+<td>直接接收调用者提供的 MediaStreamTrack</td>
+</tr>
+<tr>
+<td><code>captureVolume</code></td>
+<td><code>setCaptureVolume</code></td>
+<td>Web Audio GainNode/内部音量管线</td>
+</tr>
+<tr>
+<td><code>profile</code></td>
+<td>字符串查 profile 表或直接对象</td>
+<td>sampleRate/channelCount/bitrate/3A constraints</td>
+</tr>
+<tr>
+<td><code>earMonitorVolume</code></td>
+<td><code>{muted, volume}</code> 播放配置</td>
+<td>HTMLMediaElement.volume / Audio graph</td>
+</tr>
+<tr>
+<td><code>echoCancellation</code></td>
+<td>写入 audio profile</td>
+<td>getUserMedia audio constraint</td>
+</tr>
+<tr>
+<td><code>noiseSuppression</code></td>
+<td>写入 audio profile</td>
+<td>getUserMedia audio constraint</td>
+</tr>
+<tr>
+<td><code>autoGainControl</code></td>
+<td>写入 audio profile</td>
+<td>getUserMedia audio constraint</td>
+</tr>
+</tbody></table></div>
+<p>调用链：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">startLocalAudio
+  → new LocalAudioTrack(audioManager)
+  → setProfile()/setCaptureVolume()
+  → 绑定设备错误、active device、publish state、player state
+  → track.capture({deviceId | customSource})
+    → build audio MediaTrackConstraints
+    → navigator.mediaDevices.getUserMedia({audio: constraints})
+    → stream.getAudioTracks()[0]
+    → setInputMediaStreamTrack(source)
+      → 可选 AudioContext processing graph
+      → 生成 outMediaTrack
+  → setMute()
+  → Room.publish(track)（publish=true 且已进房）
+    → UplinkTransport.addTrack/replaceTrack
+    → sender/transceiver + WebSocket publish/change RPC
+  → _updateAudioPlayOption(ear monitor)
+  → EventBus 113
+</code></pre>
+</div><p>源码门面区域部分短变量在反混淆后未完全同步，详细 capture 实现应继续沿 L23000 附近 Track 类阅读，而不是照抄 <code>e/o/s</code> 名称。</p>
+<h3 id="4-2-updatelocalaudio-config-是分支更新-不是统一重采集">4.2 <code>updateLocalAudio(config)</code> 是分支更新，不是统一重采集<a class="heading-anchor" href="#4-2-updatelocalaudio-config-是分支更新-不是统一重采集" aria-label="链接到本节">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>输入变化</th>
+<th>分支</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>microphoneId</code></td>
+<td><code>switchDevice(id)</code>，通常新 getUserMedia 后替换输入 Track</td>
+</tr>
+<tr>
+<td><code>audioTrack</code></td>
+<td><code>setInputMediaStreamTrack(customTrack)</code></td>
+</tr>
+<tr>
+<td><code>captureVolume</code></td>
+<td>200 ms 防抖后更新 capture gain</td>
+</tr>
+<tr>
+<td><code>earMonitorVolume</code></td>
+<td>更新播放 muted/volume，不改变采集约束</td>
+</tr>
+<tr>
+<td>3A 字段</td>
+<td><code>update3A(config)</code>，按浏览器能力 applyConstraints 或重采集</td>
+</tr>
+<tr>
+<td><code>publish</code></td>
+<td>Room.publish / Room.unpublish</td>
+</tr>
+<tr>
+<td><code>mute</code></td>
+<td>LocalAudioTrack.setMute</td>
+</tr>
+</tbody></table></div>
+<p><code>deepMerge(this._localAudioConfig, config)</code> 在最后保存增量配置，供下一次 update 和恢复流程使用。</p>
+<h3 id="4-3-stoplocalaudio-的释放顺序">4.3 <code>stopLocalAudio()</code> 的释放顺序<a class="heading-anchor" href="#4-3-stoplocalaudio-的释放顺序" aria-label="链接到本节">#</a></h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">Room.unpublish(track)（已进房）
+  → EventBus 114
+  → track.stop()        停播放器/运行状态
+  → track.close()       停 source/out Track、音频节点和监听
+  → audioManager.removeInput(track)
+  → destroyEventDispatcher(track)
+  → 清空 Track/config 引用
+</code></pre>
+</div><h2 id="5-本地视频-api">5. 本地视频 API<a class="heading-anchor" href="#5-本地视频-api" aria-label="链接到本节">#</a></h2>
+<h3 id="5-1-startlocalvideo-config">5.1 <code>startLocalVideo(config)</code><a class="heading-anchor" href="#5-1-startlocalvideo-config" aria-label="链接到本节">#</a></h3>
+<p>默认配置是 <code>{publish:true, view:null, capture:true}</code>。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>内部映射</th>
+<th>Web API 层</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>capture</code></td>
+<td>false 时不主动采集，只挂入 manager input</td>
+<td>是否调用 getUserMedia</td>
+</tr>
+<tr>
+<td><code>option.cameraId</code></td>
+<td><code>captureConfig.deviceId</code></td>
+<td>video deviceId constraint</td>
+</tr>
+<tr>
+<td><code>option.useFrontCamera</code></td>
+<td>user/environment</td>
+<td>facingMode constraint</td>
+</tr>
+<tr>
+<td><code>option.videoTrack</code></td>
+<td>customSource</td>
+<td>外部 MediaStreamTrack</td>
+</tr>
+<tr>
+<td><code>retryWhenExactFailed</code></td>
+<td>capture retry policy</td>
+<td>exact constraint 失败后降级重试</td>
+</tr>
+<tr>
+<td><code>profile</code></td>
+<td>profile 表或对象</td>
+<td>width/height/frameRate + sender bitrate</td>
+</tr>
+<tr>
+<td><code>qosPreference</code></td>
+<td><code>mapQoSToContentHint</code></td>
+<td>MediaStreamTrack.contentHint；下游 degradationPreference</td>
+</tr>
+<tr>
+<td><code>avoidCropping</code></td>
+<td>Track 字段</td>
+<td>profile/实际画幅选择策略</td>
+</tr>
+<tr>
+<td><code>small/smallMode</code></td>
+<td>small config</td>
+<td>simulcast encoding/transceiver</td>
+</tr>
+<tr>
+<td><code>fillMode</code></td>
+<td>player objectFit</td>
+<td>video CSS/Canvas 渲染</td>
+</tr>
+<tr>
+<td><code>mirror</code></td>
+<td>player mirror</td>
+<td>CSS transform/Canvas/WebGL 坐标</td>
+</tr>
+<tr>
+<td><code>rotation</code></td>
+<td>Track renderer/processor</td>
+<td>Canvas/WebGL/track pipeline</td>
+</tr>
+</tbody></table></div>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">startLocalVideo
+  → new CameraVideoTrack(videoManager)
+  → profile/small/rotation/contentHint 配置
+  → 绑定 first-frame、device、publish、player、size 事件
+  → capture=true ? track.capture(captureConfig) : manager.changeInput(track)
+    → getUserMedia({video: constraints})
+    → sourceTrack.getCapabilities()/getSettings()
+    → setInputMediaStreamTrack(sourceTrack)
+  → setMute()
+  → Room.publish(track)
+  → _updateVideoPlayOption(view, {objectFit, mirror})
+    → view 解析为一个或多个 DOM 容器
+    → Track.play → HTMLVideoElement 或 Canvas/WebGL
+</code></pre>
+</div><h3 id="5-2-updatelocalvideo-config-的决策树">5.2 <code>updateLocalVideo(config)</code> 的决策树<a class="heading-anchor" href="#5-2-updatelocalvideo-config-的决策树" aria-label="链接到本节">#</a></h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">当前 capture=true
+  ├─ capture=false → stopCapture()
+  ├─ cameraId      → switchDevice(cameraId)
+  ├─ useFrontCamera→ switchDevice(user/environment)
+  └─ videoTrack    → setInputMediaStreamTrack(customTrack)
+
+当前 capture=false 且新 capture=true
+  → 合并旧/新 cameraId、facingMode、customSource
+  → capture(mergedConfig)
+
+profile 更新
+  → setProfile()
+  → 若无需设备切换 → applyProfile()
+
+播放属性更新
+  → fillMode/mirror/rotation/contentHint
+
+发布状态更新
+  → Room.publish()/unpublish()
+  → setMute()
+  → deepMerge 保存配置
+</code></pre>
+</div><p>“修改分辨率”最终可能走 <code>MediaStreamTrack.applyConstraints()</code>，也可能因设备/浏览器兼容重采集；“修改码率”通常进入 <code>RTCRtpSender.setParameters()</code>。二者不能混为同一个 API。</p>
+<h3 id="5-3-stoplocalvideo">5.3 <code>stopLocalVideo()</code><a class="heading-anchor" href="#5-3-stoplocalvideo" aria-label="链接到本节">#</a></h3>
+<p>已进房先 unpublish，再 stop/close Track、销毁 dispatcher、清引用。HTMLVideoElement、Canvas、WebGL、Worker 的具体释放在 Track/Player 的 <code>close/destroy</code> 下游完成。</p>
+<h2 id="6-屏幕共享-api">6. 屏幕共享 API<a class="heading-anchor" href="#6-屏幕共享-api" aria-label="链接到本节">#</a></h2>
+<h3 id="6-1-startscreenshare-config-publish-true-view-null">6.1 <code>startScreenShare(config = {publish:true, view:null})</code><a class="heading-anchor" href="#6-1-startscreenshare-config-publish-true-view-null" aria-label="链接到本节">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>内部捕获配置</th>
+<th>浏览器含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>option.profile</code></td>
+<td>ScreenTrack profile</td>
+<td>捕获后约束与 sender 参数</td>
+</tr>
+<tr>
+<td><code>option.systemAudio</code></td>
+<td><code>systemAudio=true</code></td>
+<td>请求 getDisplayMedia 音频；浏览器/共享目标决定是否返回</td>
+</tr>
+<tr>
+<td><code>echoCancellation/noiseSuppression/autoGainControl</code></td>
+<td>system audio config</td>
+<td>音频处理约束</td>
+</tr>
+<tr>
+<td><code>videoTrack/audioTrack</code></td>
+<td>custom track</td>
+<td>跳过或替换浏览器返回 Track</td>
+</tr>
+<tr>
+<td><code>captureElement</code></td>
+<td>capture element</td>
+<td>Region Capture/CropTarget 分支</td>
+</tr>
+<tr>
+<td><code>preferDisplaySurface</code></td>
+<td>display preference</td>
+<td>monitor/window/browser 偏好提示，不能强制用户选择</td>
+</tr>
+<tr>
+<td><code>qosPreference</code></td>
+<td>contentHint</td>
+<td>屏幕内容编码倾向</td>
+</tr>
+<tr>
+<td><code>muteSystemAudio</code></td>
+<td>audio track <code>enabled = !mute</code></td>
+<td>不等于停止系统音频 Track</td>
+</tr>
+</tbody></table></div>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">startScreenShare
+  → new ScreenTrack(videoManager)
+  → ScreenTrack.capture(displayConfig)
+    → navigator.mediaDevices.getDisplayMedia()
+    → stream.getVideoTracks()[0]
+    → applyConstraints/profile
+    → 可选 CropTarget.fromElement() + track.cropTo()
+  → source videoTrack.addEventListener(&#39;ended&#39;, handler)
+    → 用户从浏览器 UI 停止共享
+    → _stopScreenShare()
+    → emit(&#39;screen-share-stopped&#39;)
+  → 若 stream.getAudioTracks()[0] 存在
+    → new ScreenAudioTrack
+    → setInputMediaStreamTrack(audioTrack)
+    → enabled = !muteSystemAudio
+  → publish video + optional audio
+  → play(view)
+</code></pre>
+</div><h3 id="6-2-updatescreenshare">6.2 <code>updateScreenShare</code><a class="heading-anchor" href="#6-2-updatescreenshare" aria-label="链接到本节">#</a></h3>
+<p>该门面只直接处理：</p>
+<ul>
+<li><code>fillMode</code>：播放器更新。</li>
+<li><code>qosPreference</code>：<code>MediaStreamTrack.contentHint</code>。</li>
+<li><code>publish</code>：视频和可选音频一起 publish/unpublish。</li>
+<li><code>muteSystemAudio</code>：设置音频 Track <code>enabled</code>。</li>
+<li><code>view</code>：重新绑定或停止播放器。</li>
+</ul>
+<p>profile/捕获源的动态变化并没有在这个方法体中统一重采集，不能假设任意 start 参数都可通过 update 修改。</p>
+<h3 id="6-3-stopscreenshare">6.3 <code>_stopScreenShare</code><a class="heading-anchor" href="#6-3-stopscreenshare" aria-label="链接到本节">#</a></h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">unpublish(video + audio)
+  → screenVideo.stop()/close()
+  → 若 screenAudio.echoCancellation === false：stopPlugin(&#39;AudioProcessor&#39;)
+  → screenAudio.stop()/close()
+  → audioManager.removeInput(screenAudio)
+  → destroy video dispatcher
+  → 清 Track/config 引用
+</code></pre>
+</div><h2 id="7-远端视频订阅与可见性">7. 远端视频订阅与可见性<a class="heading-anchor" href="#7-远端视频订阅与可见性" aria-label="链接到本节">#</a></h2>
+<h3 id="7-1-startremotevideo-userid-streamtype-view-option">7.1 <code>startRemoteVideo({userId, streamType, view, option})</code><a class="heading-anchor" href="#7-1-startremotevideo-userid-streamtype-view-option" aria-label="链接到本节">#</a></h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">remotePublishedUserMap.get(userId)
+  → streamType=main ? remoteVideoTrack : remoteAuxiliaryTrack
+  → 绑定 decode-failed / video-size-changed / output-track-changed
+  → option.small（仅 main）
+    → setMediaType(大流/小流) + Room.changeType()
+    → WebSocket subscription/change-type RPC
+  → Room.subscribe(track)
+    → MPC: 创建/复用该用户下行 PC，交换 subscribe SDP
+    → SPC: 更新共享 PC 中该用户 MID/SSRC 订阅
+  → RTCPeerConnection track 事件将 receiver track 注入 RemoteTrack
+  → 可选解码失败降级插件
+  → Track.play(view, objectFit/mirror/poster/canvasRender)
+  → emit 对外 track 事件
+  → 保存 remoteVideoConfigMap
+  → 可选 _observeView()
+</code></pre>
+</div><h3 id="7-2-observeview-的精确算法">7.2 <code>_observeView</code> 的精确算法<a class="heading-anchor" href="#7-2-observeview-的精确算法" aria-label="链接到本节">#</a></h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">view 未提供                         → 不处理
+view=null/空数组/receive=false      → disconnect observer；确保订阅
+需要按可见性接收
+  → new IntersectionObserver(callback, {root:viewRoot})
+  → 每个 entry 更新 visibleViewMap[target]=isIntersecting
+  → clearTimeout(previous)
+  → window.setTimeout(200 ms)
+      任一 view 可见   → subscribe（尚未订阅时）
+      全部 view 不可见 → unsubscribe（已订阅时）
+  → 对移除的 view unobserve
+  → 对新增 view observe
+  → takeRecords() 合并尚未回调的记录
+</code></pre>
+</div><p>这里 200 ms 是可见性变化的合并窗口，避免滚动/布局抖动导致频繁信令和订阅切换。</p>
+<h3 id="7-3-updateremotevideo-stopremotevideo">7.3 <code>updateRemoteVideo</code> / <code>stopRemoteVideo</code><a class="heading-anchor" href="#7-3-updateremotevideo-stopremotevideo" aria-label="链接到本节">#</a></h3>
+<ul>
+<li>update 可改变 view、fillMode、mirror、大小流、draggable、可见性订阅。</li>
+<li>stop 先停止 player，再按远端 muteState 判断是否需要向 Room unsubscribe。</li>
+<li><code>userId:&#39;*&#39;</code> 的批量停止来自方法装饰器，不在 <code>_stopRemoteVideo</code> 方法体中。</li>
+<li>删除配置时会 <code>IntersectionObserver.disconnect()</code>。</li>
+</ul>
+<h2 id="8-远端音频">8. 远端音频<a class="heading-anchor" href="#8-远端音频" aria-label="链接到本节">#</a></h2>
+<h3 id="8-1-muteremoteaudio-userid-muted">8.1 <code>muteRemoteAudio(userId, muted)</code><a class="heading-anchor" href="#8-1-muteremoteaudio-userid-muted" aria-label="链接到本节">#</a></h3>
+<p>这里的 mute 语义是“停止/恢复接收与播放”，不是只把 <code>&lt;audio&gt;.muted</code> 设为 true：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">muted=true
+  → _stopRemoteAudio
+    → remoteAudioTrack.stop()
+    → 若远端仍发布且允许发信令 → Room.unsubscribe(track)
+    → 删除播放配置和 outTrack 映射
+    → audioManager remove reference
+
+muted=false
+  → _startRemoteAudio → _doStartRemoteAudio
+    → Room.subscribe(track)
+    → _updateAudioPlayOption({volume})
+    → HTMLAudioElement/Web Audio 播放
+    → audioManager add reference
+</code></pre>
+</div><p><code>userId:&#39;*&#39;</code> 的 stop 展开由 <code>_stopRemoteAudio</code> 装饰器完成；取消全体静音会遍历所有仍有音频的远端用户。</p>
+<h3 id="8-2-setremoteaudiovolume-userid-volume">8.2 <code>setRemoteAudioVolume(userId, volume)</code><a class="heading-anchor" href="#8-2-setremoteaudiovolume-userid-volume" aria-label="链接到本节">#</a></h3>
+<ul>
+<li><code>&#39;*&#39;</code> 会更新默认值、已缓存用户值和所有已订阅 Track。</li>
+<li>单用户值即使用户尚未发布也先缓存，后续 <code>_doStartRemoteAudio</code> 会读取。</li>
+<li>播放层把百分比除以 100 后交给 <code>setAudioVolume</code>。</li>
+<li>公开调用以 userId 为键做 200 ms 合并，连续拖动音量滑块不会每次都更新底层。</li>
+</ul>
+<h2 id="9-track-获取-快照与扬声器">9. Track 获取、快照与扬声器<a class="heading-anchor" href="#9-track-获取-快照与扬声器" aria-label="链接到本节">#</a></h2>
+<h3 id="9-1-getaudiotrack-getvideotrack">9.1 <code>getAudioTrack</code> / <code>getVideoTrack</code><a class="heading-anchor" href="#9-1-getaudiotrack-getvideotrack" aria-label="链接到本节">#</a></h3>
+<p>选择规则：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>userId</th>
+<th>streamType</th>
+<th>返回对象</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>空</td>
+<td>audio main</td>
+<td>本地麦克风 Track</td>
+</tr>
+<tr>
+<td>空</td>
+<td>audio sub</td>
+<td>屏幕共享音频 Track</td>
+</tr>
+<tr>
+<td>空</td>
+<td>video main</td>
+<td>本地摄像头 Track</td>
+</tr>
+<tr>
+<td>空</td>
+<td>video sub</td>
+<td>本地屏幕 Track</td>
+</tr>
+<tr>
+<td>非空</td>
+<td>audio</td>
+<td>指定用户 remoteAudioTrack</td>
+</tr>
+<tr>
+<td>非空</td>
+<td>video main/sub</td>
+<td>remoteVideoTrack / remoteAuxiliaryTrack</td>
+</tr>
+</tbody></table></div>
+<p>默认返回源 <code>mediaTrack</code>。<code>processed:true</code> 且 <code>outMediaTrack !== mediaTrack</code> 时返回 <code>outMediaTrack.clone()</code>，调用者获得的是一个新 MediaStreamTrack，需要自行管理 clone 的 <code>stop()</code>。</p>
+<h3 id="9-2-getvideosnapshot">9.2 <code>getVideoSnapshot</code><a class="heading-anchor" href="#9-2-getvideosnapshot" aria-label="链接到本节">#</a></h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">选择 Local/Remote + main/sub Track
+  → Track.getVideoFrame()
+  → VideoPlayer.getVideoFrame()
+    ├─ 已使用 canvas 渲染 → canvas.toDataURL(&#39;image/png&#39;)
+    └─ video element 渲染
+       → document.createElement(&#39;canvas&#39;)
+       → width/height = videoWidth/videoHeight
+       → context2d.drawImage(video, 0, 0)
+       → toDataURL(&#39;image/png&#39;)
+</code></pre>
+</div><p>没有 Track/Player 时返回空字符串。跨源媒体若污染 canvas，<code>toDataURL</code> 可能抛安全异常；RTC MediaStream 通常不是普通跨域 URL 资源。</p>
+<h3 id="9-3-setcurrentspeaker">9.3 <code>setCurrentSpeaker</code><a class="heading-anchor" href="#9-3-setcurrentspeaker" aria-label="链接到本节">#</a></h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">enumerateDevices/checkDeviceAvailability
+  → 找到匹配 audiooutput.deviceId
+  → 保存 _speakerId
+  → 本地音频、屏幕音频、全部远端音频 setAudioOutput(id)
+  → Player.setSinkId(id)
+  → HTMLMediaElement.setSinkId(id)（存在才调用）
+  → emit device-changed {type:&#39;speaker&#39;, action:&#39;active&#39;}
+</code></pre>
+</div><p>实例方法会打印弃用提示，推荐静态 <code>TRTC.setCurrentSpeaker</code>。没有 <code>setSinkId</code> 或 audiooutput 枚举能力的浏览器只能保留默认输出。</p>
+<h2 id="10-插件-sei-和自定义消息">10. 插件、SEI 和自定义消息<a class="heading-anchor" href="#10-插件-sei-和自定义消息" aria-label="链接到本节">#</a></h2>
+<h3 id="10-1-use-startplugin-updateplugin-stopplugin">10.1 <code>use/startPlugin/updatePlugin/stopPlugin</code><a class="heading-anchor" href="#10-1-use-startplugin-updateplugin-stopplugin" aria-label="链接到本节">#</a></h3>
+<ul>
+<li><code>use</code> 接受插件类或 <code>{plugin, assetsPath}</code>，以 <code>Plugin.Name</code> 去重。</li>
+<li>构造插件时注入 TRTC、Room、assetsPath 和错误类型。</li>
+<li><code>autoStart</code> 插件注册后立即走 <code>startPlugin</code>。</li>
+<li><code>start/update/stopPlugin</code> 的第一个公开参数可以是名称；<code>lG(...)</code> 包装器会解析为实例，因此方法体才会直接出现 <code>e.start/e.update/e.stop</code>。</li>
+<li>插件实际使用的 Web API 必须继续查具体插件类；不能因门面出现 <code>startPlugin</code> 就断言使用了 WebCodecs 或 WASM。</li>
+</ul>
+<h3 id="10-2-sendseimessage-buffer-options">10.2 <code>sendSEIMessage(buffer, options)</code><a class="heading-anchor" href="#10-2-sendseimessage-buffer-options" aria-label="链接到本节">#</a></h3>
+<ul>
+<li>从 <code>_plugins</code> 取 <code>SEI</code> 插件；插件未注册时门面不会直接发送。</li>
+<li>默认 <code>seiPayloadType:243</code>。</li>
+<li><code>small</code> 根据本地视频 Track 的 small 状态补入。</li>
+<li>装饰器限制调用频率和字节吞吐。</li>
+<li>真正注入点位于 sender encoded transform/Worker 流程，不是 WebSocket 消息。</li>
+</ul>
+<h3 id="10-3-sendcustommessage-cmdid-data">10.3 <code>sendCustomMessage({cmdId,data,...})</code><a class="heading-anchor" href="#10-3-sendcustommessage-cmdid-data" aria-label="链接到本节">#</a></h3>
+<p>本文件中的业务自定义消息链路是：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">SDK.sendCustomMessage
+  → Room.sendCustomMessage
+  → MessageManagerBase.send
+    → Uint8Array(data)
+    → String.fromCharCode(...bytes)
+    → btoa(...)
+    → 构造 {cmdId,msg,ordered:true,reliable:true,streamSeq}
+    → SignalChannel.send(custom-message command)
+    → JSON.stringify envelope
+    → WebSocket.send(text)
+</code></pre>
+</div><p>接收方向：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">WebSocket message
+  → JSON.parse
+  → SignalChannel emit RECEIVE_CUSTOM_MSG
+  → MessageManagerBase.onReceiveMsg
+  → atob(msg) → Uint8Array → ArrayBuffer
+  → 按 userId/cmdId/streamSeq 排序
+  → 缺序号时最多等待 5 秒
+  → Room custom-message
+  → SDK EVENT.CUSTOM_MESSAGE
+</code></pre>
+</div><p>SPC 中确实另有 RTCDataChannel，但这条公开自定义消息实现走 WebSocket 信令，不能把两者混写。</p>
+<h2 id="11-对外事件到浏览器源头">11. 对外事件到浏览器源头<a class="heading-anchor" href="#11-对外事件到浏览器源头" aria-label="链接到本节">#</a></h2>
+<p><code>TRTC.EVENT</code> 定义在 L30675-L30704。下表给出门面 <code>_listenEvents</code> 的主要来源；完整出现位置查 <code>Appendix-C-Event-Index.md</code>。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>对外事件</th>
+<th>直接内部来源</th>
+<th>最终浏览器/协议来源</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>error</code></td>
+<td>Room/Track/Player/plugin error</td>
+<td>WebSocket、PC state、DOMException、decode/play/capture failure</td>
+</tr>
+<tr>
+<td><code>autoplay-failed</code></td>
+<td>Track player error code PLAY_NOT_ALLOWED</td>
+<td><code>HTMLMediaElement.play()</code> Promise rejection</td>
+</tr>
+<tr>
+<td><code>kicked-out</code></td>
+<td>Room <code>banned</code></td>
+<td>WebSocket 服务端推送；随后 <code>_exitRoom</code></td>
+</tr>
+<tr>
+<td><code>remote-user-enter/exit</code></td>
+<td>Room <code>peer-join/peer-leave</code></td>
+<td>WebSocket 用户列表/增量消息</td>
+</tr>
+<tr>
+<td><code>remote-audio-available/unavailable</code></td>
+<td>remote publish state</td>
+<td>WebSocket publish flag；后续可能触发 PC subscribe</td>
+</tr>
+<tr>
+<td><code>remote-video-available/unavailable</code></td>
+<td>remote publish state</td>
+<td>WebSocket publish flag；主/辅流分别处理</td>
+</tr>
+<tr>
+<td><code>audio-volume</code></td>
+<td>Room audio level evaluation</td>
+<td>sender/receiver stats、Web Audio/track level、timer</td>
+</tr>
+<tr>
+<td><code>audio-frame</code></td>
+<td>audioManager</td>
+<td>AudioWorklet/ScriptProcessor/encoded audio pipeline</td>
+</tr>
+<tr>
+<td><code>network-quality</code></td>
+<td>Room network quality</td>
+<td>RTCPeerConnection.getStats + 服务端网络信息</td>
+</tr>
+<tr>
+<td><code>connection-state-changed</code></td>
+<td>signal connection state</td>
+<td>WebSocket open/close/reconnect 状态，不等同于 PC state</td>
+</tr>
+<tr>
+<td><code>audio-play-state-changed</code></td>
+<td>audio Track player</td>
+<td>HTMLMediaElement/Web Audio 播放状态</td>
+</tr>
+<tr>
+<td><code>video-play-state-changed</code></td>
+<td>video Track player</td>
+<td>HTMLVideoElement/Canvas/WebGL 播放状态</td>
+</tr>
+<tr>
+<td><code>screen-share-stopped</code></td>
+<td>screen source Track <code>ended</code></td>
+<td>用户点击浏览器“停止共享”或 source 结束</td>
+</tr>
+<tr>
+<td><code>device-changed</code></td>
+<td>device manager或 active device</td>
+<td><code>mediaDevices.devicechange</code>、enumerateDevices、switch success</td>
+</tr>
+<tr>
+<td><code>publish-state-changed</code></td>
+<td>LocalTrack publish state</td>
+<td>WebSocket publish RPC + sender/PC 状态</td>
+</tr>
+<tr>
+<td><code>track</code></td>
+<td><code>_emitTrackEvent</code></td>
+<td>source/out MediaStreamTrack 建立或替换</td>
+</tr>
+<tr>
+<td><code>statistics</code></td>
+<td>Room heartbeat report</td>
+<td>getStats 累计/瞬时值 + WebSocket heartbeat</td>
+</tr>
+<tr>
+<td><code>sei-message</code></td>
+<td>encoded transform Worker</td>
+<td>RTCRtpReceiver encoded frame/SEI parser</td>
+</tr>
+<tr>
+<td><code>custom-message</code></td>
+<td>MessageManager</td>
+<td>WebSocket message + base64/排序恢复</td>
+</tr>
+<tr>
+<td><code>video-decode-downgrade-state-changed</code></td>
+<td>decoder fallback plugin</td>
+<td>浏览器解码失败/软件解码插件状态</td>
+</tr>
+<tr>
+<td><code>layerData</code></td>
+<td>Room layer data</td>
+<td>信令或 encoded processing 内部事件</td>
+</tr>
+<tr>
+<td><code>first-video-frame</code></td>
+<td>Track first frame</td>
+<td>video loaded/render frame/Canvas pipeline</td>
+</tr>
+<tr>
+<td><code>permission-state-change</code></td>
+<td>permission manager</td>
+<td>Permissions <code>change</code> / capture permission result</td>
+</tr>
+<tr>
+<td><code>video-size-changed</code></td>
+<td>video Track</td>
+<td>loadedmetadata/resize/track settings/frame dimensions</td>
+</tr>
+</tbody></table></div>
+<h3 id="on-off-对-audio-frame-的特殊副作用"><code>on/off</code> 对 <code>audio-frame</code> 的特殊副作用<a class="heading-anchor" href="#on-off-对-audio-frame-的特殊副作用" aria-label="链接到本节">#</a></h3>
+<ul>
+<li>第一个 <code>audio-frame</code> listener 注册后，audioManager 为本地用户创建/启用 PCM 配置；若本地音频已开始，会立刻接入处理。</li>
+<li>最后一个 listener 移除后，遍历 <code>getPCMAbortCtrlMap</code>，对每个 AbortController 调用 <code>abort(&#39;off&#39;)</code> 并清 Map。</li>
+<li>因此 <code>on/off</code> 对普通事件只是 EventEmitter 操作，对 <code>audio-frame</code> 还控制真实音频处理资源。</li>
+</ul>
+<h2 id="12-websocket-与-webrtc-的职责边界">12. WebSocket 与 WebRTC 的职责边界<a class="heading-anchor" href="#12-websocket-与-webrtc-的职责边界" aria-label="链接到本节">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>功能</th>
+<th>WebSocket 控制面</th>
+<th>WebRTC 媒体面</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>进退房、角色、用户列表</td>
+<td>是</td>
+<td>否</td>
+</tr>
+<tr>
+<td>发布/订阅意图</td>
+<td>是，发送 RPC/状态</td>
+<td>是，实际 sender/receiver/transceiver</td>
+</tr>
+<tr>
+<td>SDP/能力参数</td>
+<td>作为业务消息承载</td>
+<td>create/set description 执行</td>
+</tr>
+<tr>
+<td>音视频字节</td>
+<td>否</td>
+<td>RTP/RTCP/SRTP</td>
+</tr>
+<tr>
+<td>自定义消息（此公开 API）</td>
+<td>是</td>
+<td>否；SPC DataChannel 是另一内部用途</td>
+</tr>
+<tr>
+<td>网络质量</td>
+<td>承载报告/服务端信息</td>
+<td>getStats 提供媒体与候选对数据</td>
+</tr>
+<tr>
+<td>重连</td>
+<td>SignalChannel 重连并 rejoin</td>
+<td>PC restart/recreate/update SDP</td>
+</tr>
+</tbody></table></div>
+<p>业务链中没有把 ICE candidate 逐个作为 WebSocket 消息发送的明确实现。<code>addIceCandidate()</code> 的业务性调用出现在 H264 回环能力测试；adapter 层还有兼容定义。正式 MPC/SPC 主要通过 SDP/能力消息协作，不能套用通用教程后虚构 trickle-ICE 消息。</p>
+<h2 id="13-从任意名称反查的固定路径">13. 从任意名称反查的固定路径<a class="heading-anchor" href="#13-从任意名称反查的固定路径" aria-label="链接到本节">#</a></h2>
+<ol>
+<li>看到公开 API：先在本文查总链，再进对应专项。</li>
+<li>看到源码内部方法：查 <code>Appendix-B-Source-Method-Index.md</code>，按行号确认同名方法所属类。</li>
+<li>看到浏览器 API：查 <code>Appendix-A-WebAPI-Occurrences.md</code>，获得所有调用点和所在方法。</li>
+<li>看到事件或 <code>on*</code> 属性：查 <code>Appendix-C-Event-Index.md</code>。</li>
+<li>最后回到专项，检查参数、状态、错误、事件回调和清理的完整闭环。</li>
+</ol>
+<p>同名方法很多，例如 <code>initialize</code>、<code>close</code>、<code>publish</code>、<code>subscribe</code>。搜索时必须同时带源码行号或所属对象；仅凭方法名无法确定调用的是 Track、Transport、Room 还是 Player。</p>
+<h2 id="14-学习时应保留的四个判断">14. 学习时应保留的四个判断<a class="heading-anchor" href="#14-学习时应保留的四个判断" aria-label="链接到本节">#</a></h2>
+<ol>
+<li>方法门面没有直接写 Web API，不代表没有使用；Web API 常在下游 Track/Transport/Player。</li>
+<li>方法体写了浏览器能力探测，不代表主业务一定走该分支；需要看 feature flag 和能力判断。</li>
+<li><code>Promise resolve</code>、SDK 状态事件、PC connected、首帧是不同完成点。</li>
+<li>start 的逆过程不一定是 exit；本地 Track 的逆过程是 stop/close，而 exit 只结束房间会话。</li>
+</ol>
+
+      <nav class="page-pagination" aria-label="上一篇和下一篇">
+        <a class="previous" href="Appendix-D-Method-Adjacency-Index.html"><span>上一篇</span>附录 D 方法调用邻接</a>
+        <a class="next" href="Appendix-F-Visual-Call-Flows.html"><span>下一篇</span>附录 F 流程图与时序图</a>
+      </nav>
+    </article>
+    
+    <nav class="page-toc" aria-label="本页目录">
+      <h2>本页目录</h2>
+      <a class="toc-depth-2" href="#1-先看真正的调用入口-方法体外还有装饰器">1. 先看真正的调用入口：方法体外还有装饰器</a><a class="toc-depth-2" href="#2-公开-api-总表">2. 公开 API 总表</a><a class="toc-depth-2" href="#3-房间生命周期">3. 房间生命周期</a><a class="toc-depth-3" href="#3-1-enterroom-params-的参数分流">3.1 enterRoom(params) 的参数分流</a><a class="toc-depth-3" href="#3-2-exitroom-不等于停止本地摄像头-麦克风">3.2 exitRoom() 不等于停止本地摄像头/麦克风</a><a class="toc-depth-3" href="#3-3-switchroom-params">3.3 switchRoom(params)</a><a class="toc-depth-3" href="#3-4-switchrole-role-config">3.4 switchRole(role, config)</a><a class="toc-depth-3" href="#3-5-destroy-的精确语义">3.5 destroy() 的精确语义</a><a class="toc-depth-2" href="#4-本地音频-api">4. 本地音频 API</a><a class="toc-depth-3" href="#4-1-startlocalaudio-config-publish-true">4.1 startLocalAudio(config = {publish:true})</a><a class="toc-depth-3" href="#4-2-updatelocalaudio-config-是分支更新-不是统一重采集">4.2 updateLocalAudio(config) 是分支更新，不是统一重采集</a><a class="toc-depth-3" href="#4-3-stoplocalaudio-的释放顺序">4.3 stopLocalAudio() 的释放顺序</a><a class="toc-depth-2" href="#5-本地视频-api">5. 本地视频 API</a><a class="toc-depth-3" href="#5-1-startlocalvideo-config">5.1 startLocalVideo(config)</a><a class="toc-depth-3" href="#5-2-updatelocalvideo-config-的决策树">5.2 updateLocalVideo(config) 的决策树</a><a class="toc-depth-3" href="#5-3-stoplocalvideo">5.3 stopLocalVideo()</a><a class="toc-depth-2" href="#6-屏幕共享-api">6. 屏幕共享 API</a><a class="toc-depth-3" href="#6-1-startscreenshare-config-publish-true-view-null">6.1 startScreenShare(config = {publish:true, view:null})</a><a class="toc-depth-3" href="#6-2-updatescreenshare">6.2 updateScreenShare</a><a class="toc-depth-3" href="#6-3-stopscreenshare">6.3 stopScreenShare</a><a class="toc-depth-2" href="#7-远端视频订阅与可见性">7. 远端视频订阅与可见性</a><a class="toc-depth-3" href="#7-1-startremotevideo-userid-streamtype-view-option">7.1 startRemoteVideo({userId, streamType, view, option})</a><a class="toc-depth-3" href="#7-2-observeview-的精确算法">7.2 observeView 的精确算法</a><a class="toc-depth-3" href="#7-3-updateremotevideo-stopremotevideo">7.3 updateRemoteVideo / stopRemoteVideo</a><a class="toc-depth-2" href="#8-远端音频">8. 远端音频</a><a class="toc-depth-3" href="#8-1-muteremoteaudio-userid-muted">8.1 muteRemoteAudio(userId, muted)</a><a class="toc-depth-3" href="#8-2-setremoteaudiovolume-userid-volume">8.2 setRemoteAudioVolume(userId, volume)</a><a class="toc-depth-2" href="#9-track-获取-快照与扬声器">9. Track 获取、快照与扬声器</a><a class="toc-depth-3" href="#9-1-getaudiotrack-getvideotrack">9.1 getAudioTrack / getVideoTrack</a><a class="toc-depth-3" href="#9-2-getvideosnapshot">9.2 getVideoSnapshot</a><a class="toc-depth-3" href="#9-3-setcurrentspeaker">9.3 setCurrentSpeaker</a><a class="toc-depth-2" href="#10-插件-sei-和自定义消息">10. 插件、SEI 和自定义消息</a><a class="toc-depth-3" href="#10-1-use-startplugin-updateplugin-stopplugin">10.1 use/startPlugin/updatePlugin/stopPlugin</a><a class="toc-depth-3" href="#10-2-sendseimessage-buffer-options">10.2 sendSEIMessage(buffer, options)</a><a class="toc-depth-3" href="#10-3-sendcustommessage-cmdid-data">10.3 sendCustomMessage({cmdId,data,...})</a><a class="toc-depth-2" href="#11-对外事件到浏览器源头">11. 对外事件到浏览器源头</a><a class="toc-depth-3" href="#on-off-对-audio-frame-的特殊副作用">on/off 对 audio-frame 的特殊副作用</a><a class="toc-depth-2" href="#12-websocket-与-webrtc-的职责边界">12. WebSocket 与 WebRTC 的职责边界</a><a class="toc-depth-2" href="#13-从任意名称反查的固定路径">13. 从任意名称反查的固定路径</a><a class="toc-depth-2" href="#14-学习时应保留的四个判断">14. 学习时应保留的四个判断</a>
+    </nav>
+  </main>
+  <button type="button" class="back-to-top" aria-label="回到顶部">↑</button>
+</body>
+</html>

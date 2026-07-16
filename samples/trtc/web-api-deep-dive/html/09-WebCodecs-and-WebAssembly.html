@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="TRTC 反混淆源码浏览器 Web API 深度分析：09 WebCodecs 与 WebAssembly">
+  <title>09 WebCodecs 与 WebAssembly · TRTC Web API 深度学习</title>
+  <link rel="stylesheet" href="assets/docs.css">
+  <script>try{const t=localStorage.getItem('trtc-docs-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+  <script src="assets/search-index.js" defer></script>
+  <script src="assets/mermaid.min.js" defer></script>
+  <script src="assets/docs.js" defer></script>
+</head>
+<body data-page="09-WebCodecs-and-WebAssembly.html">
+  <header class="topbar">
+    <button type="button" class="icon-button nav-toggle" aria-label="打开目录" aria-expanded="false">☰</button>
+    <a class="brand" href="index.html">TRTC Web API 深度学习</a>
+    <div class="search-shell">
+      <label class="sr-only" for="global-search">搜索全部文档</label>
+      <input id="global-search" type="search" autocomplete="off" placeholder="搜索 API、方法、事件…" aria-controls="search-results">
+      <kbd>/</kbd>
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
+    <a class="source-link" href="../09-WebCodecs-and-WebAssembly.md">Markdown</a>
+    <a class="source-link" href="../../trtc.deobfuscated.js">源码</a>
+    <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
+  </header>
+
+  <aside class="sidebar" aria-label="文档目录">
+    
+    <section class="nav-group">
+      <h2>按顺序阅读</h2>
+      
+        <a class="nav-link" href="index.html">
+          文档首页
+        </a>
+        <a class="nav-link" href="00-Reading-Guide-and-Source-Map.html">
+          00 阅读说明与源码地图
+        </a>
+        <a class="nav-link" href="01-Browser-API-Panorama.html">
+          01 浏览器 API 全景
+        </a>
+        <a class="nav-link" href="02-RTCPeerConnection-usage-analysis.html">
+          02 RTCPeerConnection
+        </a>
+        <a class="nav-link" href="03-WebSocket-usage-analysis.html">
+          03 WebSocket 信令
+        </a>
+        <a class="nav-link" href="04-MediaDevices-and-Capture.html">
+          04 MediaDevices 与采集
+        </a>
+        <a class="nav-link" href="05-MediaStreamTrack-Lifecycle.html">
+          05 Track 生命周期
+        </a>
+        <a class="nav-link" href="06-Web-Audio-usage-analysis.html">
+          06 Web Audio
+        </a>
+        <a class="nav-link" href="07-Media-Playback-and-Rendering.html">
+          07 播放与渲染
+        </a>
+        <a class="nav-link" href="08-Worker-Streams-and-Encoded-Processing.html">
+          08 Worker 与编码帧
+        </a>
+        <a class="nav-link active" href="09-WebCodecs-and-WebAssembly.html">
+          09 WebCodecs 与 WASM
+        </a>
+        <a class="nav-link" href="10-Auxiliary-Browser-APIs.html">
+          10 辅助浏览器 API
+        </a>
+        <a class="nav-link" href="11-End-to-End-Business-Flows.html">
+          11 端到端业务流程
+        </a>
+    </section>
+    <section class="nav-group">
+      <h2>附录（按需查询）</h2>
+      
+        <a class="nav-link" href="Appendix-A-WebAPI-Occurrences.html">
+          A Web API 出现位置
+        </a>
+        <a class="nav-link" href="Appendix-B-Source-Method-Index.html">
+          B 源码方法索引
+        </a>
+        <a class="nav-link" href="Appendix-C-Event-Index.html">
+          C 事件索引
+        </a>
+        <a class="nav-link" href="Appendix-D-Method-Adjacency-Index.html">
+          D 方法调用邻接
+        </a>
+        <a class="nav-link" href="Appendix-E-Public-API-Call-Chains.html">
+          E 公开 API 调用链
+        </a>
+        <a class="nav-link" href="Appendix-F-Visual-Call-Flows.html">
+          F 流程图与时序图
+        </a>
+    </section>
+  </aside>
+  <div class="sidebar-backdrop" hidden></div>
+
+  <main class="layout">
+    <article class="doc-content">
+      <h1 id="09-webcodecs-与-webassembly">09 WebCodecs 与 WebAssembly<a class="heading-anchor" href="#09-webcodecs-与-webassembly" aria-label="链接到本节">#</a></h1>
+<blockquote>
+<p>本文先区分能力证据，再说明实际解码、WASM 加载、输出和释放，避免把“检测到 API”写成“业务正在使用”。</p>
+</blockquote>
+<h2 id="1-本章结论">1. 本章结论<a class="heading-anchor" href="#1-本章结论" aria-label="链接到本节">#</a></h2>
+<p>源码同时使用四类 codec 证据：</p>
+<ol>
+<li>API/构造器是否存在。</li>
+<li>WebRTC Offer 是否宣告 codec。</li>
+<li>WebCodecs/MediaCapabilities 是否接受具体配置。</li>
+<li>实际编码或解码是否产生数据。</li>
+</ol>
+<p>证据强度逐级增加。WebCodecs 和 WASM 既承担能力检测，也有局部实际处理路径；不能把所有 Encoder/Decoder 名称命中都算作正式编解码业务。</p>
+<h2 id="2-四类能力检测">2. 四类能力检测<a class="heading-anchor" href="#2-四类能力检测" aria-label="链接到本节">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>检测</th>
+<th>能回答什么</th>
+<th>不能回答什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>构造器/方法存在</td>
+<td>浏览器暴露 API</td>
+<td>配置或 codec 一定可用</td>
+</tr>
+<tr>
+<td><code>isConfigSupported()</code></td>
+<td>浏览器接受给定配置</td>
+<td>真实帧一定成功输出</td>
+</tr>
+<tr>
+<td>MediaCapabilities</td>
+<td>supported/smooth/powerEfficient</td>
+<td>当前设备负载下真实体验</td>
+</tr>
+<tr>
+<td>WebRTC Offer/回环</td>
+<td>WebRTC 协商或真实字节收发</td>
+<td>独立 WebCodecs 路径行为</td>
+</tr>
+</tbody></table></div>
+<h2 id="3-webcodecs-视频能力">3. WebCodecs 视频能力<a class="heading-anchor" href="#3-webcodecs-视频能力" aria-label="链接到本节">#</a></h2>
+<p>典型检测会构造 codec、尺寸、码率、帧率和 profile 配置，再调用 Decoder/Encoder 的 <code>isConfigSupported()</code> 或实际 configure。</p>
+<p>H.264 必须关注：</p>
+<ul>
+<li>codec 字符串/profile-level-id。</li>
+<li>Annex B 与 avc 格式差异。</li>
+<li>description/extradata。</li>
+<li>硬件加速偏好。</li>
+<li>浏览器接受配置不等于能解码所有码流。</li>
+</ul>
+<h2 id="4-webrtc-sdp-codec-探测">4. WebRTC SDP codec 探测<a class="heading-anchor" href="#4-webrtc-sdp-codec-探测" aria-label="链接到本节">#</a></h2>
+<p>临时 <code>RTCPeerConnection</code> 通过 <code>createOffer()</code> 检查 H.264、VP8、H.265，回答的是 WebRTC m-line 能力。Android Chrome 还使用双 PC 回环和 Stats 验证真实字节收发。</p>
+<p>这部分详见 <a href="02-RTCPeerConnection-usage-analysis.html"><code>RTCPeerConnection</code> 使用分析</a>，不要与 WebCodecs Decoder 配置检测合并计数。</p>
+<h2 id="5-mediacapabilities">5. MediaCapabilities<a class="heading-anchor" href="#5-mediacapabilities" aria-label="链接到本节">#</a></h2>
+<p><code>navigator.mediaCapabilities.encodingInfo()/decodingInfo()</code> 接收音视频内容类型、尺寸、码率和帧率等参数，返回：</p>
+<ul>
+<li><code>supported</code></li>
+<li><code>smooth</code></li>
+<li><code>powerEfficient</code></li>
+</ul>
+<p>它适合做策略参考，但结果依赖浏览器实现和设备能力；真实通话仍应结合 Stats、帧率和卡顿观察。</p>
+<h2 id="6-webassembly-simd-与加载">6. WebAssembly SIMD 与加载<a class="heading-anchor" href="#6-webassembly-simd-与加载" aria-label="链接到本节">#</a></h2>
+<p>WASM 使用前会检测 WebAssembly 和 SIMD 等能力，再选择对应资源。</p>
+<p>标准加载顺序：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">fetch(wasmUrl)
+  → WebAssembly.instantiateStreaming(response, importObject)
+  └─ MIME/兼容失败
+       → response.arrayBuffer()
+       → WebAssembly.instantiate(bytes, importObject)
+</code></pre>
+</div><p>需要区分：</p>
+<ul>
+<li>网络下载失败。</li>
+<li>MIME 导致 streaming 失败。</li>
+<li>模块编译/实例化失败。</li>
+<li>importObject 不匹配。</li>
+<li>SIMD 模块在不支持设备上验证失败。</li>
+</ul>
+<h2 id="7-实际-audiodecoder-路径">7. 实际 AudioDecoder 路径<a class="heading-anchor" href="#7-实际-audiodecoder-路径" aria-label="链接到本节">#</a></h2>
+<p>源码中存在实际 <code>AudioDecoder</code> 使用，不只是能力检测：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">构造 AudioDecoder({output,error})
+  → configure(audioConfig)
+  → decode(new EncodedAudioChunk(...))
+  → output(AudioData)
+  → 消费/复制 PCM
+  → AudioData.close()
+  → decoder.flush()/close()
+</code></pre>
+</div><p>每个 <code>AudioData</code> 必须 close；decoder error 后不能继续假设当前配置有效。</p>
+<h2 id="8-自定义视频解码路径">8. 自定义视频解码路径<a class="heading-anchor" href="#8-自定义视频解码路径" aria-label="链接到本节">#</a></h2>
+<p>自定义视频解码器会根据能力和配置选择 WebCodecs/WASM 等实现，并把输出适配为播放器或新 Track 可消费的形式。</p>
+<p>可能的输出形态：</p>
+<ul>
+<li>VideoFrame 直接交给 Canvas/WebGL。</li>
+<li>写入 Track Generator 形成 MediaStreamTrack。</li>
+<li>转换为图像/纹理供自定义渲染。</li>
+</ul>
+<p>这条路径与浏览器 RTCPeerConnection 内部解码器不同；WebRTC receiver 默认不会自动把 encoded frame 交给用户自建 Decoder，除非额外 encoded transform/自定义链路明确接入。</p>
+<h2 id="9-回退原生轨道">9. 回退原生轨道<a class="heading-anchor" href="#9-回退原生轨道" aria-label="链接到本节">#</a></h2>
+<p>自定义解码或处理失败时，媒体能力应尽量回退：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">custom decoder/wasm failed
+  → 关闭自定义 processor
+  → 恢复 receiver/native track 播放
+  → 保留通话和订阅状态
+  → 上报降级原因
+</code></pre>
+</div><p>不能为了保留可选增强能力而停止整个通话。</p>
+<h2 id="10-状态和完成点">10. 状态和完成点<a class="heading-anchor" href="#10-状态和完成点" aria-label="链接到本节">#</a></h2>
+<ul>
+<li><code>isConfigSupported()</code> 完成：只代表配置查询完成。</li>
+<li><code>configure()</code> 返回：不代表首帧已解码。</li>
+<li><code>decode()</code> 返回：输入已排队，不代表 output callback 已执行。</li>
+<li><code>flush()</code> resolve：此前排队输出已完成。</li>
+<li><code>close()</code>：Decoder 不可再使用。</li>
+</ul>
+<p>文档和公开 Promise 必须明确表示哪个完成点。</p>
+<h2 id="11-释放顺序">11. 释放顺序<a class="heading-anchor" href="#11-释放顺序" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">停止输入 encoded chunks
+  → 等待或取消 pending decode
+  → flush（需要保留输出时）
+  → close decoder/encoder
+  → close 所有 VideoFrame/AudioData
+  → 释放 WASM 实例外围引用和内存视图
+  → stop Generator/output Track
+</code></pre>
+</div><p>WASM 实例没有统一 <code>close()</code>，释放依赖取消任务、清 JS 引用和模块自己提供的 destroy/free 方法。</p>
+<h2 id="12-api-参数与本项目实参">12. API 参数与本项目实参<a class="heading-anchor" href="#12-api-参数与本项目实参" aria-label="链接到本节">#</a></h2>
+<h3 id="12-1-new-videoencoder-init">12.1 <code>new VideoEncoder(init)</code><a class="heading-anchor" href="#12-1-new-videoencoder-init" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/VideoEncoder/VideoEncoder" target="_blank" rel="noreferrer">VideoEncoder()</a></p>
+<p><code>init</code> 必填，包含两个回调：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const encoder = new VideoEncoder({
+  output: chunk =&gt; {
+    encodedChunk = chunk;
+    result.encodeSupported = true;
+  },
+  error: reject
+});
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>标准含义</th>
+<th>本项目传值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>output(chunk, metadata)</code></td>
+<td>每个编码结果回调；chunk 是 EncodedVideoChunk</td>
+<td>只接第一个形参，保存 chunk 给后续 VideoDecoder，并置支持标志</td>
+</tr>
+<tr>
+<td><code>error(error)</code></td>
+<td>编码器异步错误回调</td>
+<td>直接传 capability Promise 的 reject 函数</td>
+</tr>
+</tbody></table></div>
+<p>构造成功不表示 codec 可用；必须继续 <code>configure → encode → flush</code>，并实际收到 output 才置 <code>encodeSupported=true</code>。</p>
+<h3 id="12-2-encoder-configure-config">12.2 <code>encoder.configure(config)</code><a class="heading-anchor" href="#12-2-encoder-configure-config" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/VideoEncoder/configure" target="_blank" rel="noreferrer">VideoEncoder.configure()</a></p>
+<p>H.264 探测实参：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">{
+  codec: &#39;avc1.42E01E&#39;,
+  avc: { format: &#39;annexb&#39; },
+  width: 320,
+  height: 240,
+  bitrate: 1000000
+}
+</code></pre>
+</div><p>VP8 探测实参：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">{
+  codec: &#39;vp8&#39;,
+  width: 320,
+  height: 240,
+  bitrate: 1000000
+}
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>config 字段</th>
+<th>类型/可选值</th>
+<th>含义</th>
+<th>本项目值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>codec</code></td>
+<td>codec string</td>
+<td>编码格式和 profile/level</td>
+<td>H.264 baseline-ish <code>avc1.42E01E</code>；或 <code>&#39;vp8&#39;</code></td>
+</tr>
+<tr>
+<td><code>width/height</code></td>
+<td>正整数</td>
+<td>编码帧尺寸</td>
+<td><code>320 × 240</code></td>
+</tr>
+<tr>
+<td><code>displayWidth/displayHeight</code></td>
+<td>可选正整数</td>
+<td>显示纵横比尺寸</td>
+<td>未传</td>
+</tr>
+<tr>
+<td><code>bitrate</code></td>
+<td>bit/s 或 bitrate mode 对象（按实现）</td>
+<td>目标码率</td>
+<td><code>1000000</code> bit/s</td>
+</tr>
+<tr>
+<td><code>framerate</code></td>
+<td>number</td>
+<td>目标帧率</td>
+<td>未传；能力实测只编码一帧</td>
+</tr>
+<tr>
+<td><code>hardwareAcceleration</code></td>
+<td><code>&#39;no-preference&#39;</code>、<code>&#39;prefer-hardware&#39;</code>、<code>&#39;prefer-software&#39;</code></td>
+<td>硬/软编偏好</td>
+<td>未传</td>
+</tr>
+<tr>
+<td><code>latencyMode</code></td>
+<td><code>&#39;quality&#39;</code>、<code>&#39;realtime&#39;</code></td>
+<td>质量/实时延迟偏好</td>
+<td>未传</td>
+</tr>
+<tr>
+<td><code>scalabilityMode</code></td>
+<td>string</td>
+<td>时域/空域可伸缩模式</td>
+<td>未传</td>
+</tr>
+<tr>
+<td><code>alpha</code></td>
+<td><code>&#39;discard&#39;</code> / <code>&#39;keep&#39;</code></td>
+<td>alpha 通道处理</td>
+<td>未传</td>
+</tr>
+<tr>
+<td><code>avc.format</code></td>
+<td><code>&#39;avc&#39;</code> / <code>&#39;annexb&#39;</code></td>
+<td>H.264 chunk 的字节流格式</td>
+<td>H.264 明确传 <code>&#39;annexb&#39;</code></td>
+</tr>
+</tbody></table></div>
+<p><code>configure()</code> 返回 <code>undefined</code>，错误可能同步抛出或进入 error callback。源码没有先调用 <code>VideoEncoder.isConfigSupported()</code>，而是用真实单帧编码作为最终探测。</p>
+<h3 id="12-3-new-videoframe-source-init-与-encoder-encode-frame-options">12.3 <code>new VideoFrame(source, init)</code> 与 <code>encoder.encode(frame, options?)</code><a class="heading-anchor" href="#12-3-new-videoframe-source-init-与-encoder-encode-frame-options" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/VideoFrame/VideoFrame" target="_blank" rel="noreferrer">VideoFrame()</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/VideoEncoder/encode" target="_blank" rel="noreferrer">VideoEncoder.encode()</a></p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">drawTestFrameOnCanvas();
+const frame = new VideoFrame(canvas, { timestamp: 0 });
+encoder.encode(frame, { keyFrame: true });
+frame.close();
+await encoder.flush();
+encoder.close();
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>含义</th>
+<th>本项目实参</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>VideoFrame.source</code></td>
+<td>CanvasImageSource、另一个 VideoFrame 或原始 buffer</td>
+<td><code>320×240</code> 测试 canvas</td>
+</tr>
+<tr>
+<td><code>init.timestamp</code></td>
+<td>微秒时间戳，必需于 canvas/image 类 source</td>
+<td><code>0</code>，因为只做单帧能力测试</td>
+</tr>
+<tr>
+<td><code>init.duration</code></td>
+<td>可选帧持续时间，微秒</td>
+<td>未传</td>
+</tr>
+<tr>
+<td><code>init.alpha</code></td>
+<td>是否丢弃 alpha</td>
+<td>未传</td>
+</tr>
+<tr>
+<td><code>encode.frame</code></td>
+<td>要编码的 VideoFrame</td>
+<td>上一步 frame</td>
+</tr>
+<tr>
+<td><code>encode.options.keyFrame</code></td>
+<td>boolean，请求关键帧</td>
+<td><code>true</code>，保证单帧输出可独立解码</td>
+</tr>
+</tbody></table></div>
+<p><code>frame.close()</code> 在 <code>encode()</code> 入队后立即调用，释放 JS 持有的 frame 资源；encoder 已取得编码所需引用。<code>flush()</code> 无参数，等待此前所有输出/错误完成；<code>encoder.close()</code> 无参数，最终释放 codec 资源。</p>
+<h3 id="12-4-new-videodecoder-init-configure-config-decode-chunk">12.4 <code>new VideoDecoder(init)</code>、<code>configure(config)</code>、<code>decode(chunk)</code><a class="heading-anchor" href="#12-4-new-videodecoder-init-configure-config-decode-chunk" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/VideoDecoder/VideoDecoder" target="_blank" rel="noreferrer">VideoDecoder()</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/VideoDecoder/configure" target="_blank" rel="noreferrer">configure()</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/VideoDecoder/decode" target="_blank" rel="noreferrer">decode()</a></p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const decoder = new VideoDecoder({
+  output: frame =&gt; {
+    result.decodeSupported = true;
+    resolve();
+    frame.close();
+  },
+  error: reject
+});
+
+decoder.configure(decodeConfig);
+decoder.decode(encodedChunkFromEncoder);
+await decoder.flush();
+decoder.close();
+</code></pre>
+</div><p><code>init.output/error</code> 语义与 encoder 相同，只是 output 得到 VideoFrame。H.264 config 是 <code>{codec:&#39;avc1.42E01E&#39;, avc:{format:&#39;annexb&#39;}}</code>，VP8 是 <code>{codec:&#39;vp8&#39;}</code>；width/height 可从 bitstream 推断，所以解码 config 未传。<code>decode(chunk)</code> 唯一参数正是前一步 encoder output 的 <code>EncodedVideoChunk</code>，确保编码与解码测试使用完全相同的 bitstream。</p>
+<p>实际远端视频 fallback 的 config 另为 <code>{codec:&#39;avc1.420028&#39;}</code>，来自 <code>_enableVideoDecodeFallback()</code>；编码帧由 WebRTC encoded transform 输入，不是能力测试的 320×240 chunk。</p>
+<h3 id="12-5-new-audiodecoder-init-与-opus-config">12.5 <code>new AudioDecoder(init)</code> 与 Opus config<a class="heading-anchor" href="#12-5-new-audiodecoder-init-与-opus-config" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/AudioDecoder/AudioDecoder" target="_blank" rel="noreferrer">AudioDecoder()</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/AudioDecoder/configure" target="_blank" rel="noreferrer">AudioDecoder.configure()</a></p>
+<p>远端原生音频解码失败后，插件收到的实际配置（L35584—L35593）：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">{
+  codec: &#39;opus&#39;,
+  sampleRate: 48000,
+  numberOfChannels: 1
+}
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>含义</th>
+<th>本项目值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>codec</code></td>
+<td>音频 codec string</td>
+<td><code>&#39;opus&#39;</code></td>
+</tr>
+<tr>
+<td><code>sampleRate</code></td>
+<td>解码输出采样率 Hz</td>
+<td><code>48000</code></td>
+</tr>
+<tr>
+<td><code>numberOfChannels</code></td>
+<td>输出声道数</td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>codec-specific 初始化字节</td>
+<td>未传；Opus 路径依赖 codec/流数据</td>
+</tr>
+</tbody></table></div>
+<p>构造器 <code>output(audioData)</code> 回调会增加 decoded count、向 observable 推送，并调用 player.write(audioData)；<code>error(error)</code> 记录后切失败状态。</p>
+<h3 id="12-6-new-encodedaudiochunk-init">12.6 <code>new EncodedAudioChunk(init)</code><a class="heading-anchor" href="#12-6-new-encodedaudiochunk-init" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/EncodedAudioChunk/EncodedAudioChunk" target="_blank" rel="noreferrer">EncodedAudioChunk()</a></p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">decoder.decode(new EncodedAudioChunk({
+  data: encodedFrame.data,
+  timestamp: encodedFrame.timestamp,
+  type: &#39;key&#39;
+}));
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>init 字段</th>
+<th>必填性/含义</th>
+<th>本项目来源</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>type</code></td>
+<td>必填，<code>&#39;key&#39;</code> 或 <code>&#39;delta&#39;</code></td>
+<td>固定 <code>&#39;key&#39;</code>；Opus 音频帧不按视频 GOP 依赖处理</td>
+</tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>必填，微秒时间戳</td>
+<td>encoded transform 输入帧的 <code>e.timestamp</code></td>
+</tr>
+<tr>
+<td><code>data</code></td>
+<td>必填，BufferSource</td>
+<td>encoded transform 输入帧的 <code>e.data</code></td>
+</tr>
+<tr>
+<td><code>duration</code></td>
+<td>可选，微秒</td>
+<td>未传</td>
+</tr>
+<tr>
+<td><code>transfer</code></td>
+<td>可选 ArrayBuffer 列表（新实现）</td>
+<td>未传，数据由构造器读取/复制语义处理</td>
+</tr>
+</tbody></table></div>
+<p>只有 <code>decoder.state===&#39;configured&#39;</code> 时才构造并 decode；否则该 encoded frame 被计数但不送入 decoder。</p>
+<h3 id="12-7-mediacapabilities-encodinginfo-config-decodinginfo-config">12.7 <code>MediaCapabilities.encodingInfo(config)</code> / <code>decodingInfo(config)</code><a class="heading-anchor" href="#12-7-mediacapabilities-encodinginfo-config-decodinginfo-config" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/MediaCapabilities/encodingInfo" target="_blank" rel="noreferrer">encodingInfo()</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/MediaCapabilities/decodingInfo" target="_blank" rel="noreferrer">decodingInfo()</a></p>
+<p>源码 L16557—L16607 对 codec 列表逐项传：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">{
+  type: &#39;webrtc&#39;,
+  video: {
+    contentType: `video/${codec}`,
+    width,
+    height,
+    bitrate,
+    framerate
+  }
+}
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>含义</th>
+<th>本项目默认值/来源</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>type</code></td>
+<td>媒体使用场景</td>
+<td>固定 <code>&#39;webrtc&#39;</code></td>
+</tr>
+<tr>
+<td><code>video.contentType</code></td>
+<td>MIME + codec 信息</td>
+<td>遍历参数数组 <code>e</code>，拼成 <code>video/${s}</code></td>
+</tr>
+<tr>
+<td><code>width/height</code></td>
+<td>目标像素尺寸</td>
+<td>函数默认 <code>1920 × 1080</code>，调用方可覆盖</td>
+</tr>
+<tr>
+<td><code>framerate</code></td>
+<td>目标帧率</td>
+<td>默认 <code>30</code></td>
+</tr>
+<tr>
+<td><code>bitrate</code></td>
+<td>bit/s</td>
+<td>源码默认字面量 <code>3000</code>；按标准单位这是 3000 bit/s，数值明显偏低，不能擅自改写成 3000 kbps</td>
+</tr>
+</tbody></table></div>
+<p>返回对象常含 <code>supported</code>、<code>smooth</code>、<code>powerEfficient</code>。这是浏览器预测，不等于真实 WebRTC 能收发；所以正文还保留 Offer 探测和回环实测。</p>
+<h3 id="12-8-webassembly-validate-bytes">12.8 <code>WebAssembly.validate(bytes)</code><a class="heading-anchor" href="#12-8-webassembly-validate-bytes" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/WebAssembly/Reference/JavaScript_interface/validate_static" target="_blank" rel="noreferrer">WebAssembly.validate()</a></p>
+<p>唯一必填参数是包含 wasm 二进制的 BufferSource。源码传一个固定 <code>Uint8Array([...])</code> 小模块，其中含 SIMD opcode；返回 boolean：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const supported = typeof WebAssembly !== &#39;undefined&#39; &amp;&amp;
+  WebAssembly.validate(new Uint8Array([/* SIMD probe bytes */]));
+</code></pre>
+</div><p>它只验证当前引擎能否解析/验证这段 SIMD 模块，不下载业务 wasm，也不创建 instance。</p>
+<h3 id="12-9-webassembly-instantiatestreaming-source-importobject">12.9 <code>WebAssembly.instantiateStreaming(source, importObject?)</code><a class="heading-anchor" href="#12-9-webassembly-instantiatestreaming-source-importobject" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/WebAssembly/Reference/JavaScript_interface/instantiateStreaming_static" target="_blank" rel="noreferrer">instantiateStreaming()</a></p>
+<p>源码 L31096—L31109：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const responsePromise = fetch(url);
+const result = await WebAssembly.instantiateStreaming(responsePromise, importObject);
+instance = result.instance;
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>含义</th>
+<th>本项目实参</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>source</code></td>
+<td><code>Response</code> 或其 Promise</td>
+<td><code>fetch(e)</code> 返回的 Promise，不提前 await，允许边下载边编译</td>
+</tr>
+<tr>
+<td><code>importObject</code></td>
+<td>wasm import module/name 到 JS 值的映射</td>
+<td><code>loadWasm(e,t)</code> 的第二参数 <code>t</code>，由具体 wasm 模块调用方提供</td>
+</tr>
+<tr>
+<td><code>compileOptions</code></td>
+<td>新实现可选编译选项</td>
+<td>未传</td>
+</tr>
+</tbody></table></div>
+<p>URL 是 data URL、file URL、没有 fetch 或 streaming 失败时跳过/进入 fallback。服务端 MIME 不正确也可能让 streaming 失败。</p>
+<h3 id="12-10-webassembly-instantiate-bytes-importobject-fallback">12.10 <code>WebAssembly.instantiate(bytes, importObject?)</code> fallback<a class="heading-anchor" href="#12-10-webassembly-instantiate-bytes-importobject-fallback" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/WebAssembly/Reference/JavaScript_interface/instantiate_static" target="_blank" rel="noreferrer">WebAssembly.instantiate()</a></p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const bytes = await download(url, { type: &#39;arraybuffer&#39; });
+const result = await WebAssembly.instantiate(bytes, importObject);
+instance = result.instance;
+</code></pre>
+</div><p>第一个参数从 HTTP 下载器得到完整 ArrayBuffer；第二参数与 streaming 路径是同一个 <code>t</code>。这条路径要等完整下载后编译，内存峰值和启动延迟通常更高，但不依赖 streaming MIME 条件。两条路径都只把 <code>.instance</code> 保存为运行对象；module 若需要缓存，需要另行保存 <code>result.module</code>，当前片段没有。</p>
+<h3 id="12-11-close-的对象分别是谁">12.11 <code>close()</code> 的对象分别是谁<a class="heading-anchor" href="#12-11-close-的对象分别是谁" aria-label="链接到本节">#</a></h3>
+<ul>
+<li><code>VideoFrame.close()</code> / <code>AudioData.close()</code>：释放帧背后的媒体资源；输出回调使用完即关。</li>
+<li><code>VideoEncoder.close()</code> / <code>VideoDecoder.close()</code> / <code>AudioDecoder.close()</code>：同步把 codec 状态置为 closed，后续不能再 configure/decode；调用前先 await <code>flush()</code> 才不会丢排队工作。</li>
+<li>wasm instance 没有统一 <code>close()</code> 标准方法；具体包装类必须调用其导出的 free/destroy 或清 JS/GL 资源，不能套用 WebCodecs 生命周期。</li>
+</ul>
+<h2 id="13-事实与边界">13. 事实与边界<a class="heading-anchor" href="#13-事实与边界" aria-label="链接到本节">#</a></h2>
+<h3 id="可以直接确认">可以直接确认<a class="heading-anchor" href="#可以直接确认" aria-label="链接到本节">#</a></h3>
+<ul>
+<li>codec 能力通过多种 API 交叉判断。</li>
+<li>存在实际 AudioDecoder 和自定义视频解码链。</li>
+<li>WASM 有 streaming 和 ArrayBuffer fallback。</li>
+<li>H.264 WebRTC 回环强于单纯 SDP 声明。</li>
+</ul>
+<h3 id="合理推断">合理推断<a class="heading-anchor" href="#合理推断" aria-label="链接到本节">#</a></h3>
+<ul>
+<li>多源能力证据用于降低浏览器“声明支持但实际失败”的兼容风险。</li>
+<li>WASM/WebCodecs 是可选处理路径，失败时应回退原生媒体。</li>
+</ul>
+<h3 id="不能确认">不能确认<a class="heading-anchor" href="#不能确认" aria-label="链接到本节">#</a></h3>
+<ul>
+<li>每种目标设备的硬解码、功耗和性能，需要运行数据验证。</li>
+<li>反混淆包之外的 WASM 模块内部算法和内存释放细节。</li>
+</ul>
+
+      <nav class="page-pagination" aria-label="上一篇和下一篇">
+        <a class="previous" href="08-Worker-Streams-and-Encoded-Processing.html"><span>上一篇</span>08 Worker、Streams 与编码帧处理</a>
+        <a class="next" href="10-Auxiliary-Browser-APIs.html"><span>下一篇</span>10 辅助浏览器 API</a>
+      </nav>
+    </article>
+    
+    <nav class="page-toc" aria-label="本页目录">
+      <h2>本页目录</h2>
+      <a class="toc-depth-2" href="#1-本章结论">1. 本章结论</a><a class="toc-depth-2" href="#2-四类能力检测">2. 四类能力检测</a><a class="toc-depth-2" href="#3-webcodecs-视频能力">3. WebCodecs 视频能力</a><a class="toc-depth-2" href="#4-webrtc-sdp-codec-探测">4. WebRTC SDP codec 探测</a><a class="toc-depth-2" href="#5-mediacapabilities">5. MediaCapabilities</a><a class="toc-depth-2" href="#6-webassembly-simd-与加载">6. WebAssembly SIMD 与加载</a><a class="toc-depth-2" href="#7-实际-audiodecoder-路径">7. 实际 AudioDecoder 路径</a><a class="toc-depth-2" href="#8-自定义视频解码路径">8. 自定义视频解码路径</a><a class="toc-depth-2" href="#9-回退原生轨道">9. 回退原生轨道</a><a class="toc-depth-2" href="#10-状态和完成点">10. 状态和完成点</a><a class="toc-depth-2" href="#11-释放顺序">11. 释放顺序</a><a class="toc-depth-2" href="#12-api-参数与本项目实参">12. API 参数与本项目实参</a><a class="toc-depth-3" href="#12-1-new-videoencoder-init">12.1 new VideoEncoder(init)</a><a class="toc-depth-3" href="#12-2-encoder-configure-config">12.2 encoder.configure(config)</a><a class="toc-depth-3" href="#12-3-new-videoframe-source-init-与-encoder-encode-frame-options">12.3 new VideoFrame(source, init) 与 encoder.encode(frame, options?)</a><a class="toc-depth-3" href="#12-4-new-videodecoder-init-configure-config-decode-chunk">12.4 new VideoDecoder(init) 、 configure(config) 、 decode(chunk)</a><a class="toc-depth-3" href="#12-5-new-audiodecoder-init-与-opus-config">12.5 new AudioDecoder(init) 与 Opus config</a><a class="toc-depth-3" href="#12-6-new-encodedaudiochunk-init">12.6 new EncodedAudioChunk(init)</a><a class="toc-depth-3" href="#12-7-mediacapabilities-encodinginfo-config-decodinginfo-config">12.7 MediaCapabilities.encodingInfo(config) / decodingInfo(config)</a><a class="toc-depth-3" href="#12-8-webassembly-validate-bytes">12.8 WebAssembly.validate(bytes)</a><a class="toc-depth-3" href="#12-9-webassembly-instantiatestreaming-source-importobject">12.9 WebAssembly.instantiateStreaming(source, importObject?)</a><a class="toc-depth-3" href="#12-10-webassembly-instantiate-bytes-importobject-fallback">12.10 WebAssembly.instantiate(bytes, importObject?) fallback</a><a class="toc-depth-3" href="#12-11-close-的对象分别是谁">12.11 close() 的对象分别是谁</a><a class="toc-depth-2" href="#13-事实与边界">13. 事实与边界</a><a class="toc-depth-3" href="#可以直接确认">可以直接确认</a><a class="toc-depth-3" href="#合理推断">合理推断</a><a class="toc-depth-3" href="#不能确认">不能确认</a>
+    </nav>
+  </main>
+  <button type="button" class="back-to-top" aria-label="回到顶部">↑</button>
+</body>
+</html>

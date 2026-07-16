@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="TRTC 反混淆源码浏览器 Web API 深度分析：03 WebSocket 信令分析">
+  <title>03 WebSocket 信令分析 · TRTC Web API 深度学习</title>
+  <link rel="stylesheet" href="assets/docs.css">
+  <script>try{const t=localStorage.getItem('trtc-docs-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+  <script src="assets/search-index.js" defer></script>
+  <script src="assets/mermaid.min.js" defer></script>
+  <script src="assets/docs.js" defer></script>
+</head>
+<body data-page="03-WebSocket-usage-analysis.html">
+  <header class="topbar">
+    <button type="button" class="icon-button nav-toggle" aria-label="打开目录" aria-expanded="false">☰</button>
+    <a class="brand" href="index.html">TRTC Web API 深度学习</a>
+    <div class="search-shell">
+      <label class="sr-only" for="global-search">搜索全部文档</label>
+      <input id="global-search" type="search" autocomplete="off" placeholder="搜索 API、方法、事件…" aria-controls="search-results">
+      <kbd>/</kbd>
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
+    <a class="source-link" href="../03-WebSocket-usage-analysis.md">Markdown</a>
+    <a class="source-link" href="../../trtc.deobfuscated.js">源码</a>
+    <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
+  </header>
+
+  <aside class="sidebar" aria-label="文档目录">
+    
+    <section class="nav-group">
+      <h2>按顺序阅读</h2>
+      
+        <a class="nav-link" href="index.html">
+          文档首页
+        </a>
+        <a class="nav-link" href="00-Reading-Guide-and-Source-Map.html">
+          00 阅读说明与源码地图
+        </a>
+        <a class="nav-link" href="01-Browser-API-Panorama.html">
+          01 浏览器 API 全景
+        </a>
+        <a class="nav-link" href="02-RTCPeerConnection-usage-analysis.html">
+          02 RTCPeerConnection
+        </a>
+        <a class="nav-link active" href="03-WebSocket-usage-analysis.html">
+          03 WebSocket 信令
+        </a>
+        <a class="nav-link" href="04-MediaDevices-and-Capture.html">
+          04 MediaDevices 与采集
+        </a>
+        <a class="nav-link" href="05-MediaStreamTrack-Lifecycle.html">
+          05 Track 生命周期
+        </a>
+        <a class="nav-link" href="06-Web-Audio-usage-analysis.html">
+          06 Web Audio
+        </a>
+        <a class="nav-link" href="07-Media-Playback-and-Rendering.html">
+          07 播放与渲染
+        </a>
+        <a class="nav-link" href="08-Worker-Streams-and-Encoded-Processing.html">
+          08 Worker 与编码帧
+        </a>
+        <a class="nav-link" href="09-WebCodecs-and-WebAssembly.html">
+          09 WebCodecs 与 WASM
+        </a>
+        <a class="nav-link" href="10-Auxiliary-Browser-APIs.html">
+          10 辅助浏览器 API
+        </a>
+        <a class="nav-link" href="11-End-to-End-Business-Flows.html">
+          11 端到端业务流程
+        </a>
+    </section>
+    <section class="nav-group">
+      <h2>附录（按需查询）</h2>
+      
+        <a class="nav-link" href="Appendix-A-WebAPI-Occurrences.html">
+          A Web API 出现位置
+        </a>
+        <a class="nav-link" href="Appendix-B-Source-Method-Index.html">
+          B 源码方法索引
+        </a>
+        <a class="nav-link" href="Appendix-C-Event-Index.html">
+          C 事件索引
+        </a>
+        <a class="nav-link" href="Appendix-D-Method-Adjacency-Index.html">
+          D 方法调用邻接
+        </a>
+        <a class="nav-link" href="Appendix-E-Public-API-Call-Chains.html">
+          E 公开 API 调用链
+        </a>
+        <a class="nav-link" href="Appendix-F-Visual-Call-Flows.html">
+          F 流程图与时序图
+        </a>
+    </section>
+  </aside>
+  <div class="sidebar-backdrop" hidden></div>
+
+  <main class="layout">
+    <article class="doc-content">
+      <h1 id="03-websocket-信令分析">03 <code>WebSocket</code> 信令分析<a class="heading-anchor" href="#03-websocket-信令分析" aria-label="链接到本节">#</a></h1>
+<blockquote>
+<p>本文沿“连接 → 信封 → RPC → 在线状态 → 业务命令 → 恢复 → 关闭”解释 WebSocket 控制面。完整方法和事件位置见附录 B—D。</p>
+</blockquote>
+<h2 id="1-本章结论">1. 本章结论<a class="heading-anchor" href="#1-本章结论" aria-label="链接到本节">#</a></h2>
+<p>源码没有直接把 WebSocket 当成一个简单的 <code>send/onmessage</code> 通道，而是在浏览器 API 上增加了五层能力：</p>
+<ol>
+<li>主、备地址同时连接，选择先成功的一条。</li>
+<li>所有业务命令封装成统一 JSON 信封。</li>
+<li>使用单调 <code>seq</code> 把事件式响应包装成 Promise RPC。</li>
+<li>把“socket open”“应用层信道就绪”“join 成功”分成不同状态。</li>
+<li>在异常关闭后恢复信令，再由 Room 决定是否重进房和重建媒体。</li>
+</ol>
+<p>源码没有实现应用层 Ping/Pong。<code>isOnline</code> 的核心依据是连接状态和最近约 12 秒是否收到下行消息，而不是定时向服务器发送 ping。</p>
+<h2 id="2-使用边界">2. 使用边界<a class="heading-anchor" href="#2-使用边界" aria-label="链接到本节">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>层</th>
+<th>WebSocket 相关内容</th>
+<th>是否属于正式业务</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>能力检测</td>
+<td>检查 <code>WebSocket</code> 构造器和标准静态状态值</td>
+<td>只说明 API 存在</td>
+</tr>
+<tr>
+<td>SignalChannel</td>
+<td>建连、收发、RPC、在线判断、恢复</td>
+<td>是，控制面核心</td>
+</tr>
+<tr>
+<td>Room</td>
+<td>join/publish/subscribe/rebuild 等业务命令</td>
+<td>是，命令调用方</td>
+</tr>
+<tr>
+<td>WebRTC</td>
+<td>SDP 或 ability 通过信令交换</td>
+<td>是，但媒体数据不走 WebSocket</td>
+</tr>
+</tbody></table></div>
+<p>WebSocket 负责控制面；音视频 RTP/RTCP 由 RTCPeerConnection 承载。WebSocket 在线不代表 ICE/DTLS 和媒体路径可用。</p>
+<h2 id="3-谁拥有-websocket">3. 谁拥有 WebSocket<a class="heading-anchor" href="#3-谁拥有-websocket" aria-label="链接到本节">#</a></h2>
+<p>房间初始化时创建 SignalChannel（源码语义对象，反混淆类名 <code>Xj</code>）：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">SDK 实例
+  → TRTCRoom
+    → SignalChannel
+      ├─ _socket          主地址候选
+      ├─ _backupSocket    备地址候选
+      └─ _socketInUse     当前胜出的连接
+</code></pre>
+</div><p>SignalChannel 同时持有：</p>
+<ul>
+<li>SDK AppId、userId、userSig 和信令 URL。</li>
+<li>当前 tinyId 和信令会话信息。</li>
+<li>递增 <code>_seq</code>。</li>
+<li>最近下行消息时间。</li>
+<li>尚未完成 RPC 的事件 listener 和 timeout。</li>
+<li>重连、关闭和在线状态字段。</li>
+</ul>
+<p>Room 决定什么时候 join、reJoin 或销毁；SignalChannel 只负责可靠地传递命令和恢复连接。</p>
+<h2 id="4-url-怎样构造">4. URL 怎样构造<a class="heading-anchor" href="#4-url-怎样构造" aria-label="链接到本节">#</a></h2>
+<p>主、备地址来自房间调度结果。SignalChannel 在基址后拼接 SDK 和用户信息，以及白名单诊断查询参数。</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">schedule mainUrl / backupUrl
+  → build URL query
+  → encodeURIComponent(value)
+  → new WebSocket(finalUrl)
+</code></pre>
+</div><p>需要注意：</p>
+<ul>
+<li>查询值逐项编码，不是把整个 URL 再编码一次。</li>
+<li>userSig 等鉴权信息可能进入 URL，日志和错误上报必须脱敏。</li>
+<li>源码没有传 WebSocket <code>protocols</code> 参数。</li>
+<li>没有读取协商后的 <code>protocol</code>、<code>extensions</code> 或二进制类型。</li>
+</ul>
+<h2 id="5-主备连接是竞速-不是顺序回退">5. 主备连接是竞速，不是顺序回退<a class="heading-anchor" href="#5-主备连接是竞速-不是顺序回退" aria-label="链接到本节">#</a></h2>
+<p>连接阶段同时调用两次 <code>connectWS()</code>：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">connectWS(main)
+    ┐
+    ├─ promiseAny → 最先成功的 socket → _socketInUse
+    ┘
+connectWS(backup)
+</code></pre>
+</div><p>每个候选连接：</p>
+<ol>
+<li><code>new WebSocket(url)</code>。</li>
+<li>临时绑定 <code>onopen/onclose/onerror</code>。</li>
+<li>可选连接超时。</li>
+<li>open 时 resolve 当前 socket。</li>
+<li>close/error/timeout 时 reject。</li>
+<li>finally 清临时 handler 和 timer。</li>
+</ol>
+<p>选出胜者后关闭较慢的候选。这样可以同时处理“主域名不可达”和“主域名可达但更慢”，代价是短时间内会创建两条 TCP/TLS/WebSocket 连接。</p>
+<h2 id="6-open-之后还没有完成进房">6. open 之后还没有完成进房<a class="heading-anchor" href="#6-open-之后还没有完成进房" aria-label="链接到本节">#</a></h2>
+<p>至少要区分四个阶段：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">WebSocket open
+  → CHANNEL_SETUP_RESULT / 应用层信道建立
+    → join RPC 成功
+      → MPC/SPC 媒体连接完成
+</code></pre>
+</div><p><code>connectWS()</code> resolve 只能证明浏览器 WebSocket 握手成功。后续仍要等待应用层下行结果，并由 Room 发送 join。任何文档或业务日志都不应把这四步统一写成“连接成功”。</p>
+<h2 id="7-统一-json-信封">7. 统一 JSON 信封<a class="heading-anchor" href="#7-统一-json-信封" aria-label="链接到本节">#</a></h2>
+<p><code>send(command, data)</code> 发送的核心结构是：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">{
+  cmd: command,
+  data,
+  userId: this.userId,
+  tinyId: this._signalInfo.tinyId,
+  seq: ++this._seq
+}
+</code></pre>
+</div><p>特点：</p>
+<ul>
+<li>业务协议是文本 JSON，没有设置 <code>binaryType</code>。</li>
+<li><code>seq</code> 在当前 SignalChannel 内单调递增。</li>
+<li>join 前 tinyId 可能尚未建立，后续命令使用 join 结果保存的 tinyId。</li>
+<li>自定义二进制消息会先转 Base64，再放入 JSON，而不是发送 WebSocket 二进制帧。</li>
+</ul>
+<p>发送前主要依据 SDK 内部连接状态；源码没有以 <code>WebSocket.readyState === WebSocket.OPEN</code> 作为统一背压/发送门禁，也没有使用 <code>bufferedAmount</code>。</p>
+<h2 id="8-收消息-先更新活性-再分派事件">8. 收消息：先更新活性，再分派事件<a class="heading-anchor" href="#8-收消息-先更新活性-再分派事件" aria-label="链接到本节">#</a></h2>
+<p><code>onmessage(event)</code> 的阅读顺序是：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">收到浏览器 message 事件
+  → 记录最近下行消息时间
+  → JSON.parse(event.data)
+  → 读取 cmd / seq / code / message / data
+  → 数值命令映射为内部事件名
+  → EventEmitter.emit(eventName, {data: envelope})
+</code></pre>
+</div><p>未知命令不会直接丢弃；映射失败时可用命令值字符串作为事件名，便于兼容服务端新增消息。</p>
+<p>这里更新“最近收到消息”的时间非常关键：在线判断依赖下行活性，而不是应用层 ping 响应。</p>
+<h2 id="9-sendwaitforresponse-怎样把事件变成-rpc">9. <code>sendWaitForResponse()</code> 怎样把事件变成 RPC<a class="heading-anchor" href="#9-sendwaitforresponse-怎样把事件变成-rpc" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">生成 seq
+  → 注册目标响应事件 listener
+  → 发送 JSON 信封
+  → onmessage emit 对应事件
+  → listener 检查 event.data.seq
+  → 匹配时 resolve
+  → timeout/close 时 reject
+  → finally 解绑 listener、清 timer
+</code></pre>
+</div><p>同一响应事件可能同时存在多个请求，因此不能只按事件名完成 Promise，必须继续比较 <code>seq</code>。</p>
+<p>RPC 的 Promise 代表“收到匹配响应”，不一定代表后续媒体动作完成。例如 publish RPC 返回 Answer 后，仍要 <code>setRemoteDescription()</code> 并等待 PC connected。</p>
+<h2 id="10-业务命令怎样进入-signalchannel">10. 业务命令怎样进入 SignalChannel<a class="heading-anchor" href="#10-业务命令怎样进入-signalchannel" aria-label="链接到本节">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>业务动作</th>
+<th>典型命令</th>
+<th>响应后的下一步</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>进房</td>
+<td>join</td>
+<td>保存 tinyId、用户、ICE/ability；启动媒体连接</td>
+</tr>
+<tr>
+<td>MPC 发布</td>
+<td>publish / publish_change / unpublish</td>
+<td>应用 Answer、更新 sender/状态</td>
+</tr>
+<tr>
+<td>MPC 订阅</td>
+<td>subscribe / subscribe_change / unsubscribe</td>
+<td>应用 Answer或更新既有 m-line 状态</td>
+</tr>
+<tr>
+<td>SPC 重建</td>
+<td>rebuild peer connection</td>
+<td>根据新 ability 连接共享 PC</td>
+</tr>
+<tr>
+<td>媒体配置</td>
+<td>constraint/media settings</td>
+<td>服务端更新业务侧参数</td>
+</tr>
+<tr>
+<td>自定义消息</td>
+<td>custom message</td>
+<td>JSON + Base64 数据</td>
+</tr>
+<tr>
+<td>网络质量与日志</td>
+<td>report 类命令</td>
+<td>统计和诊断，不直接改变媒体轨道</td>
+</tr>
+</tbody></table></div>
+<p>命令字符串、数值下行码和 SDK 内部事件名是三套表示，需要沿映射表阅读，不能把某个数值直接当成公开事件。</p>
+<h2 id="11-在线状态不是-readystate">11. 在线状态不是 <code>readyState</code><a class="heading-anchor" href="#11-在线状态不是-readystate" aria-label="链接到本节">#</a></h2>
+<p>源码中的在线判断大致由以下事实组成：</p>
+<ul>
+<li>当前 SignalChannel 已建立并处于内部 connected 状态。</li>
+<li>最近约 12 秒内收到过服务端消息。</li>
+<li>正在关闭或明确销毁时不能判为在线。</li>
+</ul>
+<p>因此会出现几种组合：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>WebSocket</th>
+<th>最近有下行</th>
+<th>媒体 PC</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>open</td>
+<td>有</td>
+<td>connected</td>
+<td>控制面和媒体面正常</td>
+</tr>
+<tr>
+<td>open</td>
+<td>有</td>
+<td>failed</td>
+<td>信令可用，媒体路径故障</td>
+</tr>
+<tr>
+<td>open</td>
+<td>无</td>
+<td>可能仍 connected</td>
+<td>TCP 表面未关，但应用层已可能失活</td>
+</tr>
+<tr>
+<td>closed</td>
+<td>无</td>
+<td>暂时 connected</td>
+<td>现有媒体可能短暂继续，但无法可靠控制和恢复</td>
+</tr>
+</tbody></table></div>
+<p>源码没有应用层 <code>ping</code>/<code>pong</code> 命令，也无法从浏览器标准 API 主动发送协议级 WebSocket Ping 帧。</p>
+<h2 id="12-异常恢复分为三层">12. 异常恢复分为三层<a class="heading-anchor" href="#12-异常恢复分为三层" aria-label="链接到本节">#</a></h2>
+<h3 id="12-1-候选连接创建失败">12.1 候选连接创建失败<a class="heading-anchor" href="#12-1-候选连接创建失败" aria-label="链接到本节">#</a></h3>
+<p>主备任一成功即可继续；两个都失败或超时，SignalChannel 建立失败，由上层决定重试或报错。</p>
+<h3 id="12-2-已有-websocket-异常关闭">12.2 已有 WebSocket 异常关闭<a class="heading-anchor" href="#12-2-已有-websocket-异常关闭" aria-label="链接到本节">#</a></h3>
+<p>SignalChannel 清当前连接和等待状态，进入恢复流程。恢复过程中不会把旧 <code>_socketInUse</code> 继续当作可发送对象。</p>
+<h3 id="12-3-room-重新进房">12.3 Room 重新进房<a class="heading-anchor" href="#12-3-room-重新进房" aria-label="链接到本节">#</a></h3>
+<p>信令恢复不自动保证房间状态和媒体状态仍有效。Room 会根据错误和当前阶段决定：</p>
+<ul>
+<li>只恢复 SignalChannel。</li>
+<li>重新发送 join。</li>
+<li>重建 SPC。</li>
+<li>让各 MPC 连接在信令恢复后继续自己的重连。</li>
+</ul>
+<p>所以“WebSocket reconnect”和“RTC reconnect”不是同一个方法，也不应共用一个完成事件。</p>
+<h2 id="13-rpc-重试不是盲目重发">13. RPC 重试不是盲目重发<a class="heading-anchor" href="#13-rpc-重试不是盲目重发" aria-label="链接到本节">#</a></h2>
+<p>请求是否可以重试取决于命令语义：</p>
+<ul>
+<li>纯查询或幂等状态同步较容易重试。</li>
+<li>join、publish、subscribe 等状态命令必须结合服务端返回和当前 Room 状态。</li>
+<li>超时不等于服务端一定没有执行，直接重复可能产生重复状态。</li>
+</ul>
+<p>源码通过命令包装、Room 状态和恢复流程协调，而不是给所有 <code>sendWaitForResponse()</code> 自动套相同重试策略。</p>
+<h2 id="14-正常关闭必须中止所有等待">14. 正常关闭必须中止所有等待<a class="heading-anchor" href="#14-正常关闭必须中止所有等待" aria-label="链接到本节">#</a></h2>
+<p>关闭 SignalChannel 时需要完成：</p>
+<ol>
+<li>标记主动关闭，避免 <code>onclose</code> 再进入异常恢复。</li>
+<li>解绑主、备和当前 socket 的 handler。</li>
+<li>使用正常关闭码关闭浏览器 WebSocket。</li>
+<li>清连接、重试和在线 timer。</li>
+<li>拒绝所有尚未完成的 RPC Promise。</li>
+<li>移除 EventEmitter listener。</li>
+</ol>
+<p>如果只调用 <code>socket.close()</code> 而不拒绝等待请求，公开 API 可能一直等到各自 timeout，导致退房和销毁拖延。</p>
+<h2 id="15-与-rtcpeerconnection-的协同">15. 与 RTCPeerConnection 的协同<a class="heading-anchor" href="#15-与-rtcpeerconnection-的协同" aria-label="链接到本节">#</a></h2>
+<p>MPC 的 SDP 明确经过 WebSocket RPC：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">createOffer
+  → setLocalDescription
+  → publish/subscribe RPC 携 Offer
+  → 收到 Answer
+  → setRemoteDescription
+</code></pre>
+</div><p>SPC 的首次协商不同：客户端先生成 origin Offer 和 client ability，join 后使用 server ability 本地合成 Answer；WebSocket 仍负责 join、ability 和 rebuild 命令，但不是简单的“发送 Offer、返回完整 Answer”。</p>
+<p>正式 MPC/SPC 没有可证明的独立 Candidate 消息链。不能因为 Adapter 存在 <code>addIceCandidate()</code>，就写成业务 Candidate 通过 WebSocket 逐个交换。</p>
+<h2 id="16-api-参数与本项目实参">16. API 参数与本项目实参<a class="heading-anchor" href="#16-api-参数与本项目实参" aria-label="链接到本节">#</a></h2>
+<h3 id="16-1-new-websocket-url-protocols">16.1 <code>new WebSocket(url, protocols?)</code><a class="heading-anchor" href="#16-1-new-websocket-url-protocols" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/WebSocket" target="_blank" rel="noreferrer">WebSocket()</a></p>
+<p>源码 L36901—L36908：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">connectWS(e) {
+  let { url: t, timeout: i, isMain: r } = e,
+      n = new WebSocket(t);
+
+  this.bindSocket(n);
+  r ? (this._socket = n) : (this._backupSocket = n);
+  // ...
+}
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>标准含义和可选值</th>
+<th>本项目怎样传</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>url</code></td>
+<td>必填字符串或 URL；应使用 <code>ws:</code> / <code>wss:</code>（MDN 也说明浏览器可解析 HTTP(S) 形式），不能带 fragment</td>
+<td>传局部变量 <code>t</code>，它来自 <code>connectWS({url,...})</code> 的解构；主连接是 <code>_urlWithParam</code>，备连接是 <code>_backupUrlWithParam</code></td>
+</tr>
+<tr>
+<td><code>protocols</code></td>
+<td>可选字符串或字符串数组，表示期望的 WebSocket 子协议；省略时等价空列表</td>
+<td>完全未传，因此不会主动发送自定义 <code>Sec-WebSocket-Protocol</code> 候选</td>
+</tr>
+</tbody></table></div>
+<p><code>url</code> 不是服务端裸地址。getter 会拼接：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">base URL
+  + SPC race 模式下的 /v2/ws
+  + ?sdkAppId=...
+  + &amp;userId=...
+  + &amp;userSig=...
+  + &amp;keepAlive=0|1
+  + 可选 signalDomain
+  + 页面 trtc_* 调试参数
+  + race 模式下的 &amp;race=1
+</code></pre>
+</div><p>所有动态值都先经 <code>encodeURIComponent()</code>；<code>URLSearchParams(location.search)</code> 只负责读取页面查询参数。<code>userSig</code> 最终位于 URL query，日志、代理和历史记录必须避免泄露它。</p>
+<h3 id="16-2-connect-timeout-与-connectws-url-timeout-ismain">16.2 <code>connect(timeout)</code> 与 <code>connectWS({url, timeout, isMain})</code><a class="heading-anchor" href="#16-2-connect-timeout-与-connectws-url-timeout-ismain" aria-label="链接到本节">#</a></h3>
+<p>这两个不是浏览器 API，但它们决定原生构造器收到什么值。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th align="right">默认值</th>
+<th>含义</th>
+<th>下游去向</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>connect(timeout)</code></td>
+<td align="right"><code>10000</code> ms</td>
+<td>单个候选 WebSocket 的建立超时；传 <code>0</code> 时不装超时定时器</td>
+<td>同一个值分别传给主、备 <code>connectWS()</code></td>
+</tr>
+<tr>
+<td><code>url</code></td>
+<td align="right">无</td>
+<td>已拼好 query 的完整信令地址</td>
+<td>直接成为 <code>new WebSocket(url)</code> 的第一个参数</td>
+</tr>
+<tr>
+<td><code>timeout</code></td>
+<td align="right">上一层传入</td>
+<td>候选连接允许等待的毫秒数</td>
+<td><code>setTimeout(callback, timeout)</code></td>
+</tr>
+<tr>
+<td><code>isMain</code></td>
+<td align="right">无</td>
+<td>只用于把 socket 保存到 <code>_socket</code> 或 <code>_backupSocket</code>，以及超时后关闭正确候选</td>
+<td>不会传给浏览器 WebSocket</td>
+</tr>
+</tbody></table></div>
+<p>主备竞速时两个 <code>connectWS()</code> 参数对象分别是：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">{ url: this._urlWithParam,       isMain: true,  timeout }
+{ url: this._backupUrlWithParam, isMain: false, timeout }
+</code></pre>
+</div><p><code>promiseAny()</code> 选择第一个触发 <code>open</code> 的实例；另外一个实例随后解绑并以正常关闭码关掉。</p>
+<h3 id="16-3-事件绑定及事件参数">16.3 事件绑定及事件参数<a class="heading-anchor" href="#16-3-事件绑定及事件参数" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/open_event" target="_blank" rel="noreferrer">open</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/message_event" target="_blank" rel="noreferrer">message</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/error_event" target="_blank" rel="noreferrer">error</a>、<a href="https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/close_event" target="_blank" rel="noreferrer">close</a></p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">e.addEventListener(&#39;close&#39;, this.onclose);
+e.addEventListener(&#39;error&#39;, this.onerror);
+e.addEventListener(&#39;message&#39;, this.onmessage);
+</code></pre>
+</div><p><code>addEventListener(type, listener, options?)</code> 在这里传两个参数：事件名和已在构造函数中 <code>bind(this)</code> 的监听器；第三个 options 没传，因此使用非 capture、非 once、非 passive 的默认行为。连接候选阶段又临时赋值 <code>n.onopen/onerror/onclose</code>，Promise settle 后全部置 <code>null</code>；正式使用阶段则保留 <code>addEventListener()</code> 注册的三个监听器。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>回调实参</th>
+<th>标准字段</th>
+<th>本项目读取</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>MessageEvent e</code></td>
+<td><code>data</code>、<code>origin</code>、<code>lastEventId</code> 等</td>
+<td>只读取 <code>e.data</code>，先按字符串字节数计数，再 <code>JSON.parse(e.data)</code></td>
+</tr>
+<tr>
+<td><code>CloseEvent e</code></td>
+<td><code>code</code>、<code>reason</code>、<code>wasClean</code>、<code>target</code></td>
+<td>用 <code>target</code> 判断主/备及是否当前连接；用 <code>wasClean</code> 和 <code>code===1000</code> 判断是否重连</td>
+</tr>
+<tr>
+<td><code>Event e</code>（error）</td>
+<td>通常不暴露底层网络错误详情</td>
+<td>只通过 <code>target</code> 定位 socket；错误原因由状态机统一包装</td>
+</tr>
+</tbody></table></div>
+<h3 id="16-4-socket-send-data">16.4 <code>socket.send(data)</code><a class="heading-anchor" href="#16-4-socket-send-data" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/send" target="_blank" rel="noreferrer">send()</a></p>
+<p>标准 <code>data</code> 可以是字符串、<code>ArrayBuffer</code>、<code>Blob</code>、TypedArray 或 <code>DataView</code>，返回 <code>undefined</code>。本项目信令只传 UTF-8 JSON 字符串：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const envelope = {
+  cmd: command,
+  data,
+  userId: this.userId,
+  tinyId: this._signalInfo.tinyId,
+  seq: ++this._seq
+};
+const text = JSON.stringify(envelope);
+
+this._socketInUse.send(text);
+this.bytesSent += getStringByteLength(text);
+return envelope.seq;
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>信封字段</th>
+<th>来源</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>cmd</code></td>
+<td><code>send(command, data)</code> 的 <code>command</code></td>
+<td>服务端命令名，如 join、publish、subscribe、reconnect</td>
+</tr>
+<tr>
+<td><code>data</code></td>
+<td>第二参数，默认 <code>{}</code></td>
+<td>命令业务体；不是 WebSocket API 的第二参数</td>
+</tr>
+<tr>
+<td><code>userId</code></td>
+<td>SignalChannel 构造参数</td>
+<td>当前用户标识</td>
+</tr>
+<tr>
+<td><code>tinyId</code></td>
+<td>channel setup / join 响应保存</td>
+<td>服务端侧房间内短标识；建链早期可能尚未赋值</td>
+</tr>
+<tr>
+<td><code>seq</code></td>
+<td><code>_seq</code> 自增</td>
+<td>客户端 RPC 关联号；响应通过相同 seq 唤醒等待者</td>
+</tr>
+</tbody></table></div>
+<p>源码先检查 SDK 状态 <code>isConnected &amp;&amp; !room.isLeft</code>，但没有再次检查原生 <code>readyState</code>，也没有使用 <code>bufferedAmount</code> 做背压。因此该实现适合低频小信令，不适合照搬为大文件或高频媒体数据通道。</p>
+<h3 id="16-5-sendwaitforresponse-options-的每个参数">16.5 <code>sendWaitForResponse(options)</code> 的每个参数<a class="heading-anchor" href="#16-5-sendwaitforresponse-options-的每个参数" aria-label="链接到本节">#</a></h3>
+<p>这是项目在 <code>send()</code> 上构造的 RPC 层：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th align="right">默认值</th>
+<th>含义</th>
+<th>实际使用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>command</code></td>
+<td align="right">无</td>
+<td>要发送的命令</td>
+<td>传给 <code>send(command, data)</code></td>
+</tr>
+<tr>
+<td><code>data</code></td>
+<td align="right">无</td>
+<td>命令业务体</td>
+<td>进入 JSON 信封的 <code>data</code></td>
+</tr>
+<tr>
+<td><code>timeout</code></td>
+<td align="right"><code>5000</code> ms</td>
+<td>等待响应的最长时间</td>
+<td>传给 <code>setTimeout()</code>；超时后解绑响应和关闭监听器</td>
+</tr>
+<tr>
+<td><code>responseCommand</code></td>
+<td align="right">无</td>
+<td>期望收到的内部事件名</td>
+<td><code>this.on(responseCommand, handler)</code></td>
+</tr>
+<tr>
+<td><code>commandDesc</code></td>
+<td align="right">无</td>
+<td>面向日志的命令说明</td>
+<td>超时错误消息使用，不发给服务端</td>
+</tr>
+<tr>
+<td><code>enableLog</code></td>
+<td align="right"><code>true</code></td>
+<td>超时时是否写 warning</td>
+<td>仅影响日志</td>
+</tr>
+<tr>
+<td><code>addReceiveTime</code></td>
+<td align="right"><code>false</code></td>
+<td>成功响应时是否补客户端接收时间</td>
+<td>为真时写 <code>response.data.receiveTime = Date.now()</code></td>
+</tr>
+</tbody></table></div>
+<p>真正完成 Promise 的条件是 <code>response.data.seq === requestSeq</code>，而不是只匹配命令名。连接关闭时 <code>MSG_TYPE_7</code> 会让所有等待立即以 <code>API_CALL_ABORTED</code> 结束。</p>
+<h3 id="16-6-socket-close-code-reason">16.6 <code>socket.close(code?, reason?)</code><a class="heading-anchor" href="#16-6-socket-close-code-reason" aria-label="链接到本节">#</a></h3>
+<p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/close" target="_blank" rel="noreferrer">close()</a></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>标准限制</th>
+<th>本项目实参</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>code</code></td>
+<td>可省略；应用自定义码通常应在 <code>3000..4999</code>，<code>1000</code> 表示正常关闭</td>
+<td>放弃竞速候选和常规关闭传 <code>1000</code>；进入重连前传 <code>4011</code> 表示项目自定义的重连关闭</td>
+</tr>
+<tr>
+<td><code>reason</code></td>
+<td>可省略的 UTF-8 文本，编码后最多 123 字节</td>
+<td>未传</td>
+</tr>
+</tbody></table></div>
+<p><code>close()</code> 启动关闭握手，不保证调用点已完成网络关闭。项目因此先解绑事件，避免主动关闭的备用 socket 误触发正式连接的重连逻辑。<code>startReconnection()</code> 还会先把当前 socket 的 <code>onclose</code> 清空，再以 <code>4011</code> 关闭。</p>
+<h2 id="17-事实-推断和未知边界">17. 事实、推断和未知边界<a class="heading-anchor" href="#17-事实-推断和未知边界" aria-label="链接到本节">#</a></h2>
+<h3 id="可以直接确认">可以直接确认<a class="heading-anchor" href="#可以直接确认" aria-label="链接到本节">#</a></h3>
+<ul>
+<li>主备地址并发竞速，选择先成功连接。</li>
+<li>业务消息使用 JSON 信封和单调 seq。</li>
+<li>RPC 通过内部事件和 seq 匹配实现。</li>
+<li>在线判断依赖最近下行消息，不存在自定义 ping/pong。</li>
+<li>WebSocket open、join 和媒体 connected 是不同阶段。</li>
+<li>当前公开自定义消息路径走 WebSocket，而不是启用的 DataChannel。</li>
+</ul>
+<h3 id="合理推断">合理推断<a class="heading-anchor" href="#合理推断" aria-label="链接到本节">#</a></h3>
+<ul>
+<li>主备竞速用于降低 DNS、线路或单域名故障带来的建连长尾。</li>
+<li>最近下行时间比单独看 readyState 更接近“应用层是否仍活着”。</li>
+<li>未统一使用 bufferedAmount，说明信令消息被假定为低频小包；高频大数据不应照搬该实现。</li>
+</ul>
+<h3 id="仅凭当前-js-不能确认">仅凭当前 JS 不能确认<a class="heading-anchor" href="#仅凭当前-js-不能确认" aria-label="链接到本节">#</a></h3>
+<ul>
+<li>服务端全部命令协议、幂等性和错误码语义。</li>
+<li>服务端是否发送协议级 Ping 帧；浏览器 JS 无法直接观察或发送该控制帧。</li>
+<li>每种异常下服务端保留房间状态的精确时长。</li>
+</ul>
+<h2 id="18-本章附录入口">18. 本章附录入口<a class="heading-anchor" href="#18-本章附录入口" aria-label="链接到本节">#</a></h2>
+<ul>
+<li>WebSocket 全部浏览器 API 出现位置：见 <a href="Appendix-A-WebAPI-Occurrences.html">附录 A</a>。</li>
+<li>SignalChannel 方法定义和调用方：见 <a href="Appendix-B-Source-Method-Index.html">附录 B</a>。</li>
+<li><code>open/message/error/close</code> 事件：见 <a href="Appendix-C-Event-Index.html">附录 C</a>。</li>
+<li>公开 API 到信令命令：见 <a href="Appendix-E-Public-API-Call-Chains.html">附录 E</a>。</li>
+</ul>
+
+      <nav class="page-pagination" aria-label="上一篇和下一篇">
+        <a class="previous" href="02-RTCPeerConnection-usage-analysis.html"><span>上一篇</span>02 RTCPeerConnection 使用分析</a>
+        <a class="next" href="04-MediaDevices-and-Capture.html"><span>下一篇</span>04 MediaDevices 与媒体采集</a>
+      </nav>
+    </article>
+    
+    <nav class="page-toc" aria-label="本页目录">
+      <h2>本页目录</h2>
+      <a class="toc-depth-2" href="#1-本章结论">1. 本章结论</a><a class="toc-depth-2" href="#2-使用边界">2. 使用边界</a><a class="toc-depth-2" href="#3-谁拥有-websocket">3. 谁拥有 WebSocket</a><a class="toc-depth-2" href="#4-url-怎样构造">4. URL 怎样构造</a><a class="toc-depth-2" href="#5-主备连接是竞速-不是顺序回退">5. 主备连接是竞速，不是顺序回退</a><a class="toc-depth-2" href="#6-open-之后还没有完成进房">6. open 之后还没有完成进房</a><a class="toc-depth-2" href="#7-统一-json-信封">7. 统一 JSON 信封</a><a class="toc-depth-2" href="#8-收消息-先更新活性-再分派事件">8. 收消息：先更新活性，再分派事件</a><a class="toc-depth-2" href="#9-sendwaitforresponse-怎样把事件变成-rpc">9. sendWaitForResponse() 怎样把事件变成 RPC</a><a class="toc-depth-2" href="#10-业务命令怎样进入-signalchannel">10. 业务命令怎样进入 SignalChannel</a><a class="toc-depth-2" href="#11-在线状态不是-readystate">11. 在线状态不是 readyState</a><a class="toc-depth-2" href="#12-异常恢复分为三层">12. 异常恢复分为三层</a><a class="toc-depth-3" href="#12-1-候选连接创建失败">12.1 候选连接创建失败</a><a class="toc-depth-3" href="#12-2-已有-websocket-异常关闭">12.2 已有 WebSocket 异常关闭</a><a class="toc-depth-3" href="#12-3-room-重新进房">12.3 Room 重新进房</a><a class="toc-depth-2" href="#13-rpc-重试不是盲目重发">13. RPC 重试不是盲目重发</a><a class="toc-depth-2" href="#14-正常关闭必须中止所有等待">14. 正常关闭必须中止所有等待</a><a class="toc-depth-2" href="#15-与-rtcpeerconnection-的协同">15. 与 RTCPeerConnection 的协同</a><a class="toc-depth-2" href="#16-api-参数与本项目实参">16. API 参数与本项目实参</a><a class="toc-depth-3" href="#16-1-new-websocket-url-protocols">16.1 new WebSocket(url, protocols?)</a><a class="toc-depth-3" href="#16-2-connect-timeout-与-connectws-url-timeout-ismain">16.2 connect(timeout) 与 connectWS({url, timeout, isMain})</a><a class="toc-depth-3" href="#16-3-事件绑定及事件参数">16.3 事件绑定及事件参数</a><a class="toc-depth-3" href="#16-4-socket-send-data">16.4 socket.send(data)</a><a class="toc-depth-3" href="#16-5-sendwaitforresponse-options-的每个参数">16.5 sendWaitForResponse(options) 的每个参数</a><a class="toc-depth-3" href="#16-6-socket-close-code-reason">16.6 socket.close(code?, reason?)</a><a class="toc-depth-2" href="#17-事实-推断和未知边界">17. 事实、推断和未知边界</a><a class="toc-depth-3" href="#可以直接确认">可以直接确认</a><a class="toc-depth-3" href="#合理推断">合理推断</a><a class="toc-depth-3" href="#仅凭当前-js-不能确认">仅凭当前 JS 不能确认</a><a class="toc-depth-2" href="#18-本章附录入口">18. 本章附录入口</a>
+    </nav>
+  </main>
+  <button type="button" class="back-to-top" aria-label="回到顶部">↑</button>
+</body>
+</html>
