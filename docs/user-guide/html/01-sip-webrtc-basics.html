@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="CRTC Web SDK 系统学习文档：1. SIP 与 WebRTC 基础">
+  <title>1. SIP 与 WebRTC 基础 · CRTC Web SDK 系统学习</title>
+  <link rel="stylesheet" href="assets/docs.css">
+  <script>try{const t=localStorage.getItem('crtc-user-guide-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+  <script src="assets/search-index.js" defer></script>
+  <script src="assets/mermaid.min.js" defer></script>
+  <script src="assets/docs.js" defer></script>
+</head>
+<body data-page="01-sip-webrtc-basics.html">
+  <header class="topbar">
+    <button type="button" class="icon-button nav-toggle" aria-label="打开目录" aria-expanded="false">☰</button>
+    <a class="brand" href="index.html">CRTC Web SDK 系统学习</a>
+    <div class="search-shell">
+      <label class="sr-only" for="global-search">搜索全部文档</label>
+      <input id="global-search" type="search" autocomplete="off" placeholder="搜索 API、事件、功能…" aria-controls="search-results">
+      <kbd>/</kbd>
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
+    <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
+  </header>
+
+  <aside class="sidebar" aria-label="文档目录">
+    
+    <section class="nav-group">
+      <h2>系统学习指南</h2>
+      
+        <a class="nav-link" href="index.html">
+          学习指南首页
+        </a>
+        <a class="nav-link active" href="01-sip-webrtc-basics.html">
+          1 SIP 与 WebRTC 基础
+        </a>
+        <a class="nav-link" href="02-quick-start.html">
+          2 快速完成第一通电话
+        </a>
+        <a class="nav-link" href="03-call-lifecycle.html">
+          3 注册、通话与事件时序
+        </a>
+        <a class="nav-link" href="04-media-features.html">
+          4 AiNS、虚拟背景与混流
+        </a>
+        <a class="nav-link" href="05-call-statistics.html">
+          5 通话质量统计
+        </a>
+        <a class="nav-link" href="06-api-reference.html">
+          6 SDK API 参考
+        </a>
+        <a class="nav-link" href="07-upgrade-guide.html">
+          7 旧版功能升级指南
+        </a>
+        <a class="nav-link" href="08-demo-guide.html">
+          8 Base JS Demo 学习与验证
+        </a>
+    </section>
+  </aside>
+  <div class="sidebar-backdrop" hidden></div>
+
+  <main class="layout">
+    <article class="doc-content">
+      <h1 id="1-sip-与-webrtc-基础">1. SIP 与 WebRTC 基础<a class="heading-anchor" href="#1-sip-与-webrtc-基础" aria-label="链接到本节">#</a></h1>
+<p><a href="index.html">学习目录</a> · <a href="02-quick-start.html">下一章：快速完成第一通电话 →</a></p>
+<p>本章只解释接入 SDK 必须掌握的概念。你不需要先学习 SIP 报文格式、SDP 语法或 WebRTC 底层协议。</p>
+<h2 id="1-1-信令和媒体是两条链路">1.1 信令和媒体是两条链路<a class="heading-anchor" href="#1-1-信令和媒体是两条链路" aria-label="链接到本节">#</a></h2>
+<p>一次浏览器音视频通话同时存在两类连接：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>链路</th>
+<th>负责内容</th>
+<th>常见配置</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SIP 信令</td>
+<td>注册、呼叫、振铃、接听、拒接、挂断</td>
+<td>WSS 地址、SIP 账号、密码</td>
+</tr>
+<tr>
+<td>WebRTC 媒体</td>
+<td>摄像头、麦克风、音视频协商和传输</td>
+<td>媒体约束、STUN/TURN</td>
+</tr>
+</tbody></table></div>
+<p>能注册成功，只说明 SIP 信令可用，不代表音视频一定能连通。能收到来电但双方没有声音或画面时，应继续检查浏览器权限、媒体约束、ICE 和 TURN。</p>
+<h2 id="1-2-sdk-中的核心对象">1.2 SDK 中的核心对象<a class="heading-anchor" href="#1-2-sdk-中的核心对象" aria-label="链接到本节">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>对象</th>
+<th>生命周期</th>
+<th>前端职责</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>CRTC.UA</code></td>
+<td>页面或应用级，通常只创建一个</td>
+<td>连接 WSS、注册 SIP、发起呼叫、接收新会话</td>
+</tr>
+<tr>
+<td><code>CRTC.RTCSession</code></td>
+<td>一通电话一个实例</td>
+<td>接听、挂断、监听通话事件、控制媒体能力和读取统计</td>
+</tr>
+<tr>
+<td><code>RTCPeerConnection</code></td>
+<td>属于某个会话</td>
+<td>承载 WebRTC 协商、ICE 状态和远端轨道</td>
+</tr>
+<tr>
+<td><code>MediaStream</code></td>
+<td>一组音频/视频轨道</td>
+<td>绑定 <code>&lt;video&gt;</code>、作为混流输入或自定义发送流</td>
+</tr>
+<tr>
+<td><code>MediaStreamTrack</code></td>
+<td>单条音频或视频轨道</td>
+<td>静音、换设备、检查轨道状态</td>
+</tr>
+</tbody></table></div>
+<p>关系可以简单理解为：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">一个页面
+└─ 一个 CRTC.UA
+   ├─ RTCSession（第一通电话）
+   │  └─ RTCPeerConnection
+   └─ RTCSession（第二通电话）
+      └─ RTCPeerConnection
+</code></pre>
+</div><p>示例页面如果只允许一通电话，可以用 <code>currentSession</code> 保存当前会话。需要并发通话时，应使用 <code>Map&lt;session.id, session&gt;</code> 管理，不能让后一通覆盖前一通。</p>
+<h2 id="1-3-常见名词">1.3 常见名词<a class="heading-anchor" href="#1-3-常见名词" aria-label="链接到本节">#</a></h2>
+<h3 id="wss">WSS<a class="heading-anchor" href="#wss" aria-label="链接到本节">#</a></h3>
+<p>浏览器通过安全 WebSocket 连接 SIP 信令服务。WSS 连接成功后，UA 才能继续注册。</p>
+<h3 id="sip-uri">SIP URI<a class="heading-anchor" href="#sip-uri" aria-label="链接到本节">#</a></h3>
+<p>SIP 用户身份通常写成：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">sip:alice@example.com
+</code></pre>
+</div><p><code>alice</code> 是账号，<code>example.com</code> 是 SIP 域。被叫目标也建议在首次联调时使用完整 SIP URI。</p>
+<h3 id="sdp">SDP<a class="heading-anchor" href="#sdp" aria-label="链接到本节">#</a></h3>
+<p>SDP 描述本次通话希望发送和接收的媒体，例如是否有音频、视频，以及支持哪些编解码器。普通接入不需要业务自己修改 SDP。</p>
+<h3 id="ice-stun-和-turn">ICE、STUN 和 TURN<a class="heading-anchor" href="#ice-stun-和-turn" aria-label="链接到本节">#</a></h3>
+<ul>
+<li>ICE：WebRTC 寻找双方可用网络路径的过程。</li>
+<li>STUN：帮助浏览器发现公网映射地址。</li>
+<li>TURN：双方无法直连时中继媒体，企业网络、跨运营商或严格防火墙环境尤其重要。</li>
+</ul>
+<p>WSS 地址、SIP 域和 TURN 地址用途不同，不一定使用同一个域名。</p>
+<h2 id="1-4-浏览器安全要求">1.4 浏览器安全要求<a class="heading-anchor" href="#1-4-浏览器安全要求" aria-label="链接到本节">#</a></h2>
+<ul>
+<li>摄像头和麦克风通常只能在 HTTPS 或 localhost 页面使用。</li>
+<li>首次调用媒体采集时浏览器会请求权限。</li>
+<li>图片背景、AiNS 和虚拟背景资源跨域部署时，资源服务器必须允许页面域名访问。</li>
+<li>页面自动播放远端音频可能受浏览器策略限制，建议由用户点击按钮触发呼叫或接听，并处理 <code>video.play()</code> 的 Promise。</li>
+</ul>
+<h2 id="1-5-一通电话的最小心智模型">1.5 一通电话的最小心智模型<a class="heading-anchor" href="#1-5-一通电话的最小心智模型" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">创建 UA
+→ 启动并注册
+→ ua.call() 呼出，或 newRTCSession 收到呼入
+→ 得到 RTCSession
+→ 呼入调用 session.answer()
+→ 绑定 RTCPeerConnection 的 track 事件播放远端流
+→ confirmed 表示通话建立
+→ session.terminate() 挂断
+→ ended 或 failed 后清理页面状态
+</code></pre>
+</div><h2 id="1-6-sip-注册到底完成了什么">1.6 SIP 注册到底完成了什么<a class="heading-anchor" href="#1-6-sip-注册到底完成了什么" aria-label="链接到本节">#</a></h2>
+<p>浏览器不是打开 WSS 就可以呼叫。完整过程是：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">建立 WSS
+→ connected
+→ 发送 SIP REGISTER
+→ 服务端鉴权
+→ 200 OK
+→ registered
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>状态</th>
+<th>能说明什么</th>
+<th>不能说明什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>connected</code></td>
+<td>浏览器与 WSS 信令服务已连接</td>
+<td>SIP 账号不一定已注册，不能直接呼叫</td>
+</tr>
+<tr>
+<td><code>registered</code></td>
+<td>SIP 账号注册成功，服务端可路由呼入</td>
+<td>TURN 和媒体仍可能不可用</td>
+</tr>
+<tr>
+<td><code>registrationFailed</code></td>
+<td>注册被拒绝、鉴权失败或超时</td>
+<td>不一定是 WSS 故障</td>
+</tr>
+<tr>
+<td><code>disconnected</code></td>
+<td>WSS 已断开</td>
+<td>浏览器网络接口是否离线需结合 offline 事件</td>
+</tr>
+</tbody></table></div>
+<p>自动注册是 <code>register: true</code>，<code>ua.start()</code> 连接后自动发送 REGISTER。手动注册是 <code>register: false</code>，在 <code>connected</code> 后调用 <code>ua.register()</code>。两种方式的最终成功标志都相同：<code>registered</code>。</p>
+<h2 id="1-7-一次-sip-呼叫中会看到哪些阶段">1.7 一次 SIP 呼叫中会看到哪些阶段<a class="heading-anchor" href="#1-7-一次-sip-呼叫中会看到哪些阶段" aria-label="链接到本节">#</a></h2>
+<p>最常见的呼出信令：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">INVITE
+← 100 Trying
+← 180 Ringing 或 183 Session Progress
+← 200 OK
+ACK →
+……通话……
+BYE → / ← BYE
+</code></pre>
+</div><p>对应 SDK 事件：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>SIP 阶段</th>
+<th>SDK 事件</th>
+<th>页面含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>发送/接收 INVITE</td>
+<td><code>newRTCSession</code></td>
+<td>创建本通电话对象并绑定事件</td>
+</tr>
+<tr>
+<td>100 Trying</td>
+<td><code>trying</code></td>
+<td>服务正在处理呼叫</td>
+</tr>
+<tr>
+<td>180/183</td>
+<td><code>progress</code></td>
+<td>振铃、回铃或早期媒体</td>
+</tr>
+<tr>
+<td>200 OK</td>
+<td><code>accepted</code></td>
+<td>对方已接受，正在完成确认</td>
+</tr>
+<tr>
+<td>ACK</td>
+<td><code>confirmed</code></td>
+<td>会话已正式建立</td>
+</tr>
+<tr>
+<td>建立前失败</td>
+<td><code>failed</code></td>
+<td>拒接、取消、超时、协商失败</td>
+</tr>
+<tr>
+<td>建立后 BYE</td>
+<td><code>ended</code></td>
+<td>通话结束</td>
+</tr>
+</tbody></table></div>
+<p><code>accepted</code> 和 <code>confirmed</code> 不应当作同一个事件。业务通常在 <code>accepted</code> 显示“正在建立”，在 <code>confirmed</code> 切换到“通话中”。</p>
+<h3 id="180-和-183-的区别">180 和 183 的区别<a class="heading-anchor" href="#180-和-183-的区别" aria-label="链接到本节">#</a></h3>
+<ul>
+<li>180 通常表示远端正在振铃，本端可以播放本地回铃音。</li>
+<li>183 可能携带 SDP 和早期媒体，例如网络侧提供的真实回铃音或提示音。</li>
+</ul>
+<p>如果 <code>session.connection.ontrack</code> 在 confirmed 前收到远端音频，页面应优先播放这路早期媒体，避免本地回铃音和远端提示音同时播放。</p>
+<h2 id="1-8-呼入和呼出为什么时序不同">1.8 呼入和呼出为什么时序不同<a class="heading-anchor" href="#1-8-呼入和呼出为什么时序不同" aria-label="链接到本节">#</a></h2>
+<p>呼出：页面调用 <code>ua.call()</code>，SDK先准备本地媒体和 SDP Offer，再发送 INVITE，所以 Promise 可能因媒体权限/约束失败而 reject。</p>
+<p>呼入：SDK先收到远端 INVITE 并产生 <code>newRTCSession</code>，用户尚未接听，因此本地摄像头/麦克风和 PeerConnection 可能还未创建。调用 <code>session.answer(options)</code> 后才准备本地媒体并发送 SDP Answer。</p>
+<p>这决定了两条规则：</p>
+<ol>
+<li>呼入页面不要在收到来电时就假设 <code>session.connection</code> 可用。</li>
+<li>呼叫/接听参数必须共用同一构造逻辑，否则呼出有 AiNS/虚拟背景，呼入接听却没有。</li>
+</ol>
+<h2 id="1-9-sdp-offer-answer-与媒体方向">1.9 SDP Offer/Answer 与媒体方向<a class="heading-anchor" href="#1-9-sdp-offer-answer-与媒体方向" aria-label="链接到本节">#</a></h2>
+<p>SDP 是双方对音频、视频、编解码器和网络参数的描述。常见方向：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>方向</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>sendrecv</code></td>
+<td>发送并接收</td>
+</tr>
+<tr>
+<td><code>sendonly</code></td>
+<td>只发送</td>
+</tr>
+<tr>
+<td><code>recvonly</code></td>
+<td>只接收</td>
+</tr>
+<tr>
+<td><code>inactive</code></td>
+<td>暂不发送也不接收</td>
+</tr>
+</tbody></table></div>
+<p>页面调用 <code>mute()</code> 只改变本地轨道发送状态，不一定等同于修改 SDP 方向。<code>hold()</code>、音视频升级/降级、共享或某些设备操作可能触发重新协商。</p>
+<p>普通接入不要直接正则修改 SDP。确有互通要求时，应明确修改的媒体行、方向、编码或带宽字段，并覆盖呼出、呼入、UPDATE/re-INVITE、共享和重协商路径。</p>
+<h2 id="1-10-ice-建连的实际过程">1.10 ICE 建连的实际过程<a class="heading-anchor" href="#1-10-ice-建连的实际过程" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">收集本地 candidate
+→ 通过 SDP 交换候选和凭据
+→ ICE checking
+→ 选择可用 candidate pair
+→ connected/completed
+→ DTLS connected
+→ SRTP 音视频传输
+</code></pre>
+</div><p>常见候选类型：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>类型</th>
+<th>来源</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>host</code></td>
+<td>本机网络接口</td>
+<td>局域网直连候选；可能使用 mDNS 隐藏地址</td>
+</tr>
+<tr>
+<td><code>srflx</code></td>
+<td>STUN</td>
+<td>NAT 映射的公网候选</td>
+</tr>
+<tr>
+<td><code>relay</code></td>
+<td>TURN</td>
+<td>媒体经 TURN 中继，穿透成功率高但增加带宽和时延</td>
+</tr>
+</tbody></table></div>
+<p><code>iceTransportPolicy: &#39;all&#39;</code> 允许浏览器尝试 host/srflx/relay；<code>relay</code> 只允许 TURN。企业网、对称 NAT 或严格防火墙中，TURN 往往是媒体可用的关键。</p>
+<h3 id="ice-状态含义">ICE 状态含义<a class="heading-anchor" href="#ice-状态含义" aria-label="链接到本节">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>状态</th>
+<th>含义</th>
+<th>页面建议</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>new</code></td>
+<td>尚未开始或刚创建</td>
+<td>显示正在准备</td>
+</tr>
+<tr>
+<td><code>checking</code></td>
+<td>正在检查候选对</td>
+<td>显示正在连接媒体</td>
+</tr>
+<tr>
+<td><code>connected</code></td>
+<td>已找到可用路径</td>
+<td>允许继续等待更优路径</td>
+</tr>
+<tr>
+<td><code>completed</code></td>
+<td>ICE 检查基本完成</td>
+<td>正常稳定状态</td>
+</tr>
+<tr>
+<td><code>disconnected</code></td>
+<td>暂时失去连通</td>
+<td>先观察恢复，不立即挂断</td>
+</tr>
+<tr>
+<td><code>failed</code></td>
+<td>无可用路径</td>
+<td>检查 TURN、网络和防火墙</td>
+</tr>
+<tr>
+<td><code>closed</code></td>
+<td>PC 已关闭</td>
+<td>挂断后正常；通话中出现则异常</td>
+</tr>
+</tbody></table></div>
+<h2 id="1-11-mediastream-与-track-生命周期">1.11 MediaStream 与 Track 生命周期<a class="heading-anchor" href="#1-11-mediastream-与-track-生命周期" aria-label="链接到本节">#</a></h2>
+<p>一个 <code>MediaStream</code> 可以包含多条 track：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const stream = await navigator.mediaDevices.getUserMedia({
+  audio : true,
+  video : true
+});
+
+console.log(stream.getAudioTracks());
+console.log(stream.getVideoTracks());
+</code></pre>
+</div><p>Track 的常见属性：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>属性</th>
+<th>常见值</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>kind</code></td>
+<td><code>audio</code> / <code>video</code></td>
+<td>媒体类型</td>
+</tr>
+<tr>
+<td><code>enabled</code></td>
+<td><code>true</code> / <code>false</code></td>
+<td>是否输出有效媒体，常用于静音</td>
+</tr>
+<tr>
+<td><code>muted</code></td>
+<td><code>true</code> / <code>false</code></td>
+<td>track 是否暂时无法提供数据</td>
+</tr>
+<tr>
+<td><code>readyState</code></td>
+<td><code>live</code> / <code>ended</code></td>
+<td>是否仍可用</td>
+</tr>
+<tr>
+<td><code>label</code></td>
+<td>设备名称</td>
+<td>用户授权后通常可见</td>
+</tr>
+</tbody></table></div>
+<p><code>track.stop()</code> 是永久停止该 track，不能通过 <code>enabled = true</code> 恢复。切换设备、挂断和页面销毁时要区分：</p>
+<ul>
+<li>SDK 管理的通话 track 由会话流程处理。</li>
+<li>页面自行创建的预览、屏幕流、占位流必须由页面停止。</li>
+<li>不要提前 stop 一个仍被通话 sender 使用的自定义 track。</li>
+</ul>
+<h2 id="1-12-本地预览和实际发送不是同一件事">1.12 本地预览和实际发送不是同一件事<a class="heading-anchor" href="#1-12-本地预览和实际发送不是同一件事" aria-label="链接到本节">#</a></h2>
+<p><code>localVideo.srcObject = stream</code> 只是把某个流显示在页面，不代表该流一定已经发送。实际发送取决于 RTCSession 的 sender、当前协商方向和 track 状态。</p>
+<p>类似地，CSS：</p>
+<div class="code-block"><div class="code-toolbar"><span>css</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-css">video { transform: scaleX(-1); }
+</code></pre>
+</div><p>只镜像本地看到的元素，不会改变远端收到的画面。composer 的 <code>setMirror(true)</code> 改变的是实际合成输出，两者不要混用。</p>
+<h2 id="1-13-媒体权限和设备错误">1.13 媒体权限和设备错误<a class="heading-anchor" href="#1-13-媒体权限和设备错误" aria-label="链接到本节">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>错误/现象</th>
+<th>常见原因</th>
+<th>处理</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>NotAllowedError</code></td>
+<td>用户拒绝、系统权限关闭、非安全页面</td>
+<td>引导用户开启权限；不要反复弹窗</td>
+</tr>
+<tr>
+<td><code>NotFoundError</code></td>
+<td>没有满足条件的设备</td>
+<td>提示连接设备或使用纯音频/占位方案</td>
+</tr>
+<tr>
+<td><code>NotReadableError</code></td>
+<td>设备被占用或系统读取失败</td>
+<td>关闭其他应用、重新选择设备</td>
+</tr>
+<tr>
+<td><code>OverconstrainedError</code></td>
+<td><code>exact/min</code> 约束设备不支持</td>
+<td>降低分辨率/FPS或改用 <code>ideal</code></td>
+</tr>
+<tr>
+<td>设备 label 为空</td>
+<td>尚未授权媒体权限</td>
+<td>先请求一次权限后重新枚举</td>
+</tr>
+<tr>
+<td><code>play()</code> reject</td>
+<td>浏览器自动播放限制</td>
+<td>提供“点击播放/恢复播放”按钮</td>
+</tr>
+</tbody></table></div>
+<h2 id="1-14-ains-虚拟背景-混流与通话的关系">1.14 AiNS、虚拟背景、混流与通话的关系<a class="heading-anchor" href="#1-14-ains-虚拟背景-混流与通话的关系" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">麦克风 ── AiNS ─────────────┐
+                            ├─ MediaEffectsComposer/媒体管线 ─→ RTCSession sender
+摄像头 ── 虚拟背景(slot 0) ─┤
+其他音视频源(slot 1...) ────┘
+</code></pre>
+</div><ul>
+<li>AiNS 处理本地音频。</li>
+<li>虚拟背景作用于 composer 的某一路视频源，通话摄像头通常是 slot 0。</li>
+<li>composer 可处理镜像、水印和多路输入。</li>
+<li>这些能力通过 <code>ua.call()</code> / <code>session.answer()</code> 的 options 初始化，并从当前 session 获取控制器动态调整。</li>
+<li>效果失败时应尽量保持基础通话，不要把效果异常当作 SIP 通话失败。</li>
+</ul>
+<h2 id="1-15-通话统计的基本方向">1.15 通话统计的基本方向<a class="heading-anchor" href="#1-15-通话统计的基本方向" aria-label="链接到本节">#</a></h2>
+<p>从当前浏览器视角：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>方向</th>
+<th>含义</th>
+<th>用户现象</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>上行</td>
+<td>本端发送到远端</td>
+<td>远端听到/看到本端的质量</td>
+</tr>
+<tr>
+<td>下行</td>
+<td>本端从远端接收</td>
+<td>本端用户听到/看到远端的质量</td>
+</tr>
+</tbody></table></div>
+<p>例如“对方说我声音断断续续”优先看上行音频；“我听对方断断续续”优先看下行音频。网络质量 <code>0</code> 表示暂无有效样本，<code>1</code> 最好，<code>6</code> 最差或连接不可用，详细阈值见第 5 章。</p>
+<h2 id="1-16-接入前信息清单">1.16 接入前信息清单<a class="heading-anchor" href="#1-16-接入前信息清单" aria-label="链接到本节">#</a></h2>
+<p>开始写代码前应拿到：</p>
+<ul>
+<li>SDK 文件和版本号。</li>
+<li>WSS URL。</li>
+<li>SIP 域。</li>
+<li>两个可互呼的测试账号和鉴权方式。</li>
+<li>SDK 授权码。</li>
+<li>STUN/TURN URL、用户名、凭据和传输协议。</li>
+<li>是否要求 <code>relay</code>、<code>max-compat</code>、<code>rtcpMuxPolicy: negotiate</code> 等兼容参数。</li>
+<li>服务端支持的自动/手动注册、UPDATE/re-INVITE、BFCP/双流和自定义 SIP 头规则。</li>
+<li>AiNS 和虚拟背景静态资源部署地址。</li>
+</ul>
+<p>缺少其中一项时，先明确它属于信令、媒体、授权还是效果资源，不要用另一类地址猜测替代。</p>
+<h2 id="1-17-最小排查分层">1.17 最小排查分层<a class="heading-anchor" href="#1-17-最小排查分层" aria-label="链接到本节">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>层次</th>
+<th>成功标志</th>
+<th>失败时检查</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>页面和 SDK</td>
+<td><code>CRTC.version</code> 可读</td>
+<td>引入路径、缓存、脚本顺序</td>
+</tr>
+<tr>
+<td>WSS</td>
+<td><code>connected</code></td>
+<td>URL、证书、代理、网络</td>
+</tr>
+<tr>
+<td>SIP 注册</td>
+<td><code>registered</code></td>
+<td>URI、密码、realm、授权、账号状态</td>
+</tr>
+<tr>
+<td>SIP 呼叫</td>
+<td><code>progress/accepted/confirmed</code></td>
+<td>被叫、路由、响应码、超时</td>
+</tr>
+<tr>
+<td>本地采集</td>
+<td>有 live audio/video track</td>
+<td>HTTPS、权限、设备、约束</td>
+</tr>
+<tr>
+<td>ICE/DTLS</td>
+<td>connected/completed</td>
+<td>STUN/TURN、防火墙、凭据</td>
+</tr>
+<tr>
+<td>远端播放</td>
+<td><code>ontrack</code> 且 play 成功</td>
+<td>SDP 方向、远端发送、自动播放</td>
+</tr>
+<tr>
+<td>媒体效果</td>
+<td>控制器非 null，效果可见</td>
+<td>呼叫参数、资源、CORS、性能</td>
+</tr>
+<tr>
+<td>通话统计</td>
+<td>后续样本出现有效字段</td>
+<td>PC、浏览器兼容、基线等待</td>
+</tr>
+</tbody></table></div>
+<p>下一章会把这套流程写成一份可直接运行的完整页面，第 3 章再展开注册和通话时序。</p>
+<p><a href="index.html">← 学习目录</a> · <a href="02-quick-start.html">下一章：快速完成第一通电话 →</a></p>
+
+      <nav class="page-pagination" aria-label="上一篇和下一篇">
+        <a class="previous" href="index.html"><span>上一篇</span>CRTC Web SDK 系统学习指南</a>
+        <a class="next" href="02-quick-start.html"><span>下一篇</span>2. 快速完成第一通电话</a>
+      </nav>
+    </article>
+    
+    <nav class="page-toc" aria-label="本页目录">
+      <h2>本页目录</h2>
+      <a class="toc-depth-2" href="#1-1-信令和媒体是两条链路">1.1 信令和媒体是两条链路</a><a class="toc-depth-2" href="#1-2-sdk-中的核心对象">1.2 SDK 中的核心对象</a><a class="toc-depth-2" href="#1-3-常见名词">1.3 常见名词</a><a class="toc-depth-3" href="#wss">WSS</a><a class="toc-depth-3" href="#sip-uri">SIP URI</a><a class="toc-depth-3" href="#sdp">SDP</a><a class="toc-depth-3" href="#ice-stun-和-turn">ICE、STUN 和 TURN</a><a class="toc-depth-2" href="#1-4-浏览器安全要求">1.4 浏览器安全要求</a><a class="toc-depth-2" href="#1-5-一通电话的最小心智模型">1.5 一通电话的最小心智模型</a><a class="toc-depth-2" href="#1-6-sip-注册到底完成了什么">1.6 SIP 注册到底完成了什么</a><a class="toc-depth-2" href="#1-7-一次-sip-呼叫中会看到哪些阶段">1.7 一次 SIP 呼叫中会看到哪些阶段</a><a class="toc-depth-3" href="#180-和-183-的区别">180 和 183 的区别</a><a class="toc-depth-2" href="#1-8-呼入和呼出为什么时序不同">1.8 呼入和呼出为什么时序不同</a><a class="toc-depth-2" href="#1-9-sdp-offer-answer-与媒体方向">1.9 SDP Offer/Answer 与媒体方向</a><a class="toc-depth-2" href="#1-10-ice-建连的实际过程">1.10 ICE 建连的实际过程</a><a class="toc-depth-3" href="#ice-状态含义">ICE 状态含义</a><a class="toc-depth-2" href="#1-11-mediastream-与-track-生命周期">1.11 MediaStream 与 Track 生命周期</a><a class="toc-depth-2" href="#1-12-本地预览和实际发送不是同一件事">1.12 本地预览和实际发送不是同一件事</a><a class="toc-depth-2" href="#1-13-媒体权限和设备错误">1.13 媒体权限和设备错误</a><a class="toc-depth-2" href="#1-14-ains-虚拟背景-混流与通话的关系">1.14 AiNS、虚拟背景、混流与通话的关系</a><a class="toc-depth-2" href="#1-15-通话统计的基本方向">1.15 通话统计的基本方向</a><a class="toc-depth-2" href="#1-16-接入前信息清单">1.16 接入前信息清单</a><a class="toc-depth-2" href="#1-17-最小排查分层">1.17 最小排查分层</a>
+    </nav>
+  </main>
+  <button type="button" class="back-to-top" aria-label="回到顶部">↑</button>
+</body>
+</html>

@@ -1,0 +1,661 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="CRTC Web SDK 系统学习文档：3. 注册、通话与事件时序">
+  <title>3. 注册、通话与事件时序 · CRTC Web SDK 系统学习</title>
+  <link rel="stylesheet" href="assets/docs.css">
+  <script>try{const t=localStorage.getItem('crtc-user-guide-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+  <script src="assets/search-index.js" defer></script>
+  <script src="assets/mermaid.min.js" defer></script>
+  <script src="assets/docs.js" defer></script>
+</head>
+<body data-page="03-call-lifecycle.html">
+  <header class="topbar">
+    <button type="button" class="icon-button nav-toggle" aria-label="打开目录" aria-expanded="false">☰</button>
+    <a class="brand" href="index.html">CRTC Web SDK 系统学习</a>
+    <div class="search-shell">
+      <label class="sr-only" for="global-search">搜索全部文档</label>
+      <input id="global-search" type="search" autocomplete="off" placeholder="搜索 API、事件、功能…" aria-controls="search-results">
+      <kbd>/</kbd>
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
+    <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
+  </header>
+
+  <aside class="sidebar" aria-label="文档目录">
+    
+    <section class="nav-group">
+      <h2>系统学习指南</h2>
+      
+        <a class="nav-link" href="index.html">
+          学习指南首页
+        </a>
+        <a class="nav-link" href="01-sip-webrtc-basics.html">
+          1 SIP 与 WebRTC 基础
+        </a>
+        <a class="nav-link" href="02-quick-start.html">
+          2 快速完成第一通电话
+        </a>
+        <a class="nav-link active" href="03-call-lifecycle.html">
+          3 注册、通话与事件时序
+        </a>
+        <a class="nav-link" href="04-media-features.html">
+          4 AiNS、虚拟背景与混流
+        </a>
+        <a class="nav-link" href="05-call-statistics.html">
+          5 通话质量统计
+        </a>
+        <a class="nav-link" href="06-api-reference.html">
+          6 SDK API 参考
+        </a>
+        <a class="nav-link" href="07-upgrade-guide.html">
+          7 旧版功能升级指南
+        </a>
+        <a class="nav-link" href="08-demo-guide.html">
+          8 Base JS Demo 学习与验证
+        </a>
+    </section>
+  </aside>
+  <div class="sidebar-backdrop" hidden></div>
+
+  <main class="layout">
+    <article class="doc-content">
+      <h1 id="3-注册-通话与事件时序">3. 注册、通话与事件时序<a class="heading-anchor" href="#3-注册-通话与事件时序" aria-label="链接到本节">#</a></h1>
+<p><a href="02-quick-start.html">← 上一章：快速完成第一通电话</a> · <a href="index.html">学习目录</a> · <a href="04-media-features.html">下一章：媒体能力 →</a></p>
+<p>本章回答四个接入中最容易混淆的问题：什么时候注册、什么时候得到 <code>RTCSession</code>、什么时候可以使用 <code>session.connection</code>、什么事件负责成功/失败后的页面状态。</p>
+<h2 id="3-1-总体状态关系">3.1 总体状态关系<a class="heading-anchor" href="#3-1-总体状态关系" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">UA 未启动
+  └─ ua.start()
+      └─ WSS 连接中
+          ├─ connected
+          │   └─ SIP 注册中
+          │       ├─ registered → 允许呼叫
+          │       └─ registrationFailed → 禁止呼叫
+          └─ disconnected / failed
+
+每一通电话
+  └─ newRTCSession
+      ├─ progress / trying
+      ├─ accepted
+      ├─ confirmed → 通话已建立
+      ├─ failed → 未建立成功即结束
+      └─ ended → 已建立后结束
+</code></pre>
+</div><p><code>connected</code> 只表示 WSS 信令传输已连接，不能代替 <code>registered</code>。页面开放呼叫按钮前至少检查 <code>ua.isConnected()</code> 和 <code>ua.isRegistered()</code>。</p>
+<h2 id="3-2-自动注册时序">3.2 自动注册时序<a class="heading-anchor" href="#3-2-自动注册时序" aria-label="链接到本节">#</a></h2>
+<p>默认 <code>register: true</code>。调用 <code>ua.start()</code> 后，WSS 连接成功会自动发送 SIP REGISTER。</p>
+<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">sequenceDiagram
+    autonumber
+    participant Page as &quot;前端页面&quot;
+    participant UA as &quot;CRTC.UA&quot;
+    participant WSS as &quot;WSS 信令服务&quot;
+    participant SIP as &quot;SIP 注册服务&quot;
+
+    Page-&gt;&gt;UA: &quot;new CRTC.UA({ register: true, ... })&quot;
+    Page-&gt;&gt;UA: &quot;绑定 connected/registered/registrationFailed/disconnected&quot;
+    Page-&gt;&gt;UA: &quot;ua.start()&quot;
+    UA-&gt;&gt;WSS: &quot;建立安全 WebSocket&quot;
+    alt WSS 建立成功
+        WSS--&gt;&gt;UA: &quot;连接成功&quot;
+        UA--&gt;&gt;Page: &quot;connected&quot;
+        UA-&gt;&gt;SIP: &quot;自动发送 REGISTER&quot;
+        alt 注册成功
+            SIP--&gt;&gt;UA: &quot;200 OK&quot;
+            UA--&gt;&gt;Page: &quot;registered({ response })&quot;
+            Page-&gt;&gt;Page: &quot;开放呼叫按钮&quot;
+        else 注册被拒绝或超时
+            SIP--&gt;&gt;UA: &quot;失败响应或超时&quot;
+            UA--&gt;&gt;Page: &quot;registrationFailed({ response, cause })&quot;
+            Page-&gt;&gt;Page: &quot;保持呼叫按钮禁用并提示原因&quot;
+        end
+    else WSS 失败或断开
+        WSS--&gt;&gt;UA: &quot;关闭/错误&quot;
+        UA--&gt;&gt;Page: &quot;disconnected({ code, reason, error })&quot;
+        Page-&gt;&gt;Page: &quot;禁用新呼叫&quot;
+    end</pre></div>
+<p>自动注册配置：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const ua = new CRTC.UA({
+  sockets          : socket,
+  uri              : &#39;sip:alice@example.com&#39;,
+  password         : &#39;alice-password&#39;,
+  secret_key       : &#39;SDK 授权码&#39;,
+  register         : true,
+  register_expires : 600
+});
+
+ua.on(&#39;registered&#39;, function()
+{
+  callButton.disabled = false;
+});
+
+ua.start();
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>配置</th>
+<th align="right">默认值</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>register</code></td>
+<td align="right"><code>true</code></td>
+<td>WSS 连接成功后是否自动注册</td>
+</tr>
+<tr>
+<td><code>register_expires</code></td>
+<td align="right"><code>600</code> 秒</td>
+<td>REGISTER 过期时间；已注册后会按注册生命周期刷新</td>
+</tr>
+<tr>
+<td><code>connection_recovery_min_interval</code></td>
+<td align="right"><code>2</code> 秒</td>
+<td>信令恢复重试的最小间隔</td>
+</tr>
+<tr>
+<td><code>connection_recovery_max_interval</code></td>
+<td align="right"><code>30</code> 秒</td>
+<td>信令恢复重试的最大间隔</td>
+</tr>
+</tbody></table></div>
+<p>Base JS Demo 为了便于快速观察刷新，设置 <code>register_expires: 20</code>，并把恢复间隔设置为 <code>2～3</code> 秒。业务项目应使用服务端要求的值，不必照搬 Demo 的短过期时间。</p>
+<h2 id="3-3-手动注册时序">3.3 手动注册时序<a class="heading-anchor" href="#3-3-手动注册时序" aria-label="链接到本节">#</a></h2>
+<p>需要先建立 WSS、再由业务决定何时注册时，使用 <code>register: false</code>，并在 <code>connected</code> 之后调用 <code>ua.register()</code>。</p>
+<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">sequenceDiagram
+    autonumber
+    participant Page as &quot;前端页面&quot;
+    participant UA as &quot;CRTC.UA&quot;
+    participant WSS as &quot;WSS 信令服务&quot;
+    participant SIP as &quot;SIP 注册服务&quot;
+
+    Page-&gt;&gt;UA: &quot;new CRTC.UA({ register: false, ... })&quot;
+    Page-&gt;&gt;UA: &quot;ua.start()&quot;
+    UA-&gt;&gt;WSS: &quot;建立 WebSocket&quot;
+    WSS--&gt;&gt;UA: &quot;连接成功&quot;
+    UA--&gt;&gt;Page: &quot;connected&quot;
+    Note over Page,UA: &quot;只有此时或 isConnected() 为 true 时才手动注册&quot;
+    Page-&gt;&gt;UA: &quot;ua.register()&quot;
+    UA-&gt;&gt;SIP: &quot;REGISTER&quot;
+    alt 200 OK
+        SIP--&gt;&gt;UA: &quot;注册成功&quot;
+        UA--&gt;&gt;Page: &quot;registered({ response })&quot;
+    else 失败响应或超时
+        SIP--&gt;&gt;UA: &quot;注册失败&quot;
+        UA--&gt;&gt;Page: &quot;registrationFailed({ response, cause })&quot;
+    end</pre></div>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const ua = new CRTC.UA({
+  sockets    : socket,
+  uri        : &#39;sip:alice@example.com&#39;,
+  password   : &#39;alice-password&#39;,
+  secret_key : &#39;SDK 授权码&#39;,
+  register   : false
+});
+
+ua.on(&#39;connected&#39;, function()
+{
+  ua.register();
+});
+
+ua.start();
+</code></pre>
+</div><p>Base JS Demo 可使用下面的 URL 验证手动注册；不传 <code>register=manual</code> 时仍为自动注册：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">http://localhost:8080/demo/base-js/index.html?caller=7300&amp;register=manual
+</code></pre>
+</div><p>自动注册与手动注册只改变 REGISTER 的触发方式，不改变 <code>registered</code>、<code>registrationFailed</code> 事件和后续呼叫 API。</p>
+<h2 id="3-4-ua-网络事件与页面状态">3.4 UA 网络事件与页面状态<a class="heading-anchor" href="#3-4-ua-网络事件与页面状态" aria-label="链接到本节">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>事件/方法</th>
+<th>触发条件或返回值</th>
+<th>页面处理</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>browser:navigator:offline</code></td>
+<td>浏览器 <code>navigator</code> 判断离线</td>
+<td>显示设备网络已断开，不发起新呼叫</td>
+</tr>
+<tr>
+<td><code>browser:navigator:online</code></td>
+<td>浏览器判断恢复在线</td>
+<td>显示正在恢复；不要直接当作已注册</td>
+</tr>
+<tr>
+<td><code>connected</code></td>
+<td>WSS 已建立</td>
+<td>自动注册时等待 <code>registered</code>；手动注册时调用 <code>register()</code></td>
+</tr>
+<tr>
+<td><code>disconnected(data)</code></td>
+<td>WSS 主动或被动断开</td>
+<td>禁止新呼叫；显示 <code>code/reason</code></td>
+</tr>
+<tr>
+<td><code>failed(data)</code></td>
+<td>UA 发生无法完成当前操作的错误</td>
+<td>记录 <code>originator/message/cause</code></td>
+</tr>
+<tr>
+<td><code>isConnected()</code></td>
+<td>当前 WSS 是否连接</td>
+<td>用于按钮或超时检查</td>
+</tr>
+<tr>
+<td><code>isRegistered()</code></td>
+<td>当前 SIP 是否注册</td>
+<td>呼叫前最终检查</td>
+</tr>
+<tr>
+<td><code>stop()</code></td>
+<td>主动停止 UA</td>
+<td>页面退出或明确注销整个 UA 时调用</td>
+</tr>
+</tbody></table></div>
+<p><code>online</code> 只说明浏览器网络接口恢复，WSS 和 SIP 注册可能仍在恢复。页面应等到 <code>connected</code>、<code>registered</code> 后再恢复呼叫按钮。</p>
+<h2 id="3-5-呼出完整时序">3.5 呼出完整时序<a class="heading-anchor" href="#3-5-呼出完整时序" aria-label="链接到本节">#</a></h2>
+<p>呼出前必须满足：UA 已注册、没有违反业务的并发通话限制、被叫地址非空。本地媒体权限可能在 <code>ua.call()</code> 内请求，所以 <code>ua.call()</code> 返回 Promise。</p>
+<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">sequenceDiagram
+    autonumber
+    participant Page as &quot;前端页面&quot;
+    participant UA as &quot;CRTC.UA&quot;
+    participant Media as &quot;摄像头/麦克风&quot;
+    participant Session as &quot;RTCSession&quot;
+    participant PC as &quot;RTCPeerConnection&quot;
+    participant SIP as &quot;SIP 服务/对端&quot;
+
+    Page-&gt;&gt;UA: &quot;ua.isRegistered()&quot;
+    alt 未注册
+        UA--&gt;&gt;Page: &quot;false&quot;
+        Page-&gt;&gt;Page: &quot;阻止呼叫并提示先完成注册&quot;
+    else 已注册
+        UA--&gt;&gt;Page: &quot;true&quot;
+        Page-&gt;&gt;UA: &quot;await ua.call(target, options)&quot;
+        UA-&gt;&gt;Media: &quot;按 mediaConstraints 请求本地媒体&quot;
+        alt 权限拒绝/设备或约束失败
+            Media--&gt;&gt;UA: &quot;reject Error&quot;
+            UA--&gt;&gt;Page: &quot;ua.call() Promise reject&quot;
+            Page-&gt;&gt;Page: &quot;恢复按钮并提示权限/设备问题&quot;
+        else 采集成功或使用 mediaStream
+            Media--&gt;&gt;Session: &quot;本地 MediaStream&quot;
+            Session-&gt;&gt;PC: &quot;创建 PC、加入轨道、生成 SDP Offer&quot;
+            UA--&gt;&gt;Page: &quot;newRTCSession({ originator: &#39;local&#39;, session, request })&quot;
+            Page-&gt;&gt;Session: &quot;绑定本通电话全部事件&quot;
+            UA-&gt;&gt;SIP: &quot;INVITE + SDP Offer + extraHeaders&quot;
+            UA--&gt;&gt;Page: &quot;ua.call() resolve(session)&quot;
+            SIP--&gt;&gt;Session: &quot;100 Trying&quot;
+            Session--&gt;&gt;Page: &quot;trying&quot;
+            SIP--&gt;&gt;Session: &quot;180/183 等 1xx&quot;
+            Session--&gt;&gt;Page: &quot;progress({ originator: &#39;remote&#39;, response })&quot;
+            opt 183 携带早期媒体
+                SIP--&gt;&gt;PC: &quot;远端媒体轨道&quot;
+                PC--&gt;&gt;Page: &quot;connection.ontrack&quot;
+            end
+            alt 对端接听
+                SIP--&gt;&gt;Session: &quot;200 OK + SDP Answer&quot;
+                Session--&gt;&gt;Page: &quot;accepted({ response })&quot;
+                Session-&gt;&gt;SIP: &quot;ACK&quot;
+                Session--&gt;&gt;Page: &quot;confirmed&quot;
+                Session--&gt;&gt;Page: &quot;stats:* 周期事件&quot;
+            else 拒接/取消/超时/协商失败
+                SIP--&gt;&gt;Session: &quot;失败响应或超时&quot;
+                Session--&gt;&gt;Page: &quot;failed({ originator, message, cause })&quot;
+                Page-&gt;&gt;Page: &quot;清理本通电话 UI 和引用&quot;
+            end
+        end
+    end</pre></div>
+<p>呼出示例：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">async function call(target)
+{
+  if (!ua.isRegistered())
+  {
+    throw new Error(&#39;SIP 尚未注册&#39;);
+  }
+
+  try
+  {
+    const session = await ua.call(target, buildCallOptions());
+
+    // 呼出 PC 已创建后可绑定远端轨道。
+    bindPeerConnection(session.connection);
+    return session;
+  }
+  catch (error)
+  {
+    console.error(&#39;呼叫初始化失败：&#39;, error);
+    throw error;
+  }
+}
+</code></pre>
+</div><h2 id="3-6-呼入与接听完整时序">3.6 呼入与接听完整时序<a class="heading-anchor" href="#3-6-呼入与接听完整时序" aria-label="链接到本节">#</a></h2>
+<p>呼入时先收到 <code>newRTCSession</code>。此时可以读取主叫、呼叫模式和随路头，但不要假设本地媒体已经采集。用户点击接听后调用 <code>answer(options)</code>；Demo 中 <code>answer()</code> 调用返回后即可读取 <code>session.connection</code> 并绑定浏览器事件。</p>
+<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">sequenceDiagram
+    autonumber
+    participant SIP as &quot;SIP 服务/对端&quot;
+    participant UA as &quot;CRTC.UA&quot;
+    participant Session as &quot;RTCSession&quot;
+    participant Page as &quot;前端页面&quot;
+    participant Media as &quot;摄像头/麦克风&quot;
+    participant PC as &quot;RTCPeerConnection&quot;
+
+    SIP-&gt;&gt;UA: &quot;INVITE + SDP Offer&quot;
+    UA-&gt;&gt;Session: &quot;创建呼入会话&quot;
+    UA--&gt;&gt;Page: &quot;newRTCSession({ originator: &#39;remote&#39;, session, request })&quot;
+    Page-&gt;&gt;Page: &quot;读取 request.from/request.mode/自定义头&quot;
+    Page-&gt;&gt;Session: &quot;绑定 progress/accepted/confirmed/failed/ended 等事件&quot;
+    Session-&gt;&gt;SIP: &quot;本地振铃响应&quot;
+    Session--&gt;&gt;Page: &quot;progress({ originator: &#39;local&#39;, response })&quot;
+    alt 用户接听
+        Page-&gt;&gt;Session: &quot;session.answer(options)&quot;
+        Session-&gt;&gt;PC: &quot;创建 PC&quot;
+        Page-&gt;&gt;PC: &quot;绑定 connection.ontrack&quot;
+        Session-&gt;&gt;Media: &quot;按 mediaConstraints 请求媒体&quot;
+        alt 采集/协商成功
+            Media--&gt;&gt;Session: &quot;MediaStream&quot;
+            Session-&gt;&gt;PC: &quot;加入轨道并生成 SDP Answer&quot;
+            Session-&gt;&gt;SIP: &quot;200 OK + SDP Answer&quot;
+            Session--&gt;&gt;Page: &quot;accepted({ response })&quot;
+            SIP-&gt;&gt;Session: &quot;ACK&quot;
+            Session--&gt;&gt;Page: &quot;confirmed&quot;
+            Session--&gt;&gt;Page: &quot;stats:* 周期事件&quot;
+        else 采集或协商失败
+            Media--&gt;&gt;Session: &quot;Error&quot;
+            Session--&gt;&gt;Page: &quot;failed({ cause }) 或 mediaerror&quot;
+            Page-&gt;&gt;Page: &quot;提示权限/设备并清理&quot;
+        end
+    else 用户拒接
+        Page-&gt;&gt;Session: &quot;terminate({ status_code: 486 })&quot;
+        Session-&gt;&gt;SIP: &quot;486 Busy Here&quot;
+        Session--&gt;&gt;Page: &quot;failed({ cause })&quot;
+    else 对端取消
+        SIP-&gt;&gt;Session: &quot;CANCEL&quot;
+        Session--&gt;&gt;Page: &quot;failed({ cause })&quot;
+    end</pre></div>
+<p>接听示例：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function answerIncoming(session, video)
+{
+  session.answer({
+    pcConfig,
+    mediaConstraints : {
+      audio : true,
+      video : video ? videoConstraints : false
+    }
+  });
+
+  if (session.connection)
+  {
+    bindPeerConnection(session.connection);
+  }
+}
+</code></pre>
+</div><h2 id="3-7-newrtcsession-统一会话入口">3.7 <code>newRTCSession</code> 统一会话入口<a class="heading-anchor" href="#3-7-newrtcsession-统一会话入口" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">ua.on(&#39;newRTCSession&#39;, function(data)
+{
+  const session = data.session;
+
+  console.log(data.originator === &#39;remote&#39; ? &#39;呼入&#39; : &#39;呼出&#39;);
+  bindSessionEvents(session);
+});
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型/可选值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>originator</code></td>
+<td><code>local</code> / <code>remote</code></td>
+<td><code>local</code> 为本端呼出，<code>remote</code> 为远端呼入</td>
+</tr>
+<tr>
+<td><code>session</code></td>
+<td><code>RTCSession</code></td>
+<td>本通电话唯一的会话对象</td>
+</tr>
+<tr>
+<td><code>request</code></td>
+<td>SIP 请求对象</td>
+<td>可读取主叫、呼叫模式和自定义头</td>
+</tr>
+</tbody></table></div>
+<p>每一通电话都要重新绑定事件。不要把上一通的 composer、AiNS 控制器、统计实例或 <code>session.connection</code> 用到下一通。</p>
+<p>如果页面只允许一通电话，可在已有会话时拒绝新呼入：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">if (currentSession &amp;&amp; currentSession !== data.session)
+{
+  data.session.terminate({ status_code: 486 });
+  return;
+}
+</code></pre>
+</div><p><code>486</code> 表示忙。是否拒绝、排队或展示第二通来电由产品策略决定。</p>
+<h2 id="3-8-会话事件的触发条件和参数">3.8 会话事件的触发条件和参数<a class="heading-anchor" href="#3-8-会话事件的触发条件和参数" aria-label="链接到本节">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>事件</th>
+<th>主要参数</th>
+<th>触发条件</th>
+<th>页面建议</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>trying</code></td>
+<td>无</td>
+<td>呼出进入 Trying 阶段</td>
+<td>显示“正在呼叫”</td>
+</tr>
+<tr>
+<td><code>progress</code></td>
+<td><code>{ originator, response }</code></td>
+<td>收到或发出 1xx；<code>remote</code> 常用于呼出回铃，<code>local</code> 常用于呼入振铃</td>
+<td>显示振铃/回铃；处理早期媒体</td>
+</tr>
+<tr>
+<td><code>accepted</code></td>
+<td><code>{ response }</code></td>
+<td>INVITE 已收到成功响应，但会话确认流程尚可能继续</td>
+<td>显示“对方已接听，正在建立”</td>
+</tr>
+<tr>
+<td><code>confirmed</code></td>
+<td>可忽略或读取来源</td>
+<td>ACK 完成，会话正式建立</td>
+<td>切换为通话中 UI</td>
+</tr>
+<tr>
+<td><code>failed</code></td>
+<td><code>{ originator, message, cause }</code></td>
+<td>会话未建立即结束：拒接、取消、超时、媒体或信令失败</td>
+<td>清理并展示失败原因</td>
+</tr>
+<tr>
+<td><code>ended</code></td>
+<td><code>{ originator, message, cause }</code></td>
+<td>已建立会话被任一方挂断或终止</td>
+<td>清理并恢复可呼叫状态</td>
+</tr>
+<tr>
+<td><code>hold</code> / <code>unhold</code></td>
+<td><code>{ originator: &#39;local&#39; | &#39;remote&#39; }</code></td>
+<td>本端或远端保持状态变化</td>
+<td>更新保持按钮和提示</td>
+</tr>
+<tr>
+<td><code>muted</code> / <code>unmuted</code></td>
+<td><code>{ audio, video }</code></td>
+<td>本端静音/恢复音频或视频</td>
+<td>更新麦克风/摄像头按钮</td>
+</tr>
+<tr>
+<td><code>mode</code></td>
+<td><code>{ mode: &#39;audio&#39; | &#39;video&#39; }</code></td>
+<td>通话模式升级或降级完成</td>
+<td>更新媒体模式 UI</td>
+</tr>
+<tr>
+<td><code>cameraChanged</code></td>
+<td><code>{ videoStream }</code></td>
+<td>摄像头切换完成</td>
+<td>更新本地预览</td>
+</tr>
+<tr>
+<td><code>peerconnection:iceConnectionState</code></td>
+<td>ICE 状态字符串</td>
+<td>ICE 状态改变</td>
+<td>显示连接恢复/失败信息</td>
+</tr>
+<tr>
+<td><code>remoteShared</code></td>
+<td><code>{ sharedStream }</code></td>
+<td>远端开始共享</td>
+<td>播放共享视频流</td>
+</tr>
+<tr>
+<td><code>remoteUnShared</code></td>
+<td>无</td>
+<td>远端停止共享</td>
+<td>清空共享区域</td>
+</tr>
+<tr>
+<td><code>mediaerror</code></td>
+<td><code>{ type, mediastream }</code></td>
+<td>轨道或流异常</td>
+<td>提示设备/媒体问题</td>
+</tr>
+<tr>
+<td><code>mediaEffectsIssue</code></td>
+<td><code>{ module, message, ... }</code></td>
+<td>AiNS、虚拟背景或混流异常/降级</td>
+<td>保持通话，提示效果不可用</td>
+</tr>
+<tr>
+<td><code>stats:*</code></td>
+<td>见第 5 章</td>
+<td>PC 建立后周期采样</td>
+<td>更新质量面板</td>
+</tr>
+</tbody></table></div>
+<p><code>failed</code> 和 <code>ended</code> 必须采用同样完整的清理流程，但含义不同：<code>failed</code> 表示电话没有成功进入稳定通话，<code>ended</code> 表示已经建立后结束。</p>
+<h2 id="3-9-远端轨道与媒体播放">3.9 远端轨道与媒体播放<a class="heading-anchor" href="#3-9-远端轨道与媒体播放" aria-label="链接到本节">#</a></h2>
+<p>Demo 直接使用 <code>session.connection</code>：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function bindPeerConnection(pc)
+{
+  if (!pc)
+  {
+    return;
+  }
+
+  pc.ontrack = function(event)
+  {
+    const stream = event.streams &amp;&amp; event.streams[0];
+
+    if (stream)
+    {
+      remoteVideo.srcObject = stream;
+      remoteVideo.play().catch(function()
+      {
+        showManualPlayButton();
+      });
+    }
+  };
+}
+</code></pre>
+</div><p>还可以在 <code>confirmed</code> 后通过 <code>CRTC.Utils.getStreams(session.connection, &#39;local&#39;/&#39;remote&#39;)</code> 获取已聚合的本地或远端流。<code>ontrack</code> 仍应保留，因为远端可能在早期媒体、重协商或共享时新增轨道。</p>
+<h2 id="3-10-挂断-拒接与取消">3.10 挂断、拒接与取消<a class="heading-anchor" href="#3-10-挂断-拒接与取消" aria-label="链接到本节">#</a></h2>
+<p>同一个 <code>terminate()</code> 会根据当前阶段发送不同信令：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>当前阶段</th>
+<th>调用</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>呼入振铃中</td>
+<td><code>terminate({ status_code: 486 })</code></td>
+<td>拒接来电</td>
+</tr>
+<tr>
+<td>呼出尚未接通</td>
+<td><code>terminate()</code></td>
+<td>取消呼叫</td>
+</tr>
+<tr>
+<td>已建立</td>
+<td><code>terminate()</code></td>
+<td>挂断通话</td>
+</tr>
+</tbody></table></div>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function hangup()
+{
+  if (currentSession)
+  {
+    currentSession.terminate();
+  }
+}
+</code></pre>
+</div><p>不要在点击挂断后立即假设所有状态已完成；最终页面清理由对应会话的 <code>failed</code> 或 <code>ended</code> 处理，避免本端和远端事件顺序不同造成残留。</p>
+<h2 id="3-11-会话清理清单">3.11 会话清理清单<a class="heading-anchor" href="#3-11-会话清理清单" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function clearSession(session)
+{
+  if (currentSession !== session)
+  {
+    return;
+  }
+
+  currentSession = null;
+  remoteVideo.srcObject = null;
+  sharedVideo.srcObject = null;
+  callButton.disabled = !ua.isRegistered();
+  answerButton.disabled = true;
+  hangupButton.disabled = true;
+}
+
+session.on(&#39;failed&#39;, function() { clearSession(session); });
+session.on(&#39;ended&#39;, function() { clearSession(session); });
+</code></pre>
+</div><p>至少清理：</p>
+<ul>
+<li>当前 <code>RTCSession</code> 引用。</li>
+<li>本地、远端和共享 <code>&lt;video&gt;/&lt;audio&gt;</code> 的 <code>srcObject</code>。</li>
+<li>与本通电话关联的 composer、AiNS 和统计页面引用。</li>
+<li>页面创建的屏幕共享流、自定义预览流和定时器。</li>
+<li>通话按钮、接听按钮、保持/静音/共享状态。</li>
+</ul>
+<p>会话内的统计实例和媒体效果控制器由会话释放；业务自行创建的 <code>MediaStream</code> 仍应停止其 tracks。</p>
+<h2 id="3-12-页面销毁和-ua-停止">3.12 页面销毁和 UA 停止<a class="heading-anchor" href="#3-12-页面销毁和-ua-停止" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function disposeCallPage()
+{
+  if (currentSession)
+  {
+    currentSession.terminate();
+    currentSession = null;
+  }
+
+  remoteVideo.srcObject = null;
+  ua.stop();
+}
+</code></pre>
+</div><p>如果 <code>UA</code> 是整个应用共享的单例，组件卸载时只清理组件拥有的会话和 DOM，不要停止其他页面仍在使用的 UA。只有退出账号、关闭通信模块或整个页面卸载时才调用 <code>ua.stop()</code>。</p>
+<p><a href="02-quick-start.html">← 上一章：快速完成第一通电话</a> · <a href="04-media-features.html">下一章：媒体能力 →</a></p>
+
+      <nav class="page-pagination" aria-label="上一篇和下一篇">
+        <a class="previous" href="02-quick-start.html"><span>上一篇</span>2. 快速完成第一通电话</a>
+        <a class="next" href="04-media-features.html"><span>下一篇</span>4. 媒体能力：AiNS、虚拟背景与混流</a>
+      </nav>
+    </article>
+    
+    <nav class="page-toc" aria-label="本页目录">
+      <h2>本页目录</h2>
+      <a class="toc-depth-2" href="#3-1-总体状态关系">3.1 总体状态关系</a><a class="toc-depth-2" href="#3-2-自动注册时序">3.2 自动注册时序</a><a class="toc-depth-2" href="#3-3-手动注册时序">3.3 手动注册时序</a><a class="toc-depth-2" href="#3-4-ua-网络事件与页面状态">3.4 UA 网络事件与页面状态</a><a class="toc-depth-2" href="#3-5-呼出完整时序">3.5 呼出完整时序</a><a class="toc-depth-2" href="#3-6-呼入与接听完整时序">3.6 呼入与接听完整时序</a><a class="toc-depth-2" href="#3-7-newrtcsession-统一会话入口">3.7 newRTCSession 统一会话入口</a><a class="toc-depth-2" href="#3-8-会话事件的触发条件和参数">3.8 会话事件的触发条件和参数</a><a class="toc-depth-2" href="#3-9-远端轨道与媒体播放">3.9 远端轨道与媒体播放</a><a class="toc-depth-2" href="#3-10-挂断-拒接与取消">3.10 挂断、拒接与取消</a><a class="toc-depth-2" href="#3-11-会话清理清单">3.11 会话清理清单</a><a class="toc-depth-2" href="#3-12-页面销毁和-ua-停止">3.12 页面销毁和 UA 停止</a>
+    </nav>
+  </main>
+  <button type="button" class="back-to-top" aria-label="回到顶部">↑</button>
+</body>
+</html>

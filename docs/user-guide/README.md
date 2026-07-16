@@ -2,6 +2,12 @@
 
 这套文档面向熟悉 JavaScript、DOM、Promise 和浏览器开发，但第一次接入 SIP/WebRTC 的前端工程师。建议按章节顺序完成基础通话、媒体能力和通话质量统计的接入。
 
+## HTML 文档站
+
+- 浏览入口：[html/index.html](./html/index.html)
+- 页面支持左侧章节导航、全文搜索、页内目录、Mermaid 流程图、代码复制、明暗主题和移动端阅读。
+- Markdown 更新后，在本目录运行 `node build-html.cjs` 重新生成并校验全部 HTML 页面。
+
 ## 学完可以完成什么
 
 - 配置并启动 `CRTC.UA`，完成 SIP 注册。

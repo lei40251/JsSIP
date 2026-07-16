@@ -1,0 +1,921 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="CRTC Web SDK 系统学习文档：4. 媒体能力：AiNS、虚拟背景与混流">
+  <title>4. 媒体能力：AiNS、虚拟背景与混流 · CRTC Web SDK 系统学习</title>
+  <link rel="stylesheet" href="assets/docs.css">
+  <script>try{const t=localStorage.getItem('crtc-user-guide-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+  <script src="assets/search-index.js" defer></script>
+  <script src="assets/mermaid.min.js" defer></script>
+  <script src="assets/docs.js" defer></script>
+</head>
+<body data-page="04-media-features.html">
+  <header class="topbar">
+    <button type="button" class="icon-button nav-toggle" aria-label="打开目录" aria-expanded="false">☰</button>
+    <a class="brand" href="index.html">CRTC Web SDK 系统学习</a>
+    <div class="search-shell">
+      <label class="sr-only" for="global-search">搜索全部文档</label>
+      <input id="global-search" type="search" autocomplete="off" placeholder="搜索 API、事件、功能…" aria-controls="search-results">
+      <kbd>/</kbd>
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
+    <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
+  </header>
+
+  <aside class="sidebar" aria-label="文档目录">
+    
+    <section class="nav-group">
+      <h2>系统学习指南</h2>
+      
+        <a class="nav-link" href="index.html">
+          学习指南首页
+        </a>
+        <a class="nav-link" href="01-sip-webrtc-basics.html">
+          1 SIP 与 WebRTC 基础
+        </a>
+        <a class="nav-link" href="02-quick-start.html">
+          2 快速完成第一通电话
+        </a>
+        <a class="nav-link" href="03-call-lifecycle.html">
+          3 注册、通话与事件时序
+        </a>
+        <a class="nav-link active" href="04-media-features.html">
+          4 AiNS、虚拟背景与混流
+        </a>
+        <a class="nav-link" href="05-call-statistics.html">
+          5 通话质量统计
+        </a>
+        <a class="nav-link" href="06-api-reference.html">
+          6 SDK API 参考
+        </a>
+        <a class="nav-link" href="07-upgrade-guide.html">
+          7 旧版功能升级指南
+        </a>
+        <a class="nav-link" href="08-demo-guide.html">
+          8 Base JS Demo 学习与验证
+        </a>
+    </section>
+  </aside>
+  <div class="sidebar-backdrop" hidden></div>
+
+  <main class="layout">
+    <article class="doc-content">
+      <h1 id="4-媒体能力-ains-虚拟背景与混流">4. 媒体能力：AiNS、虚拟背景与混流<a class="heading-anchor" href="#4-媒体能力-ains-虚拟背景与混流" aria-label="链接到本节">#</a></h1>
+<p><a href="03-call-lifecycle.html">← 上一章：通话流程与事件时序</a> · <a href="index.html">学习目录</a> · <a href="05-call-statistics.html">下一章：通话质量统计 →</a></p>
+<p>本章使用 SDK 的 <code>RTCSession</code> 集成方式。呼叫或接听时传入初始配置，通话中从当前会话获取控制器。普通通话不需要业务创建独立处理实例，也不需要自行替换发送轨道。</p>
+<h2 id="4-1-三项能力的关系">4.1 三项能力的关系<a class="heading-anchor" href="#4-1-三项能力的关系" aria-label="链接到本节">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>能力</th>
+<th>处理对象</th>
+<th>初始入口</th>
+<th>通话中入口</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>AiNS</td>
+<td>本地麦克风音频</td>
+<td><code>options.aiNoiseSuppression</code></td>
+<td><code>session.getAiNoiseSuppression()</code></td>
+</tr>
+<tr>
+<td>AI 虚拟背景</td>
+<td><code>slot 0</code> 本地摄像头画面</td>
+<td><code>mediaEffectsComposer.sources[].aiVirtualBackground</code></td>
+<td><code>session.getMediaEffectsComposer()</code></td>
+</tr>
+<tr>
+<td>音视频混流</td>
+<td>摄像头、屏幕或其他 <code>MediaStream</code></td>
+<td><code>options.mediaEffectsComposer</code></td>
+<td><code>session.getMediaEffectsComposer()</code></td>
+</tr>
+</tbody></table></div>
+<p>虚拟背景是混流器某一路视频源的效果，因此它放在 <code>mediaEffectsComposer.sources</code> 中，而不是独立的会话顶层参数。</p>
+<h2 id="4-2-创建统一的呼叫参数">4.2 创建统一的呼叫参数<a class="heading-anchor" href="#4-2-创建统一的呼叫参数" aria-label="链接到本节">#</a></h2>
+<p>呼出 <code>ua.call()</code> 和呼入 <code>session.answer()</code> 应使用同一个构造函数，避免两条路径效果不一致：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const pcConfig = {
+  iceServers : [
+    {
+      urls       : &#39;turn:turn.example.com:3478&#39;,
+      username   : &#39;turn-user&#39;,
+      credential : &#39;turn-password&#39;
+    }
+  ]
+};
+
+function buildMediaOptions()
+{
+  return {
+    pcConfig,
+    mediaConstraints : {
+      audio : {
+        sampleRate   : 48000,
+        channelCount : 1
+      },
+      video : {
+        width     : { ideal: 1280 },
+        height    : { ideal: 720 },
+        frameRate : { ideal: 15 }
+      }
+    },
+    aiNoiseSuppression : {
+      enabled             : true,
+      noiseReductionLevel : 80,
+      outputGain          : 1,
+      assetConfig         : { cdnUrl: &#39;./assets/ains&#39; }
+    },
+    mediaEffectsComposer : {
+      width  : 1280,
+      height : 720,
+      fps    : 15,
+      sources : [
+        {
+          slot : 0,
+          aiVirtualBackground : {
+            mode         : &#39;blur&#39;,
+            blurRadius   : 16,
+            assetConfig : { cdnUrl: &#39;./assets/aivb&#39; }
+          }
+        }
+      ]
+    }
+  };
+}
+</code></pre>
+</div><p>应用到呼出和接听：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function startVideoCall(target)
+{
+  return ua.call(target, buildMediaOptions());
+}
+
+function answerVideoCall()
+{
+  if (currentSession &amp;&amp; currentSession.direction === &#39;incoming&#39;)
+  {
+    currentSession.answer(buildMediaOptions());
+  }
+}
+</code></pre>
+</div><p>不需要某项能力时，删除对应字段即可。纯音频通话不需要配置 <code>mediaEffectsComposer</code>。</p>
+<h2 id="4-3-ains">4.3 AiNS<a class="heading-anchor" href="#4-3-ains" aria-label="链接到本节">#</a></h2>
+<p>AiNS 处理本地麦克风轨道。建议请求 <code>48000Hz</code> 单声道，并避免同时启用其他第三方降噪，防止重复处理造成声音失真或音量降低。</p>
+<h3 id="参数">参数<a class="heading-anchor" href="#参数" aria-label="链接到本节">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>类型</th>
+<th align="right">默认值</th>
+<th>范围或说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>enabled</code></td>
+<td><code>boolean</code></td>
+<td align="right"><code>true</code></td>
+<td>是否启用</td>
+</tr>
+<tr>
+<td><code>noiseReductionLevel</code></td>
+<td><code>number</code></td>
+<td align="right"><code>80</code></td>
+<td><code>0~100</code></td>
+</tr>
+<tr>
+<td><code>outputGain</code></td>
+<td><code>number</code></td>
+<td align="right"><code>1</code></td>
+<td><code>0~4</code></td>
+</tr>
+<tr>
+<td><code>sampleRate</code></td>
+<td><code>number</code></td>
+<td align="right"><code>48000</code></td>
+<td>正整数</td>
+</tr>
+<tr>
+<td><code>preserveOtherTracks</code></td>
+<td><code>boolean</code></td>
+<td align="right"><code>true</code></td>
+<td>是否保留输入流中的非音频轨道</td>
+</tr>
+<tr>
+<td><code>assetConfig.cdnUrl</code></td>
+<td><code>string</code></td>
+<td align="right"><code>./static</code></td>
+<td>AiNS 资源目录</td>
+</tr>
+</tbody></table></div>
+<p><code>cdnUrl</code> 目录应包含：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">ans.wasm
+ans_onnx.tar.gz
+</code></pre>
+</div><h3 id="通话中调整">通话中调整<a class="heading-anchor" href="#通话中调整" aria-label="链接到本节">#</a></h3>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function updateAiNS(level, gain)
+{
+  const controller = currentSession &amp;&amp;
+    currentSession.getAiNoiseSuppression();
+
+  if (!controller)
+  {
+    console.warn(&#39;当前会话未启用 AiNS，或控制器尚未创建&#39;);
+    return;
+  }
+
+  controller.setSuppressionLevel(level);
+  const appliedGain = controller.setOutputGain(gain);
+
+  console.log(&#39;实际应用增益：&#39;, appliedGain);
+}
+</code></pre>
+</div><p>Base JS Demo 在呼叫/接听前通过下拉框决定是否创建 AiNS；通话中演示强度和输出增益热更新。若本通电话开始时未启用 AiNS，选择“开启”不会凭空创建当前控制器，应在下一次呼叫/接听参数中启用。</p>
+<p><code>getAiNoiseSuppression()</code> 在当前会话未配置 AiNS、控制器尚未创建或会话已结束时返回 <code>null</code>。</p>
+<h3 id="demo-对照">Demo 对照<a class="heading-anchor" href="#demo-对照" aria-label="链接到本节">#</a></h3>
+<p>Base JS Demo 中对应：</p>
+<ul>
+<li><code>buildCallAiNsOptions()</code>：构造呼叫和接听参数。</li>
+<li><code>applyAiNsLevelToCurrentCall()</code>：通话中修改降噪强度。</li>
+<li><code>applyAiNsOutputGainToCurrentCall()</code>：通话中修改输出增益。</li>
+</ul>
+<p>这些函数位于 <a href="../../../demo/base-js/js/app-media-effects.js"><code>demo/base-js/js/app-media-effects.js</code></a>。</p>
+<h2 id="4-4-ai-虚拟背景">4.4 AI 虚拟背景<a class="heading-anchor" href="#4-4-ai-虚拟背景" aria-label="链接到本节">#</a></h2>
+<p>SDK 会话集成中，本地摄像头是 <code>slot 0</code>。虚拟背景配置属于该输入源。</p>
+<h3 id="背景模式">背景模式<a class="heading-anchor" href="#背景模式" aria-label="链接到本节">#</a></h3>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const blurBackground = {
+  mode       : &#39;blur&#39;,
+  blurRadius : 16
+};
+
+const imageBackground = {
+  mode     : &#39;image&#39;,
+  imageUrl : &#39;https://static.example.com/office.jpg&#39;
+};
+
+const colorBackground = {
+  mode  : &#39;color&#39;,
+  color : &#39;#1f2937&#39;
+};
+
+const noBackgroundEffect = {
+  mode : &#39;none&#39;
+};
+</code></pre>
+</div><h3 id="常用参数">常用参数<a class="heading-anchor" href="#常用参数" aria-label="链接到本节">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th align="right">默认值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>enabled</code></td>
+<td align="right"><code>true</code></td>
+<td><code>false</code> 表示暂停虚拟背景处理；需要删除已有配置时调用清除方法</td>
+</tr>
+<tr>
+<td><code>mode</code></td>
+<td align="right"><code>none</code></td>
+<td><code>none</code>、<code>blur</code>、<code>image</code>、<code>color</code></td>
+</tr>
+<tr>
+<td><code>imageUrl</code></td>
+<td align="right">—</td>
+<td>图片背景 URL</td>
+</tr>
+<tr>
+<td><code>color</code></td>
+<td align="right">—</td>
+<td>纯色背景 CSS 颜色</td>
+</tr>
+<tr>
+<td><code>blurRadius</code></td>
+<td align="right"><code>12</code></td>
+<td>背景模糊半径</td>
+</tr>
+<tr>
+<td><code>video.width</code> / <code>video.height</code></td>
+<td align="right"><code>1280</code> / <code>720</code></td>
+<td>输入处理尺寸</td>
+</tr>
+<tr>
+<td><code>video.targetFps</code></td>
+<td align="right"><code>15</code></td>
+<td>处理帧率，范围 <code>1~60</code></td>
+</tr>
+<tr>
+<td><code>video.mirror</code></td>
+<td align="right"><code>false</code></td>
+<td>是否镜像输入源</td>
+</tr>
+<tr>
+<td><code>video.processingScale</code></td>
+<td align="right"><code>0.5</code></td>
+<td>处理缩放，范围 <code>0.1~1</code></td>
+</tr>
+<tr>
+<td><code>segmentation.frameSkip</code></td>
+<td align="right"><code>1</code></td>
+<td>跳帧数，范围 <code>0~120</code></td>
+</tr>
+<tr>
+<td><code>postProcessing.maxBlurRadius</code></td>
+<td align="right"><code>20</code></td>
+<td>最大模糊半径，范围 <code>0~100</code></td>
+</tr>
+<tr>
+<td><code>postProcessing.foregroundBrightness</code></td>
+<td align="right"><code>1.12</code></td>
+<td>前景亮度，范围 <code>0.5~2</code></td>
+</tr>
+<tr>
+<td><code>postProcessing.foregroundContrast</code></td>
+<td align="right"><code>1.10</code></td>
+<td>前景对比度，范围 <code>0.5~2</code></td>
+</tr>
+<tr>
+<td><code>postProcessing.foregroundSaturate</code></td>
+<td align="right"><code>1.08</code></td>
+<td>前景饱和度，范围 <code>0~2</code></td>
+</tr>
+</tbody></table></div>
+<h3 id="资源配置">资源配置<a class="heading-anchor" href="#资源配置" aria-label="链接到本节">#</a></h3>
+<p>使用 <code>assetConfig.cdnUrl</code> 时，目录应包含：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">vision.js
+vision_wasm_internal.js
+vision_wasm_internal.wasm
+vision_wasm_nosimd_internal.js
+vision_wasm_nosimd_internal.wasm
+selfie_segmenter_landscape.tflite
+</code></pre>
+</div><p>也可以分别配置 <code>moduleUrl</code>、<code>wasmBaseUrl</code> 和 <code>modelUrl</code>。显式 URL 优先于 <code>cdnUrl</code>。</p>
+<h3 id="通话中切换背景">通话中切换背景<a class="heading-anchor" href="#通话中切换背景" aria-label="链接到本节">#</a></h3>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function useImageBackground(imageUrl)
+{
+  const composer = currentSession &amp;&amp;
+    currentSession.getMediaEffectsComposer();
+
+  if (!composer)
+  {
+    console.warn(&#39;当前会话未启用 mediaEffectsComposer&#39;);
+    return;
+  }
+
+  composer.setSourceAiVirtualBackground(0, {
+    mode : &#39;image&#39;,
+    imageUrl,
+    assetConfig : { cdnUrl: &#39;./assets/aivb&#39; }
+  });
+}
+
+function clearVirtualBackground()
+{
+  const composer = currentSession &amp;&amp;
+    currentSession.getMediaEffectsComposer();
+
+  composer &amp;&amp; composer.clearSourceAiVirtualBackground(0);
+}
+</code></pre>
+</div><p>调用示例：<code>useImageBackground(&#39;https://static.example.com/meeting-room.jpg&#39;)</code>。</p>
+<p>图片跨域时，图片服务器必须返回允许当前页面访问的 CORS 响应头。</p>
+<h3 id="demo-对照-2">Demo 对照<a class="heading-anchor" href="#demo-对照-2" aria-label="链接到本节">#</a></h3>
+<ul>
+<li><code>buildCallComposerOptions()</code>：构造混流和虚拟背景初始配置。</li>
+<li><code>applyCurrentVirtualBackgroundToSession()</code>：通话中切换背景。</li>
+<li>函数实现见 <a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a>，页面控件见 <a href="../../../demo/base-js/index.html"><code>index.html</code></a>。</li>
+</ul>
+<h2 id="4-5-音视频混流">4.5 音视频混流<a class="heading-anchor" href="#4-5-音视频混流" aria-label="链接到本节">#</a></h2>
+<p>启用 <code>mediaEffectsComposer</code> 后，本地摄像头作为 <code>slot 0</code>。SDK 将合成结果用于当前通话，业务无需再次获取输出流。</p>
+<h3 id="会话配置">会话配置<a class="heading-anchor" href="#会话配置" aria-label="链接到本节">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>类型/可选值</th>
+<th align="right">默认值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>width</code> / <code>height</code></td>
+<td>正整数</td>
+<td align="right"><code>1280</code> / <code>720</code></td>
+<td>合成输出尺寸</td>
+</tr>
+<tr>
+<td><code>fps</code></td>
+<td>正整数</td>
+<td align="right">通常 <code>15</code></td>
+<td>输出帧率；部分需要帧率纠偏的浏览器环境会使用适配值</td>
+</tr>
+<tr>
+<td><code>backgroundColor</code></td>
+<td>CSS color</td>
+<td align="right"><code>#000</code></td>
+<td>无画面区域背景色</td>
+</tr>
+<tr>
+<td><code>audioGain</code></td>
+<td><code>number</code></td>
+<td align="right"><code>0.8</code></td>
+<td>输入源默认音频增益</td>
+</tr>
+<tr>
+<td><code>renderMode</code></td>
+<td>见下表</td>
+<td align="right"><code>auto</code></td>
+<td>渲染方式；普通接入使用 <code>auto</code></td>
+</tr>
+<tr>
+<td><code>workerUrl</code></td>
+<td><code>string | null</code></td>
+<td align="right"><code>null</code></td>
+<td>自定义 Worker 脚本地址</td>
+</tr>
+<tr>
+<td><code>dropFrameWhenBusy</code></td>
+<td><code>boolean</code></td>
+<td align="right"><code>true</code></td>
+<td>渲染忙时是否丢弃旧帧避免积压</td>
+</tr>
+<tr>
+<td><code>maxFrameQueue</code></td>
+<td>正整数</td>
+<td align="right"><code>1</code></td>
+<td>最大等待帧数</td>
+</tr>
+<tr>
+<td><code>preserveDrawingBuffer</code></td>
+<td><code>boolean</code></td>
+<td align="right"><code>true</code></td>
+<td>是否保留绘制缓冲</td>
+</tr>
+<tr>
+<td><code>enableInsertable</code></td>
+<td><code>boolean</code></td>
+<td align="right"><code>false</code></td>
+<td>是否请求可插入流输出能力；需浏览器支持</td>
+</tr>
+<tr>
+<td><code>manualCaptureFrameControl</code></td>
+<td><code>boolean</code></td>
+<td align="right"><code>true</code></td>
+<td>是否使用手动 requestFrame 控制输出</td>
+</tr>
+<tr>
+<td><code>sourceMirror</code></td>
+<td><code>boolean</code></td>
+<td align="right"><code>false</code></td>
+<td>输入源默认镜像</td>
+</tr>
+<tr>
+<td><code>mirror</code></td>
+<td><code>boolean</code></td>
+<td align="right"><code>false</code></td>
+<td>最终输出是否镜像</td>
+</tr>
+<tr>
+<td><code>mirrorWatermarksWithOutput</code></td>
+<td><code>boolean</code></td>
+<td align="right"><code>false</code></td>
+<td>输出镜像时水印是否一起镜像</td>
+</tr>
+<tr>
+<td><code>watermarks</code></td>
+<td>对象、数组或 <code>null</code></td>
+<td align="right"><code>[]</code></td>
+<td>初始水印配置</td>
+</tr>
+<tr>
+<td><code>sources</code></td>
+<td>数组或 <code>null</code></td>
+<td align="right"><code>null</code></td>
+<td>各输入源的 slot、增益、镜像和虚拟背景</td>
+</tr>
+</tbody></table></div>
+<p><code>renderMode</code> 可选值：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>auto</code></td>
+<td>自动选择并在能力不足时降级，普通接入推荐</td>
+</tr>
+<tr>
+<td><code>worker-webgl2</code></td>
+<td>Worker 中 WebGL2</td>
+</tr>
+<tr>
+<td><code>main-webgl2</code></td>
+<td>主线程 WebGL2</td>
+</tr>
+<tr>
+<td><code>worker-2d</code></td>
+<td>Worker 中 Canvas2D</td>
+</tr>
+<tr>
+<td><code>main-2d</code></td>
+<td>主线程 Canvas2D，兼容性优先</td>
+</tr>
+</tbody></table></div>
+<p>强制某种模式但浏览器不支持时可能触发降级或媒体效果事件。除非有明确兼容验证，不要固定渲染后端。</p>
+<p><code>sources[]</code>：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型/范围</th>
+<th>默认/说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>slot</code></td>
+<td>非负整数</td>
+<td>输入槽位；通话摄像头通常为 <code>0</code></td>
+</tr>
+<tr>
+<td><code>gain</code></td>
+<td><code>number</code></td>
+<td>该路音频增益；未传使用 <code>audioGain</code></td>
+</tr>
+<tr>
+<td><code>sourceMirror</code></td>
+<td><code>boolean</code></td>
+<td>覆盖该路输入镜像</td>
+</tr>
+<tr>
+<td><code>aiVirtualBackground</code></td>
+<td>AiVB 配置或 <code>null</code></td>
+<td>该路视频的虚拟背景</td>
+</tr>
+</tbody></table></div>
+<h3 id="添加屏幕作为第二路源">添加屏幕作为第二路源<a class="heading-anchor" href="#添加屏幕作为第二路源" aria-label="链接到本节">#</a></h3>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">let screenStream = null;
+
+async function addScreenToComposer()
+{
+  const composer = currentSession &amp;&amp;
+    currentSession.getMediaEffectsComposer();
+
+  if (!composer)
+  {
+    throw new Error(&#39;当前会话未启用 mediaEffectsComposer&#39;);
+  }
+
+  screenStream = await navigator.mediaDevices.getDisplayMedia({
+    video : true,
+    audio : true
+  });
+
+  composer.addSource(screenStream, {
+    slot : 1,
+    gain : 0.7
+  });
+
+  const screenTrack = screenStream.getVideoTracks()[0];
+
+  screenTrack.addEventListener(&#39;ended&#39;, function()
+  {
+    composer.removeSource(screenStream);
+    screenStream = null;
+  });
+}
+</code></pre>
+</div><p>同一 <code>slot</code> 添加新输入会替换原输入，最多支持 9 路源。移除输入时使用 <code>removeSource(stream)</code>，清空全部输入时使用 <code>clearSources()</code>。</p>
+<h3 id="更新镜像和水印">更新镜像和水印<a class="heading-anchor" href="#更新镜像和水印" aria-label="链接到本节">#</a></h3>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">async function updateComposerDisplay()
+{
+  const composer = currentSession &amp;&amp;
+    currentSession.getMediaEffectsComposer();
+
+  if (!composer)
+  {
+    return;
+  }
+
+  await composer.setMirror(true);
+  await composer.setWatermarks([
+    {
+      id       : &#39;brand&#39;,
+      target   : &#39;output&#39;,
+      type     : &#39;text&#39;,
+      text     : &#39;CRTC&#39;,
+      fontSize : 28,
+      color    : &#39;#ffffff&#39;,
+      opacity  : 1,
+      position : &#39;bottom-right&#39;
+    }
+  ]);
+}
+</code></pre>
+</div><p>Demo 实际使用 <code>getWatermarks()</code> 读取当前列表，过滤同 ID 的旧水印后再调用 <code>setWatermarks()</code>，这样更新文字水印时不会误删图片水印。</p>
+<h3 id="水印参数">水印参数<a class="heading-anchor" href="#水印参数" aria-label="链接到本节">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>类型/可选值</th>
+<th align="right">默认值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>id</code></td>
+<td><code>string</code></td>
+<td align="right">自动/业务设置</td>
+<td>建议为每个业务水印提供稳定 ID</td>
+</tr>
+<tr>
+<td><code>target</code></td>
+<td><code>output</code> / <code>source</code></td>
+<td align="right"><code>output</code></td>
+<td>输出级或输入源级水印</td>
+</tr>
+<tr>
+<td><code>type</code></td>
+<td><code>text</code> / <code>image</code></td>
+<td align="right">按内容推导</td>
+<td>文字或图片</td>
+</tr>
+<tr>
+<td><code>text</code></td>
+<td><code>string</code></td>
+<td align="right">—</td>
+<td>文字内容</td>
+</tr>
+<tr>
+<td><code>image</code></td>
+<td>URL、图片/画布/视频元素或 ImageBitmap</td>
+<td align="right">—</td>
+<td>图片内容</td>
+</tr>
+<tr>
+<td><code>position</code></td>
+<td>7 个预设或 <code>{ x, y }</code></td>
+<td align="right">预设默认</td>
+<td>锚点或坐标</td>
+</tr>
+<tr>
+<td><code>width</code> / <code>height</code></td>
+<td>正整数</td>
+<td align="right">图片原始/推导尺寸</td>
+<td>图片绘制尺寸</td>
+</tr>
+<tr>
+<td><code>opacity</code></td>
+<td><code>0～1</code></td>
+<td align="right"><code>1</code></td>
+<td>透明度</td>
+</tr>
+<tr>
+<td><code>fontSize</code></td>
+<td>正整数</td>
+<td align="right"><code>28</code></td>
+<td>文字字号</td>
+</tr>
+<tr>
+<td><code>color</code></td>
+<td>CSS color</td>
+<td align="right"><code>#fff</code></td>
+<td>文字颜色</td>
+</tr>
+<tr>
+<td><code>backgroundColor</code></td>
+<td>CSS color</td>
+<td align="right"><code>rgba(0,0,0,0.45)</code></td>
+<td>文字背景</td>
+</tr>
+<tr>
+<td><code>padding</code></td>
+<td>非负整数</td>
+<td align="right"><code>3</code></td>
+<td>文字背景内边距</td>
+</tr>
+<tr>
+<td><code>backgroundRadius</code></td>
+<td>非负整数</td>
+<td align="right"><code>3</code></td>
+<td>背景圆角</td>
+</tr>
+<tr>
+<td><code>margin</code></td>
+<td>非负整数</td>
+<td align="right"><code>16</code></td>
+<td>与画布边缘距离</td>
+</tr>
+</tbody></table></div>
+<p>预设位置：<code>top-left</code>、<code>top-center</code>、<code>top-right</code>、<code>center</code>、<code>bottom-left</code>、<code>bottom-center</code>、<code>bottom-right</code>。</p>
+<p><code>width</code>、<code>height</code>、<code>fps</code> 和 <code>renderMode</code> 等构造参数不支持在已有实例上热更新。需要改变这些参数时，在下一次呼叫或接听中传入新配置。</p>
+<h2 id="4-6-统一处理媒体效果异常">4.6 统一处理媒体效果异常<a class="heading-anchor" href="#4-6-统一处理媒体效果异常" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">session.on(&#39;mediaEffectsIssue&#39;, function(event)
+{
+  console.warn(&#39;媒体效果异常：&#39;, event.module, event.message);
+  showToast(&#39;当前媒体效果不可用，通话将继续&#39;);
+});
+</code></pre>
+</div><p>媒体效果失败时不要直接挂断。SDK 会尽量继续使用可用的原始媒体，业务可以关闭对应控件并提示用户。</p>
+<p>事件至少读取：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型/常见值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>module</code></td>
+<td><code>AiNS</code> / <code>MediaEffectsComposer</code></td>
+<td>出问题的能力</td>
+</tr>
+<tr>
+<td><code>message</code></td>
+<td><code>string</code></td>
+<td>可记录的错误说明</td>
+</tr>
+<tr>
+<td><code>component</code></td>
+<td><code>string</code>（可能存在）</td>
+<td>具体组件</td>
+</tr>
+<tr>
+<td><code>stage</code></td>
+<td><code>string</code>（可能存在）</td>
+<td>失败阶段</td>
+</tr>
+<tr>
+<td><code>severity</code></td>
+<td><code>debug</code> / <code>warn</code> / <code>error</code>（可能存在）</td>
+<td>严重程度</td>
+</tr>
+<tr>
+<td><code>fallbackApplied</code></td>
+<td><code>boolean</code>（可能存在）</td>
+<td>是否已回退</td>
+</tr>
+<tr>
+<td><code>degraded</code></td>
+<td><code>boolean</code>（可能存在）</td>
+<td>是否处于降级状态</td>
+</tr>
+</tbody></table></div>
+<h3 id="常见故障与页面处理">常见故障与页面处理<a class="heading-anchor" href="#常见故障与页面处理" aria-label="链接到本节">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>现象</th>
+<th>常见原因</th>
+<th>页面处理</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>AiNS 资源加载失败</td>
+<td>cdnUrl、404、CORS、WASM 被网关改写</td>
+<td>提示降噪不可用，继续基础音频</td>
+</tr>
+<tr>
+<td>输入流没有音频 track</td>
+<td>纯视频、自定义流构造错误</td>
+<td>不启用 AiNS，检查媒体流</td>
+</tr>
+<tr>
+<td>虚拟背景模型失败</td>
+<td>模型/WASM/vision.js 不可访问</td>
+<td>清除背景效果，继续摄像头</td>
+</tr>
+<tr>
+<td>图片背景或水印失败</td>
+<td>URL、CORS、图片解码</td>
+<td>提示资源不可用，保留其他效果</td>
+</tr>
+<tr>
+<td>composer 渲染降级</td>
+<td>Worker/WebGL/性能限制</td>
+<td>降低输出尺寸/FPS，继续观察</td>
+</tr>
+<tr>
+<td>控制器为 <code>null</code></td>
+<td>本通电话没有初始化该能力或已结束</td>
+<td>不调用方法，下次 call/answer 配置</td>
+</tr>
+</tbody></table></div>
+<h2 id="4-7-初始配置和热更新边界">4.7 初始配置和热更新边界<a class="heading-anchor" href="#4-7-初始配置和热更新边界" aria-label="链接到本节">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数/操作</th>
+<th>通话中可更新</th>
+<th>推荐入口</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>AiNS 强度</td>
+<td>是</td>
+<td><code>setSuppressionLevel()</code></td>
+</tr>
+<tr>
+<td>AiNS 输出增益</td>
+<td>是</td>
+<td><code>setOutputGain()</code></td>
+</tr>
+<tr>
+<td>虚拟背景模式/图片/颜色</td>
+<td>是</td>
+<td><code>setSourceAiVirtualBackground(0, options)</code></td>
+</tr>
+<tr>
+<td>清除虚拟背景</td>
+<td>是</td>
+<td><code>clearSourceAiVirtualBackground(0)</code></td>
+</tr>
+<tr>
+<td>输出镜像</td>
+<td>是</td>
+<td><code>setMirror(boolean)</code></td>
+</tr>
+<tr>
+<td>水印列表</td>
+<td>是</td>
+<td><code>setWatermarks()</code></td>
+</tr>
+<tr>
+<td>composer 宽、高、FPS</td>
+<td>否，下一通配置</td>
+<td><code>call/answer</code> 的 <code>mediaEffectsComposer</code></td>
+</tr>
+<tr>
+<td><code>renderMode</code></td>
+<td>否，下一通配置</td>
+<td>初始配置</td>
+</tr>
+<tr>
+<td>从未启用的 composer/AiNS</td>
+<td>不能靠 getter 创建</td>
+<td>下一通 <code>call/answer</code> 配置</td>
+</tr>
+</tbody></table></div>
+<h2 id="4-8-性能选择建议">4.8 性能选择建议<a class="heading-anchor" href="#4-8-性能选择建议" aria-label="链接到本节">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>设备/场景</th>
+<th>初始建议</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>普通桌面视频</td>
+<td><code>640×480</code> 或 <code>1280×720</code>、<code>15fps</code></td>
+</tr>
+<tr>
+<td>移动端/低性能设备</td>
+<td>先 <code>640×480@15fps</code>，减少后处理</td>
+</tr>
+<tr>
+<td>虚拟背景 + 水印</td>
+<td>先确认单路效果稳定，再组合</td>
+</tr>
+<tr>
+<td>多路输入</td>
+<td>控制每路分辨率/FPS，观察 CPU、掉帧和编码耗时</td>
+</tr>
+<tr>
+<td>屏幕文字内容</td>
+<td><code>contentHint=&#39;detail&#39;/&#39;text&#39;</code>，同时验证清晰度和帧率</td>
+</tr>
+</tbody></table></div>
+<p>效果参数越高不一定体验越好。编码器 CPU 受限、FPS 下降、分辨率下降会在第 5 章的统计 issues 中体现。</p>
+<h2 id="4-9-上线检查">4.9 上线检查<a class="heading-anchor" href="#4-9-上线检查" aria-label="链接到本节">#</a></h2>
+<ul>
+<li>呼出和呼入都使用同一套媒体参数。</li>
+<li>AiNS 和虚拟背景资源均可从生产页面直接访问。</li>
+<li>资源服务器已正确配置 HTTPS、CORS 和内容类型。</li>
+<li>切换背景、添加屏幕和停止共享都已验证。</li>
+<li>会话结束后页面不再保存旧 composer 或 AiNS 控制器。</li>
+<li>移动浏览器上验证过摄像头方向、画布尺寸、帧率和性能。</li>
+</ul>
+<p>旧版接口的逐项迁移见 <a href="07-upgrade-guide.html">旧版功能升级指南</a>。</p>
+<p><a href="03-call-lifecycle.html">← 上一章：通话流程与事件时序</a> · <a href="05-call-statistics.html">下一章：通话质量统计 →</a></p>
+
+      <nav class="page-pagination" aria-label="上一篇和下一篇">
+        <a class="previous" href="03-call-lifecycle.html"><span>上一篇</span>3. 注册、通话与事件时序</a>
+        <a class="next" href="05-call-statistics.html"><span>下一篇</span>5. 通话质量统计</a>
+      </nav>
+    </article>
+    
+    <nav class="page-toc" aria-label="本页目录">
+      <h2>本页目录</h2>
+      <a class="toc-depth-2" href="#4-1-三项能力的关系">4.1 三项能力的关系</a><a class="toc-depth-2" href="#4-2-创建统一的呼叫参数">4.2 创建统一的呼叫参数</a><a class="toc-depth-2" href="#4-3-ains">4.3 AiNS</a><a class="toc-depth-3" href="#参数">参数</a><a class="toc-depth-3" href="#通话中调整">通话中调整</a><a class="toc-depth-3" href="#demo-对照">Demo 对照</a><a class="toc-depth-2" href="#4-4-ai-虚拟背景">4.4 AI 虚拟背景</a><a class="toc-depth-3" href="#背景模式">背景模式</a><a class="toc-depth-3" href="#常用参数">常用参数</a><a class="toc-depth-3" href="#资源配置">资源配置</a><a class="toc-depth-3" href="#通话中切换背景">通话中切换背景</a><a class="toc-depth-3" href="#demo-对照-2">Demo 对照</a><a class="toc-depth-2" href="#4-5-音视频混流">4.5 音视频混流</a><a class="toc-depth-3" href="#会话配置">会话配置</a><a class="toc-depth-3" href="#添加屏幕作为第二路源">添加屏幕作为第二路源</a><a class="toc-depth-3" href="#更新镜像和水印">更新镜像和水印</a><a class="toc-depth-3" href="#水印参数">水印参数</a><a class="toc-depth-2" href="#4-6-统一处理媒体效果异常">4.6 统一处理媒体效果异常</a><a class="toc-depth-3" href="#常见故障与页面处理">常见故障与页面处理</a><a class="toc-depth-2" href="#4-7-初始配置和热更新边界">4.7 初始配置和热更新边界</a><a class="toc-depth-2" href="#4-8-性能选择建议">4.8 性能选择建议</a><a class="toc-depth-2" href="#4-9-上线检查">4.9 上线检查</a>
+    </nav>
+  </main>
+  <button type="button" class="back-to-top" aria-label="回到顶部">↑</button>
+</body>
+</html>

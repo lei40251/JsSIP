@@ -1,0 +1,695 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="CRTC Web SDK 系统学习文档：2. 快速完成第一通电话">
+  <title>2. 快速完成第一通电话 · CRTC Web SDK 系统学习</title>
+  <link rel="stylesheet" href="assets/docs.css">
+  <script>try{const t=localStorage.getItem('crtc-user-guide-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+  <script src="assets/search-index.js" defer></script>
+  <script src="assets/mermaid.min.js" defer></script>
+  <script src="assets/docs.js" defer></script>
+</head>
+<body data-page="02-quick-start.html">
+  <header class="topbar">
+    <button type="button" class="icon-button nav-toggle" aria-label="打开目录" aria-expanded="false">☰</button>
+    <a class="brand" href="index.html">CRTC Web SDK 系统学习</a>
+    <div class="search-shell">
+      <label class="sr-only" for="global-search">搜索全部文档</label>
+      <input id="global-search" type="search" autocomplete="off" placeholder="搜索 API、事件、功能…" aria-controls="search-results">
+      <kbd>/</kbd>
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
+    <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
+  </header>
+
+  <aside class="sidebar" aria-label="文档目录">
+    
+    <section class="nav-group">
+      <h2>系统学习指南</h2>
+      
+        <a class="nav-link" href="index.html">
+          学习指南首页
+        </a>
+        <a class="nav-link" href="01-sip-webrtc-basics.html">
+          1 SIP 与 WebRTC 基础
+        </a>
+        <a class="nav-link active" href="02-quick-start.html">
+          2 快速完成第一通电话
+        </a>
+        <a class="nav-link" href="03-call-lifecycle.html">
+          3 注册、通话与事件时序
+        </a>
+        <a class="nav-link" href="04-media-features.html">
+          4 AiNS、虚拟背景与混流
+        </a>
+        <a class="nav-link" href="05-call-statistics.html">
+          5 通话质量统计
+        </a>
+        <a class="nav-link" href="06-api-reference.html">
+          6 SDK API 参考
+        </a>
+        <a class="nav-link" href="07-upgrade-guide.html">
+          7 旧版功能升级指南
+        </a>
+        <a class="nav-link" href="08-demo-guide.html">
+          8 Base JS Demo 学习与验证
+        </a>
+    </section>
+  </aside>
+  <div class="sidebar-backdrop" hidden></div>
+
+  <main class="layout">
+    <article class="doc-content">
+      <h1 id="2-快速完成第一通电话">2. 快速完成第一通电话<a class="heading-anchor" href="#2-快速完成第一通电话" aria-label="链接到本节">#</a></h1>
+<p><a href="01-sip-webrtc-basics.html">← 上一章：SIP 与 WebRTC 基础</a> · <a href="index.html">学习目录</a> · <a href="03-call-lifecycle.html">下一章：通话流程与事件时序 →</a></p>
+<p>本章完成一个最小但完整的单通话页面，包括注册、呼出、来电、接听、远端视频、失败处理和挂断。</p>
+<h2 id="2-1-引入-sdk">2.1 引入 SDK<a class="heading-anchor" href="#2-1-引入-sdk" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>html</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-html">&lt;script src=&quot;./adapter-latest.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;./CRTC.min.js&quot;&gt;&lt;/script&gt;
+</code></pre>
+</div><p><code>adapter-latest.js</code> 用于浏览器 WebRTC 兼容，<code>CRTC.min.js</code> 是页面需要引入的 SDK 文件。Base JS Demo 使用 <code>dist/CRTC.min.js</code>。</p>
+<h2 id="2-2-准备页面元素">2.2 准备页面元素<a class="heading-anchor" href="#2-2-准备页面元素" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>html</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-html">&lt;p id=&quot;status&quot;&gt;尚未启动&lt;/p&gt;
+&lt;video id=&quot;remoteVideo&quot; autoplay playsinline&gt;&lt;/video&gt;
+
+&lt;input id=&quot;target&quot; value=&quot;sip:bob@example.com&quot;&gt;
+&lt;button id=&quot;callButton&quot; disabled&gt;音视频呼叫&lt;/button&gt;
+&lt;button id=&quot;answerButton&quot; disabled&gt;接听&lt;/button&gt;
+&lt;button id=&quot;hangupButton&quot; disabled&gt;挂断&lt;/button&gt;
+</code></pre>
+</div><p>按钮初始禁用，注册成功后开放呼叫，收到来电后开放接听。这样可以避免用户在错误时机调用 SDK。</p>
+<h2 id="2-3-创建-ua">2.3 创建 UA<a class="heading-anchor" href="#2-3-创建-ua" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const socket = new CRTC.WebSocketInterface(&#39;wss://sip.example.com/wss&#39;);
+
+const ua = new CRTC.UA({
+  sockets    : socket,
+  uri        : &#39;sip:alice@example.com&#39;,
+  password   : &#39;alice-password&#39;,
+  secret_key : &#39;SDK 授权码&#39;
+});
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>配置</th>
+<th>类型</th>
+<th>必填</th>
+<th align="right">默认值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>sockets</code></td>
+<td><code>WebSocketInterface</code> 或数组</td>
+<td>是</td>
+<td align="right">无</td>
+<td>WSS 信令连接对象</td>
+</tr>
+<tr>
+<td><code>uri</code></td>
+<td><code>string</code></td>
+<td>是</td>
+<td align="right">无</td>
+<td>当前登录用户的完整 SIP URI</td>
+</tr>
+<tr>
+<td><code>password</code></td>
+<td><code>string</code></td>
+<td>视鉴权</td>
+<td align="right"><code>null</code></td>
+<td>当前 SIP 账号的注册密码</td>
+</tr>
+<tr>
+<td><code>secret_key</code></td>
+<td><code>string</code></td>
+<td>是</td>
+<td align="right">无</td>
+<td>SDK 授权码</td>
+</tr>
+<tr>
+<td><code>display_name</code></td>
+<td><code>string</code></td>
+<td>否</td>
+<td align="right"><code>null</code></td>
+<td>来电显示名称</td>
+</tr>
+<tr>
+<td><code>register</code></td>
+<td><code>boolean</code></td>
+<td>否</td>
+<td align="right"><code>true</code></td>
+<td>是否在连接成功后自动注册</td>
+</tr>
+<tr>
+<td><code>register_expires</code></td>
+<td>正整数</td>
+<td>否</td>
+<td align="right"><code>600</code> 秒</td>
+<td>注册有效期</td>
+</tr>
+</tbody></table></div>
+<p>生产环境不要把账号密码和授权码直接写入前端代码或提交到版本管理系统。</p>
+<h2 id="2-4-配置-webrtc-网络">2.4 配置 WebRTC 网络<a class="heading-anchor" href="#2-4-配置-webrtc-网络" aria-label="链接到本节">#</a></h2>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const pcConfig = {
+  iceServers : [
+    {
+      urls       : &#39;turn:turn.example.com:3478&#39;,
+      username   : &#39;turn-user&#39;,
+      credential : &#39;turn-password&#39;
+    }
+  ]
+};
+</code></pre>
+</div><p>如果服务端要求媒体必须经过 TURN，可以同时配置 <code>iceTransportPolicy: &#39;relay&#39;</code>。不要在不了解部署要求时默认强制 relay。</p>
+<p><code>RTCConfiguration</code> 常用字段：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型/可选值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>iceServers</code></td>
+<td><code>RTCIceServer[]</code></td>
+<td>STUN/TURN 列表；TURN 通常需要用户名和凭据</td>
+</tr>
+<tr>
+<td><code>iceTransportPolicy</code></td>
+<td><code>all</code> / <code>relay</code></td>
+<td><code>all</code> 允许直连和中继；<code>relay</code> 只使用 TURN</td>
+</tr>
+<tr>
+<td><code>iceCandidatePoolSize</code></td>
+<td>非负整数</td>
+<td>预收集 ICE 候选数量</td>
+</tr>
+<tr>
+<td><code>bundlePolicy</code></td>
+<td><code>balanced</code> / <code>max-compat</code> / <code>max-bundle</code></td>
+<td>多媒体传输复用策略；按服务兼容要求选择</td>
+</tr>
+<tr>
+<td><code>rtcpMuxPolicy</code></td>
+<td><code>require</code> / <code>negotiate</code></td>
+<td>RTCP 复用策略；Demo 接听使用 <code>negotiate</code> 兼容配置</td>
+</tr>
+</tbody></table></div>
+<h2 id="2-5-媒体约束怎么填写">2.5 媒体约束怎么填写<a class="heading-anchor" href="#2-5-媒体约束怎么填写" aria-label="链接到本节">#</a></h2>
+<p>音频和视频都可以传 <code>true</code>、<code>false</code> 或约束对象：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const mediaConstraints = {
+  audio : {
+    deviceId    : { exact: selectedMicrophoneId },
+    sampleRate  : 48000,
+    channelCount: 1
+  },
+  video : {
+    deviceId   : { exact: selectedCameraId },
+    facingMode : &#39;user&#39;,
+    width      : { ideal: 1280 },
+    height     : { ideal: 720 },
+    frameRate  : { ideal: 15, max: 30 }
+  }
+};
+</code></pre>
+</div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>写法</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>audio: true</code></td>
+<td>使用默认麦克风</td>
+</tr>
+<tr>
+<td><code>audio: false</code></td>
+<td>不采集本地音频</td>
+</tr>
+<tr>
+<td><code>video: true</code></td>
+<td>使用默认摄像头</td>
+</tr>
+<tr>
+<td><code>video: false</code></td>
+<td>不采集本地视频</td>
+</tr>
+<tr>
+<td><code>deviceId: { exact: id }</code></td>
+<td>必须使用指定设备；设备不存在会采集失败</td>
+</tr>
+<tr>
+<td><code>deviceId: { ideal: id }</code></td>
+<td>尽量使用指定设备，失败时允许浏览器回退</td>
+</tr>
+<tr>
+<td><code>facingMode: &#39;user&#39;</code></td>
+<td>前置摄像头</td>
+</tr>
+<tr>
+<td><code>facingMode: &#39;environment&#39;</code></td>
+<td>后置摄像头</td>
+</tr>
+<tr>
+<td><code>width/height/frameRate: number</code></td>
+<td>直接约束目标值</td>
+</tr>
+<tr>
+<td><code>{ ideal, min, max, exact }</code></td>
+<td>使用 WebRTC 约束范围；<code>exact</code> 最严格</td>
+</tr>
+</tbody></table></div>
+<p>第一版接入建议先使用 Demo 的 <code>640×480@15fps</code>，基础通话稳定后再提高分辨率和帧率。约束越严格，设备不支持时越容易产生 <code>OverconstrainedError</code>。</p>
+<h2 id="2-6-完整页面代码">2.6 完整页面代码<a class="heading-anchor" href="#2-6-完整页面代码" aria-label="链接到本节">#</a></h2>
+<p>替换 WSS、账号、密码、授权码、TURN 和被叫地址后，可将以下内容作为接入骨架：</p>
+<div class="code-block"><div class="code-toolbar"><span>html</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-html">&lt;!doctype html&gt;
+&lt;html lang=&quot;zh-CN&quot;&gt;
+&lt;head&gt;
+  &lt;meta charset=&quot;utf-8&quot;&gt;
+  &lt;title&gt;CRTC 第一通电话&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;p id=&quot;status&quot;&gt;尚未启动&lt;/p&gt;
+  &lt;video id=&quot;remoteVideo&quot; autoplay playsinline&gt;&lt;/video&gt;
+
+  &lt;input id=&quot;target&quot; value=&quot;sip:bob@example.com&quot;&gt;
+  &lt;button id=&quot;callButton&quot; disabled&gt;音视频呼叫&lt;/button&gt;
+  &lt;button id=&quot;answerButton&quot; disabled&gt;接听&lt;/button&gt;
+  &lt;button id=&quot;hangupButton&quot; disabled&gt;挂断&lt;/button&gt;
+
+  &lt;script src=&quot;./adapter-latest.js&quot;&gt;&lt;/script&gt;
+  &lt;script src=&quot;./CRTC.min.js&quot;&gt;&lt;/script&gt;
+  &lt;script&gt;
+    const statusElement = document.getElementById(&#39;status&#39;);
+    const remoteVideo = document.getElementById(&#39;remoteVideo&#39;);
+    const targetInput = document.getElementById(&#39;target&#39;);
+    const callButton = document.getElementById(&#39;callButton&#39;);
+    const answerButton = document.getElementById(&#39;answerButton&#39;);
+    const hangupButton = document.getElementById(&#39;hangupButton&#39;);
+
+    const socket = new CRTC.WebSocketInterface(&#39;wss://sip.example.com/wss&#39;);
+    const ua = new CRTC.UA({
+      sockets    : socket,
+      uri        : &#39;sip:alice@example.com&#39;,
+      password   : &#39;alice-password&#39;,
+      secret_key : &#39;SDK 授权码&#39;
+    });
+
+    const pcConfig = {
+      iceServers : [
+        {
+          urls       : &#39;turn:turn.example.com:3478&#39;,
+          username   : &#39;turn-user&#39;,
+          credential : &#39;turn-password&#39;
+        }
+      ]
+    };
+
+    let currentSession = null;
+
+    function setStatus(text)
+    {
+      statusElement.textContent = text;
+    }
+
+    function buildCallOptions()
+    {
+      return {
+        pcConfig,
+        mediaConstraints : {
+          audio : true,
+          video : {
+            width     : { ideal: 1280 },
+            height    : { ideal: 720 },
+            frameRate : { ideal: 15 }
+          }
+        }
+      };
+    }
+
+    const boundPeerConnections = new WeakSet();
+
+    function bindRemoteMedia(session)
+    {
+      const peerConnection = session.connection;
+
+      if (!peerConnection || boundPeerConnections.has(peerConnection))
+      {
+        return;
+      }
+
+      boundPeerConnections.add(peerConnection);
+
+      peerConnection.addEventListener(&#39;track&#39;, function(event)
+      {
+        const stream = event.streams[0];
+
+        if (stream)
+        {
+          remoteVideo.srcObject = stream;
+          remoteVideo.play().catch(function(error)
+          {
+            console.warn(&#39;远端视频自动播放失败：&#39;, error);
+          });
+        }
+      });
+    }
+
+    function clearSession(session)
+    {
+      if (currentSession === session)
+      {
+        currentSession = null;
+      }
+
+      remoteVideo.srcObject = null;
+      answerButton.disabled = true;
+      hangupButton.disabled = true;
+      callButton.disabled = !ua.isRegistered();
+    }
+
+    ua.on(&#39;connected&#39;, function()
+    {
+      setStatus(&#39;WSS 已连接，正在注册&#39;);
+    });
+
+    ua.on(&#39;registered&#39;, function()
+    {
+      setStatus(&#39;SIP 注册成功&#39;);
+      callButton.disabled = false;
+    });
+
+    ua.on(&#39;registrationFailed&#39;, function(event)
+    {
+      setStatus(&#39;SIP 注册失败&#39;);
+      console.error(event);
+    });
+
+    ua.on(&#39;disconnected&#39;, function()
+    {
+      setStatus(&#39;WSS 已断开&#39;);
+      callButton.disabled = true;
+    });
+
+    ua.on(&#39;newRTCSession&#39;, function(data)
+    {
+      const session = data.session;
+
+      // 最小示例只允许一通电话。
+      if (currentSession &amp;&amp; currentSession !== session)
+      {
+        session.terminate({ status_code: 486 });
+        return;
+      }
+
+      currentSession = session;
+      bindRemoteMedia(session);
+      callButton.disabled = true;
+      hangupButton.disabled = false;
+
+      if (data.originator === &#39;remote&#39;)
+      {
+        setStatus(&#39;收到来电&#39;);
+        answerButton.disabled = false;
+      }
+      else
+      {
+        setStatus(&#39;正在呼叫&#39;);
+      }
+
+      session.on(&#39;progress&#39;, function()
+      {
+        setStatus(&#39;呼叫振铃中&#39;);
+      });
+
+      session.on(&#39;confirmed&#39;, function()
+      {
+        setStatus(&#39;通话已建立&#39;);
+        answerButton.disabled = true;
+      });
+
+      session.on(&#39;failed&#39;, function(event)
+      {
+        console.warn(&#39;通话失败：&#39;, event.cause);
+        setStatus(&#39;通话失败：&#39; + event.cause);
+        clearSession(session);
+      });
+
+      session.on(&#39;ended&#39;, function(event)
+      {
+        console.log(&#39;通话结束：&#39;, event.cause);
+        setStatus(&#39;通话已结束&#39;);
+        clearSession(session);
+      });
+    });
+
+    callButton.addEventListener(&#39;click&#39;, function()
+    {
+      const target = targetInput.value.trim();
+
+      if (!target || currentSession)
+      {
+        return;
+      }
+
+      ua.call(target, buildCallOptions())
+        .catch(function(error)
+        {
+          console.error(&#39;发起呼叫失败：&#39;, error);
+          setStatus(&#39;发起呼叫失败&#39;);
+          callButton.disabled = !ua.isRegistered();
+        });
+    });
+
+    answerButton.addEventListener(&#39;click&#39;, function()
+    {
+      if (currentSession &amp;&amp; currentSession.direction === &#39;incoming&#39;)
+      {
+        currentSession.answer(buildCallOptions());
+        // 呼入在 answer() 调用后创建 connection。
+        bindRemoteMedia(currentSession);
+        answerButton.disabled = true;
+      }
+    });
+
+    hangupButton.addEventListener(&#39;click&#39;, function()
+    {
+      currentSession &amp;&amp; currentSession.terminate();
+    });
+
+    CRTC.debug.enable(&#39;CRTC:*&#39;);
+    ua.start();
+  &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+</div><h2 id="2-7-代码运行顺序">2.7 代码运行顺序<a class="heading-anchor" href="#2-7-代码运行顺序" aria-label="链接到本节">#</a></h2>
+<p>完整示例的执行顺序如下：</p>
+<ol>
+<li>创建 DOM 引用、WSS、UA 和 <code>pcConfig</code>。</li>
+<li>在 <code>ua.start()</code> 前绑定 UA 事件，避免漏掉快速返回的连接/注册事件。</li>
+<li><code>connected</code> 时只显示“正在注册”。</li>
+<li><code>registered</code> 时开放呼叫按钮。</li>
+<li>每次 <code>newRTCSession</code> 保存当前 session，并立即绑定本通电话事件。</li>
+<li>呼出时 <code>ua.call()</code> 负责采集、创建 PC 和发送 INVITE。</li>
+<li>呼入时用户点击后 <code>answer()</code> 负责创建 PC、采集和应答。</li>
+<li><code>connection.ontrack</code> 播放远端流。</li>
+<li><code>failed</code> 或 <code>ended</code> 统一清理页面。</li>
+</ol>
+<p>不要把事件绑定放到 <code>confirmed</code> 后：拒接、超时、早期媒体和建立前失败都会在 confirmed 之前发生。</p>
+<h2 id="2-8-自动注册和手动注册">2.8 自动注册和手动注册<a class="heading-anchor" href="#2-8-自动注册和手动注册" aria-label="链接到本节">#</a></h2>
+<p>示例默认自动注册。手动注册写法：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const ua = new CRTC.UA({
+  sockets    : socket,
+  uri        : &#39;sip:alice@example.com&#39;,
+  password   : &#39;alice-password&#39;,
+  secret_key : &#39;SDK 授权码&#39;,
+  register   : false
+});
+
+ua.on(&#39;connected&#39;, function()
+{
+  ua.register();
+});
+</code></pre>
+</div><p>两种方式都必须等 <code>registered</code> 后呼叫。详细时序见第 3 章。</p>
+<h2 id="2-9-呼叫-options-最小字段表">2.9 呼叫 options 最小字段表<a class="heading-anchor" href="#2-9-呼叫-options-最小字段表" aria-label="链接到本节">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>什么时候需要</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>pcConfig</code></td>
+<td><code>RTCConfiguration</code></td>
+<td>需要 TURN 或特定 PC 策略时</td>
+</tr>
+<tr>
+<td><code>mediaConstraints</code></td>
+<td><code>MediaStreamConstraints</code></td>
+<td>让浏览器采集音视频时</td>
+</tr>
+<tr>
+<td><code>mediaStream</code></td>
+<td><code>MediaStream</code></td>
+<td>使用业务已创建的自定义流时</td>
+</tr>
+<tr>
+<td><code>extraHeaders</code></td>
+<td><code>string[]</code></td>
+<td>服务端要求随路数据时</td>
+</tr>
+<tr>
+<td><code>rtcOfferConstraints</code></td>
+<td><code>RTCOfferOptions</code></td>
+<td>需要明确接收音频/视频方向时</td>
+</tr>
+<tr>
+<td><code>aiNoiseSuppression</code></td>
+<td><code>object</code></td>
+<td>开启 AiNS 时</td>
+</tr>
+<tr>
+<td><code>mediaEffectsComposer</code></td>
+<td><code>object</code></td>
+<td>开启虚拟背景、混流、镜像或水印时</td>
+</tr>
+</tbody></table></div>
+<p><code>mediaStream</code> 与 <code>mediaConstraints</code> 不要随意同时传。使用自定义流时先检查所需音频/视频 tracks 是否存在且 <code>readyState === &#39;live&#39;</code>。</p>
+<h2 id="2-10-ui-状态建议">2.10 UI 状态建议<a class="heading-anchor" href="#2-10-ui-状态建议" aria-label="链接到本节">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>SDK 状态/事件</th>
+<th>呼叫</th>
+<th>接听</th>
+<th>挂断</th>
+<th>页面文字</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>未注册</td>
+<td>禁用</td>
+<td>禁用</td>
+<td>禁用</td>
+<td>正在连接/注册</td>
+</tr>
+<tr>
+<td><code>registered</code></td>
+<td>开放</td>
+<td>禁用</td>
+<td>禁用</td>
+<td>注册成功</td>
+</tr>
+<tr>
+<td>呼出中</td>
+<td>禁用</td>
+<td>禁用</td>
+<td>开放</td>
+<td>正在呼叫</td>
+</tr>
+<tr>
+<td>呼入中</td>
+<td>禁用</td>
+<td>开放</td>
+<td>开放</td>
+<td>收到来电</td>
+</tr>
+<tr>
+<td><code>progress</code></td>
+<td>禁用</td>
+<td>视方向</td>
+<td>开放</td>
+<td>振铃/回铃</td>
+</tr>
+<tr>
+<td><code>confirmed</code></td>
+<td>禁用</td>
+<td>禁用</td>
+<td>开放</td>
+<td>通话中</td>
+</tr>
+<tr>
+<td><code>failed/ended</code></td>
+<td>按注册状态恢复</td>
+<td>禁用</td>
+<td>禁用</td>
+<td>失败原因/已结束</td>
+</tr>
+</tbody></table></div>
+<h2 id="2-11-验证顺序">2.11 验证顺序<a class="heading-anchor" href="#2-11-验证顺序" aria-label="链接到本节">#</a></h2>
+<ol>
+<li>通过 HTTPS 或 localhost 打开页面。</li>
+<li>控制台出现 WSS 连接和注册成功信息。</li>
+<li>使用账号 A 呼叫账号 B，确认 B 页面出现来电。</li>
+<li>B 点击接听，双方允许摄像头和麦克风权限。</li>
+<li>确认远端视频出现，双方可以听到声音。</li>
+<li>任一方点击挂断，双方页面都回到可呼叫状态。</li>
+</ol>
+<h2 id="2-12-常见失败">2.12 常见失败<a class="heading-anchor" href="#2-12-常见失败" aria-label="链接到本节">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>现象</th>
+<th>优先检查</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>WSS 连接失败</td>
+<td>地址、证书、反向代理和网络访问</td>
+</tr>
+<tr>
+<td>注册失败</td>
+<td>SIP URI、密码、授权码和账号状态</td>
+</tr>
+<tr>
+<td>摄像头/麦克风失败</td>
+<td>HTTPS、浏览器权限、设备占用和约束</td>
+</tr>
+<tr>
+<td>可以振铃但没有媒体</td>
+<td>TURN、ICE、防火墙和对端媒体权限</td>
+</tr>
+<tr>
+<td>来电时 <code>session.connection</code> 为空</td>
+<td>呼入尚未接听；调用 <code>answer()</code> 后再绑定 <code>session.connection</code></td>
+</tr>
+<tr>
+<td>视频存在但不自动播放</td>
+<td>捕获 <code>video.play()</code> 失败并提供用户点击播放入口</td>
+</tr>
+</tbody></table></div>
+<h2 id="2-13-第一通电话完成检查">2.13 第一通电话完成检查<a class="heading-anchor" href="#2-13-第一通电话完成检查" aria-label="链接到本节">#</a></h2>
+<ul>
+<li><code>connected</code> 和 <code>registered</code> 含义没有混用。</li>
+<li>呼叫前检查 <code>ua.isRegistered()</code>。</li>
+<li>呼入和呼出都经过 <code>newRTCSession</code>，每通电话都重新绑定事件。</li>
+<li><code>ua.call()</code> 的 Promise 有 reject 处理。</li>
+<li><code>answer()</code> 只对当前呼入 session 调用。</li>
+<li><code>connection.ontrack</code> 能处理后续新增轨道，不只在 confirmed 时取一次流。</li>
+<li><code>failed</code> 和 <code>ended</code> 都清除 <code>srcObject</code>、当前 session 和按钮状态。</li>
+<li>页面关闭或退出账号时调用 <code>ua.stop()</code>。</li>
+</ul>
+<p><a href="01-sip-webrtc-basics.html">← 上一章：SIP 与 WebRTC 基础</a> · <a href="03-call-lifecycle.html">下一章：通话流程与事件时序 →</a></p>
+
+      <nav class="page-pagination" aria-label="上一篇和下一篇">
+        <a class="previous" href="01-sip-webrtc-basics.html"><span>上一篇</span>1. SIP 与 WebRTC 基础</a>
+        <a class="next" href="03-call-lifecycle.html"><span>下一篇</span>3. 注册、通话与事件时序</a>
+      </nav>
+    </article>
+    
+    <nav class="page-toc" aria-label="本页目录">
+      <h2>本页目录</h2>
+      <a class="toc-depth-2" href="#2-1-引入-sdk">2.1 引入 SDK</a><a class="toc-depth-2" href="#2-2-准备页面元素">2.2 准备页面元素</a><a class="toc-depth-2" href="#2-3-创建-ua">2.3 创建 UA</a><a class="toc-depth-2" href="#2-4-配置-webrtc-网络">2.4 配置 WebRTC 网络</a><a class="toc-depth-2" href="#2-5-媒体约束怎么填写">2.5 媒体约束怎么填写</a><a class="toc-depth-2" href="#2-6-完整页面代码">2.6 完整页面代码</a><a class="toc-depth-2" href="#2-7-代码运行顺序">2.7 代码运行顺序</a><a class="toc-depth-2" href="#2-8-自动注册和手动注册">2.8 自动注册和手动注册</a><a class="toc-depth-2" href="#2-9-呼叫-options-最小字段表">2.9 呼叫 options 最小字段表</a><a class="toc-depth-2" href="#2-10-ui-状态建议">2.10 UI 状态建议</a><a class="toc-depth-2" href="#2-11-验证顺序">2.11 验证顺序</a><a class="toc-depth-2" href="#2-12-常见失败">2.12 常见失败</a><a class="toc-depth-2" href="#2-13-第一通电话完成检查">2.13 第一通电话完成检查</a>
+    </nav>
+  </main>
+  <button type="button" class="back-to-top" aria-label="回到顶部">↑</button>
+</body>
+</html>
