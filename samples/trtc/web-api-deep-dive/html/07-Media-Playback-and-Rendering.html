@@ -21,6 +21,7 @@
       <kbd>/</kbd>
       <div id="search-results" class="search-results" hidden></div>
     </div>
+    <a class="source-link" href="00-Reading-Guide-and-Source-Map.html#7-核心术语速查">术语与来源</a>
     <a class="source-link" href="../07-Media-Playback-and-Rendering.md">Markdown</a>
     <a class="source-link" href="../../trtc.deobfuscated.js">源码</a>
     <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
@@ -376,9 +377,14 @@
 <td>元素具备媒体后尝试自动播放，但仍受用户激活策略约束</td>
 </tr>
 <tr>
-<td><code>playsInline</code> / <code>playsinline</code></td>
-<td>boolean/属性</td>
+<td><code>playsInline</code></td>
+<td>boolean DOM 属性</td>
 <td>移动端尽量内联而非强制全屏</td>
+</tr>
+<tr>
+<td><code>playsinline</code></td>
+<td>HTML boolean 属性</td>
+<td><code>playsInline</code> 对应的标记写法；项目兼容代码也可能显式设置该属性</td>
 </tr>
 <tr>
 <td><code>crossOrigin</code></td>
@@ -424,9 +430,14 @@
 <td>与上次回调时间差计算 FPS</td>
 </tr>
 <tr>
-<td><code>metadata.width/height</code></td>
-<td>当前视频帧媒体像素尺寸</td>
-<td>更新播放器 stat</td>
+<td><code>metadata.width</code></td>
+<td>当前视频帧媒体像素宽度</td>
+<td>更新播放器 stat 的宽度</td>
+</tr>
+<tr>
+<td><code>metadata.height</code></td>
+<td>当前视频帧媒体像素高度</td>
+<td>更新播放器 stat 的高度</td>
 </tr>
 <tr>
 <td><code>metadata.presentedFrames</code></td>
@@ -509,14 +520,19 @@
 <td>展示后允许清空，提高性能；截图不能依赖旧 framebuffer 长期保留</td>
 </tr>
 <tr>
-<td><code>depth</code> / <code>stencil</code></td>
+<td><code>depth</code></td>
 <td align="right">false</td>
-<td>2D 视频合成不申请深度/模板缓冲</td>
+<td>2D 视频合成不申请深度缓冲</td>
+</tr>
+<tr>
+<td><code>stencil</code></td>
+<td align="right">false</td>
+<td>2D 视频合成不申请模板缓冲</td>
 </tr>
 <tr>
 <td><code>failIfMajorPerformanceCaveat</code></td>
 <td align="right">true</td>
-<td>只有明显软件/低性能实现时允许创建失败并降级</td>
+<td>如果只能提供明显低性能的实现，允许 <code>getContext()</code> 返回 <code>null</code>，由项目进入失败/降级处理</td>
 </tr>
 <tr>
 <td><code>powerPreference</code></td>

@@ -21,6 +21,7 @@
       <kbd>/</kbd>
       <div id="search-results" class="search-results" hidden></div>
     </div>
+    <a class="source-link" href="00-Reading-Guide-and-Source-Map.html#7-核心术语速查">术语与来源</a>
     <a class="source-link" href="../01-Browser-API-Panorama.md">Markdown</a>
     <a class="source-link" href="../../trtc.deobfuscated.js">源码</a>
     <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
@@ -109,11 +110,11 @@
 <ul>
 <li>Adapter：L6651—L9450。</li>
 <li>codec/Transceiver 能力检测：L15760—L16340、L45352—L45455。</li>
-<li>MPC：L37350—L40710。</li>
-<li>SPC：L45320—L49420。</li>
+<li>MPC（Multiple PeerConnections，多连接模式）：L37350—L40710。</li>
+<li>SPC（Single PeerConnection，单连接模式）：L45320—L49420。</li>
 </ul>
 <p><strong>实际参数</strong></p>
-<p>正式 PC 都使用 <code>iceServers</code>、<code>iceTransportPolicy</code>、<code>sdpSemantics</code>、<code>max-bundle</code> 和 <code>rtcpMuxPolicy=require</code>。SPC 另外使用 <code>encodedInsertableStreams</code> 和 <code>offerExtmapAllowMixed</code>。源码还传入 <code>tcpCandidatePolicy</code>、<code>IceTransportsType</code> 等非标准字段，不能直接当作通用 WebRTC 配置。</p>
+<p>正式 PC 都使用 <code>iceServers</code>、<code>iceTransportPolicy</code>、<code>sdpSemantics</code>、<code>max-bundle</code> 和 <code>rtcpMuxPolicy=require</code>。SPC 另外使用 <code>encodedInsertableStreams</code> 和 <code>offerExtmapAllowMixed</code>。源码还传入 <code>tcpCandidatePolicy</code>、<code>IceTransportsType</code> 等非标准字段，不能直接当作通用 WebRTC 配置。每个字段的标准状态和来源链接见 <a href="02-RTCPeerConnection-usage-analysis.html#14-1-new-rtcpeerconnection-configuration">02 第 14.1 节</a>。</p>
 <p><strong>使用场景</strong></p>
 <ul>
 <li>MPC 为上行和每个远端用户分别持有 PC。</li>

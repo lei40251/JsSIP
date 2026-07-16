@@ -272,7 +272,8 @@ await new Promise((resolve, reject) => {
 | `volume` | `0..1` | 元素播放音量；初始化时源码 `Math.min(Math.max(value,0),1)` |
 | `loop` | boolean | URL/音乐播放结束后是否循环 |
 | `autoplay` | boolean/属性 | 元素具备媒体后尝试自动播放，但仍受用户激活策略约束 |
-| `playsInline` / `playsinline` | boolean/属性 | 移动端尽量内联而非强制全屏 |
+| `playsInline` | boolean DOM 属性 | 移动端尽量内联而非强制全屏 |
+| `playsinline` | HTML boolean 属性 | `playsInline` 对应的标记写法；项目兼容代码也可能显式设置该属性 |
 | `crossOrigin` | `anonymous` 等 | URL 媒体的 CORS 模式；Track `srcObject` 路径不需要 |
 
 `NotAllowedError` 被包装为自动播放错误并引导用户点击恢复；`NotSupportedError` 在音乐路径会尝试重载资源。`pause()` 只是暂停元素时间推进，不停止 Track，也不取消订阅。
@@ -314,7 +315,8 @@ video.requestVideoFrameCallback((now, metadata) => {
 | 回调值 | 含义 | 本项目用途 |
 |---|---|---|
 | `now` | 与 performance timeline 同源的回调时间戳，毫秒 | 与上次回调时间差计算 FPS |
-| `metadata.width/height` | 当前视频帧媒体像素尺寸 | 更新播放器 stat |
+| `metadata.width` | 当前视频帧媒体像素宽度 | 更新播放器 stat 的宽度 |
+| `metadata.height` | 当前视频帧媒体像素高度 | 更新播放器 stat 的高度 |
 | `metadata.presentedFrames` | 已提交合成的帧总数 | 计算两次采样间新增帧数 |
 | `metadata.presentationTime` | 预期展示时间 | 卡顿监控链使用 |
 
@@ -361,8 +363,9 @@ canvas.getContext('webgl2', {
 | `antialias` | false | 不请求多重采样，降低开销 |
 | `premultipliedAlpha` | false | 不假定颜色已预乘 alpha |
 | `preserveDrawingBuffer` | false | 展示后允许清空，提高性能；截图不能依赖旧 framebuffer 长期保留 |
-| `depth` / `stencil` | false | 2D 视频合成不申请深度/模板缓冲 |
-| `failIfMajorPerformanceCaveat` | true | 只有明显软件/低性能实现时允许创建失败并降级 |
+| `depth` | false | 2D 视频合成不申请深度缓冲 |
+| `stencil` | false | 2D 视频合成不申请模板缓冲 |
+| `failIfMajorPerformanceCaveat` | true | 如果只能提供明显低性能的实现，允许 `getContext()` 返回 `null`，由项目进入失败/降级处理 |
 | `powerPreference` | `'low-power'` | 提示优先低功耗 GPU；只是提示，不保证设备选择 |
 
 返回值可能是 `null`，源码会包装为 VIDEO_MANAGER_ERROR，而不是继续调用空 context。

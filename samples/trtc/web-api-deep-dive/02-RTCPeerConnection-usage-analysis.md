@@ -8,11 +8,13 @@
 
 1. **Adapter**：修改浏览器原生 API，让 Chrome、Firefox 和 Safari 暴露更一致的行为。
 2. **能力检测**：临时创建 PC，通过 Offer 或本地双 PC 回环验证编码、解码和 Transceiver 能力。
-3. **正式业务**：使用 MPC 或 SPC 两套拓扑承载发布、订阅、换轨、统计和重连。
+3. **正式业务**：使用 MPC（Multiple PeerConnections，多连接模式）或 SPC（Single PeerConnection，单连接模式）两套拓扑承载发布、订阅、换轨、统计和重连。
+
+这里的 MPC/SPC 是**当前项目的架构简称，不是 W3C WebRTC API 名称**：MPC 让上行和每个远端用户分别拥有 PC；SPC 让房间级 `SignalTransport` 共享一个 PC。源码中的 `singlePC`、`enableSPC`、`initSinglePC()` 和 `fallbackToMPC()` 可直接证明命名和切换关系。其他缩写见[核心术语速查](00-Reading-Guide-and-Source-Map.md#7-核心术语速查)。
 
 正式业务的核心区别是：
 
-| 维度 | MPC | SPC |
+| 维度 | MPC（多连接） | SPC（单连接） |
 |---|---|---|
 | PC 所有者 | 每个 `iJ` 派生连接实例独占一个 PC | 房间级 `SignalTransport` 独占一个共享 PC |
 | 上行/下行 | `dJ` 上行、每个 `aJ` 负责一个远端用户下行 | `UplinkTransport`、`DownlinkTransport` 只是共享 PC 的业务视图 |
@@ -326,7 +328,7 @@ Room 退房时的总体顺序是：停止同步和心跳 → 关闭各下行 →
 
 ## 14. API 参数与本项目实参
 
-本节只解释正文调用链中真正影响行为的原生 API。参数的标准含义以 MDN 为准；“本项目实参”则以 `trtc.deobfuscated.js` 为准。二者必须分开看：标准允许某个字段，不代表本项目传了它；源码传了私有字段，也不代表它属于 Web 标准。
+本节只解释正文调用链中真正影响行为的原生 API。参数是否属于当前标准以 W3C Web IDL 为准，语法和兼容说明参考 MDN；“本项目实参”则以 `trtc.deobfuscated.js` 为准。三者必须分开看：标准允许某个字段，不代表本项目传了它；源码传了私有字段，也不代表它属于 Web 标准。
 
 ## 14.1 `new RTCPeerConnection(configuration)`
 
@@ -348,20 +350,22 @@ const e = {
 this._peerConnection = new RTCPeerConnection(e);
 ```
 
-标准 `configuration` 字段如下：
+构造对象中的字段必须一项一行。下表不仅列参数，还区分当前标准、历史扩展和当前项目私有字段；“源码传了”不等于“规范定义了”。
 
-| 字段 | 类型、可选值和默认值 | 含义 | 本项目怎样传 |
-|---|---|---|---|
-| `iceServers` | `RTCIceServer[]`，可省略 | 可供 ICE 使用的 STUN/TURN 服务器；空数组时只能依靠主机候选等本地可达路径 | MPC 调 `room.getIceServers()`；SPC 接收 `initialize(iceServers)` 参数。每项通常含 `urls`，TURN 还可含 `username`、`credential`、`credentialType` |
-| `iceTransportPolicy` | `'all'` 或 `'relay'`；标准默认 `'all'` | `'all'` 考虑所有候选，`'relay'` 只使用 TURN relay 候选 | 来自 `room.getIceTransportPolicy()`；`forceRelay` 场景会得到 `'relay'` |
-| `bundlePolicy` | `'balanced'`、`'max-compat'`、`'max-bundle'`；默认 `'balanced'` | 远端不支持 BUNDLE 时，决定预先创建多少 transport | 固定传 `'max-bundle'`，倾向所有媒体共用一个 transport |
-| `rtcpMuxPolicy` | 现代实现使用 `'require'` | 是否要求 RTP/RTCP 复用 | 固定传 `'require'` |
-| `iceCandidatePoolSize` | `0..65535`，默认 `0` | 预取 ICE Candidate 的池大小 | 未传，使用浏览器默认 `0` |
-| `certificates` | `RTCCertificate[]`，可省略 | 指定 DTLS 身份证书；首次确定后不能靠 `setConfiguration()` 更换 | 未传，由浏览器生成 |
-| `peerIdentity` | `string`，可省略 | 要求远端通过指定身份验证 | 未传 |
-| `sdpSemantics` | 非当前标准配置字段；历史 Chrome 常见 `'unified-plan'` / `'plan-b'` | 选择 SDP 轨道语义 | 源码显式传 `_sdpSemantics` / `room.sdpSemantics`，属于兼容性历史包袱 |
-| `tcpCandidatePolicy`、`IceTransportsType` | 非 MDN 标准字段 | 目标内核或私有实现的候选过滤开关 | 固定为 `'disable'`、`'nohost'`；不能复制成通用 WebRTC 配置 |
-| `encodedInsertableStreams`、`offerExtmapAllowMixed` | 实验/历史实现字段 | 分别启用旧 Encoded Insertable Streams、允许 extmap mixed 协商 | 仅 SPC 按能力传前者，并固定传后者为 `true` |
+| 字段 | 类型、可选值和默认值 | 含义 | 本项目怎样传 | 来源与状态 |
+|---|---|---|---|---|
+| `iceServers` | `RTCIceServer[]`，默认 `[]` | 可供 ICE 使用的 STUN/TURN 服务器；空数组时只能依靠浏览器能收集到的其他候选 | MPC 调 `room.getIceServers()`；SPC 接收 `initialize(iceServers)` 参数 | [当前 WebRTC 标准](https://www.w3.org/TR/webrtc/#dom-rtcconfiguration-iceservers)；[MDN](https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/RTCPeerConnection#iceservers) |
+| `iceTransportPolicy` | `'all'` 或 `'relay'`；默认 `'all'` | `'all'` 考虑所有候选，`'relay'` 只使用中继候选 | 来自 `room.getIceTransportPolicy()`；`forceRelay` 场景得到 `'relay'` | [当前 WebRTC 标准](https://www.w3.org/TR/webrtc/#dom-rtcconfiguration-icetransportpolicy) |
+| `bundlePolicy` | `'balanced'`、`'max-compat'`、`'max-bundle'`；默认 `'balanced'` | 远端不支持 BUNDLE 时，决定预先创建多少 transport | 固定传 `'max-bundle'`，倾向所有媒体共用一个 transport | [当前 WebRTC 标准](https://www.w3.org/TR/webrtc/#dom-rtcconfiguration-bundlepolicy) |
+| `rtcpMuxPolicy` | 当前枚举只保留 `'require'` | 要求 RTP/RTCP 复用 | 固定传 `'require'` | [当前 WebRTC 标准](https://www.w3.org/TR/webrtc/#dom-rtcconfiguration-rtcpmuxpolicy) |
+| `iceCandidatePoolSize` | `0..255`，默认 `0` | 预取 ICE Candidate 的池大小 | 未传，使用浏览器默认 `0` | [当前 WebRTC 标准](https://www.w3.org/TR/webrtc/#dom-rtcconfiguration-icecandidatepoolsize)。原文写成 `0..65535` 不符合当前 Web IDL 的 `octet` 类型，已更正 |
+| `certificates` | `RTCCertificate[]`，默认 `[]` | 指定 DTLS 身份证书；首次确定后不能靠 `setConfiguration()` 更换 | 未传，由浏览器生成 | [当前 WebRTC 标准](https://www.w3.org/TR/webrtc/#dom-rtcconfiguration-certificates) |
+| `peerIdentity` | `string`，可省略 | 要求远端通过指定身份验证 | 未传 | [当前 WebRTC 标准](https://www.w3.org/TR/webrtc/#dom-rtcconfiguration-peeridentity) |
+| `sdpSemantics` | `'unified-plan'` / `'plan-b'` | 选择 Chrome 历史 SDP 轨道语义 | 源码显式传 `_sdpSemantics` / `room.sdpSemantics` | **非当前标准**；属于 Chrome 的 Plan B → Unified Plan 迁移期扩展，见 [Chromium/WebRTC 迁移说明](https://webrtc.org/getting-started/unified-plan-transition-guide) |
+| `tcpCandidatePolicy` | 源码传 `'disable'` | 看名字像 TCP Candidate 过滤开关，但公开语义不能仅凭字段名确定 | MPC/SPC 都固定传 `'disable'` | **项目/目标内核私有**；当前 W3C `RTCConfiguration` 和 Chromium 公开字段中均无此名称，只能确认[当前源码确实传入](../trtc.deobfuscated.js#:~:text=tcpCandidatePolicy) |
+| `IceTransportsType` | 源码传 `'nohost'` | 看名字像 Host Candidate 过滤开关，但大小写和取值都不属于当前标准 | MPC/SPC 都固定传 `'nohost'` | **项目/目标内核私有**；不能等同于标准 `iceTransportPolicy`，只能确认[当前源码确实传入](../trtc.deobfuscated.js#:~:text=IceTransportsType) |
+| `encodedInsertableStreams` | `boolean`，旧实现默认 `false` | 在旧版实现中允许 Sender/Receiver 暴露编码帧 Streams | 仅 SPC 按能力开关传入；重设配置时尽量保持首次值 | **历史实验字段**；见 [W3C 旧 Insertable Streams IDL](https://w3c.github.io/webrtc-insertable-streams/)；现代标准方向是 [WebRTC Encoded Transform](https://www.w3.org/TR/webrtc-encoded-transform/) |
+| `offerExtmapAllowMixed` | `boolean`，Chrome 历史实现字段 | 控制 Offer 是否包含 `a=extmap-allow-mixed` | 仅 SPC 固定传 `true` | **Chromium 实现扩展，不是当前 W3C `RTCConfiguration` 字段**；见 [Chromium 官方源码说明](https://chromium.googlesource.com/chromium/src/+/07021ec8560836d2f75a80ae903e7d7e333de98b/third_party/blink/common/features.cc#:~:text=offerExtmapAllowMixed) |
 
 `RTCIceServer` 子字段要继续展开：
 
@@ -380,12 +384,12 @@ MDN：[createOffer()](https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerCo
 
 标准签名是 `pc.createOffer(options?)`，返回 `Promise<RTCSessionDescriptionInit>`。主要选项：
 
-| 选项 | 类型/默认 | 含义 | 本项目怎样传 |
-|---|---|---|---|
-| `iceRestart` | `boolean`，默认 `false` | `true` 时让新 Offer 携带新的 ICE credentials，发起 ICE Restart | 正式业务没有传；重连采用重建 PC 或重新交换 SDP |
-| `offerToReceiveAudio` | `boolean`，已废弃 | legacy Plan B 风格地要求接收音频 | 只有无 `addTransceiver()` 的兼容分支传 `true` |
-| `offerToReceiveVideo` | `boolean`，已废弃 | legacy Plan B 风格地要求接收视频 | 解码探测和 MPC 兼容分支传 `true` |
-| `voiceActivityDetection` | `boolean`，历史选项 | 是否使用语音活动检测相关能力 | MPC 下行显式传 `false` |
+| 选项 | 类型/默认 | 含义 | 本项目怎样传 | 来源与状态 |
+|---|---|---|---|---|
+| `iceRestart` | `boolean`，默认 `false` | `true` 时让新 Offer 携带新的 ICE credentials，发起 ICE Restart | 正式业务没有传；重连采用重建 PC 或重新交换 SDP | [当前 WebRTC 标准](https://www.w3.org/TR/webrtc/#dom-rtcofferoptions-icerestart) |
+| `offerToReceiveAudio` | `boolean`，已废弃 | legacy Plan B 风格地要求接收音频 | 只有无 `addTransceiver()` 的兼容分支传 `true` | [W3C legacy extension](https://www.w3.org/TR/webrtc/#legacy-configuration-extensions)；MDN 仍为旧代码迁移保留说明 |
+| `offerToReceiveVideo` | `boolean`，已废弃 | legacy Plan B 风格地要求接收视频 | 解码探测和 MPC 兼容分支传 `true` | [W3C legacy extension](https://www.w3.org/TR/webrtc/#legacy-configuration-extensions)；MDN 仍为旧代码迁移保留说明 |
+| `voiceActivityDetection` | `boolean`；2018 候选推荐版默认 `true`，当前规范已移除 | 历史含义是告诉实现是否希望启用“检测静音并据此改变发送行为”的处理；它不是 `getStats()` 音量检测开关，也不是当前标准中的 VAD API | MPC 上行和下行都显式传 `false`；SPC 无参调用 `createOffer()` | [2018 W3C 历史定义](https://www.w3.org/TR/2018/CR-webrtc-20180927/#dom-rtcofferansweroptions-voiceactivitydetection)；[当前 W3C `RTCOfferOptions`](https://www.w3.org/TR/webrtc/#dom-rtcofferoptions) 和 [当前 MDN](https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/createOffer#parameters) 都已不再列出它 |
 
 MPC 下行（L38231—L38238）先决定 Unified Plan 还是 legacy 参数：
 
@@ -401,7 +405,9 @@ hasAddTransceiver() && this._sdpSemantics === sdpSemanticsUnifiedPlan
 const t = await this._peerConnection.createOffer(e);
 ```
 
-因此 `e` 的运行时形态有两种：支持 Transceiver 时只有 `{voiceActivityDetection:false}`；旧接口分支则再带两个 `offerToReceive*`。SPC 初始化直接无参 `createOffer()`，因为四个 `sendonly` Transceiver 已经定义了 m-line 结构。
+因此 MPC 下行的 `e` 有两种形态：支持 Transceiver 时只有 `{voiceActivityDetection:false}`；旧接口分支再带两个 `offerToReceive*`。MPC 上行还通过常量 `lJ` 在 L39214、L39398 传同一个历史字段。SPC 初始化直接无参 `createOffer()`，因为四个 `sendonly` Transceiver 已经定义了 m-line 结构。
+
+现代浏览器把参数对象按 Web IDL 字典转换；当前 `RTCOfferOptions` 没有 `voiceActivityDetection` 成员，所以不能假设该值仍会改变行为。文档保留它是为了忠实解释当前源码，而不是推荐新代码继续使用。
 
 ## 14.3 `addTransceiver(trackOrKind, init)`
 

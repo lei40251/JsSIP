@@ -97,4 +97,5 @@
 ## HTML 文档站
 
 - 浏览入口：[html/index.html](html/index.html)
+- 术语和来源判读：[核心术语速查](00-Reading-Guide-and-Source-Map.md#7-核心术语速查)、[怎样判断字段来源](00-Reading-Guide-and-Source-Map.md#8-怎样判断-这个字段从哪里来)
 - `build-html.cjs` 以当前目录 Markdown 为内容源，生成左侧主线/附录导航、全文搜索、页内目录和 Mermaid 图。

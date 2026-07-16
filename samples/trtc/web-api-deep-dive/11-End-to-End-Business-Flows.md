@@ -1,6 +1,6 @@
 # 11 端到端业务流程
 
-> 前面按浏览器 API 学习；本文反过来从用户动作出发，把公开 API、Room、Track、WebSocket、PeerConnection 和 Player 串成完整链路。
+> 前面按浏览器 API 学习；本文反过来从用户动作出发，把公开 API、Room、Track、WebSocket、PeerConnection 和 Player 串成完整链路。MPC 是 Multiple PeerConnections（多连接模式），SPC 是 Single PeerConnection（单连接模式）；其他缩写见[核心术语速查](00-Reading-Guide-and-Source-Map.md#7-核心术语速查)。
 
 ## 1. 总体心智模型
 

@@ -126,6 +126,7 @@ function navHtml(activeFile) {
 
 function transformMarkdownLinks(href) {
   if (href && href.startsWith('html/')) return href.slice('html/'.length);
+  if (href && href.startsWith('../trtc.deobfuscated.js')) return `../${href}`;
   if (!href || !/\.md(?:#.*)?$/i.test(href)) return href;
   const hashIndex = href.indexOf('#');
   const rawPath = hashIndex >= 0 ? href.slice(0, hashIndex) : href;
@@ -203,6 +204,7 @@ function renderDocument(doc, index) {
       <kbd>/</kbd>
       <div id="search-results" class="search-results" hidden></div>
     </div>
+    <a class="source-link" href="00-Reading-Guide-and-Source-Map.html#7-核心术语速查">术语与来源</a>
     <a class="source-link" href="../${encodeURIComponent(doc.name)}">Markdown</a>
     <a class="source-link" href="../../trtc.deobfuscated.js">源码</a>
     <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>

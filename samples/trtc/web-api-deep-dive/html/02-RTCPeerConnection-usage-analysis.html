@@ -21,6 +21,7 @@
       <kbd>/</kbd>
       <div id="search-results" class="search-results" hidden></div>
     </div>
+    <a class="source-link" href="00-Reading-Guide-and-Source-Map.html#7-核心术语速查">术语与来源</a>
     <a class="source-link" href="../02-RTCPeerConnection-usage-analysis.md">Markdown</a>
     <a class="source-link" href="../../trtc.deobfuscated.js">源码</a>
     <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
@@ -107,15 +108,16 @@
 <ol>
 <li><strong>Adapter</strong>：修改浏览器原生 API，让 Chrome、Firefox 和 Safari 暴露更一致的行为。</li>
 <li><strong>能力检测</strong>：临时创建 PC，通过 Offer 或本地双 PC 回环验证编码、解码和 Transceiver 能力。</li>
-<li><strong>正式业务</strong>：使用 MPC 或 SPC 两套拓扑承载发布、订阅、换轨、统计和重连。</li>
+<li><strong>正式业务</strong>：使用 MPC（Multiple PeerConnections，多连接模式）或 SPC（Single PeerConnection，单连接模式）两套拓扑承载发布、订阅、换轨、统计和重连。</li>
 </ol>
+<p>这里的 MPC/SPC 是<strong>当前项目的架构简称，不是 W3C WebRTC API 名称</strong>：MPC 让上行和每个远端用户分别拥有 PC；SPC 让房间级 <code>SignalTransport</code> 共享一个 PC。源码中的 <code>singlePC</code>、<code>enableSPC</code>、<code>initSinglePC()</code> 和 <code>fallbackToMPC()</code> 可直接证明命名和切换关系。其他缩写见<a href="00-Reading-Guide-and-Source-Map.html#7-核心术语速查">核心术语速查</a>。</p>
 <p>正式业务的核心区别是：</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
 <th>维度</th>
-<th>MPC</th>
-<th>SPC</th>
+<th>MPC（多连接）</th>
+<th>SPC（单连接）</th>
 </tr>
 </thead>
 <tbody><tr>
@@ -574,7 +576,7 @@ pc.connectionState=failed/closed
 </tbody></table></div>
 <p>Room 退房时的总体顺序是：停止同步和心跳 → 关闭各下行 → 清网络质量 → 关闭上行 → 处理 WebSocket → 重置 Stats 和用户 → 最后关闭共享 SPC。</p>
 <h2 id="14-api-参数与本项目实参">14. API 参数与本项目实参<a class="heading-anchor" href="#14-api-参数与本项目实参" aria-label="链接到本节">#</a></h2>
-<p>本节只解释正文调用链中真正影响行为的原生 API。参数的标准含义以 MDN 为准；“本项目实参”则以 <code>trtc.deobfuscated.js</code> 为准。二者必须分开看：标准允许某个字段，不代表本项目传了它；源码传了私有字段，也不代表它属于 Web 标准。</p>
+<p>本节只解释正文调用链中真正影响行为的原生 API。参数是否属于当前标准以 W3C Web IDL 为准，语法和兼容说明参考 MDN；“本项目实参”则以 <code>trtc.deobfuscated.js</code> 为准。三者必须分开看：标准允许某个字段，不代表本项目传了它；源码传了私有字段，也不代表它属于 Web 标准。</p>
 <h2 id="14-1-new-rtcpeerconnection-configuration">14.1 <code>new RTCPeerConnection(configuration)</code><a class="heading-anchor" href="#14-1-new-rtcpeerconnection-configuration" aria-label="链接到本节">#</a></h2>
 <p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/RTCPeerConnection" target="_blank" rel="noreferrer">RTCPeerConnection()</a></p>
 <p>MPC 的正式业务代码（L37435—L37448）直接展示了配置对象怎样进入构造器：</p>
@@ -590,7 +592,7 @@ pc.connectionState=failed/closed
 
 this._peerConnection = new RTCPeerConnection(e);
 </code></pre>
-</div><p>标准 <code>configuration</code> 字段如下：</p>
+</div><p>构造对象中的字段必须一项一行。下表不仅列参数，还区分当前标准、历史扩展和当前项目私有字段；“源码传了”不等于“规范定义了”。</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -598,67 +600,92 @@ this._peerConnection = new RTCPeerConnection(e);
 <th>类型、可选值和默认值</th>
 <th>含义</th>
 <th>本项目怎样传</th>
+<th>来源与状态</th>
 </tr>
 </thead>
 <tbody><tr>
 <td><code>iceServers</code></td>
-<td><code>RTCIceServer[]</code>，可省略</td>
-<td>可供 ICE 使用的 STUN/TURN 服务器；空数组时只能依靠主机候选等本地可达路径</td>
-<td>MPC 调 <code>room.getIceServers()</code>；SPC 接收 <code>initialize(iceServers)</code> 参数。每项通常含 <code>urls</code>，TURN 还可含 <code>username</code>、<code>credential</code>、<code>credentialType</code></td>
+<td><code>RTCIceServer[]</code>，默认 <code>[]</code></td>
+<td>可供 ICE 使用的 STUN/TURN 服务器；空数组时只能依靠浏览器能收集到的其他候选</td>
+<td>MPC 调 <code>room.getIceServers()</code>；SPC 接收 <code>initialize(iceServers)</code> 参数</td>
+<td><a href="https://www.w3.org/TR/webrtc/#dom-rtcconfiguration-iceservers" target="_blank" rel="noreferrer">当前 WebRTC 标准</a>；<a href="https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/RTCPeerConnection#iceservers" target="_blank" rel="noreferrer">MDN</a></td>
 </tr>
 <tr>
 <td><code>iceTransportPolicy</code></td>
-<td><code>&#39;all&#39;</code> 或 <code>&#39;relay&#39;</code>；标准默认 <code>&#39;all&#39;</code></td>
-<td><code>&#39;all&#39;</code> 考虑所有候选，<code>&#39;relay&#39;</code> 只使用 TURN relay 候选</td>
-<td>来自 <code>room.getIceTransportPolicy()</code>；<code>forceRelay</code> 场景会得到 <code>&#39;relay&#39;</code></td>
+<td><code>&#39;all&#39;</code> 或 <code>&#39;relay&#39;</code>；默认 <code>&#39;all&#39;</code></td>
+<td><code>&#39;all&#39;</code> 考虑所有候选，<code>&#39;relay&#39;</code> 只使用中继候选</td>
+<td>来自 <code>room.getIceTransportPolicy()</code>；<code>forceRelay</code> 场景得到 <code>&#39;relay&#39;</code></td>
+<td><a href="https://www.w3.org/TR/webrtc/#dom-rtcconfiguration-icetransportpolicy" target="_blank" rel="noreferrer">当前 WebRTC 标准</a></td>
 </tr>
 <tr>
 <td><code>bundlePolicy</code></td>
 <td><code>&#39;balanced&#39;</code>、<code>&#39;max-compat&#39;</code>、<code>&#39;max-bundle&#39;</code>；默认 <code>&#39;balanced&#39;</code></td>
 <td>远端不支持 BUNDLE 时，决定预先创建多少 transport</td>
 <td>固定传 <code>&#39;max-bundle&#39;</code>，倾向所有媒体共用一个 transport</td>
+<td><a href="https://www.w3.org/TR/webrtc/#dom-rtcconfiguration-bundlepolicy" target="_blank" rel="noreferrer">当前 WebRTC 标准</a></td>
 </tr>
 <tr>
 <td><code>rtcpMuxPolicy</code></td>
-<td>现代实现使用 <code>&#39;require&#39;</code></td>
-<td>是否要求 RTP/RTCP 复用</td>
+<td>当前枚举只保留 <code>&#39;require&#39;</code></td>
+<td>要求 RTP/RTCP 复用</td>
 <td>固定传 <code>&#39;require&#39;</code></td>
+<td><a href="https://www.w3.org/TR/webrtc/#dom-rtcconfiguration-rtcpmuxpolicy" target="_blank" rel="noreferrer">当前 WebRTC 标准</a></td>
 </tr>
 <tr>
 <td><code>iceCandidatePoolSize</code></td>
-<td><code>0..65535</code>，默认 <code>0</code></td>
+<td><code>0..255</code>，默认 <code>0</code></td>
 <td>预取 ICE Candidate 的池大小</td>
 <td>未传，使用浏览器默认 <code>0</code></td>
+<td><a href="https://www.w3.org/TR/webrtc/#dom-rtcconfiguration-icecandidatepoolsize" target="_blank" rel="noreferrer">当前 WebRTC 标准</a>。原文写成 <code>0..65535</code> 不符合当前 Web IDL 的 <code>octet</code> 类型，已更正</td>
 </tr>
 <tr>
 <td><code>certificates</code></td>
-<td><code>RTCCertificate[]</code>，可省略</td>
+<td><code>RTCCertificate[]</code>，默认 <code>[]</code></td>
 <td>指定 DTLS 身份证书；首次确定后不能靠 <code>setConfiguration()</code> 更换</td>
 <td>未传，由浏览器生成</td>
+<td><a href="https://www.w3.org/TR/webrtc/#dom-rtcconfiguration-certificates" target="_blank" rel="noreferrer">当前 WebRTC 标准</a></td>
 </tr>
 <tr>
 <td><code>peerIdentity</code></td>
 <td><code>string</code>，可省略</td>
 <td>要求远端通过指定身份验证</td>
 <td>未传</td>
+<td><a href="https://www.w3.org/TR/webrtc/#dom-rtcconfiguration-peeridentity" target="_blank" rel="noreferrer">当前 WebRTC 标准</a></td>
 </tr>
 <tr>
 <td><code>sdpSemantics</code></td>
-<td>非当前标准配置字段；历史 Chrome 常见 <code>&#39;unified-plan&#39;</code> / <code>&#39;plan-b&#39;</code></td>
-<td>选择 SDP 轨道语义</td>
-<td>源码显式传 <code>_sdpSemantics</code> / <code>room.sdpSemantics</code>，属于兼容性历史包袱</td>
+<td><code>&#39;unified-plan&#39;</code> / <code>&#39;plan-b&#39;</code></td>
+<td>选择 Chrome 历史 SDP 轨道语义</td>
+<td>源码显式传 <code>_sdpSemantics</code> / <code>room.sdpSemantics</code></td>
+<td><strong>非当前标准</strong>；属于 Chrome 的 Plan B → Unified Plan 迁移期扩展，见 <a href="https://webrtc.org/getting-started/unified-plan-transition-guide" target="_blank" rel="noreferrer">Chromium/WebRTC 迁移说明</a></td>
 </tr>
 <tr>
-<td><code>tcpCandidatePolicy</code>、<code>IceTransportsType</code></td>
-<td>非 MDN 标准字段</td>
-<td>目标内核或私有实现的候选过滤开关</td>
-<td>固定为 <code>&#39;disable&#39;</code>、<code>&#39;nohost&#39;</code>；不能复制成通用 WebRTC 配置</td>
+<td><code>tcpCandidatePolicy</code></td>
+<td>源码传 <code>&#39;disable&#39;</code></td>
+<td>看名字像 TCP Candidate 过滤开关，但公开语义不能仅凭字段名确定</td>
+<td>MPC/SPC 都固定传 <code>&#39;disable&#39;</code></td>
+<td><strong>项目/目标内核私有</strong>；当前 W3C <code>RTCConfiguration</code> 和 Chromium 公开字段中均无此名称，只能确认<a href="../../trtc.deobfuscated.js#:~:text=tcpCandidatePolicy">当前源码确实传入</a></td>
 </tr>
 <tr>
-<td><code>encodedInsertableStreams</code>、<code>offerExtmapAllowMixed</code></td>
-<td>实验/历史实现字段</td>
-<td>分别启用旧 Encoded Insertable Streams、允许 extmap mixed 协商</td>
-<td>仅 SPC 按能力传前者，并固定传后者为 <code>true</code></td>
+<td><code>IceTransportsType</code></td>
+<td>源码传 <code>&#39;nohost&#39;</code></td>
+<td>看名字像 Host Candidate 过滤开关，但大小写和取值都不属于当前标准</td>
+<td>MPC/SPC 都固定传 <code>&#39;nohost&#39;</code></td>
+<td><strong>项目/目标内核私有</strong>；不能等同于标准 <code>iceTransportPolicy</code>，只能确认<a href="../../trtc.deobfuscated.js#:~:text=IceTransportsType">当前源码确实传入</a></td>
+</tr>
+<tr>
+<td><code>encodedInsertableStreams</code></td>
+<td><code>boolean</code>，旧实现默认 <code>false</code></td>
+<td>在旧版实现中允许 Sender/Receiver 暴露编码帧 Streams</td>
+<td>仅 SPC 按能力开关传入；重设配置时尽量保持首次值</td>
+<td><strong>历史实验字段</strong>；见 <a href="https://w3c.github.io/webrtc-insertable-streams/" target="_blank" rel="noreferrer">W3C 旧 Insertable Streams IDL</a>；现代标准方向是 <a href="https://www.w3.org/TR/webrtc-encoded-transform/" target="_blank" rel="noreferrer">WebRTC Encoded Transform</a></td>
+</tr>
+<tr>
+<td><code>offerExtmapAllowMixed</code></td>
+<td><code>boolean</code>，Chrome 历史实现字段</td>
+<td>控制 Offer 是否包含 <code>a=extmap-allow-mixed</code></td>
+<td>仅 SPC 固定传 <code>true</code></td>
+<td><strong>Chromium 实现扩展，不是当前 W3C <code>RTCConfiguration</code> 字段</strong>；见 <a href="https://chromium.googlesource.com/chromium/src/+/07021ec8560836d2f75a80ae903e7d7e333de98b/third_party/blink/common/features.cc#:~:text=offerExtmapAllowMixed" target="_blank" rel="noreferrer">Chromium 官方源码说明</a></td>
 </tr>
 </tbody></table></div>
 <p><code>RTCIceServer</code> 子字段要继续展开：</p>
@@ -707,6 +734,7 @@ this._peerConnection = new RTCPeerConnection(e);
 <th>类型/默认</th>
 <th>含义</th>
 <th>本项目怎样传</th>
+<th>来源与状态</th>
 </tr>
 </thead>
 <tbody><tr>
@@ -714,24 +742,28 @@ this._peerConnection = new RTCPeerConnection(e);
 <td><code>boolean</code>，默认 <code>false</code></td>
 <td><code>true</code> 时让新 Offer 携带新的 ICE credentials，发起 ICE Restart</td>
 <td>正式业务没有传；重连采用重建 PC 或重新交换 SDP</td>
+<td><a href="https://www.w3.org/TR/webrtc/#dom-rtcofferoptions-icerestart" target="_blank" rel="noreferrer">当前 WebRTC 标准</a></td>
 </tr>
 <tr>
 <td><code>offerToReceiveAudio</code></td>
 <td><code>boolean</code>，已废弃</td>
 <td>legacy Plan B 风格地要求接收音频</td>
 <td>只有无 <code>addTransceiver()</code> 的兼容分支传 <code>true</code></td>
+<td><a href="https://www.w3.org/TR/webrtc/#legacy-configuration-extensions" target="_blank" rel="noreferrer">W3C legacy extension</a>；MDN 仍为旧代码迁移保留说明</td>
 </tr>
 <tr>
 <td><code>offerToReceiveVideo</code></td>
 <td><code>boolean</code>，已废弃</td>
 <td>legacy Plan B 风格地要求接收视频</td>
 <td>解码探测和 MPC 兼容分支传 <code>true</code></td>
+<td><a href="https://www.w3.org/TR/webrtc/#legacy-configuration-extensions" target="_blank" rel="noreferrer">W3C legacy extension</a>；MDN 仍为旧代码迁移保留说明</td>
 </tr>
 <tr>
 <td><code>voiceActivityDetection</code></td>
-<td><code>boolean</code>，历史选项</td>
-<td>是否使用语音活动检测相关能力</td>
-<td>MPC 下行显式传 <code>false</code></td>
+<td><code>boolean</code>；2018 候选推荐版默认 <code>true</code>，当前规范已移除</td>
+<td>历史含义是告诉实现是否希望启用“检测静音并据此改变发送行为”的处理；它不是 <code>getStats()</code> 音量检测开关，也不是当前标准中的 VAD API</td>
+<td>MPC 上行和下行都显式传 <code>false</code>；SPC 无参调用 <code>createOffer()</code></td>
+<td><a href="https://www.w3.org/TR/2018/CR-webrtc-20180927/#dom-rtcofferansweroptions-voiceactivitydetection" target="_blank" rel="noreferrer">2018 W3C 历史定义</a>；<a href="https://www.w3.org/TR/webrtc/#dom-rtcofferoptions" target="_blank" rel="noreferrer">当前 W3C <code>RTCOfferOptions</code></a> 和 <a href="https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/createOffer#parameters" target="_blank" rel="noreferrer">当前 MDN</a> 都已不再列出它</td>
 </tr>
 </tbody></table></div>
 <p>MPC 下行（L38231—L38238）先决定 Unified Plan 还是 legacy 参数：</p>
@@ -745,7 +777,8 @@ hasAddTransceiver() &amp;&amp; this._sdpSemantics === sdpSemanticsUnifiedPlan
 
 const t = await this._peerConnection.createOffer(e);
 </code></pre>
-</div><p>因此 <code>e</code> 的运行时形态有两种：支持 Transceiver 时只有 <code>{voiceActivityDetection:false}</code>；旧接口分支则再带两个 <code>offerToReceive*</code>。SPC 初始化直接无参 <code>createOffer()</code>，因为四个 <code>sendonly</code> Transceiver 已经定义了 m-line 结构。</p>
+</div><p>因此 MPC 下行的 <code>e</code> 有两种形态：支持 Transceiver 时只有 <code>{voiceActivityDetection:false}</code>；旧接口分支再带两个 <code>offerToReceive*</code>。MPC 上行还通过常量 <code>lJ</code> 在 L39214、L39398 传同一个历史字段。SPC 初始化直接无参 <code>createOffer()</code>，因为四个 <code>sendonly</code> Transceiver 已经定义了 m-line 结构。</p>
+<p>现代浏览器把参数对象按 Web IDL 字典转换；当前 <code>RTCOfferOptions</code> 没有 <code>voiceActivityDetection</code> 成员，所以不能假设该值仍会改变行为。文档保留它是为了忠实解释当前源码，而不是推荐新代码继续使用。</p>
 <h2 id="14-3-addtransceiver-trackorkind-init">14.3 <code>addTransceiver(trackOrKind, init)</code><a class="heading-anchor" href="#14-3-addtransceiver-trackorkind-init" aria-label="链接到本节">#</a></h2>
 <p>MDN：<a href="https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/addTransceiver" target="_blank" rel="noreferrer">addTransceiver()</a></p>
 <div class="table-wrap"><table>

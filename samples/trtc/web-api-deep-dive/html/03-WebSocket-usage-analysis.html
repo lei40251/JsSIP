@@ -21,6 +21,7 @@
       <kbd>/</kbd>
       <div id="search-results" class="search-results" hidden></div>
     </div>
+    <a class="source-link" href="00-Reading-Guide-and-Source-Map.html#7-核心术语速查">术语与来源</a>
     <a class="source-link" href="../03-WebSocket-usage-analysis.md">Markdown</a>
     <a class="source-link" href="../../trtc.deobfuscated.js">源码</a>
     <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
@@ -100,7 +101,7 @@
     <article class="doc-content">
       <h1 id="03-websocket-信令分析">03 <code>WebSocket</code> 信令分析<a class="heading-anchor" href="#03-websocket-信令分析" aria-label="链接到本节">#</a></h1>
 <blockquote>
-<p>本文沿“连接 → 信封 → RPC → 在线状态 → 业务命令 → 恢复 → 关闭”解释 WebSocket 控制面。完整方法和事件位置见附录 B—D。</p>
+<p>本文沿“连接 → 信封 → RPC → 在线状态 → 业务命令 → 恢复 → 关闭”解释 WebSocket 控制面。RPC 是 Remote Procedure Call（远程过程调用）；MPC/SPC 分别指多 PeerConnection/单 PeerConnection 模式。完整术语见<a href="00-Reading-Guide-and-Source-Map.html#7-核心术语速查">核心术语速查</a>，方法和事件位置见附录 B—D。</p>
 </blockquote>
 <h2 id="1-本章结论">1. 本章结论<a class="heading-anchor" href="#1-本章结论" aria-label="链接到本节">#</a></h2>
 <p>源码没有直接把 WebSocket 当成一个简单的 <code>send/onmessage</code> 通道，而是在浏览器 API 上增加了五层能力：</p>

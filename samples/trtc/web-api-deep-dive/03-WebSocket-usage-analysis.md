@@ -1,6 +1,6 @@
 # 03 `WebSocket` 信令分析
 
-> 本文沿“连接 → 信封 → RPC → 在线状态 → 业务命令 → 恢复 → 关闭”解释 WebSocket 控制面。完整方法和事件位置见附录 B—D。
+> 本文沿“连接 → 信封 → RPC → 在线状态 → 业务命令 → 恢复 → 关闭”解释 WebSocket 控制面。RPC 是 Remote Procedure Call（远程过程调用）；MPC/SPC 分别指多 PeerConnection/单 PeerConnection 模式。完整术语见[核心术语速查](00-Reading-Guide-and-Source-Map.md#7-核心术语速查)，方法和事件位置见附录 B—D。
 
 ## 1. 本章结论
 

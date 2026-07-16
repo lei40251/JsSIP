@@ -272,8 +272,10 @@ track.readyState === 'ended' && this.onTrackEnded();
 | 状态 | 含义 | 项目动作 |
 |---|---|---|
 | `enabled=false` | 应用主动禁用输出 | SDK `setMute()` 写入；不代表浏览器源故障 |
-| `muted=true` / `mute` 事件 | Track 暂时无法提供数据 | 写 warning，保留对象等待 `unmute` |
-| `readyState='ended'` / `ended` 事件 | Track 永久结束 | 屏幕共享触发停止流程；设备 Track 可进入重采集策略 |
+| `muted=true` 属性 | Track 当前暂时无法提供数据 | 写 warning，保留对象等待恢复 |
+| `mute` 事件 | `muted` 从 `false` 变成 `true` | 进入同一暂时静音处理 |
+| `readyState='ended'` 属性 | Track 已永久结束 | 后续逻辑不能等待它自行恢复 |
+| `ended` 事件 | Track 进入结束状态 | 屏幕共享触发停止流程；设备 Track 可进入重采集策略 |
 
 `stop()` 由应用主动调用时，规范上不一定向同一个 Track 对象触发 `ended` 事件，因此释放逻辑不能只依赖事件回调。
 

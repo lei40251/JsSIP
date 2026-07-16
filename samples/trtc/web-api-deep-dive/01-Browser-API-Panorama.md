@@ -12,12 +12,12 @@
 
 - Adapter：L6651—L9450。
 - codec/Transceiver 能力检测：L15760—L16340、L45352—L45455。
-- MPC：L37350—L40710。
-- SPC：L45320—L49420。
+- MPC（Multiple PeerConnections，多连接模式）：L37350—L40710。
+- SPC（Single PeerConnection，单连接模式）：L45320—L49420。
 
 **实际参数**
 
-正式 PC 都使用 `iceServers`、`iceTransportPolicy`、`sdpSemantics`、`max-bundle` 和 `rtcpMuxPolicy=require`。SPC 另外使用 `encodedInsertableStreams` 和 `offerExtmapAllowMixed`。源码还传入 `tcpCandidatePolicy`、`IceTransportsType` 等非标准字段，不能直接当作通用 WebRTC 配置。
+正式 PC 都使用 `iceServers`、`iceTransportPolicy`、`sdpSemantics`、`max-bundle` 和 `rtcpMuxPolicy=require`。SPC 另外使用 `encodedInsertableStreams` 和 `offerExtmapAllowMixed`。源码还传入 `tcpCandidatePolicy`、`IceTransportsType` 等非标准字段，不能直接当作通用 WebRTC 配置。每个字段的标准状态和来源链接见 [02 第 14.1 节](02-RTCPeerConnection-usage-analysis.md#14-1-new-rtcpeerconnection-configuration)。
 
 **使用场景**
 

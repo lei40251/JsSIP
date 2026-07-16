@@ -412,7 +412,8 @@ if (e.systemAudio) {
 | 字段 | 含义 | 本项目来源 |
 |---|---|---|
 | `displaySurface` | 希望的表面类型，常见 `monitor`、`window`、`browser` | `e.preferDisplaySurface`，无值时 `'monitor'`；这是提示，用户仍必须在选择器确认 |
-| `width/height` | 希望的输出尺寸 | Safari 只传 `{max}`，其他浏览器传 `{ideal,max}` |
+| `width` | 希望的输出宽度 | Safari 只传 `{max}`，其他浏览器传 `{ideal,max}` |
+| `height` | 希望的输出高度 | Safari 只传 `{max}`，其他浏览器传 `{ideal,max}` |
 | `frameRate` | 希望的帧率 | 直接传 `e.frameRate` |
 
 浏览器必须每次弹出用户选择；这些选项不能替用户静默固定某个屏幕。

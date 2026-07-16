@@ -21,6 +21,7 @@
       <kbd>/</kbd>
       <div id="search-results" class="search-results" hidden></div>
     </div>
+    <a class="source-link" href="00-Reading-Guide-and-Source-Map.html#7-核心术语速查">术语与来源</a>
     <a class="source-link" href="../00-Reading-Guide-and-Source-Map.md">Markdown</a>
     <a class="source-link" href="../../trtc.deobfuscated.js">源码</a>
     <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
@@ -100,7 +101,7 @@
     <article class="doc-content">
       <h1 id="00-阅读说明与源码地图">00 阅读说明与源码地图<a class="heading-anchor" href="#00-阅读说明与源码地图" aria-label="链接到本节">#</a></h1>
 <blockquote>
-<p>本文只解决两个问题：源码分成哪些层，以及后续文档应该按什么顺序阅读。</p>
+<p>本文解决三个问题：源码分成哪些层、文档中的缩写和术语是什么意思，以及后续文档应该按什么顺序阅读。</p>
 </blockquote>
 <h2 id="1-先建立六层结构">1. 先建立六层结构<a class="heading-anchor" href="#1-先建立六层结构" aria-label="链接到本节">#</a></h2>
 <div class="table-wrap"><table>
@@ -308,7 +309,351 @@
 <li>谁负责关闭和释放。</li>
 </ol>
 <p>其中每张“API 参数与本项目实参”卡片固定包含：API 签名、JS 源码片段、标准参数定义、本项目逐字段来源、默认/省略行为、调用阶段、返回值去向。机械搜索命中、全部行号和反向索引仍放在附录。</p>
-<h2 id="7-推荐阅读路径">7. 推荐阅读路径<a class="heading-anchor" href="#7-推荐阅读路径" aria-label="链接到本节">#</a></h2>
+<h2 id="7-核心术语速查">7. 核心术语速查<a class="heading-anchor" href="#7-核心术语速查" aria-label="链接到本节">#</a></h2>
+<p>本文中的缩写分为两类：WebRTC/Web 平台的标准术语，以及当前 TRTC 源码自己的架构简称。标准术语可以追到规范；项目简称只能由当前源码命名和对象关系解释，不能假装成 Web 标准。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>术语</th>
+<th>英文全称</th>
+<th>本文中的准确含义</th>
+<th>来源</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>TRTC</td>
+<td>Tencent Real-Time Communication</td>
+<td>腾讯实时音视频 SDK；本文分析的是其浏览器端反混淆产物</td>
+<td>当前项目上下文</td>
+</tr>
+<tr>
+<td>SDK</td>
+<td>Software Development Kit</td>
+<td>提供给接入方调用的软件开发工具包</td>
+<td>通用软件术语</td>
+</tr>
+<tr>
+<td>API</td>
+<td>Application Programming Interface</td>
+<td>可被代码调用的接口；“Web API”特指浏览器提供的接口</td>
+<td>通用软件术语</td>
+</tr>
+<tr>
+<td>RTC</td>
+<td>Real-Time Communication</td>
+<td>实时通信；本文通常出现在 WebRTC、TRTC 或 RTC 房间等名称中</td>
+<td>通用实时通信术语</td>
+</tr>
+<tr>
+<td>PC</td>
+<td>Peer Connection</td>
+<td>文中的简称，通常指一个 <code>RTCPeerConnection</code> 实例，而不是个人电脑</td>
+<td><a href="https://www.w3.org/TR/webrtc/#rtcpeerconnection-interface" target="_blank" rel="noreferrer">W3C WebRTC</a></td>
+</tr>
+<tr>
+<td>MPC</td>
+<td>Multiple PeerConnections</td>
+<td><strong>当前文档为便于阅读采用的项目术语</strong>：上行和各远端用户分别使用独立 PC 的多连接模式</td>
+<td><a href="../../trtc.deobfuscated.js#:~:text=fallbackToMPC">当前源码：MPC 连接与 <code>fallbackToMPC</code></a></td>
+</tr>
+<tr>
+<td>SPC</td>
+<td>Single PeerConnection</td>
+<td><strong>当前源码使用的项目术语</strong>：房间级 <code>SignalTransport</code> 共享一个 PC 的单连接模式；源码中的 <code>singlePC</code>、<code>enableSPC</code>、<code>initSinglePC()</code> 可直接证明这一含义</td>
+<td><a href="../../trtc.deobfuscated.js#:~:text=initSinglePC">当前源码：<code>initSinglePC</code></a></td>
+</tr>
+<tr>
+<td>SDP</td>
+<td>Session Description Protocol</td>
+<td>描述媒体、编解码器、方向、地址和协商结果的会话文本</td>
+<td><a href="https://www.rfc-editor.org/rfc/rfc8866" target="_blank" rel="noreferrer">RFC 8866</a></td>
+</tr>
+<tr>
+<td>ICE</td>
+<td>Interactive Connectivity Establishment</td>
+<td>在主机、STUN 和 TURN 候选之间寻找可用网络路径的机制</td>
+<td><a href="https://www.rfc-editor.org/rfc/rfc8445" target="_blank" rel="noreferrer">RFC 8445</a></td>
+</tr>
+<tr>
+<td>STUN</td>
+<td>Session Traversal Utilities for NAT</td>
+<td>帮助端点发现公网映射地址；它不是媒体中继</td>
+<td><a href="https://www.rfc-editor.org/rfc/rfc8489" target="_blank" rel="noreferrer">RFC 8489</a></td>
+</tr>
+<tr>
+<td>TURN</td>
+<td>Traversal Using Relays around NAT</td>
+<td>直连失败时由中继服务器转发数据</td>
+<td><a href="https://www.rfc-editor.org/rfc/rfc8656" target="_blank" rel="noreferrer">RFC 8656</a></td>
+</tr>
+<tr>
+<td>DTLS</td>
+<td>Datagram Transport Layer Security</td>
+<td>WebRTC 用于协商密钥和保护数据报传输的安全协议；媒体侧通常结合 SRTP</td>
+<td><a href="https://www.rfc-editor.org/rfc/rfc9147" target="_blank" rel="noreferrer">RFC 9147</a></td>
+</tr>
+<tr>
+<td>RTP</td>
+<td>Real-time Transport Protocol</td>
+<td>承载实时音视频媒体包</td>
+<td><a href="https://www.rfc-editor.org/rfc/rfc3550" target="_blank" rel="noreferrer">RFC 3550</a></td>
+</tr>
+<tr>
+<td>RTCP</td>
+<td>RTP Control Protocol</td>
+<td>与 RTP 配套的质量、同步和参与者控制信息</td>
+<td><a href="https://www.rfc-editor.org/rfc/rfc3550" target="_blank" rel="noreferrer">RFC 3550</a></td>
+</tr>
+<tr>
+<td>BUNDLE</td>
+<td>Bundle Protocol</td>
+<td>让多个媒体描述复用同一组传输资源</td>
+<td><a href="https://www.rfc-editor.org/rfc/rfc9143" target="_blank" rel="noreferrer">RFC 9143</a></td>
+</tr>
+<tr>
+<td>RTP/RTCP mux</td>
+<td>RTP and RTCP Multiplexing</td>
+<td>让 RTP 和 RTCP 复用同一端口/传输</td>
+<td><a href="https://www.rfc-editor.org/rfc/rfc5761" target="_blank" rel="noreferrer">RFC 5761</a></td>
+</tr>
+<tr>
+<td>Unified Plan</td>
+<td>Unified Plan SDP semantics</td>
+<td>现代 WebRTC 的轨道/Transceiver 映射模型；一个 m-line 对应一个收发器</td>
+<td><a href="https://www.w3.org/TR/webrtc/#rtcrtptransceiver-interface" target="_blank" rel="noreferrer">W3C <code>RTCRtpTransceiver</code></a></td>
+</tr>
+<tr>
+<td>Plan B</td>
+<td>Plan B SDP semantics</td>
+<td>Chrome 早期的非标准多轨 SDP 模型；源码仅为旧环境保留兼容分支</td>
+<td><a href="https://webrtc.org/getting-started/unified-plan-transition-guide" target="_blank" rel="noreferrer">Chromium Unified Plan 迁移说明</a></td>
+</tr>
+<tr>
+<td>m-line</td>
+<td>media description line</td>
+<td>SDP 中以 <code>m=</code> 开始的一段媒体描述</td>
+<td><a href="https://www.rfc-editor.org/rfc/rfc8866#section-5.14" target="_blank" rel="noreferrer">RFC 8866 §5.14</a></td>
+</tr>
+<tr>
+<td>MID</td>
+<td>Media Identification</td>
+<td>在 SDP/RTP 中标识媒体描述的 ID，用于把包和 m-line/Transceiver 对应起来</td>
+<td><a href="https://www.rfc-editor.org/rfc/rfc8843" target="_blank" rel="noreferrer">RFC 8843</a></td>
+</tr>
+<tr>
+<td>SSRC</td>
+<td>Synchronization Source</td>
+<td>RTP 同步源标识，常用来区分发送源</td>
+<td><a href="https://www.rfc-editor.org/rfc/rfc3550#section-6.4.1" target="_blank" rel="noreferrer">RFC 3550 §6.4.1</a></td>
+</tr>
+<tr>
+<td>MSID</td>
+<td>MediaStream Identification</td>
+<td>SDP 中把媒体轨道关联到 <code>MediaStream</code>/<code>MediaStreamTrack</code> 的标识</td>
+<td><a href="https://www.rfc-editor.org/rfc/rfc8830" target="_blank" rel="noreferrer">RFC 8830</a></td>
+</tr>
+<tr>
+<td>RPC</td>
+<td>Remote Procedure Call</td>
+<td>项目在 WebSocket 上封装的“发命令并等待对应响应”模式，不是 WebSocket 自带能力</td>
+<td>当前源码 <code>sendWaitForResponse()</code></td>
+</tr>
+<tr>
+<td>VAD</td>
+<td>Voice Activity Detection</td>
+<td>语音活动检测；用于判断声音中是否有语音活动</td>
+<td><a href="https://www.w3.org/TR/2018/CR-webrtc-20180927/#dom-rtcofferansweroptions-voiceactivitydetection" target="_blank" rel="noreferrer">2018 WebRTC 候选推荐版中的历史定义</a></td>
+</tr>
+<tr>
+<td>AEC</td>
+<td>Acoustic Echo Cancellation</td>
+<td>声学回声消除；本文也用来指音频处理图中的回声参考支路</td>
+<td><a href="https://www.w3.org/TR/mediacapture-streams/#def-constraint-echoCancellation" target="_blank" rel="noreferrer">W3C Media Capture <code>echoCancellation</code></a></td>
+</tr>
+<tr>
+<td>RTT</td>
+<td>Round-Trip Time</td>
+<td>数据往返一次所需时间；Stats 中常用来描述网络时延</td>
+<td><a href="https://www.w3.org/TR/webrtc-stats/#dom-rtcremoteinboundrtpstreamstats-roundtriptime" target="_blank" rel="noreferrer">W3C WebRTC Stats</a></td>
+</tr>
+<tr>
+<td>PCM</td>
+<td>Pulse-Code Modulation</td>
+<td>未压缩的数字音频采样数据</td>
+<td>通用音频术语</td>
+</tr>
+<tr>
+<td>SEI</td>
+<td>Supplemental Enhancement Information</td>
+<td>视频码流中的补充增强信息；项目用于随视频发送附加数据</td>
+<td><a href="https://www.itu.int/rec/T-REC-H.264" target="_blank" rel="noreferrer">ITU-T H.264</a></td>
+</tr>
+<tr>
+<td>WASM</td>
+<td>WebAssembly</td>
+<td>浏览器可执行的低级二进制指令格式</td>
+<td><a href="https://webassembly.github.io/spec/core/" target="_blank" rel="noreferrer">WebAssembly Core Specification</a></td>
+</tr>
+<tr>
+<td>SIMD</td>
+<td>Single Instruction, Multiple Data</td>
+<td>一条指令并行处理多份数据；WASM 媒体算法常用来加速像素/音频计算</td>
+<td><a href="https://webassembly.github.io/spec/core/bikeshed/#simd-instructions%E2%91%A0" target="_blank" rel="noreferrer">WebAssembly SIMD</a></td>
+</tr>
+<tr>
+<td>URL</td>
+<td>Uniform Resource Locator</td>
+<td>网络资源地址</td>
+<td><a href="https://url.spec.whatwg.org/" target="_blank" rel="noreferrer">WHATWG URL Standard</a></td>
+</tr>
+<tr>
+<td>HTTP</td>
+<td>Hypertext Transfer Protocol</td>
+<td>调度、资源加载和上报使用的请求/响应协议</td>
+<td><a href="https://www.rfc-editor.org/rfc/rfc9110" target="_blank" rel="noreferrer">RFC 9110</a></td>
+</tr>
+<tr>
+<td>JSON</td>
+<td>JavaScript Object Notation</td>
+<td>WebSocket 信封和 HTTP 数据常用的文本数据格式</td>
+<td><a href="https://www.rfc-editor.org/rfc/rfc8259" target="_blank" rel="noreferrer">RFC 8259</a></td>
+</tr>
+<tr>
+<td>XHR</td>
+<td>XMLHttpRequest</td>
+<td>浏览器的历史 HTTP 请求接口</td>
+<td><a href="https://xhr.spec.whatwg.org/" target="_blank" rel="noreferrer">WHATWG XMLHttpRequest</a></td>
+</tr>
+<tr>
+<td>DOM</td>
+<td>Document Object Model</td>
+<td>浏览器页面节点和事件对象模型</td>
+<td><a href="https://dom.spec.whatwg.org/" target="_blank" rel="noreferrer">WHATWG DOM</a></td>
+</tr>
+<tr>
+<td>UA</td>
+<td>User Agent</td>
+<td>执行页面的浏览器/客户端实现；UA string 指浏览器标识字符串</td>
+<td><a href="https://html.spec.whatwg.org/multipage/system-state.html#the-navigator-object" target="_blank" rel="noreferrer">WHATWG HTML Navigator</a></td>
+</tr>
+<tr>
+<td>MIME / media type</td>
+<td>Multipurpose Internet Mail Extensions media type</td>
+<td>描述资源格式的类型字符串，例如 <code>video/mp4</code>、<code>application/wasm</code></td>
+<td><a href="https://www.rfc-editor.org/rfc/rfc6838" target="_blank" rel="noreferrer">RFC 6838</a></td>
+</tr>
+<tr>
+<td>CORS</td>
+<td>Cross-Origin Resource Sharing</td>
+<td>浏览器决定跨源请求/资源是否可被页面读取的机制</td>
+<td><a href="https://fetch.spec.whatwg.org/#http-cors-protocol" target="_blank" rel="noreferrer">WHATWG Fetch CORS protocol</a></td>
+</tr>
+<tr>
+<td>CSP</td>
+<td>Content Security Policy</td>
+<td>限制页面可加载和执行哪些资源的安全策略</td>
+<td><a href="https://www.w3.org/TR/CSP3/" target="_blank" rel="noreferrer">W3C CSP Level 3</a></td>
+</tr>
+<tr>
+<td>NAT</td>
+<td>Network Address Translation</td>
+<td>在内网地址与外部地址之间转换；ICE/STUN/TURN 主要解决其带来的可达性问题</td>
+<td><a href="https://www.rfc-editor.org/rfc/rfc2663" target="_blank" rel="noreferrer">RFC 2663</a></td>
+</tr>
+<tr>
+<td>SRTP</td>
+<td>Secure Real-time Transport Protocol</td>
+<td>为 RTP/RTCP 提供机密性、认证和重放保护</td>
+<td><a href="https://www.rfc-editor.org/rfc/rfc3711" target="_blank" rel="noreferrer">RFC 3711</a></td>
+</tr>
+<tr>
+<td>TCP</td>
+<td>Transmission Control Protocol</td>
+<td>面向连接的可靠字节流协议；WebSocket 通常建立在 TCP/TLS 上</td>
+<td><a href="https://www.rfc-editor.org/rfc/rfc9293" target="_blank" rel="noreferrer">RFC 9293</a></td>
+</tr>
+<tr>
+<td>TLS</td>
+<td>Transport Layer Security</td>
+<td>HTTPS/WSS 使用的传输层安全协议</td>
+<td><a href="https://www.rfc-editor.org/rfc/rfc8446" target="_blank" rel="noreferrer">RFC 8446</a></td>
+</tr>
+<tr>
+<td>GPU</td>
+<td>Graphics Processing Unit</td>
+<td>图形处理器；WebGL 渲染和硬件编解码可能使用</td>
+<td>通用硬件术语</td>
+</tr>
+<tr>
+<td>CPU</td>
+<td>Central Processing Unit</td>
+<td>中央处理器；Canvas 像素读取和软件编解码可能增加 CPU 负载</td>
+<td>通用硬件术语</td>
+</tr>
+<tr>
+<td>rAF</td>
+<td><code>requestAnimationFrame</code></td>
+<td>浏览器在下一次绘制前安排回调的页面动画 API</td>
+<td><a href="https://html.spec.whatwg.org/multipage/imagebitmap-and-animations.html#animation-frames" target="_blank" rel="noreferrer">HTML Standard</a></td>
+</tr>
+<tr>
+<td>FBO</td>
+<td>Framebuffer Object</td>
+<td>WebGL 的离屏/自定义帧缓冲对象</td>
+<td><a href="https://registry.khronos.org/webgl/specs/latest/2.0/" target="_blank" rel="noreferrer">WebGL 2.0 Specification</a></td>
+</tr>
+<tr>
+<td>TLV</td>
+<td>Type-Length-Value</td>
+<td>由类型、长度和值组成的二进制字段编码形式</td>
+<td>通用协议编码术语</td>
+</tr>
+<tr>
+<td>Shim</td>
+<td>Compatibility shim</td>
+<td>在原生 API 外包一层，补齐或改写旧浏览器行为</td>
+<td>本文 Adapter 源码层</td>
+</tr>
+</tbody></table></div>
+<p>各专题仍应在术语<strong>首次出现</strong>时写出全称或中文解释；本表用于跨章节快速回查，而不是让正文只剩缩写。</p>
+<h2 id="8-怎样判断-这个字段从哪里来">8. 怎样判断“这个字段从哪里来”<a class="heading-anchor" href="#8-怎样判断-这个字段从哪里来" aria-label="链接到本节">#</a></h2>
+<p>文档中的“来源”必须区分下面四种证据，不能只放一个 MDN 链接就把项目私有字段也算成标准：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>标记</th>
+<th>能证明什么</th>
+<th>不能证明什么</th>
+<th>首选链接</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>当前标准</td>
+<td>当前 Web IDL 中仍定义了该 API/字段</td>
+<td>当前项目一定传了它</td>
+<td><a href="https://www.w3.org/TR/webrtc/" target="_blank" rel="noreferrer">W3C WebRTC Recommendation</a>、对应 WHATWG/W3C 规范</td>
+</tr>
+<tr>
+<td>开发者文档</td>
+<td>语法、参数解释和浏览器兼容性</td>
+<td>规范未定义的项目私有行为</td>
+<td>对应 <a href="https://developer.mozilla.org/en-US/docs/Web/API" target="_blank" rel="noreferrer">MDN Web Docs</a> 页面</td>
+</tr>
+<tr>
+<td>历史/实现扩展</td>
+<td>旧规范或特定内核曾定义/实现</td>
+<td>其他浏览器或当前版本仍支持</td>
+<td>带日期的 W3C 旧版本、Chromium/Firefox/WebKit 官方源码</td>
+</tr>
+<tr>
+<td>当前项目源码</td>
+<td>当前反混淆文件确实传参或调用</td>
+<td>字段属于 Web 标准、服务端语义已知</td>
+<td><a href="../../trtc.deobfuscated.js"><code>trtc.deobfuscated.js</code></a> 的方法和行号</td>
+</tr>
+</tbody></table></div>
+<p>因此，看到“MDN 当前页没有某字段”时，正确处理不是直接删掉，而是依次回答：源码有没有传、旧规范是否定义过、当前规范是否仍存在、目标浏览器是否只是容忍未知字典成员。查不到公开实现来源的字段必须明确标成“项目/内核私有，公开语义不能确认”。</p>
+<h2 id="9-推荐阅读路径">9. 推荐阅读路径<a class="heading-anchor" href="#9-推荐阅读路径" aria-label="链接到本节">#</a></h2>
 <p>先读 <a href="01-Browser-API-Panorama.html">浏览器 API 使用全景分析</a>，知道整体用了什么；再读 <a href="02-RTCPeerConnection-usage-analysis.html"><code>RTCPeerConnection</code></a> 和 <a href="03-WebSocket-usage-analysis.html"><code>WebSocket</code></a>，建立媒体面和控制面；然后根据问题进入采集、Track、Audio、渲染或 Worker 专题；最后通过 <a href="11-End-to-End-Business-Flows.html">端到端业务流程</a> 把各层重新串起来。</p>
 <p>附录 A—F 只用于核对完整行号和反向查找，不作为学习入口。</p>
 
@@ -320,7 +665,7 @@
     
     <nav class="page-toc" aria-label="本页目录">
       <h2>本页目录</h2>
-      <a class="toc-depth-2" href="#1-先建立六层结构">1. 先建立六层结构</a><a class="toc-depth-2" href="#2-控制面与媒体面必须分开">2. 控制面与媒体面必须分开</a><a class="toc-depth-2" href="#3-三种源码出现位置不能混为一谈">3. 三种源码出现位置不能混为一谈</a><a class="toc-depth-2" href="#4-关键对象与资源所有权">4. 关键对象与资源所有权</a><a class="toc-depth-2" href="#5-参数怎样从公开-api-流到浏览器">5. 参数怎样从公开 API 流到浏览器</a><a class="toc-depth-2" href="#6-阅读每个专题时固定回答什么">6. 阅读每个专题时固定回答什么</a><a class="toc-depth-2" href="#7-推荐阅读路径">7. 推荐阅读路径</a>
+      <a class="toc-depth-2" href="#1-先建立六层结构">1. 先建立六层结构</a><a class="toc-depth-2" href="#2-控制面与媒体面必须分开">2. 控制面与媒体面必须分开</a><a class="toc-depth-2" href="#3-三种源码出现位置不能混为一谈">3. 三种源码出现位置不能混为一谈</a><a class="toc-depth-2" href="#4-关键对象与资源所有权">4. 关键对象与资源所有权</a><a class="toc-depth-2" href="#5-参数怎样从公开-api-流到浏览器">5. 参数怎样从公开 API 流到浏览器</a><a class="toc-depth-2" href="#6-阅读每个专题时固定回答什么">6. 阅读每个专题时固定回答什么</a><a class="toc-depth-2" href="#7-核心术语速查">7. 核心术语速查</a><a class="toc-depth-2" href="#8-怎样判断-这个字段从哪里来">8. 怎样判断“这个字段从哪里来”</a><a class="toc-depth-2" href="#9-推荐阅读路径">9. 推荐阅读路径</a>
     </nav>
   </main>
   <button type="button" class="back-to-top" aria-label="回到顶部">↑</button>

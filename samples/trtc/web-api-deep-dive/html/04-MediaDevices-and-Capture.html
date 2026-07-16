@@ -21,6 +21,7 @@
       <kbd>/</kbd>
       <div id="search-results" class="search-results" hidden></div>
     </div>
+    <a class="source-link" href="00-Reading-Guide-and-Source-Map.html#7-核心术语速查">术语与来源</a>
     <a class="source-link" href="../04-MediaDevices-and-Capture.md">Markdown</a>
     <a class="source-link" href="../../trtc.deobfuscated.js">源码</a>
     <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
@@ -719,8 +720,13 @@ if (e.systemAudio) {
 <td><code>e.preferDisplaySurface</code>，无值时 <code>&#39;monitor&#39;</code>；这是提示，用户仍必须在选择器确认</td>
 </tr>
 <tr>
-<td><code>width/height</code></td>
-<td>希望的输出尺寸</td>
+<td><code>width</code></td>
+<td>希望的输出宽度</td>
+<td>Safari 只传 <code>{max}</code>，其他浏览器传 <code>{ideal,max}</code></td>
+</tr>
+<tr>
+<td><code>height</code></td>
+<td>希望的输出高度</td>
 <td>Safari 只传 <code>{max}</code>，其他浏览器传 <code>{ideal,max}</code></td>
 </tr>
 <tr>
