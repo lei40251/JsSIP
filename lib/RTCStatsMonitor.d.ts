@@ -59,7 +59,7 @@ declare namespace RTCStatsMonitor {
     backgroundSampleIntervalMs?: number
     /** 媒体变化后跳过瞬时诊断的样本数量，默认 2。 */
     transitionGraceSamples?: number
-    /** 是否记录完整报告并发送 detailed-report 摘要，默认 true。 */
+    /** 是否记录常用诊断摘要并发送 detailed-report 事件，默认 true。 */
     enableDetailedReport?: boolean
     /** 是否限频记录原始 RTCStatsReport，默认 false。 */
     enableRawStatsLog?: boolean
@@ -439,7 +439,7 @@ declare namespace RTCStatsMonitor {
     issues: Array<Pick<QualityIssue, 'code' | 'severity'>>
   }
 
-  /** logger 和 getLatestReport() 使用的完整诊断报告。 */
+  /** getLatestReport() 返回的完整诊断报告；普通 logger 只输出其中的常用摘要。 */
   interface DetailedReport {
     /** 本次报告中最大的浏览器统计时间戳，单位毫秒。 */
     timestamp: number

@@ -30,6 +30,30 @@ let statsSession;
 let earlyMedia = false;
 // 当前活跃通话的 RTCSession 实例
 let rtcSession;
+
+/**
+ * 读取当前通话最近一份统计，不触发新的采样。
+ * 可在浏览器控制台执行 getCurrentCallStats() 对照 docs/user-guide/05-call-statistics.md。
+ *
+ * @returns {{networkQuality: object|null, legacyReport: object|null, detailedReport: object|null}|null}
+ */
+function getCurrentCallStats()
+{
+  const monitor = rtcSession && rtcSession.statsMonitor;
+
+  if (!monitor)
+  {
+    return null;
+  }
+
+  return {
+    networkQuality : monitor.getLatestNetworkQuality(),
+    legacyReport   : monitor.getLatestLegacyReport(),
+    detailedReport : monitor.getLatestReport()
+  };
+}
+
+window.getCurrentCallStats = getCurrentCallStats;
 // iOS 兼容：定时发送 OPTIONS 保活的定时器句柄
 let optionsTimer;
 // 呼叫转移场景中被转入的新会话实例
@@ -137,6 +161,8 @@ const mbit = handleGetQuery('mbit') || 400;
 const rec = handleGetQuery('rec') || false;
 // 环境标识，用于切换不同的信令服务器/密码等配置
 const env = handleGetQuery('env');
+// 注册模式：默认 automatic；传 register=manual 时由 connected 事件显式调用 ua.register()。
+const manualRegister = handleGetQuery('register') === 'manual';
 // 是否移除 REMB/Transport-CC 扩展（VoLTE 互通兼容）
 const noremb = handleGetQuery('noremb') || false;
 // 根据 env 参数选择对应的环境配置，默认使用 env_default
@@ -174,6 +200,8 @@ const configuration = {
   connection_recovery_min_interval : 2,
   // 注册过期时间（秒），UA 会周期性刷新注册
   register_expires                 : 20,
+  // automatic: ua.start() 连接成功后自动注册；manual: connected 后调用 ua.register()
+  register                         : !manualRegister,
   // 禁用 Session Timers（RFC 4028）
   session_timers                   : false,
   // 通话加密密钥
@@ -288,6 +316,14 @@ ua.on('connected', function()
   isShowUI = false;
 
   setStatus('信令连接成功');
+
+  // 手动注册演示：使用 ?caller=7300&register=manual 打开页面。
+  // 默认模式不进入此分支，ua.start() 会自动完成注册。
+  if (manualRegister)
+  {
+    setStatus('信令连接成功，正在手动注册');
+    ua.register();
+  }
 });
 
 /**

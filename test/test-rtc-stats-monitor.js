@@ -171,6 +171,42 @@ async function testTimestampDeltaAndCompatibility()
   assert.strictEqual(second.connection.candidatePairSelection, 'transport');
 }
 
+async function testDetailedLogUsesCompactSummary()
+{
+  const monitor = new RTCStatsMonitor(createPc([ createStats(1000, 1), createStats(3000, 2) ]), { autoStart: false, transitionGraceSamples: 0 });
+
+  await monitor._collect();
+  const detailed = await monitor._collect();
+  const summary = monitor._createDetailedLogReport(detailed);
+
+  assert.deepStrictEqual(Object.keys(summary), [
+    'compatibility',
+    'phase',
+    'ready',
+    'sampleDurationMs',
+    'connection',
+    'outbound',
+    'inbound',
+    'quality',
+    'performance'
+  ]);
+  assert.deepStrictEqual(summary.connection.candidatePath.local, {
+    candidateType : 'host',
+    protocol      : 'udp',
+    relayProtocol : null
+  });
+  assert.ok(!Object.prototype.hasOwnProperty.call(summary.connection.candidatePath.local, 'address'));
+  assert.ok(!Object.prototype.hasOwnProperty.call(summary.outbound[0], 'bytesSent'));
+  assert.ok(!Object.prototype.hasOwnProperty.call(summary.inbound[0], 'bytesReceived'));
+  assert.strictEqual(summary.outbound.find((stream) => stream.type === 'audio').rttMs, 80);
+  assert.strictEqual(summary.inbound.find((stream) => stream.type === 'video').averageJitterBufferDelayMs, 3.333);
+  const summaryLength = JSON.stringify(summary).length;
+  const detailedLength = JSON.stringify(detailed).length;
+
+  assert.ok(summaryLength < 3000);
+  assert.ok(summaryLength < detailedLength / 2);
+}
+
 async function testLegacyEventShape()
 {
   const monitor = new RTCStatsMonitor(createPc([ createStats(1000, 1), createStats(3000, 2) ]), { autoStart: false, transitionGraceSamples: 0 });
@@ -715,6 +751,7 @@ async function run()
     suiteName : 'RTCStatsMonitor',
     tests     : [
       { name: 'uses report timestamps for deltas and detects full support', fn: testTimestampDeltaAndCompatibility },
+      { name: 'keeps detailed logs compact while retaining user-facing diagnostics', fn: testDetailedLogUsesCompactSummary },
       { name: 'keeps report and network-quality payload shapes compatible', fn: testLegacyEventShape },
       { name: 'uses current media RTT and worst current RTP loss', fn: testUsesCurrentMediaRttAndWorstLoss },
       { name: 'keeps each RTP stream and falls back to track settings', fn: testKeepsEachRtpStreamAndFallsBackToTrackSettings },
