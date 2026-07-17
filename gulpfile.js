@@ -534,7 +534,7 @@ gulp.task('grammar', function(cb)
 });
 
 // 以下 zip 相关任务用于生成交付包。
-// release 入口会先完成 dist 构建，再收集 demo / dist/CRTC.min.js / changelog / docs PDF 进入 zip。
+// release 入口会先完成 dist 构建，再收集 demo / dist/CRTC.min.js / changelog / user-guide HTML 进入 zip。
 gulp.task('zip-demo', gulp.series(
   copyFiles,
   renameConfig,
@@ -558,7 +558,7 @@ gulp.task('zip-changelog', function()
 gulp.task('zip-doc', function()
 {
   return gulp
-    .src('docs/*.pdf')
+    .src('docs/user-guide/html/**', { base: 'docs/user-guide/html' })
     .pipe(gulp.dest('zip/docs/'));
 });
 

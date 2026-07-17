@@ -6,6 +6,41 @@
 // 页面级 UI 事件绑定
 // =============================================================================
 
+// 主动注册：适用于 register=manual，也可在主动注销后重新注册。
+document.querySelector('#registerUa').onclick = function()
+{
+  if (!ua.isConnected())
+  {
+    setStatus('信令尚未连接，不能注册');
+
+    return;
+  }
+
+  if (ua.isRegistered())
+  {
+    setStatus('当前账号已经注册');
+
+    return;
+  }
+
+  setStatus('正在主动注册');
+  ua.register();
+};
+
+// 主动注销：注销 SIP 注册但保留 WSS 连接，可再次点击“主动注册”。
+document.querySelector('#unregisterUa').onclick = function()
+{
+  if (!ua.isRegistered())
+  {
+    setStatus('当前账号尚未注册');
+
+    return;
+  }
+
+  setStatus('正在主动注销');
+  ua.unregister();
+};
+
 // 发起无音视频呼叫（静默音频 + 黑屏视频）
 document.querySelector('#callNull').onclick = function()
 {
@@ -387,5 +422,4 @@ document.querySelector('#clearCurrentImageWatermark').onclick = async function()
 {
   await clearCurrentImageWatermarkFromSession();
 };
-
 

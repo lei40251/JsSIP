@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.5.20267151059
+ * CRTC v2.0.5.20267171442
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -4168,7 +4168,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.5.405214302118 (Web)',
+  USER_AGENT: 'UA/2.0.5.405214342884 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17423,7 +17423,7 @@ var debug = require('debug')('CRTC');
 var RTCStatsMonitor = require('./RTCStatsMonitor');
 var MediaEffectsComposer = require('./MediaEffectsComposer/MediaEffectsComposer');
 var MetaHumanClient = require('./MetaHumanClient');
-debug('version %s', '2.0.5.405214302118');
+debug('version %s', '2.0.5.405214342884');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17464,7 +17464,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.5.405214302118';
+    return '2.0.5.405214342884';
   }
 };
 },{"./Constants":30,"./Exceptions":35,"./Grammar":36,"./MediaEffectsComposer/MediaEffectsComposer":47,"./MetaHumanClient":59,"./NameAddrHeader":60,"./RTCStatsMonitor":70,"./UA":78,"./URI":79,"./Utils":80,"./WebSocketInterface":81,"debug":86}],38:[function(require,module,exports){
@@ -32746,7 +32746,7 @@ module.exports = class RTCSession extends EventEmitter {
       }
     });
 
-    // RTCSession 原样转发统计事件，业务既可从 statsMonitor 监听，也可直接监听会话。
+    // 会话事件统一增加 stats: 前缀，避免与通话事件混淆；payload 保持不变。
     ['report', 'network-quality', 'detailed-report', 'stats-error'].forEach(eventName => {
       monitor.on(eventName, payload => {
         logger.debug(`${this._id} stats:${eventName}`);
@@ -37693,7 +37693,7 @@ var LEVEL = {
  *   -> 兼容标准 Map、普通对象和旧版 result()/stat() 报告
  *   -> 按 report.id 保存上一份基线
  *   -> 使用报告自身 timestamp 计算区间增量
- *   -> 生成 detailed-report
+ *   -> 生成完整诊断报告和 detailed-report 事件摘要
  *   -> 按较低频率生成兼容的 report / network-quality
  *
  * 这里刻意不使用 setInterval：一次 getStats 尚未完成时不会启动下一次采样，
@@ -37712,7 +37712,7 @@ var LEVEL = {
  * PC 创建后即可启动，不要求当时已经存在 sender、receiver、MID 或 RTP 数据。
  * 浏览器缺失的字段统一返回 null，避免把“未知”误判为 0。
  *
- * @fires RTCStatsMonitor#detailed-report 每次成功采样后触发的完整诊断报告
+ * @fires RTCStatsMonitor#detailed-report 每次成功采样后触发的常用诊断摘要
  * @fires RTCStatsMonitor#report 兼容旧模块结构的上下行媒体报告
  * @fires RTCStatsMonitor#network-quality 兼容旧模块结构的网络等级
  * @fires RTCStatsMonitor#stats-error 不影响通话流程的统计错误
@@ -37725,7 +37725,7 @@ module.exports = class RTCStatsMonitor extends EventEmitter {
    * @param {number} [options.legacyReportIntervalMs=2000] 两个兼容事件的输出间隔
    * @param {number} [options.backgroundSampleIntervalMs=2000] 页面后台时的采样间隔
    * @param {number} [options.transitionGraceSamples=2] 媒体变化后跳过异常诊断的样本数
-   * @param {boolean} [options.enableDetailedReport=true] 是否发送 detailed-report
+   * @param {boolean} [options.enableDetailedReport=true] 是否记录常用诊断摘要并发送 detailed-report 事件
    * @param {boolean} [options.enableRawStatsLog=false] 是否按限频规则记录原始报告
    * @param {number} [options.getStatsTimeoutMs=5000] 单次 getStats 超时时间，最小 100ms
    * @param {boolean} [options.autoStart=true] 构造后是否立即开始采样
@@ -37879,12 +37879,6 @@ module.exports = class RTCStatsMonitor extends EventEmitter {
     }
     this._timer = setTimeout(() => this._sample(), timeoutMs);
   }
-  _nextInterval() {
-    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
-      return this._options.backgroundSampleIntervalMs;
-    }
-    return this._options.sampleIntervalMs;
-  }
 
   /**
    * 执行一个完整采样周期。
@@ -37903,7 +37897,11 @@ module.exports = class RTCStatsMonitor extends EventEmitter {
     this._sampling = true;
     try {
       if (!this._canGetStats()) {
-        this._reportUnsupported();
+        if (!this._unsupportedReported) {
+          this._unsupportedReported = true;
+          this._compatibility.level = LEVEL.UNSUPPORTED;
+          this._emitStatsError('GET_STATS_UNSUPPORTED', new Error('RTCPeerConnection.getStats is unavailable'), true);
+        }
         this.stop();
         return;
       }
@@ -37921,10 +37919,12 @@ module.exports = class RTCStatsMonitor extends EventEmitter {
       this._consecutiveErrors = 0;
       this._latestDetailedReport = detailedReport;
       if (this._options.enableDetailedReport) {
-        logger.debug('detailed-report: ', JSON.stringify(detailedReport));
+        logger.debug('detailed-report: ', JSON.stringify(this._createDetailedLogReport(detailedReport)));
         this.emit('detailed-report', this._createDetailedEventReport(detailedReport));
       }
-      if (this._shouldEmitLegacy(detailedReport.timestamp)) {
+      if (this._sampleCount === 1) {
+        this._lastLegacyTimestamp = detailedReport.timestamp;
+      } else if (this._lastLegacyTimestamp === null || detailedReport.timestamp - this._lastLegacyTimestamp >= this._options.legacyReportIntervalMs) {
         var legacyReport = this._createLegacyReport(detailedReport);
         var networkQualityReport = this._createNetworkQuality(detailedReport);
         this._lastLegacyTimestamp = detailedReport.timestamp;
@@ -37941,7 +37941,7 @@ module.exports = class RTCStatsMonitor extends EventEmitter {
       if (this._started && (runId === this._runId || this._restartPending)) {
         var restartImmediately = this._restartPending;
         this._restartPending = false;
-        this._schedule(restartImmediately ? 0 : this._nextInterval());
+        this._schedule(restartImmediately ? 0 : typeof document !== 'undefined' && document.visibilityState === 'hidden' ? this._options.backgroundSampleIntervalMs : this._options.sampleIntervalMs);
       }
     }
   }
@@ -37949,7 +37949,7 @@ module.exports = class RTCStatsMonitor extends EventEmitter {
   /**
    * 收集、归一化并解析一次报告，同时记录 getStats 和解析耗时。
    *
-   * @returns {Promise<object>} detailed-report payload
+   * @returns {Promise<object>} 完整诊断报告
    * @private
    */
   async _collect() {
@@ -38110,7 +38110,7 @@ module.exports = class RTCStatsMonitor extends EventEmitter {
       this.markTransition('stats-topology-changed');
     }
     this._lastTopology = topology;
-    var ready = hasComparableStreams(outbound, inbound);
+    var ready = outbound.some(stream => stream.comparable && stream.actualBitrateBps !== null) || inbound.some(stream => stream.comparable && stream.receiveBitrateBps !== null);
     var phase = this._readPhase(ready);
     var detailedReport = {
       timestamp,
@@ -38413,6 +38413,103 @@ module.exports = class RTCStatsMonitor extends EventEmitter {
       downlinkLoss: quality.downlinkLoss
     };
   }
+
+  /**
+   * 普通日志只保留通话浮层和常规排障所需字段，避免每个采样周期输出
+   * candidate 地址、累计计数器和关联对象等完整诊断数据。
+   * 完整报告仍可通过 getLatestReport() 获取。
+   *
+   * @private
+   */
+  _createDetailedLogReport(report) {
+    var compactCandidate = candidate => {
+      if (!candidate) {
+        return null;
+      }
+      return {
+        candidateType: candidate.candidateType,
+        protocol: candidate.protocol,
+        relayProtocol: candidate.relayProtocol
+      };
+    };
+    return {
+      compatibility: report.compatibility ? {
+        level: report.compatibility.level
+      } : null,
+      phase: report.phase,
+      ready: report.ready,
+      sampleDurationMs: report.sampleDurationMs,
+      connection: {
+        connectionState: report.connection.connectionState,
+        iceConnectionState: report.connection.iceConnectionState,
+        dtlsState: report.connection.dtlsState,
+        rttMs: report.connection.rttMs,
+        sendBitrateBps: report.connection.sendBitrateBps,
+        availableOutgoingBitrateBps: report.connection.availableOutgoingBitrateBps,
+        receiveBitrateBps: report.connection.receiveBitrateBps,
+        availableIncomingBitrateBps: report.connection.availableIncomingBitrateBps,
+        candidatePath: {
+          state: report.connection.candidatePairState,
+          local: compactCandidate(report.connection.localCandidate),
+          remote: compactCandidate(report.connection.remoteCandidate)
+        }
+      },
+      outbound: report.outbound.map(stream => ({
+        type: stream.type,
+        mid: stream.mid,
+        codec: stream.codec ? stream.codec.name : null,
+        actualBitrateBps: stream.actualBitrateBps,
+        lossPercent: stream.remoteInbound ? stream.remoteInbound.intervalLossPercent : null,
+        jitterMs: stream.remoteInbound ? stream.remoteInbound.jitterMs : null,
+        rttMs: stream.remoteInbound ? stream.remoteInbound.rttMs : null,
+        framesPerSecond: stream.framesPerSecond,
+        frameWidth: stream.frameWidth,
+        frameHeight: stream.frameHeight,
+        averageEncodeTimeMs: stream.averageEncodeTimeMs,
+        qualityLimitationReason: stream.qualityLimitationReason
+      })),
+      inbound: report.inbound.map(stream => ({
+        type: stream.type,
+        mid: stream.mid,
+        codec: stream.codec ? stream.codec.name : null,
+        receiveBitrateBps: stream.receiveBitrateBps,
+        lossPercent: stream.intervalLossPercent,
+        jitterMs: stream.jitterMs,
+        averageJitterBufferDelayMs: stream.averageJitterBufferDelayMs,
+        framesPerSecond: stream.framesPerSecond,
+        frameWidth: stream.frameWidth,
+        frameHeight: stream.frameHeight,
+        averageDecodeTimeMs: stream.averageDecodeTimeMs,
+        droppedFramePercent: stream.droppedFramePercent
+      })),
+      quality: {
+        RTT: report.quality.RTT,
+        uplinkLoss: report.quality.uplinkLoss,
+        downlinkLoss: report.quality.downlinkLoss,
+        uplinkNetworkQuality: report.quality.uplinkNetworkQuality,
+        downlinkNetworkQuality: report.quality.downlinkNetworkQuality,
+        uplinkMediaQuality: report.quality.uplinkMediaQuality,
+        downlinkMediaQuality: report.quality.downlinkMediaQuality,
+        issues: report.quality.issues.map(reportIssue => ({
+          code: reportIssue.code,
+          severity: reportIssue.severity
+        }))
+      },
+      performance: {
+        getStatsDurationMs: report.performance.getStatsDurationMs,
+        parseDurationMs: report.performance.parseDurationMs,
+        reportCount: report.performance.reportCount,
+        statsFormat: report.performance.statsFormat
+      }
+    };
+  }
+
+  /**
+   * 事件只反馈 Demo 和常规监控需要的字段，避免把完整诊断对象持续传给业务层。
+   * 完整报告可通过 getLatestReport() 获取。
+   *
+   * @private
+   */
   _createDetailedEventReport(report) {
     return {
       connection: {
@@ -38629,13 +38726,6 @@ module.exports = class RTCStatsMonitor extends EventEmitter {
       statsFormat: this._statsFormat
     };
   }
-  _shouldEmitLegacy(timestamp) {
-    if (this._sampleCount === 1) {
-      this._lastLegacyTimestamp = timestamp;
-      return false;
-    }
-    return this._lastLegacyTimestamp === null || timestamp - this._lastLegacyTimestamp >= this._options.legacyReportIntervalMs;
-  }
   _logRawStats(timestamp, reports) {
     if (!this._options.enableRawStatsLog) {
       return;
@@ -38645,14 +38735,6 @@ module.exports = class RTCStatsMonitor extends EventEmitter {
     }
     this._lastRawLogTimestamp = timestamp;
     logger.debug(`raw stats: ${JSON.stringify(reports)}`);
-  }
-  _reportUnsupported() {
-    if (this._unsupportedReported) {
-      return;
-    }
-    this._unsupportedReported = true;
-    this._compatibility.level = LEVEL.UNSUPPORTED;
-    this._emitStatsError('GET_STATS_UNSUPPORTED', new Error('RTCPeerConnection.getStats is unavailable'), true);
   }
   _emitStatsError(code, error, fatal) {
     var event = {
@@ -39013,9 +39095,6 @@ function createTopology(outbound, inbound, transceivers, pair) {
   transceivers.forEach(transceiver => parts.push(`t:${transceiver.mid}:${transceiver.currentDirection || transceiver.direction}:${readTrackId(transceiver, 'sender')}:${readTrackId(transceiver, 'receiver')}`));
   pair && parts.push(`p:${pair.id}`);
   return parts.sort().join('|');
-}
-function hasComparableStreams(outbound, inbound) {
-  return outbound.some(stream => stream.comparable && stream.actualBitrateBps !== null) || inbound.some(stream => stream.comparable && stream.receiveBitrateBps !== null);
 }
 function findSampleDuration(outbound, inbound) {
   var durations = [];

@@ -151,6 +151,25 @@ const ua = new CRTC.UA({
 </tr>
 </tbody></table></div>
 <p>生产环境不要把账号密码和授权码直接写入前端代码或提交到版本管理系统。</p>
+<p>Base JS Demo 把环境配置和账号参数组合成 <code>configuration</code>，再只创建一个 UA。以下节选自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const account = handleGetQuery(&#39;caller&#39;);
+const socket = new CRTC.WebSocketInterface(signalingUrl);
+const configuration = {
+  sockets                          : socket,
+  uri                              : `sip:${account}@${sipDomain}`,
+  display_name                     : account,
+  password                         : `${password ? password : &#39;yl_19&#39;}${account}`,
+  connection_recovery_max_interval : 3,
+  connection_recovery_min_interval : 2,
+  register_expires                 : 20,
+  register                         : !manualRegister,
+  session_timers                   : false,
+  secret_key                       : secretKey
+};
+
+const ua = new CRTC.UA(configuration);
+</code></pre>
+</div><p>这里的密码规则和较短注册周期是 Demo 环境行为，客户项目应使用服务方交付的真实配置。</p>
 <h2 id="2-4-配置-webrtc-网络">2.4 配置 WebRTC 网络<a class="heading-anchor" href="#2-4-配置-webrtc-网络" aria-label="链接到本节">#</a></h2>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const pcConfig = {
   iceServers : [
@@ -264,6 +283,35 @@ const ua = new CRTC.UA({
 </tr>
 </tbody></table></div>
 <p>第一版接入建议先使用 Demo 的 <code>640×480@15fps</code>，基础通话稳定后再提高分辨率和帧率。约束越严格，设备不支持时越容易产生 <code>OverconstrainedError</code>。</p>
+<p>Demo 将设备选择收敛成两个构造函数，呼出、接听和视频升级都复用它们。代码取自 <a href="../../../demo/base-js/js/app.sdk-helper.js"><code>app.sdk-helper.js</code></a>：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function buildSelectedAudioConstraints()
+{
+  const constraints = {
+    sampleRate   : 48000,
+    channelCount : 1
+  };
+
+  if (selectMic)
+  {
+    constraints.deviceId = { exact: selectMic };
+  }
+
+  return constraints;
+}
+
+function buildSelectedVideoConstraints()
+{
+  const constraints = Object.assign({}, videoConstraints);
+
+  if (selectCamera)
+  {
+    constraints.deviceId = { exact: selectCamera };
+  }
+
+  return constraints;
+}
+</code></pre>
+</div><p>将选择的 deviceId 集中写入约束，可以避免呼出用选中设备、接听却回到默认设备。</p>
 <h2 id="2-6-完整页面代码">2.6 完整页面代码<a class="heading-anchor" href="#2-6-完整页面代码" aria-label="链接到本节">#</a></h2>
 <p>替换 WSS、账号、密码、授权码、TURN 和被叫地址后，可将以下内容作为接入骨架：</p>
 <div class="code-block"><div class="code-toolbar"><span>html</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-html">&lt;!doctype html&gt;
@@ -500,6 +548,54 @@ const ua = new CRTC.UA({
 <li><code>failed</code> 或 <code>ended</code> 统一清理页面。</li>
 </ol>
 <p>不要把事件绑定放到 <code>confirmed</code> 后：拒接、超时、早期媒体和建立前失败都会在 confirmed 之前发生。</p>
+<p>Base JS Demo 的标准呼出也遵循同一顺序。以下是 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a> 中 <code>call(type, direction, mediaStream)</code> 的核心节选：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">if (!ua.isRegistered())
+{
+  setStatus(&#39;请注册成功后呼叫&#39;);
+
+  return;
+}
+
+options = {
+  extraHeaders  : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}`, `X-Direction: ${direction || &#39;sendrecv&#39;}` ],
+  extraFeatures : extraFeatures,
+  pcConfig      : pcConfig,
+  eventHandlers : {
+    mediaEffectsIssue : handleSessionMediaEffectsIssue
+  }
+};
+
+options[&#39;mediaConstraints&#39;] = {
+  audio : buildSelectedAudioConstraints(),
+  video : (type === &#39;video&#39; || type === &#39;onlyVideo&#39;) ? buildSelectedVideoConstraints() : false
+};
+
+options.mediaEffectsComposer = buildCallComposerOptions();
+options.aiNoiseSuppression = buildCallAiNsOptions();
+
+const session = await ua.call(`${number}@${sipDomain}`, options);
+</code></pre>
+</div><p>这是 Demo 的通用函数节选，因此包含随路头和媒体效果。最小接入可只保留 <code>pcConfig</code>、<code>mediaConstraints</code> 和 <code>ua.call()</code>。</p>
+<p>标准视频接听的参数与呼出保持一致，以下代码同样取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">document.querySelector(&#39;#answerVideo&#39;).onclick = function()
+{
+  e.session.answer({
+    mediaConstraints : {
+      audio : buildSelectedAudioConstraints(),
+      video : buildSelectedVideoConstraints()
+    },
+    pcConfig             : Object.assign(pcConfig, { &#39;rtcpMuxPolicy&#39;: &#39;negotiate&#39; }),
+    extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
+    rtcOfferConstraints  : { offerToReceiveAudio: true, offerToReceiveVideo: true },
+    extraFeatures        : extraFeatures,
+    mediaEffectsComposer : buildCallComposerOptions(),
+    aiNoiseSuppression   : buildCallAiNsOptions()
+  });
+
+  setStatus(&#39;video answer&#39;);
+};
+</code></pre>
+</div><p>呼出和接听都调用 <code>buildSelected*Constraints()</code>、<code>buildCallComposerOptions()</code> 和 <code>buildCallAiNsOptions()</code>，这正是两条路径保持一致的关键。</p>
 <h2 id="2-8-自动注册和手动注册">2.8 自动注册和手动注册<a class="heading-anchor" href="#2-8-自动注册和手动注册" aria-label="链接到本节">#</a></h2>
 <p>示例默认自动注册。手动注册写法：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const ua = new CRTC.UA({
@@ -682,7 +778,7 @@ ua.on(&#39;connected&#39;, function()
     
     <nav class="page-toc" aria-label="本页目录">
       <h2>本页目录</h2>
-      <a class="toc-depth-2" href="#2-1-引入-sdk">2.1 引入 SDK</a><a class="toc-depth-2" href="#2-2-准备页面元素">2.2 准备页面元素</a><a class="toc-depth-2" href="#2-3-创建-ua">2.3 创建 UA</a><a class="toc-depth-2" href="#2-4-配置-webrtc-网络">2.4 配置 WebRTC 网络</a><a class="toc-depth-2" href="#2-5-媒体约束怎么填写">2.5 媒体约束怎么填写</a><a class="toc-depth-2" href="#2-6-完整页面代码">2.6 完整页面代码</a><a class="toc-depth-2" href="#2-7-代码运行顺序">2.7 代码运行顺序</a><a class="toc-depth-2" href="#2-8-自动注册和手动注册">2.8 自动注册和手动注册</a><a class="toc-depth-2" href="#2-9-呼叫-options-最小字段表">2.9 呼叫 options 最小字段表</a><a class="toc-depth-2" href="#2-10-ui-状态建议">2.10 UI 状态建议</a><a class="toc-depth-2" href="#2-11-验证顺序">2.11 验证顺序</a><a class="toc-depth-2" href="#2-12-常见失败">2.12 常见失败</a><a class="toc-depth-2" href="#2-13-第一通电话完成检查">2.13 第一通电话完成检查</a>
+      <a class="toc-depth-2" href="#2-1-引入-sdk" title="2.1 引入 SDK">2.1 引入 SDK</a><a class="toc-depth-2" href="#2-2-准备页面元素" title="2.2 准备页面元素">2.2 准备页面元素</a><a class="toc-depth-2" href="#2-3-创建-ua" title="2.3 创建 UA">2.3 创建 UA</a><a class="toc-depth-2" href="#2-4-配置-webrtc-网络" title="2.4 配置 WebRTC 网络">2.4 配置 WebRTC 网络</a><a class="toc-depth-2" href="#2-5-媒体约束怎么填写" title="2.5 媒体约束怎么填写">2.5 媒体约束怎么填写</a><a class="toc-depth-2" href="#2-6-完整页面代码" title="2.6 完整页面代码">2.6 完整页面代码</a><a class="toc-depth-2" href="#2-7-代码运行顺序" title="2.7 代码运行顺序">2.7 代码运行顺序</a><a class="toc-depth-2" href="#2-8-自动注册和手动注册" title="2.8 自动注册和手动注册">2.8 自动注册和手动注册</a><a class="toc-depth-2" href="#2-9-呼叫-options-最小字段表" title="2.9 呼叫 options 最小字段表">2.9 呼叫 options 最小字段表</a><a class="toc-depth-2" href="#2-10-ui-状态建议" title="2.10 UI 状态建议">2.10 UI 状态建议</a><a class="toc-depth-2" href="#2-11-验证顺序" title="2.11 验证顺序">2.11 验证顺序</a><a class="toc-depth-2" href="#2-12-常见失败" title="2.12 常见失败">2.12 常见失败</a><a class="toc-depth-2" href="#2-13-第一通电话完成检查" title="2.13 第一通电话完成检查">2.13 第一通电话完成检查</a>
     </nav>
   </main>
   <button type="button" class="back-to-top" aria-label="回到顶部">↑</button>

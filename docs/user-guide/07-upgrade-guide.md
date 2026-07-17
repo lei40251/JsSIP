@@ -106,6 +106,30 @@ if (composer)
 composer && composer.clearSourceAiVirtualBackground(0);
 ```
 
+Base JS Demo 将“更新”和“清除”收敛到同一个通话中函数，这样页面下拉框切换到空值时不会遗留上一个背景：
+
+```js
+const { sessionComposer } = getSessionComposerHandles();
+
+if (!sessionComposer)
+{
+  return;
+}
+
+const aiVBOptions = buildCurrentAiVBOptions();
+
+if (!aiVBOptions)
+{
+  sessionComposer.clearSourceAiVirtualBackground(0);
+}
+else
+{
+  sessionComposer.setSourceAiVirtualBackground(0, aiVBOptions);
+}
+```
+
+代码节选自 [`app-media-effects.js`](../../demo/base-js/js/app-media-effects.js)。升级时应同时替换开启、切换和清除三条路径，不能只改初始呼叫参数。
+
 ### 7.2.3 模式与参数迁移
 
 | `mode` | 必要参数 | 说明 |
@@ -160,6 +184,19 @@ const session = await ua.call(target, options);
 ```js
 session.answer(options);
 ```
+
+Base JS Demo 在发起呼叫前从当前页面状态重新构造效果参数：
+
+```js
+options.mediaEffectsComposer = buildCallComposerOptions();
+options.aiNoiseSuppression = buildCallAiNsOptions();
+
+remoteNo = number;
+
+const session = await ua.call(`${number}@${sipDomain}`, options);
+```
+
+标准音频和视频接听也调用同样的 `buildCallComposerOptions()` 和 `buildCallAiNsOptions()`。这段代码取自 [`app.js`](../../demo/base-js/js/app.js)，可作为检查“呼出已升级、接听未升级”问题的对照点。
 
 当前会话需要动态更新时：
 
@@ -236,6 +273,26 @@ ua.on('newRTCSession', function(data)
 | `stats:stats-error` | `{ code, fatal, message, error, consecutiveErrors }` | 新增 |
 
 直接创建独立监控器时，事件名仍不带 `stats:` 前缀：`report`、`network-quality`、`detailed-report`、`stats-error`。
+
+Demo 的当前接入会用会话引用过滤延迟统计事件：
+
+```js
+statsSession = e.session;
+
+e.session.on('stats:detailed-report', function(report)
+{
+  if (statsSession !== e.session)
+  {
+    return;
+  }
+
+  renderSessionStatsStreams('#rtcStatsOutbound', report.outbound, true);
+  renderSessionStatsStreams('#rtcStatsInbound', report.inbound, false);
+  renderSessionConnectionStats(report.connection);
+});
+```
+
+该节选来自 [`app.js`](../../demo/base-js/js/app.js)。旧页面迁移后如果允许快速重呼，建议保留这种会话归属检查。
 
 ## 7.6 网络质量等级的行为变化
 

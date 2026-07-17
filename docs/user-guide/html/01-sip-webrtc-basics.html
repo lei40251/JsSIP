@@ -131,6 +131,24 @@
       └─ RTCPeerConnection
 </code></pre>
 </div><p>示例页面如果只允许一通电话，可以用 <code>currentSession</code> 保存当前会话。需要并发通话时，应使用 <code>Map&lt;session.id, session&gt;</code> 管理，不能让后一通覆盖前一通。</p>
+<p>Base JS Demo 在 UA 的 <code>newRTCSession</code> 中保存当前会话。下面是 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a> 的会话入口节选：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">ua.on(&#39;newRTCSession&#39;, function(e)
+{
+  if (tmpSession)
+  {
+    e.session.terminate({ status_code: 486 });
+  }
+  else if (!rtcSession)
+  {
+    rtcSession = e.session;
+  }
+  else
+  {
+    tmpSession = e.session;
+  }
+});
+</code></pre>
+</div><p>Demo 为呼转保留了 <code>tmpSession</code>，普通单通话页面可以简化为只保留一个 <code>rtcSession</code>。关键是只保存 <code>e.session</code>，不要自行构造 <code>RTCSession</code>。</p>
 <h2 id="1-3-常见名词">1.3 常见名词<a class="heading-anchor" href="#1-3-常见名词" aria-label="链接到本节">#</a></h2>
 <h3 id="wss">WSS<a class="heading-anchor" href="#wss" aria-label="链接到本节">#</a></h3>
 <p>浏览器通过安全 WebSocket 连接 SIP 信令服务。WSS 连接成功后，UA 才能继续注册。</p>
@@ -205,7 +223,28 @@
 </tr>
 </tbody></table></div>
 <p>自动注册是 <code>register: true</code>，<code>ua.start()</code> 连接后自动发送 REGISTER。手动注册是 <code>register: false</code>，在 <code>connected</code> 后调用 <code>ua.register()</code>。两种方式的最终成功标志都相同：<code>registered</code>。</p>
-<h2 id="1-7-一次-sip-呼叫中会看到哪些阶段">1.7 一次 SIP 呼叫中会看到哪些阶段<a class="heading-anchor" href="#1-7-一次-sip-呼叫中会看到哪些阶段" aria-label="链接到本节">#</a></h2>
+<p>Demo 不在 <code>connected</code> 事件中直接开放呼叫，而是分别记录连接和注册结果。以下代码取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">ua.on(&#39;connected&#39;, function()
+{
+  setStatus(&#39;信令连接成功&#39;);
+
+  if (manualRegister)
+  {
+    setStatus(&#39;信令连接成功，请点击“主动注册”&#39;);
+  }
+});
+
+ua.on(&#39;registered&#39;, function(data)
+{
+  setStatus(`注册成功：${data.response.from.uri.toString()}`);
+});
+
+ua.on(&#39;registrationFailed&#39;, function(data)
+{
+  setStatus(`注册失败${data.cause}`);
+});
+</code></pre>
+</div><h2 id="1-7-一次-sip-呼叫中会看到哪些阶段">1.7 一次 SIP 呼叫中会看到哪些阶段<a class="heading-anchor" href="#1-7-一次-sip-呼叫中会看到哪些阶段" aria-label="链接到本节">#</a></h2>
 <p>最常见的呼出信令：</p>
 <div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">INVITE
 ← 100 Trying
@@ -338,6 +377,15 @@ BYE → / ← BYE
 </tr>
 </tbody></table></div>
 <p><code>iceTransportPolicy: &#39;all&#39;</code> 允许浏览器尝试 host/srflx/relay；<code>relay</code> 只允许 TURN。企业网、对称 NAT 或严格防火墙中，TURN 往往是媒体可用的关键。</p>
+<p>Base JS Demo 将交付环境的 ICE 参数写入同一个 <code>pcConfig</code>，再同时用于呼出和接听：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const pcConfig = {};
+
+iceServers &amp;&amp; (pcConfig[&#39;iceServers&#39;] = iceServers);
+iceTransportPolicy &amp;&amp; (pcConfig[&#39;iceTransportPolicy&#39;] = iceTransportPolicy);
+pcConfig[&#39;iceCandidatePoolSize&#39;] = 4;
+pcConfig[&#39;bundlePolicy&#39;] = &#39;max-compat&#39;;
+</code></pre>
+</div><p>这段代码取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>。<code>iceServers</code>、<code>iceTransportPolicy</code> 应来自当前部署环境，不要复制其他环境的 TURN 凭据。</p>
 <h3 id="ice-状态含义">ICE 状态含义<a class="heading-anchor" href="#ice-状态含义" aria-label="链接到本节">#</a></h3>
 <div class="table-wrap"><table>
 <thead>
@@ -434,8 +482,25 @@ console.log(stream.getVideoTracks());
 <li>页面自行创建的预览、屏幕流、占位流必须由页面停止。</li>
 <li>不要提前停止一个仍被当前通话使用的自定义 track。</li>
 </ul>
+<p>Demo 在页面自己创建的媒体流失败或结束时显式停止 tracks。以下是 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a> 中的清理方式：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">cusMediaStream.getTracks().forEach((track) =&gt; track.stop());
+cusMediaStream = new MediaStream();
+</code></pre>
+</div><p>这个规则适用于页面自行采集的屏幕流、自定义流和预览流；会话内部管理的流仍交给 SDK 会话生命周期。</p>
 <h2 id="1-12-本地预览和实际发送不是同一件事">1.12 本地预览和实际发送不是同一件事<a class="heading-anchor" href="#1-12-本地预览和实际发送不是同一件事" aria-label="链接到本节">#</a></h2>
 <p><code>localVideo.srcObject = stream</code> 只是把某个流显示在页面，不代表该流一定已经发送。实际发送取决于当前会话配置、媒体方向和 track 状态。</p>
+<p>Demo 通过 <a href="../../../demo/base-js/js/app.sdk-helper.js"><code>app.sdk-helper.js</code></a> 从 PeerConnection 读取 SDK 正在使用的流，再绑定到页面元素：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const localStream = CRTC.Utils.getStreams(pc, &#39;local&#39;);
+const remoteStream = CRTC.Utils.getStreams(pc, &#39;remote&#39;);
+
+bindMediaStreamIfChanged(remoteAudio, remoteStream.audioStream);
+bindMediaStreamIfChanged(remoteVideo, remoteStream.mediaStream);
+
+Promise.all([ localVideo.play(), remoteAudio.play(), remoteVideo.play() ])
+  .then(() =&gt; { })
+  .catch(() =&gt; { });
+</code></pre>
+</div><p><code>srcObject</code> 用于展示，<code>CRTC.Utils.getStreams()</code> 反映的才是当前 PeerConnection 的本地/远端媒体。</p>
 <p>类似地，CSS：</p>
 <div class="code-block"><div class="code-toolbar"><span>css</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-css">video { transform: scaleX(-1); }
 </code></pre>
@@ -480,6 +545,34 @@ console.log(stream.getVideoTracks());
 <td>提供“点击播放/恢复播放”按钮</td>
 </tr>
 </tbody></table></div>
+<p>Demo 的摄像头检查同时处理“没有设备”和“用户拒绝权限”，代码取自 <a href="../../../demo/base-js/js/app.sdk-helper.js"><code>app.sdk-helper.js</code></a>：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">try
+{
+  await navigator.mediaDevices.getUserMedia({ video: true }).then(async(mediastream) =&gt;
+  {
+    mediastream &amp;&amp; mediastream.getTracks().forEach((t) =&gt; t.stop());
+  });
+  haveACamera = true;
+
+  return &#39;摄像头可以正常使用&#39;;
+}
+catch (error)
+{
+  if (error.name === &#39;NotFoundError&#39; || error.name === &#39;DevicesNotFoundError&#39;)
+  {
+    return &#39;系统没有摄像头&#39;;
+  }
+  else if (error.name === &#39;NotAllowedError&#39; || error.name === &#39;PermissionDeniedError&#39;)
+  {
+    return &#39;用户拒绝了摄像头权限&#39;;
+  }
+  else
+  {
+    return `摄像头错误: ${error.name}`;
+  }
+}
+</code></pre>
+</div><p>这段检查创建的 track 只用于验证权限和设备，因此成功后立即停止，不会与后续通话争用摄像头。</p>
 <h2 id="1-14-ains-虚拟背景-混流与通话的关系">1.14 AiNS、虚拟背景、混流与通话的关系<a class="heading-anchor" href="#1-14-ains-虚拟背景-混流与通话的关系" aria-label="链接到本节">#</a></h2>
 <div class="table-wrap"><table>
 <thead>
@@ -604,7 +697,7 @@ console.log(stream.getVideoTracks());
     
     <nav class="page-toc" aria-label="本页目录">
       <h2>本页目录</h2>
-      <a class="toc-depth-2" href="#1-1-信令和媒体是两条链路">1.1 信令和媒体是两条链路</a><a class="toc-depth-2" href="#1-2-sdk-中的核心对象">1.2 SDK 中的核心对象</a><a class="toc-depth-2" href="#1-3-常见名词">1.3 常见名词</a><a class="toc-depth-3" href="#wss">WSS</a><a class="toc-depth-3" href="#sip-uri">SIP URI</a><a class="toc-depth-3" href="#sdp">SDP</a><a class="toc-depth-3" href="#ice-stun-和-turn">ICE、STUN 和 TURN</a><a class="toc-depth-2" href="#1-4-浏览器安全要求">1.4 浏览器安全要求</a><a class="toc-depth-2" href="#1-5-一通电话的最小心智模型">1.5 一通电话的最小心智模型</a><a class="toc-depth-2" href="#1-6-sip-注册到底完成了什么">1.6 SIP 注册到底完成了什么</a><a class="toc-depth-2" href="#1-7-一次-sip-呼叫中会看到哪些阶段">1.7 一次 SIP 呼叫中会看到哪些阶段</a><a class="toc-depth-3" href="#180-和-183-的区别">180 和 183 的区别</a><a class="toc-depth-2" href="#1-8-呼入和呼出为什么时序不同">1.8 呼入和呼出为什么时序不同</a><a class="toc-depth-2" href="#1-9-sdp-offer-answer-与媒体方向">1.9 SDP Offer/Answer 与媒体方向</a><a class="toc-depth-2" href="#1-10-ice-建连的实际过程">1.10 ICE 建连的实际过程</a><a class="toc-depth-3" href="#ice-状态含义">ICE 状态含义</a><a class="toc-depth-2" href="#1-11-mediastream-与-track-生命周期">1.11 MediaStream 与 Track 生命周期</a><a class="toc-depth-2" href="#1-12-本地预览和实际发送不是同一件事">1.12 本地预览和实际发送不是同一件事</a><a class="toc-depth-2" href="#1-13-媒体权限和设备错误">1.13 媒体权限和设备错误</a><a class="toc-depth-2" href="#1-14-ains-虚拟背景-混流与通话的关系">1.14 AiNS、虚拟背景、混流与通话的关系</a><a class="toc-depth-2" href="#1-15-通话统计的基本方向">1.15 通话统计的基本方向</a><a class="toc-depth-2" href="#1-16-接入前信息清单">1.16 接入前信息清单</a><a class="toc-depth-2" href="#1-17-最小排查分层">1.17 最小排查分层</a>
+      <a class="toc-depth-2" href="#1-1-信令和媒体是两条链路" title="1.1 信令和媒体是两条链路">1.1 信令和媒体是两条链路</a><a class="toc-depth-2" href="#1-2-sdk-中的核心对象" title="1.2 SDK 中的核心对象">1.2 SDK 中的核心对象</a><a class="toc-depth-2" href="#1-3-常见名词" title="1.3 常见名词">1.3 常见名词</a><a class="toc-depth-3" href="#wss" title="WSS">WSS</a><a class="toc-depth-3" href="#sip-uri" title="SIP URI">SIP URI</a><a class="toc-depth-3" href="#sdp" title="SDP">SDP</a><a class="toc-depth-3" href="#ice-stun-和-turn" title="ICE、STUN 和 TURN">ICE、STUN 和 TURN</a><a class="toc-depth-2" href="#1-4-浏览器安全要求" title="1.4 浏览器安全要求">1.4 浏览器安全要求</a><a class="toc-depth-2" href="#1-5-一通电话的最小心智模型" title="1.5 一通电话的最小心智模型">1.5 一通电话的最小心智模型</a><a class="toc-depth-2" href="#1-6-sip-注册到底完成了什么" title="1.6 SIP 注册到底完成了什么">1.6 SIP 注册到底完成了什么</a><a class="toc-depth-2" href="#1-7-一次-sip-呼叫中会看到哪些阶段" title="1.7 一次 SIP 呼叫中会看到哪些阶段">1.7 一次 SIP 呼叫中会看到哪些阶段</a><a class="toc-depth-3" href="#180-和-183-的区别" title="180 和 183 的区别">180 和 183 的区别</a><a class="toc-depth-2" href="#1-8-呼入和呼出为什么时序不同" title="1.8 呼入和呼出为什么时序不同">1.8 呼入和呼出为什么时序不同</a><a class="toc-depth-2" href="#1-9-sdp-offer-answer-与媒体方向" title="1.9 SDP Offer/Answer 与媒体方向">1.9 SDP Offer/Answer 与媒体方向</a><a class="toc-depth-2" href="#1-10-ice-建连的实际过程" title="1.10 ICE 建连的实际过程">1.10 ICE 建连的实际过程</a><a class="toc-depth-3" href="#ice-状态含义" title="ICE 状态含义">ICE 状态含义</a><a class="toc-depth-2" href="#1-11-mediastream-与-track-生命周期" title="1.11 MediaStream 与 Track 生命周期">1.11 MediaStream 与 Track 生命周期</a><a class="toc-depth-2" href="#1-12-本地预览和实际发送不是同一件事" title="1.12 本地预览和实际发送不是同一件事">1.12 本地预览和实际发送不是同一件事</a><a class="toc-depth-2" href="#1-13-媒体权限和设备错误" title="1.13 媒体权限和设备错误">1.13 媒体权限和设备错误</a><a class="toc-depth-2" href="#1-14-ains-虚拟背景-混流与通话的关系" title="1.14 AiNS、虚拟背景、混流与通话的关系">1.14 AiNS、虚拟背景、混流与通话的关系</a><a class="toc-depth-2" href="#1-15-通话统计的基本方向" title="1.15 通话统计的基本方向">1.15 通话统计的基本方向</a><a class="toc-depth-2" href="#1-16-接入前信息清单" title="1.16 接入前信息清单">1.16 接入前信息清单</a><a class="toc-depth-2" href="#1-17-最小排查分层" title="1.17 最小排查分层">1.17 最小排查分层</a>
     </nav>
   </main>
   <button type="button" class="back-to-top" aria-label="回到顶部">↑</button>

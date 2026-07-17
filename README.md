@@ -100,7 +100,7 @@ npm run build:standard
 npm run release
 ```
 
-`npm run release` first clears the previous local zip output in `release/`, then builds the distribution artifacts, and finally creates a local SDK zip package there. The zip includes `demo/**`, `dist/CRTC.min.js`, `CHANGELOG.md`, and the generated PDF documents under `docs/*.pdf`.
+`npm run release` first clears the previous local zip output in `release/`, then builds the distribution artifacts, and finally creates a local SDK zip package there. The zip includes `demo/**`, `dist/CRTC.min.js`, `CHANGELOG.md`, and the user guide HTML documents under `docs/` together with their required assets.
 
 Legacy entrypoints such as `node npm-scripts.js test` and `npm run prepublish` remain available for compatibility, but the commands above are the current recommended interface.
 

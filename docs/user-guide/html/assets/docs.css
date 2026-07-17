@@ -231,3 +231,13 @@ body.diagram-open { overflow: hidden; }
 @media (max-width: 1180px) {
   .toc-toggle { display: none; }
 }
+
+.page-toc {
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+}
+.page-toc a {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

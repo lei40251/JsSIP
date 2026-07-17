@@ -51,6 +51,46 @@ ua.on('newRTCSession', function(data)
 
 默认约每 `2000ms` 更新一次。通话刚开始时部分值暂时为 `null` 属于正常现象。
 
+Base JS Demo 在每次 `newRTCSession` 中绑定统计，并用 `statsSession` 防止旧会话的延迟结果覆盖新会话。以下代码取自 [`app.js`](../../demo/base-js/js/app.js)：
+
+```js
+statsSession = e.session;
+resetSessionStatsPanel();
+
+e.session.on('stats:detailed-report', function(report)
+{
+  if (statsSession !== e.session)
+  {
+    return;
+  }
+
+  const quality = report.quality;
+  const issueText = quality.issues.map((issue) =>
+  {
+    return `${sessionStatsIssueNames[issue.code] || issue.code}(L${issue.severity})`;
+  }).join(' | ');
+
+  renderSessionStatsStreams('#rtcStatsOutbound', report.outbound, true);
+  renderSessionStatsStreams('#rtcStatsInbound', report.inbound, false);
+  renderSessionConnectionStats(report.connection);
+  setSessionStatsPanelText(
+    '#rtcStatsQuality',
+    `RTT:${formatSessionStatsNumber(quality.RTT, 'ms')} | ↑:${formatSessionNetworkQuality(quality.uplinkNetworkQuality)} | ↓:${formatSessionNetworkQuality(quality.downlinkNetworkQuality)}`
+  );
+  setSessionStatsPanelText('#rtcStatsIssues', issueText || '无');
+});
+
+e.session.on('stats:stats-error', function(error)
+{
+  if (statsSession === e.session)
+  {
+    console.warn('[RTCStatsMonitor] stats-error:', error);
+  }
+});
+```
+
+这段代码展示了一个完整页面接入应同时考虑的三件事：会话归属、完整报告渲染和非致命错误记录。
+
 ## 5.2 数值、单位与空值
 
 | 字段类型 | 单位或取值 | 页面显示建议 |
@@ -82,6 +122,22 @@ function formatBitrate(value)
     : (value / 1000).toFixed(1) + 'kbps';
 }
 ```
+
+Demo 的实际格式化函数保留一位小数，并且同样不把空值当成 `0`：
+
+```js
+const formatSessionStatsNumber = function(value, unit)
+{
+  return value === null || value === undefined ? '-' : `${value}${unit || ''}`;
+};
+
+const formatSessionStatsBitrate = function(value)
+{
+  return value === null || value === undefined ? '-' : `${(Math.round(value / 100) / 10).toFixed(1)}kbps`;
+};
+```
+
+该节选来自 [`app.js`](../../demo/base-js/js/app.js)。这里的换算等价于将 bps 除以 `1000` 后保留一位小数。
 
 ## 5.3 网络质量等级 0～6
 
@@ -357,6 +413,30 @@ if (monitor)
 
 `session.statsMonitor` 在 PeerConnection 创建后可用，会话结束释放后为 `null`。会话内实例不要自行调用 `start()`、`stop()` 或 `reset()`。
 
+Demo 把最近一份结果暴露给浏览器控制台，便于联调时对照页面面板。以下代码取自 [`app.js`](../../demo/base-js/js/app.js)：
+
+```js
+function getCurrentCallStats()
+{
+  const monitor = rtcSession && rtcSession.statsMonitor;
+
+  if (!monitor)
+  {
+    return null;
+  }
+
+  return {
+    networkQuality : monitor.getLatestNetworkQuality(),
+    legacyReport   : monitor.getLatestLegacyReport(),
+    detailedReport : monitor.getLatestReport()
+  };
+}
+
+window.getCurrentCallStats = getCurrentCallStats;
+```
+
+这些 getter 只读取缓存，不会立即触发一轮 `getStats()`。
+
 ## 5.13 独立 PeerConnection 监控
 
 只有监控不属于 `RTCSession` 的 PeerConnection 时才直接创建：
@@ -394,5 +474,22 @@ monitor.stop();
 | 存在问题 | `quality.issues[].code/severity` |
 
 Demo 代码见 [`demo/base-js/js/app.js`] 的 `RTCSession 统计事件接入示例`。运行和验证步骤见 [Base JS Demo 学习与验证](./08-demo-guide.md)，旧统计迁移见 [旧版功能升级指南](./07-upgrade-guide.md)。
+
+Demo 在新会话开始、当前会话失败或结束时都调用同一个面板重置函数：
+
+```js
+const resetSessionStatsPanel = function()
+{
+  const waitingText = '--';
+
+  setSessionStatsPanelText('#rtcStatsConnection', waitingText);
+  setSessionStatsPanelText('#rtcStatsQuality', waitingText);
+  setSessionStatsPanelText('#rtcStatsIssues', '无');
+  setSessionStatsPanelText('#rtcStatsOutbound', waitingText);
+  setSessionStatsPanelText('#rtcStatsInbound', waitingText);
+};
+```
+
+只清空局部文字而不切换 `statsSession` 不够；结束时还需将归属引用置为 `null`，才能屏蔽旧会话的延迟事件。
 
 [← 上一章：媒体能力](./04-media-features.md) · [下一章：SDK API 参考 →](./06-api-reference.md)

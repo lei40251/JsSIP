@@ -64,10 +64,114 @@
     <article class="doc-content">
       <h1 id="8-base-js-demo-完整学习与验证">8. Base JS Demo 完整学习与验证<a class="heading-anchor" href="#8-base-js-demo-完整学习与验证" aria-label="链接到本节">#</a></h1>
 <p><a href="07-upgrade-guide.html">← 上一章：旧版功能升级</a> · <a href="index.html">学习目录</a></p>
-<p>Base JS Demo 是一份可运行的完整接入示例，覆盖 UA 创建、自动/手动注册、呼入呼出、媒体设备、音视频模式、共享、AiNS、虚拟背景、镜像、水印、DTMF、SIP INFO、呼转和通话质量统计。</p>
-<p>本章按“先运行 → 配置环境 → 完成基础通话 → 逐项验证功能 → 迁移到业务页面”的顺序使用。</p>
+<p>Base JS Demo 是一份可运行的 SDK 接入示例，覆盖 UA 创建、自动/主动注册、呼入呼出、媒体设备、音视频模式、共享、AiNS、虚拟背景、镜像、水印、DTMF、SIP INFO、呼转和通话质量统计。</p>
+<p>本章不仅说明按钮用途，还按“页面入口 → Demo 代码位置 → SDK 调用 → 事件反馈 → 清理与验证”解释主要功能。客户可以先按功能运行，再根据函数名定位源码。</p>
 <h2 id="8-1-使用建议">8.1 使用建议<a class="heading-anchor" href="#8-1-使用建议" aria-label="链接到本节">#</a></h2>
 <p>建议先完成注册、语音通话和音视频通话，再逐项验证设备切换、媒体效果、共享和统计。迁移到业务页面时，以本指南中的公开 SDK 调用为准，不要复制 Demo 的测试账号或环境配置。</p>
+<h3 id="8-1-1-源码入口与加载顺序">8.1.1 源码入口与加载顺序<a class="heading-anchor" href="#8-1-1-源码入口与加载顺序" aria-label="链接到本节">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>文件</th>
+<th>客户应重点阅读的内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="../../../demo/base-js/index.html"><code>index.html</code></a></td>
+<td>页面控件、按钮 ID、音视频元素和脚本加载顺序</td>
+</tr>
+<tr>
+<td><a href="../../../demo/base-js/js/app.js"><code>app.js</code></a></td>
+<td>UA 配置与事件、<code>newRTCSession</code>、呼叫/接听、通话中控制、共享和统计展示</td>
+</tr>
+<tr>
+<td><a href="../../../demo/base-js/js/app.sdk-helper.js"><code>app.sdk-helper.js</code></a></td>
+<td>URL 参数、设备列表、选中设备约束、本地/远端媒体渲染</td>
+</tr>
+<tr>
+<td><a href="../../../demo/base-js/js/app.ui-bindings.js"><code>app.ui-bindings.js</code></a></td>
+<td>主动注册/注销、外呼按钮、设备下拉框和媒体效果控件绑定</td>
+</tr>
+<tr>
+<td><a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a></td>
+<td>composer、虚拟背景、水印和 AiNS 参数构建及通话中更新</td>
+</tr>
+<tr>
+<td><a href="../../../demo/config.js"><code>config.js</code></a></td>
+<td>Demo 环境选择；客户必须替换为自己的交付配置</td>
+</tr>
+</tbody></table></div>
+<p><code>index.html</code> 先加载 SDK 和环境配置，再加载媒体效果、辅助函数、主流程和页面绑定。阅读时建议按以下顺序搜索函数或事件名：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">configuration → new CRTC.UA → ua.on(...) → start()
+newRTCSession → call(...) / session.answer(...)
+session.on(...) → failed / ended 清理
+</code></pre>
+</div><h3 id="8-1-2-核心功能定位总表">8.1.2 核心功能定位总表<a class="heading-anchor" href="#8-1-2-核心功能定位总表" aria-label="链接到本节">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>功能</th>
+<th>页面入口</th>
+<th>代码定位</th>
+<th>主要 SDK 调用/事件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>自动/主动注册</td>
+<td>注册控制区、<code>register=manual</code></td>
+<td><code>manualRegister</code>、<code>registerUa</code>、<code>unregisterUa</code></td>
+<td><code>start()</code>、<code>register()</code>、<code>unregister()</code>、注册事件</td>
+</tr>
+<tr>
+<td>语音/视频外呼</td>
+<td><code>#call</code>、<code>#callVideo</code></td>
+<td><code>call(type, direction, mediaStream)</code></td>
+<td><code>ua.call()</code>、<code>newRTCSession</code></td>
+</tr>
+<tr>
+<td>语音/视频接听</td>
+<td><code>#answer</code>、<code>#answerVideo</code></td>
+<td><code>newRTCSession</code> 中的按钮绑定</td>
+<td><code>session.answer()</code></td>
+</tr>
+<tr>
+<td>设备选择</td>
+<td><code>#cameras</code>、<code>#mics</code></td>
+<td><code>buildSelected*Constraints()</code>、设备 <code>change</code> 事件</td>
+<td><code>CRTC.Utils.get*()</code>、<code>switchDevice()</code></td>
+</tr>
+<tr>
+<td>音视频模式切换</td>
+<td><code>#toAudio</code>、<code>#toVideo</code>、<code>#toVideoSendonly</code></td>
+<td><code>newRTCSession</code> 中的模式按钮绑定</td>
+<td><code>downgradeToAudio()</code>、<code>upgradeToVideo()</code>、<code>mode</code></td>
+</tr>
+<tr>
+<td>媒体效果</td>
+<td>输出镜像、虚拟背景和水印控件</td>
+<td><code>buildCallComposerOptions()</code>、<code>buildCallAiNsOptions()</code></td>
+<td><code>getMediaEffectsComposer()</code>、<code>getAiNoiseSuppression()</code></td>
+</tr>
+<tr>
+<td>屏幕/元素分享</td>
+<td>共享与推流区</td>
+<td><code>screenShare</code>、<code>formShare</code>、<code>picShare</code>、<code>videoShare</code></td>
+<td><code>share()</code>、<code>unShare()</code>、共享事件</td>
+</tr>
+<tr>
+<td>呼转/INFO/DTMF</td>
+<td>辅助功能区</td>
+<td><code>referBtn</code>、<code>sendInfo</code>、<code>dtmf</code></td>
+<td><code>refer()</code>、<code>sendInfo()</code>、<code>sendDTMF()</code></td>
+</tr>
+<tr>
+<td>通话统计</td>
+<td>视频区下方浮层</td>
+<td><code>stats:detailed-report</code> 监听和渲染函数</td>
+<td><code>stats:*</code> 会话事件</td>
+</tr>
+</tbody></table></div>
+<p>页面中的 B2B、无设备、自定义黑屏流、双流兼容按钮属于专项联调入口，不是普通客户接入的必选流程。阅读主流程时先关注上表中的标准入口。</p>
 <h2 id="8-2-运行条件">8.2 运行条件<a class="heading-anchor" href="#8-2-运行条件" aria-label="链接到本节">#</a></h2>
 <ul>
 <li>Chrome 或 Edge 推荐使用较新版本；Safari/Firefox 需结合目标功能验证。</li>
@@ -135,7 +239,7 @@ http://localhost:8080/demo/base-js/index.html?caller=1002
 <td><code>register</code></td>
 <td><code>manual</code></td>
 <td>自动注册</td>
-<td><code>manual</code> 时连接后显式调用 <code>ua.register()</code></td>
+<td><code>manual</code> 时只连接 WSS，等待点击“主动注册”</td>
 </tr>
 </tbody></table></div>
 <p>组合示例：</p>
@@ -143,19 +247,91 @@ http://localhost:8080/demo/base-js/index.html?caller=1002
 </code></pre>
 </div><h2 id="8-5-demo-的-ua-配置">8.5 Demo 的 UA 配置<a class="heading-anchor" href="#8-5-demo-的-ua-配置" aria-label="链接到本节">#</a></h2>
 <p>Demo 会根据已配置的环境和账号创建 <code>CRTC.UA</code>。客户项目应使用服务方提供的 WSS、SIP URI、鉴权凭据、授权码和注册参数，不要迁移 Demo 的测试账号规则。完整 UA 配置见 <a href="06-api-reference.html">SDK API 参考</a>。</p>
+<p>Demo 中的 UA 创建代码位于 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const account = handleGetQuery(&#39;caller&#39;);
+const socket = new CRTC.WebSocketInterface(signalingUrl);
+const configuration = {
+  sockets                          : socket,
+  uri                              : `sip:${account}@${sipDomain}`,
+  display_name                     : account,
+  password                         : `${password ? password : &#39;yl_19&#39;}${account}`,
+  connection_recovery_max_interval : 3,
+  connection_recovery_min_interval : 2,
+  register_expires                 : 20,
+  register                         : !manualRegister,
+  session_timers                   : false,
+  secret_key                       : secretKey
+};
+
+const ua = new CRTC.UA(configuration);
+</code></pre>
+</div><p><code>signalingUrl</code>、<code>sipDomain</code>、<code>secretKey</code>、<code>iceServers</code> 和 <code>password</code> 由 <code>config.js</code> 中选中的环境提供。Demo 的密码拼接方式只是测试环境规则，不是 SDK 固定要求。</p>
 <h3 id="自动注册">自动注册<a class="heading-anchor" href="#自动注册" aria-label="链接到本节">#</a></h3>
 <p>默认 URL：</p>
 <div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">?caller=1001
 </code></pre>
 </div><p><code>ua.start()</code> 连接成功后自动注册，事件顺序通常为 <code>connected → registered</code>。</p>
-<h3 id="手动注册">手动注册<a class="heading-anchor" href="#手动注册" aria-label="链接到本节">#</a></h3>
+<p>Demo 对两个状态分别记录：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">ua.on(&#39;connected&#39;, function()
+{
+  disconnectedBy = null;
+  isShowUI = false;
+  setStatus(&#39;信令连接成功&#39;);
+
+  if (manualRegister)
+  {
+    setStatus(&#39;信令连接成功，请点击“主动注册”&#39;);
+  }
+});
+
+ua.on(&#39;registered&#39;, function(data)
+{
+  setStatus(`注册成功：${data.response.from.uri.toString()}`);
+});
+</code></pre>
+</div><p>只看到“信令连接成功”时还不能呼叫，必须继续等待 <code>registered</code>。</p>
+<h3 id="主动注册与注销">主动注册与注销<a class="heading-anchor" href="#主动注册与注销" aria-label="链接到本节">#</a></h3>
 <div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">?caller=1001&amp;register=manual
 </code></pre>
-</div><p>配置 <code>register: false</code>；<code>connected</code> 回调调用 <code>ua.register()</code>。最终仍以 <code>registered</code> 事件作为可呼叫条件。</p>
-<p>页面以 <code>isConnected()</code> 和 <code>isRegistered()</code> 判断当前是否可以呼叫，注册失败时应先检查环境和账号配置。</p>
+</div><p>该模式配置 <code>register: false</code>。<code>ua.start()</code> 只建立 WSS；收到 <code>connected</code> 后，页面显示“已连接，等待主动注册”，不会立即发送 REGISTER。</p>
+<p>注册控制区对应代码位于 <a href="../../../demo/base-js/js/app.ui-bindings.js"><code>app.ui-bindings.js</code></a>：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">document.querySelector(&#39;#registerUa&#39;).onclick = function()
+{
+  if (ua.isConnected() &amp;&amp; !ua.isRegistered())
+  {
+    ua.register();
+  }
+};
+
+document.querySelector(&#39;#unregisterUa&#39;).onclick = function()
+{
+  if (ua.isRegistered())
+  {
+    ua.unregister();
+  }
+};
+</code></pre>
+</div><p>完整验证顺序：</p>
+<ol>
+<li>等待状态变为“已连接，等待主动注册”。</li>
+<li>点击“主动注册”，最终以 <code>registered</code> 事件和“已注册”状态为准。</li>
+<li>点击“主动注销”，等待 <code>unregistered</code> 事件和“未注册”状态。</li>
+<li>再次点击“主动注册”，确认可以重新注册并呼叫。</li>
+<li>未注册时点击外呼，<code>call()</code> 会通过 <code>isRegistered()</code> 阻止呼叫。</li>
+</ol>
+<p>自动模式也可以使用主动注销/重新注册按钮。为避免影响通话验证，建议在没有活动通话时操作。注册状态处理集中在 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a> 的 <code>connected</code>、<code>registered</code>、<code>registrationFailed</code>、<code>unregistered</code> 和 <code>disconnected</code> 事件中。</p>
 <h2 id="8-6-webrtc-网络配置">8.6 WebRTC 网络配置<a class="heading-anchor" href="#8-6-webrtc-网络配置" aria-label="链接到本节">#</a></h2>
 <p>呼叫和接听参数中的 <code>pcConfig</code> 应使用服务方提供的 STUN/TURN 配置。是否强制使用 TURN 以及其他兼容参数必须以部署要求为准，不要照搬测试环境值。</p>
 <p>注册成功但没有媒体时，先检查 ICE/TURN，不要只检查 WSS。强制 <code>relay</code> 时 TURN 地址、凭据、UDP/TCP 端口或防火墙任一异常都会导致媒体失败。</p>
+<p>Demo 在 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a> 中按环境参数组装 <code>pcConfig</code>：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const pcConfig = {};
+
+iceServers &amp;&amp; (pcConfig[&#39;iceServers&#39;] = iceServers);
+iceTransportPolicy &amp;&amp; (pcConfig[&#39;iceTransportPolicy&#39;] = iceTransportPolicy);
+pcConfig[&#39;iceCandidatePoolSize&#39;] = 4;
+pcConfig[&#39;bundlePolicy&#39;] = &#39;max-compat&#39;;
+</code></pre>
+</div><p>该对象同时传给 <code>ua.call()</code> 和两个标准 <code>session.answer()</code> 入口。如果只在呼出传 TURN，呼入接听可能在同一网络下出现不同结果。</p>
 <h2 id="8-7-页面顶部配置项">8.7 页面顶部配置项<a class="heading-anchor" href="#8-7-页面顶部配置项" aria-label="链接到本节">#</a></h2>
 <h3 id="呼叫号码">呼叫号码<a class="heading-anchor" href="#呼叫号码" aria-label="链接到本节">#</a></h3>
 <p>输入账号部分，例如 <code>1002</code>。Demo 调用：</p>
@@ -164,9 +340,46 @@ http://localhost:8080/demo/base-js/index.html?caller=1002
 </div><h3 id="摄像头和麦克风">摄像头和麦克风<a class="heading-anchor" href="#摄像头和麦克风" aria-label="链接到本节">#</a></h3>
 <p>下拉列表来自 <code>CRTC.Utils.getCameras()</code> 和 <code>getMicrophones()</code>。选择后：</p>
 <ul>
-<li>无通话：保存 deviceId，下一次呼叫/接听写入 <code>mediaConstraints.*.deviceId.exact</code>。</li>
+<li>无通话：保存 deviceId，标准呼叫/接听通过 <code>buildSelectedAudioConstraints()</code>、<code>buildSelectedVideoConstraints()</code> 写入 <code>deviceId.exact</code>。</li>
 <li>通话中：立即调用 <code>session.switchDevice(&#39;camera&#39;/&#39;audio&#39;, deviceId)</code>。</li>
 </ul>
+<p>代码位置：设备枚举和约束构建在 <a href="../../../demo/base-js/js/app.sdk-helper.js"><code>app.sdk-helper.js</code></a>，下拉框 <code>change</code> 事件在 <a href="../../../demo/base-js/js/app.ui-bindings.js"><code>app.ui-bindings.js</code></a>。标准接听和视频升级也复用相同的视频约束，避免呼出、接听使用不同设备。</p>
+<p>约束构建函数会在已选设备时写入 <code>deviceId.exact</code>：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function buildSelectedVideoConstraints()
+{
+  const constraints = Object.assign({}, videoConstraints);
+
+  if (selectCamera)
+  {
+    constraints.deviceId = { exact: selectCamera };
+  }
+
+  return constraints;
+}
+</code></pre>
+</div><p>下拉框变化时同时保存下一通要用的设备，并热更新当前通话：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">document.querySelector(&#39;#cameras&#39;).addEventListener(&#39;change&#39;, function()
+{
+  const deviceId = this.options[this.selectedIndex].value;
+
+  selectCamera = deviceId;
+
+  if (rtcSession)
+  {
+    if (typeof cloneStream !== &#39;undefined&#39; &amp;&amp; cloneStream)
+    {
+      cloneStream.getVideoTracks().forEach((v) =&gt;
+      {
+        v.stop();
+      });
+    }
+    rtcSession.switchDevice(&#39;camera&#39;, deviceId);
+  }
+
+  setStatus(`${rtcSession ? &#39;switchDevice&#39; : &#39;select camera&#39;} ${this.options[this.selectedIndex].innerText}`);
+});
+</code></pre>
+</div><p>两段代码分别取自 <a href="../../../demo/base-js/js/app.sdk-helper.js"><code>app.sdk-helper.js</code></a> 和 <a href="../../../demo/base-js/js/app.ui-bindings.js"><code>app.ui-bindings.js</code></a>。麦克风的处理相同，只把设备类型替换为 <code>&#39;audio&#39;</code>。</p>
 <h3 id="更新方式">更新方式<a class="heading-anchor" href="#更新方式" aria-label="链接到本节">#</a></h3>
 <div class="table-wrap"><table>
 <thead>
@@ -187,7 +400,7 @@ http://localhost:8080/demo/base-js/index.html?caller=1002
 <td>使用 re-INVITE 方式</td>
 </tr>
 </tbody></table></div>
-<p>必须由服务端和对端共同支持，默认联调先使用现网已验证的方式。</p>
+<p>下拉框在 <a href="../../../demo/base-js/js/app.ui-bindings.js"><code>app.ui-bindings.js</code></a> 更新 <code>useUpdate</code>；<code>#toAudio</code>、<code>#toVideo</code> 和 <code>#toVideoSendonly</code> 在 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a> 把该值传给升级/降级方法。必须由服务端和对端共同支持，默认联调先使用现网已验证的方式。</p>
 <h3 id="画质偏好">画质偏好<a class="heading-anchor" href="#画质偏好" aria-label="链接到本节">#</a></h3>
 <p>调用 <code>session.setVideoContentHint(value)</code>：</p>
 <div class="table-wrap"><table>
@@ -219,6 +432,14 @@ http://localhost:8080/demo/base-js/index.html?caller=1002
 <td>文字/屏幕内容；浏览器支持程度需验证</td>
 </tr>
 </tbody></table></div>
+<p>Demo 在下拉框变化时直接更新当前会话：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">document.querySelector(&#39;#videoHint&#39;).onchange = function()
+{
+  e.session.setVideoContentHint(this.options[this.selectedIndex].value);
+  setStatus(`${this.options[this.selectedIndex].text}`);
+};
+</code></pre>
+</div><p>这段代码位于 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a> 的 <code>newRTCSession</code> 内，因此操作的始终是当前这一通会话。</p>
 <h3 id="输出镜像">输出镜像<a class="heading-anchor" href="#输出镜像" aria-label="链接到本节">#</a></h3>
 <p>只有本次呼叫/接听启用了 <code>mediaEffectsComposer</code> 才能通话中生效。下拉变化调用 composer 的镜像更新方法；这是发送合成画面的镜像，不等同于只镜像本地 <code>&lt;video&gt;</code> 的 CSS。</p>
 <h3 id="虚拟背景">虚拟背景<a class="heading-anchor" href="#虚拟背景" aria-label="链接到本节">#</a></h3>
@@ -273,6 +494,49 @@ http://localhost:8080/demo/base-js/index.html?caller=1002
 </tr>
 </tbody></table></div>
 <p>关闭下拉并不代表当前通话一定会动态销毁已有 AiNS；Demo 重点展示初始启用和强度热更新。需要运行时开关时应按产品设计明确其生命周期。</p>
+<p>以上三项的参数构建和通话中更新集中在 <a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a>：</p>
+<ul>
+<li><code>buildCallComposerOptions()</code>：组合镜像、水印和虚拟背景，供呼叫/标准接听使用。</li>
+<li><code>applyCurrentOutputMirrorToSession()</code>：更新当前通话输出镜像。</li>
+<li><code>applyCurrentVirtualBackgroundToSession()</code>：更新或清除 slot 0 虚拟背景。</li>
+<li><code>buildCallAiNsOptions()</code>：生成下一次呼叫/标准接听的 AiNS 参数。</li>
+<li><code>applyAiNsLevelToCurrentCall()</code>：热更新当前通话降噪强度。</li>
+</ul>
+<p>composer 初始配置的核心代码如下，取自 <a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a>：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const outputMirror = document.getElementById(&#39;callMediaEffectsComposerOutputMirror&#39;).value === &#39;on&#39;;
+const aiVBOptions = buildCurrentAiVBOptions();
+const watermarks = buildCurrentWatermarks();
+const hasComposerEffects = outputMirror || watermarks.length || aiVBOptions;
+const composerOptions = {};
+
+if (outputMirror)
+{
+  composerOptions.mirror = true;
+}
+
+if (watermarks.length)
+{
+  composerOptions.watermarks = watermarks;
+}
+
+if (aiVBOptions)
+{
+  composerOptions.sources = [
+    {
+      aiVirtualBackground : aiVBOptions
+    }
+  ];
+}
+</code></pre>
+</div><p>AiNS 则使用独立顶层配置：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">return {
+  enabled             : true,
+  noiseReductionLevel : getCurrentAiNsLevel(),
+  outputGain          : 1,
+  assetConfig         : { cdnUrl: AI_NOISE_ASSET_ROOT }
+};
+</code></pre>
+</div><p>前一段将虚拟背景放在 <code>sources[]</code>，后一段将 AiNS 放在呼叫 options 顶层，两者的参数层级不能互换。</p>
 <h2 id="8-8-水印控件">8.8 水印控件<a class="heading-anchor" href="#8-8-水印控件" aria-label="链接到本节">#</a></h2>
 <p>文字水印：</p>
 <div class="table-wrap"><table>
@@ -340,6 +604,60 @@ http://localhost:8080/demo/base-js/index.html?caller=1002
 </tr>
 </tbody></table></div>
 <p>“应用”读取当前控件并调用 <code>setWatermarks()</code>；“清空”移除对应水印。<code>getMediaEffectsComposer()</code> 返回 <code>null</code> 时表示本通电话没有启用 composer，按钮不能改变当前发送画面。</p>
+<p>代码位置：水印输入读取、合并和更新位于 <a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a> 的 <code>buildCurrent*Watermark()</code>、<code>mergeSessionWatermarks()</code>、<code>applyCurrent*WatermarkToSession()</code>；按钮绑定位于 <a href="../../../demo/base-js/js/app.ui-bindings.js"><code>app.ui-bindings.js</code></a>。</p>
+<p>文字水印的构造函数会保留 SDK 默认值，只写入用户真正填写的可选字段：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function buildCurrentTextWatermark()
+{
+  const text = document.getElementById(&#39;callMediaEffectsComposerTextWatermarkText&#39;).value.trim();
+
+  if (!text)
+  {
+    return null;
+  }
+
+  const textPosition = document.getElementById(&#39;callMediaEffectsComposerTextWatermarkPosition&#39;).value || &#39;bottom-right&#39;;
+  const textSize = document.getElementById(&#39;callMediaEffectsComposerTextWatermarkSize&#39;).value;
+  const textColor = document.getElementById(&#39;callMediaEffectsComposerTextWatermarkColor&#39;).value.trim();
+  const textOpacity = readCallMediaEffectsComposerOpacity(
+    document.getElementById(&#39;callMediaEffectsComposerTextWatermarkOpacity&#39;)
+  );
+  const textWatermark = {
+    id       : CALL_TEXT_WATERMARK_ID,
+    type     : &#39;text&#39;,
+    text     : text,
+    position : textPosition
+  };
+
+  if (String(textSize).trim())
+  {
+    textWatermark.fontSize = Number(textSize);
+  }
+
+  if (textColor)
+  {
+    textWatermark.color = textColor;
+  }
+
+  if (textOpacity !== undefined)
+  {
+    textWatermark.opacity = textOpacity;
+  }
+
+  return textWatermark;
+}
+</code></pre>
+</div><p>更新单个水印前，Demo 用稳定 ID 保留其他水印：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function mergeSessionWatermarks(nextItems, idsToReplace)
+{
+  const { sessionComposer } = getSessionComposerHandles();
+  const current = getSessionWatermarkSnapshot(sessionComposer);
+
+  return current
+    .filter((item) =&gt; !idsToReplace.includes(item &amp;&amp; item.id))
+    .concat(nextItems);
+}
+</code></pre>
+</div><p>两段都取自 <a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a>。<code>setWatermarks()</code> 是全量写入，如果跳过合并步骤，应用文字水印时可能会把图片水印删掉。</p>
 <h2 id="8-9-基础呼叫按钮">8.9 基础呼叫按钮<a class="heading-anchor" href="#8-9-基础呼叫按钮" aria-label="链接到本节">#</a></h2>
 <div class="table-wrap"><table>
 <thead>
@@ -360,9 +678,14 @@ http://localhost:8080/demo/base-js/index.html?caller=1002
 <td>麦克风 + 摄像头</td>
 </tr>
 <tr>
-<td>共享桌面</td>
-<td><code>session.share()</code></td>
-<td>通话中共享屏幕</td>
+<td>共享桌面外呼</td>
+<td><code>getDisplayMedia()</code> + <code>ua.call()</code></td>
+<td>屏幕视频 + 麦克风作为首次外呼媒体</td>
+</tr>
+<tr>
+<td>分享屏幕</td>
+<td><code>session.share(&#39;screen&#39;, ...)</code></td>
+<td>已建立通话后切换到屏幕分享</td>
 </tr>
 </tbody></table></div>
 <p>呼叫公共步骤：</p>
@@ -376,13 +699,64 @@ http://localhost:8080/demo/base-js/index.html?caller=1002
 <li><code>await ua.call()</code>。</li>
 <li>在 session 上处理远端媒体和通话事件。</li>
 </ol>
+<p>页面级按钮位于 <a href="../../../demo/base-js/js/app.ui-bindings.js"><code>app.ui-bindings.js</code></a>，最终统一进入 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a> 的 <code>call(type, direction, mediaStream)</code>。该函数先检查注册状态，再组合设备、媒体效果、<code>pcConfig</code> 和媒体流，最后执行 <code>await ua.call()</code>。</p>
+<p>标准音频和视频按钮只负责传入呼叫类型：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">document.querySelector(&#39;#call&#39;).onclick = function()
+{
+  call();
+};
+
+document.querySelector(&#39;#callVideo&#39;).onclick = function()
+{
+  call(&#39;video&#39;);
+};
+</code></pre>
+</div><p><code>call()</code> 的核心参数组装如下：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">if (!ua.isRegistered())
+{
+  setStatus(&#39;请注册成功后呼叫&#39;);
+
+  return;
+}
+
+rtcSession &amp;&amp; rtcSession.terminate();
+
+options = {
+  extraHeaders  : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}`, `X-Direction: ${direction || &#39;sendrecv&#39;}` ],
+  extraFeatures : extraFeatures,
+  pcConfig      : pcConfig,
+  eventHandlers : {
+    mediaEffectsIssue : handleSessionMediaEffectsIssue
+  }
+};
+
+if (mediaStream)
+{
+  options[&#39;mediaStream&#39;] = mediaStream;
+}
+else
+{
+  options[&#39;mediaConstraints&#39;] = {
+    audio : buildSelectedAudioConstraints(),
+    video : (type === &#39;video&#39; || type === &#39;onlyVideo&#39;) ? buildSelectedVideoConstraints() : false
+  };
+}
+
+options.mediaEffectsComposer = buildCallComposerOptions();
+options.aiNoiseSuppression = buildCallAiNsOptions();
+
+remoteNo = number;
+
+const session = await ua.call(`${number}@${sipDomain}`, options);
+</code></pre>
+</div><p>两段均取自 Demo 当前的 <a href="../../../demo/base-js/js/app.ui-bindings.js"><code>app.ui-bindings.js</code></a> 和 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>。完整 <code>call()</code> 还包含屏幕外呼、占位轨道、单向视频和 iOS OPTIONS 保活；学习标准接入时先掌握上面的主路径。</p>
 <p>需要使用自定义 SIP 头时，其名称、编码和服务端处理规则必须由双方约定；无明确要求时不要添加。</p>
 <h2 id="8-10-接听按钮">8.10 接听按钮<a class="heading-anchor" href="#8-10-接听按钮" aria-label="链接到本节">#</a></h2>
 <p>收到远端 INVITE 后，<code>newRTCSession.originator === &#39;remote&#39;</code>，Demo 显示来电信息并等待选择：</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
-<th>按钮</th>
+<th>标准按钮</th>
 <th>媒体策略</th>
 </tr>
 </thead>
@@ -395,7 +769,42 @@ http://localhost:8080/demo/base-js/index.html?caller=1002
 <td>麦克风 + 摄像头</td>
 </tr>
 </tbody></table></div>
-<p>每个接听入口都应同时检查：<code>pcConfig</code>、媒体约束/自定义流、当前选中设备、composer 和 AiNS。只在呼出路径启用媒体能力会导致接听后功能不一致。</p>
+<p>两个标准接听入口位于 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a> 的 <code>newRTCSession</code> 回调中，分别绑定 <code>#answer</code> 和 <code>#answerVideo</code>。它们会组合 <code>pcConfig</code>、当前选中设备、composer 和 AiNS，再调用 <code>session.answer()</code>。</p>
+<p>下面是两个标准入口中最能体现区别的参数部分，取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">document.querySelector(&#39;#answer&#39;).onclick = function()
+{
+  e.session.answer({
+    mediaConstraints : {
+      audio : buildSelectedAudioConstraints(),
+      video : false
+    },
+    pcConfig             : Object.assign(pcConfig, { &#39;rtcpMuxPolicy&#39;: &#39;negotiate&#39; }),
+    extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
+    rtcOfferConstraints  : { offerToReceiveAudio: true },
+    extraFeatures        : extraFeatures,
+    mediaEffectsComposer : buildCallComposerOptions(),
+    aiNoiseSuppression   : buildCallAiNsOptions()
+  });
+};
+
+document.querySelector(&#39;#answerVideo&#39;).onclick = function()
+{
+  e.session.answer({
+    mediaConstraints : {
+      audio : buildSelectedAudioConstraints(),
+      video : buildSelectedVideoConstraints()
+    },
+    pcConfig             : Object.assign(pcConfig, { &#39;rtcpMuxPolicy&#39;: &#39;negotiate&#39; }),
+    extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
+    rtcOfferConstraints  : { offerToReceiveAudio: true, offerToReceiveVideo: true },
+    extraFeatures        : extraFeatures,
+    mediaEffectsComposer : buildCallComposerOptions(),
+    aiNoiseSuppression   : buildCallAiNsOptions()
+  });
+};
+</code></pre>
+</div><p>两个入口的公共字段完全相同，差异只在本地视频采集和是否希望接收远端视频。</p>
+<p>页面还保留空音频、单视频和自定义黑屏流等专项按钮。这些按钮用于验证特殊媒体流，不等同于标准接听路径，也不保证启用顶部选择的全部媒体效果。客户实现常规接听时应参考 <code>#answer</code>、<code>#answerVideo</code>。</p>
 <h2 id="8-11-通话中模式切换">8.11 通话中模式切换<a class="heading-anchor" href="#8-11-通话中模式切换" aria-label="链接到本节">#</a></h2>
 <div class="table-wrap"><table>
 <thead>
@@ -422,6 +831,24 @@ http://localhost:8080/demo/base-js/index.html?caller=1002
 </tr>
 </tbody></table></div>
 <p>模式切换完成后监听 <code>mode({ mode: &#39;audio&#39;|&#39;video&#39; })</code> 更新页面。不要只在按钮点击时先改 UI，因为远端可能拒绝或协商失败。</p>
+<p>代码位置：按钮绑定和 <code>mode</code> 事件都在 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a> 的 <code>newRTCSession</code> 回调中。<code>useUpdate</code> 来自页面顶部“更新方式”下拉框。</p>
+<p>Demo 的标准切换按钮代码如下：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">document.querySelector(&#39;#toAudio&#39;).onclick = function()
+{
+  e.session.downgradeToAudio({ useUpdate: useUpdate }, () =&gt; { setStatus(`切换音频模式完成${curMode}`); });
+};
+
+document.querySelector(&#39;#toVideo&#39;).onclick = function()
+{
+  e.session.upgradeToVideo({ useUpdate: useUpdate, videoConstraints: buildSelectedVideoConstraints() }, () =&gt; { setStatus(`切换视频模式完成${curMode}`); });
+};
+
+document.querySelector(&#39;#toVideoSendonly&#39;).onclick = function()
+{
+  e.session.upgradeToVideo({ sendOnly: true, useUpdate: useUpdate, videoConstraints: buildSelectedVideoConstraints() }, () =&gt; { setStatus(&#39;切换视频模式完成&#39;) + curMode; });
+};
+</code></pre>
+</div><p>以上代码取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>。视频升级继续复用当前摄像头约束，因此通话前选择的设备在升级时也不会丢失。</p>
 <h2 id="8-12-静音-设备和保持">8.12 静音、设备和保持<a class="heading-anchor" href="#8-12-静音-设备和保持" aria-label="链接到本节">#</a></h2>
 <div class="table-wrap"><table>
 <thead>
@@ -468,6 +895,48 @@ http://localhost:8080/demo/base-js/index.html?caller=1002
 </tr>
 </tbody></table></div>
 <p>保持状态以 <code>hold/unhold</code> 事件为准。<code>originator: &#39;local&#39;</code> 表示本端操作，<code>remote</code> 表示对端保持。</p>
+<p>代码位置：设备下拉框绑定在 <a href="../../../demo/base-js/js/app.ui-bindings.js"><code>app.ui-bindings.js</code></a>；静音、前后摄像头切换和保持按钮，以及 <code>muted/unmuted</code>、<code>cameraChanged</code>、<code>hold/unhold</code> 事件在 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a> 的 <code>newRTCSession</code> 回调中。</p>
+<p>麦克风和摄像头使用独立的 mute 参数：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">document.querySelector(&#39;#muteMic&#39;).onclick = function()
+{
+  console.log(&#39;mute: &#39;, e.session.isMuted().audio);
+  e.session.mute({ audio: true });
+};
+
+document.querySelector(&#39;#unmuteMic&#39;).onclick = function()
+{
+  console.log(&#39;unmute: &#39;, e.session.isMuted().audio);
+  e.session.unmute({ audio: true });
+};
+
+document.querySelector(&#39;#muteCam&#39;).onclick = function()
+{
+  if (videoOnly)
+  {
+    e.session.mute({ video: true, video_only: true });
+  }
+  else
+  {
+    e.session.mute({ video: true });
+  }
+};
+</code></pre>
+</div><p>保持按钮先读取本地/远端状态，不会在远端已保持时重复发起本地保持：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">document.querySelector(&#39;#hold&#39;).onclick = function()
+{
+  const isHold = e.session.isOnHold();
+
+  if (isHold.local)
+  {
+    e.session.unhold();
+  }
+  else if (!isHold.remote)
+  {
+    e.session.hold();
+  }
+};
+</code></pre>
+</div><p>代码均取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>。页面最终状态还应以 <code>muted/unmuted</code> 和 <code>hold/unhold</code> 事件为准，不只依赖按钮点击。</p>
 <h2 id="8-13-共享与推流">8.13 共享与推流<a class="heading-anchor" href="#8-13-共享与推流" aria-label="链接到本节">#</a></h2>
 <div class="table-wrap"><table>
 <thead>
@@ -510,15 +979,68 @@ http://localhost:8080/demo/base-js/index.html?caller=1002
 </tbody></table></div>
 <p>屏幕分享被用户从浏览器原生工具栏停止时，也应结束 SDK 分享状态。普通页面接入应监听屏幕 video track 的 <code>ended</code>。</p>
 <p>远端通过 <code>remoteShared</code> 获得共享流，<code>remoteUnShared</code> 清空共享画面。</p>
+<p>代码位置：<code>#screenShare</code>、<code>#formShare</code>、<code>#picShare</code>、<code>#videoShare</code>、<code>#stopShare</code> 以及带 <code>D</code> 的双流入口都在 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>。标准客户接入先参考不带 <code>D</code> 的方法；双流需要双方及网络侧能力支持。</p>
+<p>标准屏幕共享会保留 SDK 返回的 stream，并监听浏览器原生停止操作：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">document.querySelector(&#39;#screenShare&#39;).onclick = function()
+{
+  e.session.share(&#39;screen&#39;, null, null)
+    .then((stream) =&gt;
+    {
+      document.querySelector(&#39;#screen&#39;).srcObject = stream;
+      document.querySelector(&#39;#screen&#39;).classList = &#39;mh-100 mw-100&#39;;
+
+      stream.getVideoTracks()[0].onended = () =&gt;
+      {
+        document.querySelector(&#39;#screen&#39;).classList = &#39;mh-100 mw-100 hide&#39;;
+      };
+    });
+};
+</code></pre>
+</div><p>其他标准共享入口和停止逻辑如下：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">document.querySelector(&#39;#formShare&#39;).onclick = function()
+{
+  e.session.share(&#39;html&#39;, &#39;#ele&#39;, html2canvas);
+};
+
+document.querySelector(&#39;#picShare&#39;).onclick = function()
+{
+  e.session.share(&#39;pic&#39;, &#39;#pic_s&#39;, null);
+};
+
+document.querySelector(&#39;#videoShare&#39;).onclick = function()
+{
+  document.querySelector(&#39;#video_s&#39;).play()
+    .then(() =&gt;
+    {
+      e.session.share(&#39;video&#39;, &#39;#video_s&#39;, null);
+    });
+};
+
+document.querySelector(&#39;#stopShare&#39;).onclick = function()
+{
+  e.session.unShare();
+
+  setTimeout(() =&gt;
+  {
+    getStreams(e.session.connection);
+  }, 300);
+};
+</code></pre>
+</div><p>以上代码均取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>。<code>unShare()</code> 后重新读取 PeerConnection 媒体，是为了恢复本地和远端主画面。</p>
 <h2 id="8-14-呼转-sip-info-和-dtmf">8.14 呼转、SIP INFO 和 DTMF<a class="heading-anchor" href="#8-14-呼转-sip-info-和-dtmf" aria-label="链接到本节">#</a></h2>
 <h3 id="呼转">呼转<a class="heading-anchor" href="#呼转" aria-label="链接到本节">#</a></h3>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">session.hold();
-session.refer(`${target}@${sipDomain}`, {
-  eventHandlers : {
-    accepted      : function() {},
-    failed        : function() {},
-    requestFailed : function() {}
-  }
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const eventHandlers = {
+  &#39;progress&#39;         : function(data) { console.log(&#39;progress&#39;, data); },
+  &#39;failed&#39;           : function() { if (e.session.isOnHold().local) { e.session.unhold(); } },
+  &#39;accepted&#39;         : function(data) { console.log(&#39;accept&#39;, data); e.session.terminate(); },
+  &#39;trying&#39;           : function(data) { console.log(&#39;trying&#39;, data); },
+  &#39;requestSucceeded&#39; : function(data) { console.log(&#39;requestSucceeded&#39;, data); },
+  &#39;requestFailed&#39;    : function() { if (e.session.isOnHold().local) { e.session.unhold(); } }
+};
+
+e.session.hold();
+e.session.refer(`${document.querySelector(&#39;#refer&#39;).value}@${sipDomain}`, {
+  eventHandlers : eventHandlers
 });
 </code></pre>
 </div><p>Demo 在呼转前保持当前通话，并根据 refer 的结果恢复或结束。目标格式和转接策略必须与 SIP 服务约定。</p>
@@ -533,14 +1055,56 @@ session.refer(`${target}@${sipDomain}`, {
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">session.sendDTMF(&#39;1&#39;, { transportType: &#39;RFC2833&#39; });
 </code></pre>
 </div><p>Demo 键盘使用 <code>0～9</code>、<code>*</code>、<code>#</code>，接收端监听 <code>newDTMF</code>。传输方式还可按对端能力使用 <code>INFO</code>，不要在未确认能力时随意切换。</p>
+<p>Demo 的实际键盘会取用户点击的按键文字，接收时读取 <code>d.dtmf.tone</code>：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">document.querySelector(&#39;#dtmf&#39;).onclick = function(d)
+{
+  e.session.sendDTMF(d.target.innerText, { &#39;transportType&#39;: &#39;RFC2833&#39; });
+};
+
+e.session.on(&#39;newDTMF&#39;, function(d)
+{
+  setStatus(`${d.originator} DTMF:${d.dtmf.tone}`);
+});
+</code></pre>
+</div><p>代码位置：发送按钮 <code>referBtn</code>、<code>sendInfo</code>、<code>dtmf</code> 以及接收事件 <code>refer</code>、<code>newInfo</code>、<code>newDTMF</code> 均位于 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a> 的 <code>newRTCSession</code> 回调中。</p>
 <h2 id="8-15-统计浮层">8.15 统计浮层<a class="heading-anchor" href="#8-15-统计浮层" aria-label="链接到本节">#</a></h2>
 <p>统计浮层在每次 <code>newRTCSession</code> 中监听：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">session.on(&#39;stats:detailed-report&#39;, renderReport);
-session.on(&#39;stats:stats-error&#39;, logError);
-session.on(&#39;stats:network-quality&#39;, function() {});
-session.on(&#39;stats:report&#39;, function() {});
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">statsSession = e.session;
+resetSessionStatsPanel();
+
+e.session.on(&#39;stats:detailed-report&#39;, function(report)
+{
+  if (statsSession !== e.session)
+  {
+    return;
+  }
+
+  const quality = report.quality;
+  const issueText = quality.issues.map((issue) =&gt;
+  {
+    return `${sessionStatsIssueNames[issue.code] || issue.code}(L${issue.severity})`;
+  }).join(&#39; | &#39;);
+
+  renderSessionStatsStreams(&#39;#rtcStatsOutbound&#39;, report.outbound, true);
+  renderSessionStatsStreams(&#39;#rtcStatsInbound&#39;, report.inbound, false);
+  renderSessionConnectionStats(report.connection);
+  setSessionStatsPanelText(
+    &#39;#rtcStatsQuality&#39;,
+    `RTT:${formatSessionStatsNumber(quality.RTT, &#39;ms&#39;)} | ↑:${formatSessionNetworkQuality(quality.uplinkNetworkQuality)} | ↓:${formatSessionNetworkQuality(quality.downlinkNetworkQuality)}`
+  );
+  setSessionStatsPanelText(&#39;#rtcStatsIssues&#39;, issueText || &#39;无&#39;);
+});
+
+e.session.on(&#39;stats:stats-error&#39;, function(error)
+{
+  if (statsSession === e.session)
+  {
+    console.warn(&#39;[RTCStatsMonitor] stats-error:&#39;, error);
+  }
+});
 </code></pre>
-</div><div class="table-wrap"><table>
+</div><p>这段代码直接取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a> 的 <code>RTCSession 统计事件接入示例</code>。</p>
+<div class="table-wrap"><table>
 <thead>
 <tr>
 <th>区域</th>
@@ -570,6 +1134,7 @@ session.on(&#39;stats:report&#39;, function() {});
 </tbody></table></div>
 <p>质量 <code>0</code> 显示暂无数据；不是最佳网络。质量 <code>6</code> 表示严重异常，应结合连接状态和连续样本提示。完整解释见 <a href="05-call-statistics.html">通话质量统计</a>。</p>
 <p>会话失败/结束或当前统计会话切换时，Demo 清空旧面板，防止重呼显示上一通数据。</p>
+<p>代码位置：统计事件绑定、格式转换和浮层渲染均在 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a> 的 <code>newRTCSession</code> 回调前半部分。页面只消费 <code>session</code> 的 <code>stats:*</code> 公开事件；质量 <code>0</code> 显示“暂无数据”，质量 <code>6</code> 显示“严重异常”。</p>
 <h2 id="8-16-媒体效果资源检查">8.16 媒体效果资源检查<a class="heading-anchor" href="#8-16-媒体效果资源检查" aria-label="链接到本节">#</a></h2>
 <p>确认配置目录中的以下资源可直接返回文件内容：</p>
 <div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">AiNS: ans.wasm、ans_onnx.tar.gz
@@ -584,20 +1149,36 @@ session.on(&#39;stats:report&#39;, function() {});
 <li>WASM/模型响应没有被网关改写或截断。</li>
 <li><code>mediaEffectsIssue</code> 中的 <code>module/message</code> 能显示具体失败能力。</li>
 </ul>
+<p>Demo 对媒体效果异常只记录和提示，不会挂断通话：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function handleSessionMediaEffectsIssue(d)
+{
+  const moduleName = d &amp;&amp; d.module ? d.module : &#39;MediaEffects&#39;;
+  const message = d &amp;&amp; d.message ? d.message : &#39;Unknown media effects failure&#39;;
+
+  console.warn(
+    `[base-js][mediaEffectsIssue] module=${moduleName} message=${message}`,
+    d
+  );
+  setStatus(`媒体效果异常[${moduleName}]：${message}`);
+}
+</code></pre>
+</div><p>该函数位于 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>，呼出时通过 <code>options.eventHandlers.mediaEffectsIssue</code> 传入，呼入会话则在 <code>newRTCSession</code> 中绑定事件。</p>
 <h2 id="8-17-按功能逐步验证">8.17 按功能逐步验证<a class="heading-anchor" href="#8-17-按功能逐步验证" aria-label="链接到本节">#</a></h2>
 <h3 id="阶段-a-注册">阶段 A：注册<a class="heading-anchor" href="#阶段-a-注册" aria-label="链接到本节">#</a></h3>
 <ol>
 <li>账号 A 使用自动注册，确认 <code>connected → registered</code>。</li>
-<li>账号 B 使用 <code>register=manual</code>，确认连接后手动注册成功。</li>
+<li>账号 B 使用 <code>register=manual</code>，确认连接后保持未注册。</li>
+<li>点击“主动注册”，确认 <code>registered</code>；点击“主动注销”，确认 <code>unregistered</code>。</li>
+<li>再次主动注册，确认可以恢复呼叫。</li>
 <li>修改为错误密码，确认 <code>registrationFailed</code> 且呼叫被禁止。</li>
-<li>临时断网，观察 offline/disconnected；恢复后等待重新连接和注册。</li>
+<li>临时断网，观察 offline/disconnected；恢复后确认 WSS 重连，再按当前注册模式完成注册。</li>
 </ol>
 <h3 id="阶段-b-基础呼叫">阶段 B：基础呼叫<a class="heading-anchor" href="#阶段-b-基础呼叫" aria-label="链接到本节">#</a></h3>
 <ol>
 <li>双方完成语音呼叫。</li>
 <li>双方完成音视频呼叫。</li>
 <li>验证呼出取消、呼入拒接、主叫挂断和被叫挂断。</li>
-<li>验证 <code>failed/ended</code> 后按钮和媒体元素复位。</li>
+<li>验证 <code>failed/ended</code> 后会话引用、统计浮层和媒体展示复位。</li>
 <li>立即重呼，确认不复用旧会话。</li>
 </ol>
 <h3 id="阶段-c-设备和模式">阶段 C：设备和模式<a class="heading-anchor" href="#阶段-c-设备和模式" aria-label="链接到本节">#</a></h3>
@@ -620,7 +1201,7 @@ session.on(&#39;stats:report&#39;, function() {});
 <h3 id="阶段-e-共享和辅助功能">阶段 E：共享和辅助功能<a class="heading-anchor" href="#阶段-e-共享和辅助功能" aria-label="链接到本节">#</a></h3>
 <ol>
 <li>验证屏幕、页面元素、图片和视频分享。</li>
-<li>从浏览器共享提示条停止屏幕，确认页面恢复。</li>
+<li>从浏览器共享提示条停止屏幕，确认本地预览隐藏且通话视频恢复。</li>
 <li>验证双流分享前先确认双方能力。</li>
 <li>验证 DTMF、新 INFO 和呼转结果事件。</li>
 </ol>
@@ -647,7 +1228,7 @@ session.on(&#39;stats:report&#39;, function() {});
 </tr>
 <tr>
 <td><code>connected</code> 但不能呼叫</td>
-<td>等待 <code>registered</code>；手动模式确认调用 <code>ua.register()</code></td>
+<td>自动模式等待 <code>registered</code>；主动模式点击“主动注册”并检查注册事件</td>
 </tr>
 <tr>
 <td>收到来电但没有声音/画面</td>
@@ -695,19 +1276,75 @@ session.on(&#39;stats:report&#39;, function() {});
 </tr>
 </tbody></table></div>
 <h2 id="8-19-从-demo-迁移到业务页面">8.19 从 Demo 迁移到业务页面<a class="heading-anchor" href="#8-19-从-demo-迁移到业务页面" aria-label="链接到本节">#</a></h2>
-<p>建议保留的结构：</p>
+<p>Demo 中可以直接参考的结构：</p>
 <ul>
 <li>一个应用级 <code>UA</code>。</li>
 <li>在 UA 上集中绑定连接和注册事件。</li>
 <li>在每次 <code>newRTCSession</code> 中绑定本通电话全部事件。</li>
-<li>一个 <code>buildCallOptions()</code> 同时供呼出和呼入接听使用。</li>
 <li>直接从当前 session 获取 composer、AiNS 和统计。</li>
-<li><code>failed/ended</code> 共用完整清理函数。</li>
+</ul>
+<p>Demo 的应用入口会先请求权限并枚举设备，然后启动 UA：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function start()
+{
+  setStatus(`${CRTC.version}`);
+
+  navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+    .then(async(mediastream) =&gt;
+    {
+      await updateDevices();
+      mediastream &amp;&amp; mediastream.getTracks().forEach((track) =&gt; track.stop());
+    })
+    .catch(async(error) =&gt;
+    {
+      try
+      {
+        await updateDevices();
+      }
+      catch (deviceError)
+      {
+        setStatus(`设备列表加载失败: ${deviceError.name || deviceError.message || &#39;unknown&#39;}`);
+      }
+
+      setStatus(`预采集失败: ${error.name || error.message || &#39;unknown&#39;}`);
+    });
+
+  handleStop = false;
+  disconnectedBy = null;
+  isShowUI = false;
+
+  ua.start();
+
+  setTimeout(() =&gt;
+  {
+    if (!ua.isConnected() || (!manualRegister &amp;&amp; !ua.isRegistered()))
+    {
+      ua.stop();
+      console.log(&#39;网络连接异常或未注册成功&#39;);
+    }
+  }, 10000);
+}
+
+start();
+initMediaEffects();
+</code></pre>
+</div><p>这段代码取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>。预采集只为了请求权限和获取带名称的设备列表，因此成功后立即停止这些 tracks。</p>
+<p>页面退出时的 UA 清理位于 <a href="../../../demo/base-js/js/app.ui-bindings.js"><code>app.ui-bindings.js</code></a>：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">window.onbeforeunload = function()
+{
+  handleStop = true;
+  ua.stop();
+};
+</code></pre>
+</div><p><code>handleStop</code> 会让 UA 的 <code>disconnected</code> 事件把这次断开识别为主动退出，不当成网络故障。</p>
+<p>业务页面建议在迁移时进一步整理：</p>
+<ul>
+<li>把呼叫与接听的公共配置收敛为一个 <code>buildCallOptions()</code>，避免两条路径参数不一致。</li>
+<li>把 <code>failed/ended</code> 中的公共处理收敛为一个会话清理函数。</li>
+<li>把 Demo 的全局状态替换为框架状态或组件状态。</li>
 </ul>
 <p>业务页面需要替换的部分：</p>
 <ul>
 <li>Demo 的测试账号和环境选择方式。</li>
-<li>全局变量改为框架状态或组件状态。</li>
 <li>未使用的扩展能力无需从 Demo 迁移。</li>
 <li>日志、错误提示、权限引导和监控上报改为产品实现。</li>
 <li>账号密码、TURN 凭据和授权信息应由安全配置流程提供。</li>
@@ -715,7 +1352,7 @@ session.on(&#39;stats:report&#39;, function() {});
 <h2 id="8-20-完成标准">8.20 完成标准<a class="heading-anchor" href="#8-20-完成标准" aria-label="链接到本节">#</a></h2>
 <p>只依赖本学习文档和 Base JS Demo，应能完成：</p>
 <ul>
-<li>自动和手动注册，并正确处理连接/注册失败。</li>
+<li>自动注册、主动注册、主动注销和重新注册，并正确处理连接/注册失败。</li>
 <li>音频、视频呼入呼出、取消、拒接和双方挂断。</li>
 <li>远端音视频和共享流播放。</li>
 <li>camera/mic 切换、静音、保持和音视频模式切换。</li>
@@ -732,7 +1369,7 @@ session.on(&#39;stats:report&#39;, function() {});
     
     <nav class="page-toc" aria-label="本页目录">
       <h2>本页目录</h2>
-      <a class="toc-depth-2" href="#8-1-使用建议">8.1 使用建议</a><a class="toc-depth-2" href="#8-2-运行条件">8.2 运行条件</a><a class="toc-depth-2" href="#8-3-环境配置">8.3 环境配置</a><a class="toc-depth-2" href="#8-4-url-参数说明">8.4 URL 参数说明</a><a class="toc-depth-2" href="#8-5-demo-的-ua-配置">8.5 Demo 的 UA 配置</a><a class="toc-depth-3" href="#自动注册">自动注册</a><a class="toc-depth-3" href="#手动注册">手动注册</a><a class="toc-depth-2" href="#8-6-webrtc-网络配置">8.6 WebRTC 网络配置</a><a class="toc-depth-2" href="#8-7-页面顶部配置项">8.7 页面顶部配置项</a><a class="toc-depth-3" href="#呼叫号码">呼叫号码</a><a class="toc-depth-3" href="#摄像头和麦克风">摄像头和麦克风</a><a class="toc-depth-3" href="#更新方式">更新方式</a><a class="toc-depth-3" href="#画质偏好">画质偏好</a><a class="toc-depth-3" href="#输出镜像">输出镜像</a><a class="toc-depth-3" href="#虚拟背景">虚拟背景</a><a class="toc-depth-3" href="#ains">AiNS</a><a class="toc-depth-2" href="#8-8-水印控件">8.8 水印控件</a><a class="toc-depth-2" href="#8-9-基础呼叫按钮">8.9 基础呼叫按钮</a><a class="toc-depth-2" href="#8-10-接听按钮">8.10 接听按钮</a><a class="toc-depth-2" href="#8-11-通话中模式切换">8.11 通话中模式切换</a><a class="toc-depth-2" href="#8-12-静音-设备和保持">8.12 静音、设备和保持</a><a class="toc-depth-2" href="#8-13-共享与推流">8.13 共享与推流</a><a class="toc-depth-2" href="#8-14-呼转-sip-info-和-dtmf">8.14 呼转、SIP INFO 和 DTMF</a><a class="toc-depth-3" href="#呼转">呼转</a><a class="toc-depth-3" href="#sip-info">SIP INFO</a><a class="toc-depth-3" href="#dtmf">DTMF</a><a class="toc-depth-2" href="#8-15-统计浮层">8.15 统计浮层</a><a class="toc-depth-2" href="#8-16-媒体效果资源检查">8.16 媒体效果资源检查</a><a class="toc-depth-2" href="#8-17-按功能逐步验证">8.17 按功能逐步验证</a><a class="toc-depth-3" href="#阶段-a-注册">阶段 A：注册</a><a class="toc-depth-3" href="#阶段-b-基础呼叫">阶段 B：基础呼叫</a><a class="toc-depth-3" href="#阶段-c-设备和模式">阶段 C：设备和模式</a><a class="toc-depth-3" href="#阶段-d-媒体效果">阶段 D：媒体效果</a><a class="toc-depth-3" href="#阶段-e-共享和辅助功能">阶段 E：共享和辅助功能</a><a class="toc-depth-3" href="#阶段-f-统计">阶段 F：统计</a><a class="toc-depth-2" href="#8-18-常见问题定位表">8.18 常见问题定位表</a><a class="toc-depth-2" href="#8-19-从-demo-迁移到业务页面">8.19 从 Demo 迁移到业务页面</a><a class="toc-depth-2" href="#8-20-完成标准">8.20 完成标准</a>
+      <a class="toc-depth-2" href="#8-1-使用建议" title="8.1 使用建议">8.1 使用建议</a><a class="toc-depth-3" href="#8-1-1-源码入口与加载顺序" title="8.1.1 源码入口与加载顺序">8.1.1 源码入口与加载顺序</a><a class="toc-depth-3" href="#8-1-2-核心功能定位总表" title="8.1.2 核心功能定位总表">8.1.2 核心功能定位总表</a><a class="toc-depth-2" href="#8-2-运行条件" title="8.2 运行条件">8.2 运行条件</a><a class="toc-depth-2" href="#8-3-环境配置" title="8.3 环境配置">8.3 环境配置</a><a class="toc-depth-2" href="#8-4-url-参数说明" title="8.4 URL 参数说明">8.4 URL 参数说明</a><a class="toc-depth-2" href="#8-5-demo-的-ua-配置" title="8.5 Demo 的 UA 配置">8.5 Demo 的 UA 配置</a><a class="toc-depth-3" href="#自动注册" title="自动注册">自动注册</a><a class="toc-depth-3" href="#主动注册与注销" title="主动注册与注销">主动注册与注销</a><a class="toc-depth-2" href="#8-6-webrtc-网络配置" title="8.6 WebRTC 网络配置">8.6 WebRTC 网络配置</a><a class="toc-depth-2" href="#8-7-页面顶部配置项" title="8.7 页面顶部配置项">8.7 页面顶部配置项</a><a class="toc-depth-3" href="#呼叫号码" title="呼叫号码">呼叫号码</a><a class="toc-depth-3" href="#摄像头和麦克风" title="摄像头和麦克风">摄像头和麦克风</a><a class="toc-depth-3" href="#更新方式" title="更新方式">更新方式</a><a class="toc-depth-3" href="#画质偏好" title="画质偏好">画质偏好</a><a class="toc-depth-3" href="#输出镜像" title="输出镜像">输出镜像</a><a class="toc-depth-3" href="#虚拟背景" title="虚拟背景">虚拟背景</a><a class="toc-depth-3" href="#ains" title="AiNS">AiNS</a><a class="toc-depth-2" href="#8-8-水印控件" title="8.8 水印控件">8.8 水印控件</a><a class="toc-depth-2" href="#8-9-基础呼叫按钮" title="8.9 基础呼叫按钮">8.9 基础呼叫按钮</a><a class="toc-depth-2" href="#8-10-接听按钮" title="8.10 接听按钮">8.10 接听按钮</a><a class="toc-depth-2" href="#8-11-通话中模式切换" title="8.11 通话中模式切换">8.11 通话中模式切换</a><a class="toc-depth-2" href="#8-12-静音-设备和保持" title="8.12 静音、设备和保持">8.12 静音、设备和保持</a><a class="toc-depth-2" href="#8-13-共享与推流" title="8.13 共享与推流">8.13 共享与推流</a><a class="toc-depth-2" href="#8-14-呼转-sip-info-和-dtmf" title="8.14 呼转、SIP INFO 和 DTMF">8.14 呼转、SIP INFO 和 DTMF</a><a class="toc-depth-3" href="#呼转" title="呼转">呼转</a><a class="toc-depth-3" href="#sip-info" title="SIP INFO">SIP INFO</a><a class="toc-depth-3" href="#dtmf" title="DTMF">DTMF</a><a class="toc-depth-2" href="#8-15-统计浮层" title="8.15 统计浮层">8.15 统计浮层</a><a class="toc-depth-2" href="#8-16-媒体效果资源检查" title="8.16 媒体效果资源检查">8.16 媒体效果资源检查</a><a class="toc-depth-2" href="#8-17-按功能逐步验证" title="8.17 按功能逐步验证">8.17 按功能逐步验证</a><a class="toc-depth-3" href="#阶段-a-注册" title="阶段 A：注册">阶段 A：注册</a><a class="toc-depth-3" href="#阶段-b-基础呼叫" title="阶段 B：基础呼叫">阶段 B：基础呼叫</a><a class="toc-depth-3" href="#阶段-c-设备和模式" title="阶段 C：设备和模式">阶段 C：设备和模式</a><a class="toc-depth-3" href="#阶段-d-媒体效果" title="阶段 D：媒体效果">阶段 D：媒体效果</a><a class="toc-depth-3" href="#阶段-e-共享和辅助功能" title="阶段 E：共享和辅助功能">阶段 E：共享和辅助功能</a><a class="toc-depth-3" href="#阶段-f-统计" title="阶段 F：统计">阶段 F：统计</a><a class="toc-depth-2" href="#8-18-常见问题定位表" title="8.18 常见问题定位表">8.18 常见问题定位表</a><a class="toc-depth-2" href="#8-19-从-demo-迁移到业务页面" title="8.19 从 Demo 迁移到业务页面">8.19 从 Demo 迁移到业务页面</a><a class="toc-depth-2" href="#8-20-完成标准" title="8.20 完成标准">8.20 完成标准</a>
     </nav>
   </main>
   <button type="button" class="back-to-top" aria-label="回到顶部">↑</button>

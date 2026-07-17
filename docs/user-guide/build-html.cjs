@@ -55,6 +55,16 @@ const userGuideCss = `
 @media (max-width: 1180px) {
   .toc-toggle { display: none; }
 }
+
+.page-toc {
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+}
+.page-toc a {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 `;
 
 function replaceRequired(source, search, replacement, label) {
@@ -250,6 +260,16 @@ function transformMarkdownLinks(href) {
   return `../${href}`;
 }
 
+function formatTocLabel(text, depth) {
+  if (depth < 3 || !text.includes('(')) return text;
+
+  return text
+    .split(/\s+\/\s+/)
+    .map((part) => part.replace(/\([^)]*\)/g, '').replace(/\s*:\s*.*$/, '').trim())
+    .filter(Boolean)
+    .join(' / ');
+}
+
 function renderDocument(doc) {
   const toc = [];
   const slugs = new Map();
@@ -291,7 +311,10 @@ function renderDocument(doc) {
   const tocHtml = toc.length ? `
     <nav class="page-toc" aria-label="本页目录">
       <h2>本页目录</h2>
-      ${toc.map((item) => `<a class="toc-depth-${item.depth}" href="#${item.id}">${escapeHtml(item.text)}</a>`).join('')}
+      ${toc.map((item) => {
+        const label = formatTocLabel(item.text, item.depth);
+        return `<a class="toc-depth-${item.depth}" href="#${item.id}" title="${escapeHtml(label)}">${escapeHtml(label)}</a>`;
+      }).join('')}
     </nav>` : '';
 
   return `<!doctype html>

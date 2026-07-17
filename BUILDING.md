@@ -94,7 +94,7 @@ The zip currently contains only these release files:
 - `demo/**`
 - `dist/CRTC.min.js`
 - `CHANGELOG.md`
-- `docs/*.pdf`
+- `docs/*.html` and `docs/assets/**`, sourced from `docs/user-guide/html/`
 
 Release documentation should describe only the files that are actually included in the zip.
 

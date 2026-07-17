@@ -38,6 +38,28 @@
 
 示例页面如果只允许一通电话，可以用 `currentSession` 保存当前会话。需要并发通话时，应使用 `Map<session.id, session>` 管理，不能让后一通覆盖前一通。
 
+Base JS Demo 在 UA 的 `newRTCSession` 中保存当前会话。下面是 [`app.js`](../../demo/base-js/js/app.js) 的会话入口节选：
+
+```js
+ua.on('newRTCSession', function(e)
+{
+  if (tmpSession)
+  {
+    e.session.terminate({ status_code: 486 });
+  }
+  else if (!rtcSession)
+  {
+    rtcSession = e.session;
+  }
+  else
+  {
+    tmpSession = e.session;
+  }
+});
+```
+
+Demo 为呼转保留了 `tmpSession`，普通单通话页面可以简化为只保留一个 `rtcSession`。关键是只保存 `e.session`，不要自行构造 `RTCSession`。
+
 ## 1.3 常见名词
 
 ### WSS
@@ -108,6 +130,30 @@ WSS 地址、SIP 域和 TURN 地址用途不同，不一定使用同一个域名
 | `disconnected` | WSS 已断开 | 浏览器网络接口是否离线需结合 offline 事件 |
 
 自动注册是 `register: true`，`ua.start()` 连接后自动发送 REGISTER。手动注册是 `register: false`，在 `connected` 后调用 `ua.register()`。两种方式的最终成功标志都相同：`registered`。
+
+Demo 不在 `connected` 事件中直接开放呼叫，而是分别记录连接和注册结果。以下代码取自 [`app.js`](../../demo/base-js/js/app.js)：
+
+```js
+ua.on('connected', function()
+{
+  setStatus('信令连接成功');
+
+  if (manualRegister)
+  {
+    setStatus('信令连接成功，请点击“主动注册”');
+  }
+});
+
+ua.on('registered', function(data)
+{
+  setStatus(`注册成功：${data.response.from.uri.toString()}`);
+});
+
+ua.on('registrationFailed', function(data)
+{
+  setStatus(`注册失败${data.cause}`);
+});
+```
 
 ## 1.7 一次 SIP 呼叫中会看到哪些阶段
 
@@ -192,6 +238,19 @@ SDP 是双方对音频、视频、编解码器和网络参数的描述。常见�
 
 `iceTransportPolicy: 'all'` 允许浏览器尝试 host/srflx/relay；`relay` 只允许 TURN。企业网、对称 NAT 或严格防火墙中，TURN 往往是媒体可用的关键。
 
+Base JS Demo 将交付环境的 ICE 参数写入同一个 `pcConfig`，再同时用于呼出和接听：
+
+```js
+const pcConfig = {};
+
+iceServers && (pcConfig['iceServers'] = iceServers);
+iceTransportPolicy && (pcConfig['iceTransportPolicy'] = iceTransportPolicy);
+pcConfig['iceCandidatePoolSize'] = 4;
+pcConfig['bundlePolicy'] = 'max-compat';
+```
+
+这段代码取自 [`app.js`](../../demo/base-js/js/app.js)。`iceServers`、`iceTransportPolicy` 应来自当前部署环境，不要复制其他环境的 TURN 凭据。
+
 ### ICE 状态含义
 
 | 状态 | 含义 | 页面建议 |
@@ -234,9 +293,34 @@ Track 的常见属性：
 - 页面自行创建的预览、屏幕流、占位流必须由页面停止。
 - 不要提前停止一个仍被当前通话使用的自定义 track。
 
+Demo 在页面自己创建的媒体流失败或结束时显式停止 tracks。以下是 [`app.js`](../../demo/base-js/js/app.js) 中的清理方式：
+
+```js
+cusMediaStream.getTracks().forEach((track) => track.stop());
+cusMediaStream = new MediaStream();
+```
+
+这个规则适用于页面自行采集的屏幕流、自定义流和预览流；会话内部管理的流仍交给 SDK 会话生命周期。
+
 ## 1.12 本地预览和实际发送不是同一件事
 
 `localVideo.srcObject = stream` 只是把某个流显示在页面，不代表该流一定已经发送。实际发送取决于当前会话配置、媒体方向和 track 状态。
+
+Demo 通过 [`app.sdk-helper.js`](../../demo/base-js/js/app.sdk-helper.js) 从 PeerConnection 读取 SDK 正在使用的流，再绑定到页面元素：
+
+```js
+const localStream = CRTC.Utils.getStreams(pc, 'local');
+const remoteStream = CRTC.Utils.getStreams(pc, 'remote');
+
+bindMediaStreamIfChanged(remoteAudio, remoteStream.audioStream);
+bindMediaStreamIfChanged(remoteVideo, remoteStream.mediaStream);
+
+Promise.all([ localVideo.play(), remoteAudio.play(), remoteVideo.play() ])
+  .then(() => { })
+  .catch(() => { });
+```
+
+`srcObject` 用于展示，`CRTC.Utils.getStreams()` 反映的才是当前 PeerConnection 的本地/远端媒体。
 
 类似地，CSS：
 
@@ -256,6 +340,38 @@ video { transform: scaleX(-1); }
 | `OverconstrainedError` | `exact/min` 约束设备不支持 | 降低分辨率/FPS或改用 `ideal` |
 | 设备 label 为空 | 尚未授权媒体权限 | 先请求一次权限后重新枚举 |
 | `play()` reject | 浏览器自动播放限制 | 提供“点击播放/恢复播放”按钮 |
+
+Demo 的摄像头检查同时处理“没有设备”和“用户拒绝权限”，代码取自 [`app.sdk-helper.js`](../../demo/base-js/js/app.sdk-helper.js)：
+
+```js
+try
+{
+  await navigator.mediaDevices.getUserMedia({ video: true }).then(async(mediastream) =>
+  {
+    mediastream && mediastream.getTracks().forEach((t) => t.stop());
+  });
+  haveACamera = true;
+
+  return '摄像头可以正常使用';
+}
+catch (error)
+{
+  if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError')
+  {
+    return '系统没有摄像头';
+  }
+  else if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError')
+  {
+    return '用户拒绝了摄像头权限';
+  }
+  else
+  {
+    return `摄像头错误: ${error.name}`;
+  }
+}
+```
+
+这段检查创建的 track 只用于验证权限和设备，因此成功后立即停止，不会与后续通话争用摄像头。
 
 ## 1.14 AiNS、虚拟背景、混流与通话的关系
 

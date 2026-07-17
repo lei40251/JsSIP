@@ -20,7 +20,7 @@ function getStreams(pc)
   const localStream = CRTC.Utils.getStreams(pc, 'local');
   const remoteStream = CRTC.Utils.getStreams(pc, 'remote');
 
-  const audioTrack = localStream.audioStream.getAudioTracks() > 0 ? localStream.audioStream.getAudioTracks()[0] : null;
+  const audioTrack = localStream.audioStream.getAudioTracks().length > 0 ? localStream.audioStream.getAudioTracks()[0] : null;
   const videoTrack = (localStream.videoStream.getVideoTracks().length > 0) ? localStream.videoStream.getVideoTracks()[0] : null;
   const mediaStreamArray = [];
 
@@ -157,6 +157,44 @@ function getCurrentAiNsLevel()
   const currentValue = levelInput ? levelInput.value : '';
 
   return normalizeAiNsReductionLevel(currentValue);
+}
+
+/**
+ * 构建当前选中麦克风对应的音频采集约束。
+ * 呼出、接听和音视频升级应复用同一设备选择结果。
+ *
+ * @returns {MediaTrackConstraints} 音频采集约束
+ */
+function buildSelectedAudioConstraints()
+{
+  const constraints = {
+    sampleRate   : 48000,
+    channelCount : 1
+  };
+
+  if (selectMic)
+  {
+    constraints.deviceId = { exact: selectMic };
+  }
+
+  return constraints;
+}
+
+/**
+ * 构建当前选中摄像头对应的视频采集约束。
+ *
+ * @returns {MediaTrackConstraints} 视频采集约束
+ */
+function buildSelectedVideoConstraints()
+{
+  const constraints = Object.assign({}, videoConstraints);
+
+  if (selectCamera)
+  {
+    constraints.deviceId = { exact: selectCamera };
+  }
+
+  return constraints;
 }
 
 /**

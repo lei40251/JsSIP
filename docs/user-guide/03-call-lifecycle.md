@@ -155,6 +155,39 @@ ua.start();
 
 `online` 只说明浏览器网络接口恢复，WSS 和 SIP 注册可能仍在恢复。页面应等到 `connected`、`registered` 后再恢复呼叫按钮。
 
+Demo 将浏览器离线和 UA 信令断开分开记录。以下代码取自 [`app.js`](../../demo/base-js/js/app.js)：
+
+```js
+ua.on('browser:navigator:offline', function()
+{
+  setStatus('浏览器已离线');
+
+  if (!disconnectedBy)
+  {
+    disconnectedBy = 'BROWSER';
+    isShowUI = true;
+  }
+});
+
+ua.on('disconnected', function(data)
+{
+  setStatus(`信令连接断开: ${data.code} ${data.reason}`);
+
+  if (handleStop)
+  {
+    return;
+  }
+
+  if (!disconnectedBy)
+  {
+    isShowUI = true;
+  }
+  disconnectedBy = 'UA';
+});
+```
+
+`handleStop` 用于区分页面主动停止与被动断线；否则退出页面时也会误显示“网络异常”。
+
 ## 3.5 呼出完整时序
 
 呼出前必须满足：UA 已注册、没有违反业务的并发通话限制、被叫地址非空。本地媒体权限可能在 `ua.call()` 内请求，所以 `ua.call()` 返回 Promise。
@@ -224,6 +257,27 @@ async function call(target)
 }
 ```
 
+Base JS Demo 在 `await ua.call()` 成功后立即监听早期远端音频，避免将真实 183 提示音与本地回铃同时播放。以下节选自 [`app.js`](../../demo/base-js/js/app.js)：
+
+```js
+const session = await ua.call(`${number}@${sipDomain}`, options);
+
+earlyMedia = false;
+
+session.connection.ontrack = function(event)
+{
+  if (event.track.kind === 'audio')
+  {
+    earlyMedia = true;
+    remoteAudio.srcObject = event.streams[0];
+    remoteAudio.play()
+      .catch(() => { });
+  }
+};
+```
+
+这段监听只处理外呼阶段的早期音频；通话建立后的完整本地/远端媒体仍由会话事件中的 `getStreams()` 更新。
+
 ## 3.6 呼入与接听完整时序
 
 呼入时先收到 `newRTCSession`。此时可以读取主叫、呼叫模式和随路头，但不要假设本地媒体已经可用。用户点击接听后调用 `answer(options)`，随后再读取 `session.connection` 并绑定浏览器事件。
@@ -282,6 +336,30 @@ function answerIncoming(session, video)
 }
 ```
 
+Demo 的语音接听会把当前麦克风、PC 配置、composer 和 AiNS 一起传入。以下代码取自 [`app.js`](../../demo/base-js/js/app.js)：
+
+```js
+document.querySelector('#answer').onclick = function()
+{
+  e.session.answer({
+    mediaConstraints : {
+      audio : buildSelectedAudioConstraints(),
+      video : false
+    },
+    pcConfig             : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
+    extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
+    rtcOfferConstraints  : { offerToReceiveAudio: true },
+    extraFeatures        : extraFeatures,
+    mediaEffectsComposer : buildCallComposerOptions(),
+    aiNoiseSuppression   : buildCallAiNsOptions()
+  });
+
+  setStatus('audio answer');
+};
+```
+
+标准视频接听只把 `video: false` 换成 `video: buildSelectedVideoConstraints()`，并设置 `offerToReceiveVideo: true`。
+
 ## 3.7 `newRTCSession` 统一会话入口
 
 ```js
@@ -301,6 +379,21 @@ ua.on('newRTCSession', function(data)
 | `request` | SIP 请求对象 | 可读取主叫、呼叫模式和自定义头 |
 
 每一通电话都要重新绑定事件。不要把上一通的 composer、AiNS 控制器、统计实例或 `session.connection` 用到下一通。
+
+Demo 还在这个统一入口读取呼入方向和主叫号码：
+
+```js
+if (e.originator === 'remote')
+{
+  remoteNo = e.request.from.uri.user;
+  document.querySelector('#callee').value = remoteNo;
+
+  setStatus(`收到${e.request.mode === 'video' ? '视频' : '音频'}呼叫`);
+  showIncomingCallNotification(e.request.mode, remoteNo);
+}
+```
+
+这段代码取自 [`app.js`](../../demo/base-js/js/app.js)。读取 `request` 只用于展示来电信息，真正接听仍要等用户点击后调用 `session.answer()`。
 
 如果页面只允许一通电话，可在已有会话时拒绝新呼入：
 
@@ -367,6 +460,25 @@ function bindPeerConnection(pc)
 
 还可以在 `confirmed` 后通过 `CRTC.Utils.getStreams(session.connection, 'local'/'remote')` 获取已聚合的本地或远端流。`ontrack` 仍应保留，因为远端可能在早期媒体、重协商或共享时新增轨道。
 
+Base JS Demo 把本地音频/视频和远端聚合流分开处理。以下是 [`app.sdk-helper.js`](../../demo/base-js/js/app.sdk-helper.js) 的核心节选：
+
+```js
+function getStreams(pc)
+{
+  const localStream = CRTC.Utils.getStreams(pc, 'local');
+  const remoteStream = CRTC.Utils.getStreams(pc, 'remote');
+
+  bindMediaStreamIfChanged(remoteAudio, remoteStream.audioStream);
+  bindMediaStreamIfChanged(remoteVideo, remoteStream.mediaStream);
+
+  Promise.all([ localVideo.play(), remoteAudio.play(), remoteVideo.play() ])
+    .then(() => { })
+    .catch(() => { });
+}
+```
+
+实际 Demo 还会为本地预览克隆所需轨道，并在远端视频 track `ended` 时清空画面；业务页面可按自己的布局保留相同的生命周期处理。
+
 ## 3.10 挂断、拒接与取消
 
 同一个 `terminate()` 可用于以下通话阶段：
@@ -421,6 +533,23 @@ session.on('ended', function() { clearSession(session); });
 
 会话内的统计实例和媒体效果控制器由会话释放；业务自行创建的 `MediaStream` 仍应停止其 tracks。
 
+Demo 的 `failed` 和 `ended` 都会清理统计引用、定时器和页面自建媒体流。以下节选自 [`app.js`](../../demo/base-js/js/app.js)：
+
+```js
+if (statsSession === e.session)
+{
+  statsSession = null;
+  resetSessionStatsPanel();
+}
+
+optionsTimer && clearInterval(optionsTimer);
+
+cusMediaStream.getTracks().forEach((track) => track.stop());
+cusMediaStream = new MediaStream();
+```
+
+把这组操作同时放进两种结束路径，可以避免取消呼叫、拒接和正常挂断留下不同的页面残留。
+
 ## 3.12 页面销毁和 UA 停止
 
 ```js
@@ -438,5 +567,17 @@ function disposeCallPage()
 ```
 
 如果 `UA` 是整个应用共享的单例，组件卸载时只清理组件拥有的会话和 DOM，不要停止其他页面仍在使用的 UA。只有退出账号、关闭通信模块或整个页面卸载时才调用 `ua.stop()`。
+
+Base JS Demo 的页面卸载处理位于 [`app.ui-bindings.js`](../../demo/base-js/js/app.ui-bindings.js)：
+
+```js
+window.onbeforeunload = function()
+{
+  handleStop = true;
+  ua.stop();
+};
+```
+
+先设置 `handleStop` 是为了让 `disconnected` 回调知道这是主动停止，不展示被动断网提示。
 
 [← 上一章：快速完成第一通电话](./02-quick-start.md) · [下一章：媒体能力 →](./04-media-features.md)

@@ -194,7 +194,27 @@ if (composer)
 </div><p>清除：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">composer &amp;&amp; composer.clearSourceAiVirtualBackground(0);
 </code></pre>
-</div><h3 id="7-2-3-模式与参数迁移">7.2.3 模式与参数迁移<a class="heading-anchor" href="#7-2-3-模式与参数迁移" aria-label="链接到本节">#</a></h3>
+</div><p>Base JS Demo 将“更新”和“清除”收敛到同一个通话中函数，这样页面下拉框切换到空值时不会遗留上一个背景：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const { sessionComposer } = getSessionComposerHandles();
+
+if (!sessionComposer)
+{
+  return;
+}
+
+const aiVBOptions = buildCurrentAiVBOptions();
+
+if (!aiVBOptions)
+{
+  sessionComposer.clearSourceAiVirtualBackground(0);
+}
+else
+{
+  sessionComposer.setSourceAiVirtualBackground(0, aiVBOptions);
+}
+</code></pre>
+</div><p>代码节选自 <a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a>。升级时应同时替换开启、切换和清除三条路径，不能只改初始呼叫参数。</p>
+<h3 id="7-2-3-模式与参数迁移">7.2.3 模式与参数迁移<a class="heading-anchor" href="#7-2-3-模式与参数迁移" aria-label="链接到本节">#</a></h3>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -297,7 +317,16 @@ const session = await ua.call(target, options);
 </div><p>呼入接听使用相同的 <code>mediaEffectsComposer</code> 配置：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">session.answer(options);
 </code></pre>
-</div><p>当前会话需要动态更新时：</p>
+</div><p>Base JS Demo 在发起呼叫前从当前页面状态重新构造效果参数：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">options.mediaEffectsComposer = buildCallComposerOptions();
+options.aiNoiseSuppression = buildCallAiNsOptions();
+
+remoteNo = number;
+
+const session = await ua.call(`${number}@${sipDomain}`, options);
+</code></pre>
+</div><p>标准音频和视频接听也调用同样的 <code>buildCallComposerOptions()</code> 和 <code>buildCallAiNsOptions()</code>。这段代码取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>，可作为检查“呼出已升级、接听未升级”问题的对照点。</p>
+<p>当前会话需要动态更新时：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const composer = session.getMediaEffectsComposer();
 
 if (composer)
@@ -412,6 +441,22 @@ session.on(&#39;ended&#39;, function()
 </tr>
 </tbody></table></div>
 <p>直接创建独立监控器时，事件名仍不带 <code>stats:</code> 前缀：<code>report</code>、<code>network-quality</code>、<code>detailed-report</code>、<code>stats-error</code>。</p>
+<p>Demo 的当前接入会用会话引用过滤延迟统计事件：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">statsSession = e.session;
+
+e.session.on(&#39;stats:detailed-report&#39;, function(report)
+{
+  if (statsSession !== e.session)
+  {
+    return;
+  }
+
+  renderSessionStatsStreams(&#39;#rtcStatsOutbound&#39;, report.outbound, true);
+  renderSessionStatsStreams(&#39;#rtcStatsInbound&#39;, report.inbound, false);
+  renderSessionConnectionStats(report.connection);
+});
+</code></pre>
+</div><p>该节选来自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>。旧页面迁移后如果允许快速重呼，建议保留这种会话归属检查。</p>
 <h2 id="7-6-网络质量等级的行为变化">7.6 网络质量等级的行为变化<a class="heading-anchor" href="#7-6-网络质量等级的行为变化" aria-label="链接到本节">#</a></h2>
 <p>这是统计升级中最需要重新确认页面文案和告警逻辑的部分。</p>
 <h3 id="等级-0">等级 0<a class="heading-anchor" href="#等级-0" aria-label="链接到本节">#</a></h3>
@@ -543,7 +588,7 @@ session.on(&#39;stats:stats-error&#39;, reportStatsError);
     
     <nav class="page-toc" aria-label="本页目录">
       <h2>本页目录</h2>
-      <a class="toc-depth-2" href="#7-1-升级前先做调用清单">7.1 升级前先做调用清单</a><a class="toc-depth-2" href="#7-2-虚拟背景升级">7.2 虚拟背景升级</a><a class="toc-depth-3" href="#7-2-1-初始参数位置变化">7.2.1 初始参数位置变化</a><a class="toc-depth-3" href="#7-2-2-通话中方法变化">7.2.2 通话中方法变化</a><a class="toc-depth-3" href="#7-2-3-模式与参数迁移">7.2.3 模式与参数迁移</a><a class="toc-depth-2" href="#7-3-混流升级">7.3 混流升级</a><a class="toc-depth-3" href="#7-3-1-旧-mixer-方法迁移">7.3.1 旧 Mixer 方法迁移</a><a class="toc-depth-3" href="#7-3-2-从旧-mixer-实例迁移到会话集成">7.3.2 从旧 Mixer 实例迁移到会话集成</a><a class="toc-depth-2" href="#7-4-rtcstatsmonitor-升级概览">7.4 RTCStatsMonitor 升级概览</a><a class="toc-depth-2" href="#7-5-会话统计入口迁移">7.5 会话统计入口迁移</a><a class="toc-depth-2" href="#7-6-网络质量等级的行为变化">7.6 网络质量等级的行为变化</a><a class="toc-depth-3" href="#等级-0">等级 0</a><a class="toc-depth-3" href="#等级-1-6">等级 1～6</a><a class="toc-depth-3" href="#空值与-0-的区别">空值与 0 的区别</a><a class="toc-depth-2" href="#7-7-report-数据单位变化注意">7.7 report 数据单位变化注意</a><a class="toc-depth-2" href="#7-8-统计代码清理">7.8 统计代码清理</a><a class="toc-depth-2" href="#7-9-推荐的分阶段迁移">7.9 推荐的分阶段迁移</a><a class="toc-depth-3" href="#阶段一-保持页面结构">阶段一：保持页面结构</a><a class="toc-depth-3" href="#阶段二-切换详细面板">阶段二：切换详细面板</a><a class="toc-depth-3" href="#阶段三-删除旧资源管理">阶段三：删除旧资源管理</a><a class="toc-depth-2" href="#7-10-完整升级验证矩阵">7.10 完整升级验证矩阵</a><a class="toc-depth-2" href="#7-11-升级完成清单">7.11 升级完成清单</a>
+      <a class="toc-depth-2" href="#7-1-升级前先做调用清单" title="7.1 升级前先做调用清单">7.1 升级前先做调用清单</a><a class="toc-depth-2" href="#7-2-虚拟背景升级" title="7.2 虚拟背景升级">7.2 虚拟背景升级</a><a class="toc-depth-3" href="#7-2-1-初始参数位置变化" title="7.2.1 初始参数位置变化">7.2.1 初始参数位置变化</a><a class="toc-depth-3" href="#7-2-2-通话中方法变化" title="7.2.2 通话中方法变化">7.2.2 通话中方法变化</a><a class="toc-depth-3" href="#7-2-3-模式与参数迁移" title="7.2.3 模式与参数迁移">7.2.3 模式与参数迁移</a><a class="toc-depth-2" href="#7-3-混流升级" title="7.3 混流升级">7.3 混流升级</a><a class="toc-depth-3" href="#7-3-1-旧-mixer-方法迁移" title="7.3.1 旧 Mixer 方法迁移">7.3.1 旧 Mixer 方法迁移</a><a class="toc-depth-3" href="#7-3-2-从旧-mixer-实例迁移到会话集成" title="7.3.2 从旧 Mixer 实例迁移到会话集成">7.3.2 从旧 Mixer 实例迁移到会话集成</a><a class="toc-depth-2" href="#7-4-rtcstatsmonitor-升级概览" title="7.4 RTCStatsMonitor 升级概览">7.4 RTCStatsMonitor 升级概览</a><a class="toc-depth-2" href="#7-5-会话统计入口迁移" title="7.5 会话统计入口迁移">7.5 会话统计入口迁移</a><a class="toc-depth-2" href="#7-6-网络质量等级的行为变化" title="7.6 网络质量等级的行为变化">7.6 网络质量等级的行为变化</a><a class="toc-depth-3" href="#等级-0" title="等级 0">等级 0</a><a class="toc-depth-3" href="#等级-1-6" title="等级 1～6">等级 1～6</a><a class="toc-depth-3" href="#空值与-0-的区别" title="空值与 0 的区别">空值与 0 的区别</a><a class="toc-depth-2" href="#7-7-report-数据单位变化注意" title="7.7 report 数据单位变化注意">7.7 report 数据单位变化注意</a><a class="toc-depth-2" href="#7-8-统计代码清理" title="7.8 统计代码清理">7.8 统计代码清理</a><a class="toc-depth-2" href="#7-9-推荐的分阶段迁移" title="7.9 推荐的分阶段迁移">7.9 推荐的分阶段迁移</a><a class="toc-depth-3" href="#阶段一-保持页面结构" title="阶段一：保持页面结构">阶段一：保持页面结构</a><a class="toc-depth-3" href="#阶段二-切换详细面板" title="阶段二：切换详细面板">阶段二：切换详细面板</a><a class="toc-depth-3" href="#阶段三-删除旧资源管理" title="阶段三：删除旧资源管理">阶段三：删除旧资源管理</a><a class="toc-depth-2" href="#7-10-完整升级验证矩阵" title="7.10 完整升级验证矩阵">7.10 完整升级验证矩阵</a><a class="toc-depth-2" href="#7-11-升级完成清单" title="7.11 升级完成清单">7.11 升级完成清单</a>
     </nav>
   </main>
   <button type="button" class="back-to-top" aria-label="回到顶部">↑</button>

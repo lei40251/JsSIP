@@ -52,6 +52,29 @@ const ua = new CRTC.UA({
 
 生产环境不要把账号密码和授权码直接写入前端代码或提交到版本管理系统。
 
+Base JS Demo 把环境配置和账号参数组合成 `configuration`，再只创建一个 UA。以下节选自 [`app.js`](../../demo/base-js/js/app.js)：
+
+```js
+const account = handleGetQuery('caller');
+const socket = new CRTC.WebSocketInterface(signalingUrl);
+const configuration = {
+  sockets                          : socket,
+  uri                              : `sip:${account}@${sipDomain}`,
+  display_name                     : account,
+  password                         : `${password ? password : 'yl_19'}${account}`,
+  connection_recovery_max_interval : 3,
+  connection_recovery_min_interval : 2,
+  register_expires                 : 20,
+  register                         : !manualRegister,
+  session_timers                   : false,
+  secret_key                       : secretKey
+};
+
+const ua = new CRTC.UA(configuration);
+```
+
+这里的密码规则和较短注册周期是 Demo 环境行为，客户项目应使用服务方交付的真实配置。
+
 ## 2.4 配置 WebRTC 网络
 
 ```js
@@ -113,6 +136,39 @@ const mediaConstraints = {
 | `{ ideal, min, max, exact }` | 使用 WebRTC 约束范围；`exact` 最严格 |
 
 第一版接入建议先使用 Demo 的 `640×480@15fps`，基础通话稳定后再提高分辨率和帧率。约束越严格，设备不支持时越容易产生 `OverconstrainedError`。
+
+Demo 将设备选择收敛成两个构造函数，呼出、接听和视频升级都复用它们。代码取自 [`app.sdk-helper.js`](../../demo/base-js/js/app.sdk-helper.js)：
+
+```js
+function buildSelectedAudioConstraints()
+{
+  const constraints = {
+    sampleRate   : 48000,
+    channelCount : 1
+  };
+
+  if (selectMic)
+  {
+    constraints.deviceId = { exact: selectMic };
+  }
+
+  return constraints;
+}
+
+function buildSelectedVideoConstraints()
+{
+  const constraints = Object.assign({}, videoConstraints);
+
+  if (selectCamera)
+  {
+    constraints.deviceId = { exact: selectCamera };
+  }
+
+  return constraints;
+}
+```
+
+将选择的 deviceId 集中写入约束，可以避免呼出用选中设备、接听却回到默认设备。
 
 ## 2.6 完整页面代码
 
@@ -355,6 +411,62 @@ const mediaConstraints = {
 9. `failed` 或 `ended` 统一清理页面。
 
 不要把事件绑定放到 `confirmed` 后：拒接、超时、早期媒体和建立前失败都会在 confirmed 之前发生。
+
+Base JS Demo 的标准呼出也遵循同一顺序。以下是 [`app.js`](../../demo/base-js/js/app.js) 中 `call(type, direction, mediaStream)` 的核心节选：
+
+```js
+if (!ua.isRegistered())
+{
+  setStatus('请注册成功后呼叫');
+
+  return;
+}
+
+options = {
+  extraHeaders  : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}`, `X-Direction: ${direction || 'sendrecv'}` ],
+  extraFeatures : extraFeatures,
+  pcConfig      : pcConfig,
+  eventHandlers : {
+    mediaEffectsIssue : handleSessionMediaEffectsIssue
+  }
+};
+
+options['mediaConstraints'] = {
+  audio : buildSelectedAudioConstraints(),
+  video : (type === 'video' || type === 'onlyVideo') ? buildSelectedVideoConstraints() : false
+};
+
+options.mediaEffectsComposer = buildCallComposerOptions();
+options.aiNoiseSuppression = buildCallAiNsOptions();
+
+const session = await ua.call(`${number}@${sipDomain}`, options);
+```
+
+这是 Demo 的通用函数节选，因此包含随路头和媒体效果。最小接入可只保留 `pcConfig`、`mediaConstraints` 和 `ua.call()`。
+
+标准视频接听的参数与呼出保持一致，以下代码同样取自 [`app.js`](../../demo/base-js/js/app.js)：
+
+```js
+document.querySelector('#answerVideo').onclick = function()
+{
+  e.session.answer({
+    mediaConstraints : {
+      audio : buildSelectedAudioConstraints(),
+      video : buildSelectedVideoConstraints()
+    },
+    pcConfig             : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
+    extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
+    rtcOfferConstraints  : { offerToReceiveAudio: true, offerToReceiveVideo: true },
+    extraFeatures        : extraFeatures,
+    mediaEffectsComposer : buildCallComposerOptions(),
+    aiNoiseSuppression   : buildCallAiNsOptions()
+  });
+
+  setStatus('video answer');
+};
+```
+
+呼出和接听都调用 `buildSelected*Constraints()`、`buildCallComposerOptions()` 和 `buildCallAiNsOptions()`，这正是两条路径保持一致的关键。
 
 ## 2.8 自动注册和手动注册
 

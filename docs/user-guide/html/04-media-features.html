@@ -242,6 +242,43 @@ ans_onnx.tar.gz
 <li><code>applyAiNsOutputGainToCurrentCall()</code>：通话中修改输出增益。</li>
 </ul>
 <p>这些函数位于 [<code>demo/base-js/js/app-media-effects.js</code>]。</p>
+<p>Demo 的实际初始配置只在页面选中 AiNS 时返回对象：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function buildCallAiNsOptions()
+{
+  if (aiNsType !== &#39;AiNS&#39;)
+  {
+    return null;
+  }
+
+  return {
+    enabled             : true,
+    noiseReductionLevel : getCurrentAiNsLevel(),
+    outputGain          : 1,
+    assetConfig         : { cdnUrl: AI_NOISE_ASSET_ROOT }
+  };
+}
+</code></pre>
+</div><p>通话中热更新不会新建控制器，而是检查当前会话已经存在的 AiNS 实例：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function applyAiNsLevelToCurrentCall(level)
+{
+  if (aiNsType !== &#39;AiNS&#39; || !rtcSession)
+  {
+    return false;
+  }
+
+  const aiNsEngine = rtcSession.getAiNoiseSuppression();
+
+  if (!aiNsEngine)
+  {
+    return false;
+  }
+
+  aiNsEngine.setSuppressionLevel(level);
+
+  return true;
+}
+</code></pre>
+</div><p>两段代码均取自 <a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a>。<code>false</code> 表示当前通话无法热更新，Demo 会提示“将在下一次呼叫/接听时生效”。</p>
 <h2 id="4-4-ai-虚拟背景">4.4 AI 虚拟背景<a class="heading-anchor" href="#4-4-ai-虚拟背景" aria-label="链接到本节">#</a></h2>
 <p>SDK 会话集成中，本地摄像头是 <code>slot 0</code>。虚拟背景配置属于该输入源。</p>
 <h3 id="背景模式">背景模式<a class="heading-anchor" href="#背景模式" aria-label="链接到本节">#</a></h3>
@@ -389,8 +426,90 @@ function clearVirtualBackground()
 <li><code>applyCurrentVirtualBackgroundToSession()</code>：通话中切换背景。</li>
 <li>函数实现见 [<code>app-media-effects.js</code>]，页面控件见 [<code>index.html</code>]。</li>
 </ul>
+<p>Demo 把当前视频约束和页面选择转换为 AiVB 配置。以下是 <a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a> 的模式构造节选：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const aiVBOptions = {
+  assetConfig : { cdnUrl: AI_VB_TASKS_ROOT },
+  video       : {
+    width     : sourceWidth,
+    height    : sourceHeight,
+    targetFps : Math.min(sourceFps, 15)
+  }
+};
+
+if (virtualBackgroundType === &#39;blur&#39;)
+{
+  aiVBOptions.mode = &#39;blur&#39;;
+
+  return aiVBOptions;
+}
+
+const imageUrl = virtualBackgroundImgs[virtualBackgroundType];
+
+if (!imageUrl)
+{
+  return null;
+}
+
+aiVBOptions.mode = &#39;image&#39;;
+aiVBOptions.imageUrl = imageUrl;
+</code></pre>
+</div><p>通话中使用同一个构造结果更新 slot 0：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const aiVBOptions = buildCurrentAiVBOptions();
+
+if (!aiVBOptions)
+{
+  sessionComposer.clearSourceAiVirtualBackground(0);
+}
+else
+{
+  sessionComposer.setSourceAiVirtualBackground(0, aiVBOptions);
+}
+</code></pre>
+</div><p>这样初始呼叫和通话中切换不会出现两套背景参数解析规则。</p>
 <h2 id="4-5-音视频混流">4.5 音视频混流<a class="heading-anchor" href="#4-5-音视频混流" aria-label="链接到本节">#</a></h2>
 <p>启用 <code>mediaEffectsComposer</code> 后，本地摄像头作为 <code>slot 0</code>。SDK 将合成结果用于当前通话，业务无需再次获取输出流。</p>
+<p>Base JS Demo 根据页面当前镜像、水印和虚拟背景状态构造 composer。以下代码取自 <a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a>：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function buildCallComposerOptions()
+{
+  const outputMirror = document.getElementById(&#39;callMediaEffectsComposerOutputMirror&#39;).value === &#39;on&#39;;
+  const aiVBOptions = buildCurrentAiVBOptions();
+  const watermarks = buildCurrentWatermarks();
+  const hasComposerEffects = outputMirror || watermarks.length || aiVBOptions;
+  const composerOptions = {};
+
+  if (outputMirror)
+  {
+    composerOptions.mirror = true;
+  }
+
+  if (watermarks.length)
+  {
+    composerOptions.watermarks = watermarks;
+  }
+
+  if (aiVBOptions)
+  {
+    composerOptions.sources = [
+      {
+        aiVirtualBackground : aiVBOptions
+      }
+    ];
+  }
+
+  if (hasComposerEffects)
+  {
+    composerOptions.enableInsertable = true;
+  }
+
+  if (!hasComposerEffects)
+  {
+    return null;
+  }
+
+  return composerOptions;
+}
+</code></pre>
+</div><p>返回 <code>null</code> 表示本次呼叫不需要 composer，可以避免普通通话额外创建渲染链路。</p>
 <h3 id="会话配置">会话配置<a class="heading-anchor" href="#会话配置" aria-label="链接到本节">#</a></h3>
 <div class="table-wrap"><table>
 <thead>
@@ -546,6 +665,23 @@ async function addScreenToComposer()
 }
 </code></pre>
 </div><p>更新部分水印时，可先用 <code>getWatermarks()</code> 读取当前列表，按稳定 ID 替换对应项后再调用 <code>setWatermarks()</code>，避免误删其他水印。</p>
+<p>Demo 对单个文字水印的处理就是“读取当前列表→按 ID 合并→全量写回”：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const watermarks = mergeSessionWatermarks(
+  watermark ? [ watermark ] : [],
+  [ CALL_TEXT_WATERMARK_ID ]
+);
+
+try
+{
+  await applyWatermarksToSession(watermarks);
+  setStatus(watermark ? &#39;已应用当前文字水印到当前通话&#39; : &#39;已清除当前文字水印&#39;);
+}
+catch (error)
+{
+  console.warn(&#39;applyCurrentTextWatermarkToSession error&#39;, error);
+}
+</code></pre>
+</div><p>该节选来自 <a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a>。图片水印使用相同流程，只替换稳定 ID 和水印构造函数。</p>
 <h3 id="水印参数">水印参数<a class="heading-anchor" href="#水印参数" aria-label="链接到本节">#</a></h3>
 <div class="table-wrap"><table>
 <thead>
@@ -807,7 +943,7 @@ async function addScreenToComposer()
     
     <nav class="page-toc" aria-label="本页目录">
       <h2>本页目录</h2>
-      <a class="toc-depth-2" href="#4-1-三项能力的关系">4.1 三项能力的关系</a><a class="toc-depth-2" href="#4-2-创建统一的呼叫参数">4.2 创建统一的呼叫参数</a><a class="toc-depth-2" href="#4-3-ains">4.3 AiNS</a><a class="toc-depth-3" href="#参数">参数</a><a class="toc-depth-3" href="#通话中调整">通话中调整</a><a class="toc-depth-3" href="#demo-对照">Demo 对照</a><a class="toc-depth-2" href="#4-4-ai-虚拟背景">4.4 AI 虚拟背景</a><a class="toc-depth-3" href="#背景模式">背景模式</a><a class="toc-depth-3" href="#常用参数">常用参数</a><a class="toc-depth-3" href="#资源配置">资源配置</a><a class="toc-depth-3" href="#通话中切换背景">通话中切换背景</a><a class="toc-depth-3" href="#demo-对照-2">Demo 对照</a><a class="toc-depth-2" href="#4-5-音视频混流">4.5 音视频混流</a><a class="toc-depth-3" href="#会话配置">会话配置</a><a class="toc-depth-3" href="#添加屏幕作为第二路源">添加屏幕作为第二路源</a><a class="toc-depth-3" href="#更新镜像和水印">更新镜像和水印</a><a class="toc-depth-3" href="#水印参数">水印参数</a><a class="toc-depth-2" href="#4-6-统一处理媒体效果异常">4.6 统一处理媒体效果异常</a><a class="toc-depth-3" href="#常见故障与页面处理">常见故障与页面处理</a><a class="toc-depth-2" href="#4-7-初始配置和热更新边界">4.7 初始配置和热更新边界</a><a class="toc-depth-2" href="#4-8-性能选择建议">4.8 性能选择建议</a><a class="toc-depth-2" href="#4-9-上线检查">4.9 上线检查</a>
+      <a class="toc-depth-2" href="#4-1-三项能力的关系" title="4.1 三项能力的关系">4.1 三项能力的关系</a><a class="toc-depth-2" href="#4-2-创建统一的呼叫参数" title="4.2 创建统一的呼叫参数">4.2 创建统一的呼叫参数</a><a class="toc-depth-2" href="#4-3-ains" title="4.3 AiNS">4.3 AiNS</a><a class="toc-depth-3" href="#参数" title="参数">参数</a><a class="toc-depth-3" href="#通话中调整" title="通话中调整">通话中调整</a><a class="toc-depth-3" href="#demo-对照" title="Demo 对照">Demo 对照</a><a class="toc-depth-2" href="#4-4-ai-虚拟背景" title="4.4 AI 虚拟背景">4.4 AI 虚拟背景</a><a class="toc-depth-3" href="#背景模式" title="背景模式">背景模式</a><a class="toc-depth-3" href="#常用参数" title="常用参数">常用参数</a><a class="toc-depth-3" href="#资源配置" title="资源配置">资源配置</a><a class="toc-depth-3" href="#通话中切换背景" title="通话中切换背景">通话中切换背景</a><a class="toc-depth-3" href="#demo-对照-2" title="Demo 对照">Demo 对照</a><a class="toc-depth-2" href="#4-5-音视频混流" title="4.5 音视频混流">4.5 音视频混流</a><a class="toc-depth-3" href="#会话配置" title="会话配置">会话配置</a><a class="toc-depth-3" href="#添加屏幕作为第二路源" title="添加屏幕作为第二路源">添加屏幕作为第二路源</a><a class="toc-depth-3" href="#更新镜像和水印" title="更新镜像和水印">更新镜像和水印</a><a class="toc-depth-3" href="#水印参数" title="水印参数">水印参数</a><a class="toc-depth-2" href="#4-6-统一处理媒体效果异常" title="4.6 统一处理媒体效果异常">4.6 统一处理媒体效果异常</a><a class="toc-depth-3" href="#常见故障与页面处理" title="常见故障与页面处理">常见故障与页面处理</a><a class="toc-depth-2" href="#4-7-初始配置和热更新边界" title="4.7 初始配置和热更新边界">4.7 初始配置和热更新边界</a><a class="toc-depth-2" href="#4-8-性能选择建议" title="4.8 性能选择建议">4.8 性能选择建议</a><a class="toc-depth-2" href="#4-9-上线检查" title="4.9 上线检查">4.9 上线检查</a>
     </nav>
   </main>
   <button type="button" class="back-to-top" aria-label="回到顶部">↑</button>

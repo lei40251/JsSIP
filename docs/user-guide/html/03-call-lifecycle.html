@@ -253,6 +253,35 @@ ua.start();
 </tr>
 </tbody></table></div>
 <p><code>online</code> 只说明浏览器网络接口恢复，WSS 和 SIP 注册可能仍在恢复。页面应等到 <code>connected</code>、<code>registered</code> 后再恢复呼叫按钮。</p>
+<p>Demo 将浏览器离线和 UA 信令断开分开记录。以下代码取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">ua.on(&#39;browser:navigator:offline&#39;, function()
+{
+  setStatus(&#39;浏览器已离线&#39;);
+
+  if (!disconnectedBy)
+  {
+    disconnectedBy = &#39;BROWSER&#39;;
+    isShowUI = true;
+  }
+});
+
+ua.on(&#39;disconnected&#39;, function(data)
+{
+  setStatus(`信令连接断开: ${data.code} ${data.reason}`);
+
+  if (handleStop)
+  {
+    return;
+  }
+
+  if (!disconnectedBy)
+  {
+    isShowUI = true;
+  }
+  disconnectedBy = &#39;UA&#39;;
+});
+</code></pre>
+</div><p><code>handleStop</code> 用于区分页面主动停止与被动断线；否则退出页面时也会误显示“网络异常”。</p>
 <h2 id="3-5-呼出完整时序">3.5 呼出完整时序<a class="heading-anchor" href="#3-5-呼出完整时序" aria-label="链接到本节">#</a></h2>
 <p>呼出前必须满足：UA 已注册、没有违反业务的并发通话限制、被叫地址非空。本地媒体权限可能在 <code>ua.call()</code> 内请求，所以 <code>ua.call()</code> 返回 Promise。</p>
 <div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">sequenceDiagram
@@ -314,7 +343,24 @@ ua.start();
   }
 }
 </code></pre>
-</div><h2 id="3-6-呼入与接听完整时序">3.6 呼入与接听完整时序<a class="heading-anchor" href="#3-6-呼入与接听完整时序" aria-label="链接到本节">#</a></h2>
+</div><p>Base JS Demo 在 <code>await ua.call()</code> 成功后立即监听早期远端音频，避免将真实 183 提示音与本地回铃同时播放。以下节选自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const session = await ua.call(`${number}@${sipDomain}`, options);
+
+earlyMedia = false;
+
+session.connection.ontrack = function(event)
+{
+  if (event.track.kind === &#39;audio&#39;)
+  {
+    earlyMedia = true;
+    remoteAudio.srcObject = event.streams[0];
+    remoteAudio.play()
+      .catch(() =&gt; { });
+  }
+};
+</code></pre>
+</div><p>这段监听只处理外呼阶段的早期音频；通话建立后的完整本地/远端媒体仍由会话事件中的 <code>getStreams()</code> 更新。</p>
+<h2 id="3-6-呼入与接听完整时序">3.6 呼入与接听完整时序<a class="heading-anchor" href="#3-6-呼入与接听完整时序" aria-label="链接到本节">#</a></h2>
 <p>呼入时先收到 <code>newRTCSession</code>。此时可以读取主叫、呼叫模式和随路头，但不要假设本地媒体已经可用。用户点击接听后调用 <code>answer(options)</code>，随后再读取 <code>session.connection</code> 并绑定浏览器事件。</p>
 <div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">sequenceDiagram
     autonumber
@@ -364,7 +410,27 @@ ua.start();
   }
 }
 </code></pre>
-</div><h2 id="3-7-newrtcsession-统一会话入口">3.7 <code>newRTCSession</code> 统一会话入口<a class="heading-anchor" href="#3-7-newrtcsession-统一会话入口" aria-label="链接到本节">#</a></h2>
+</div><p>Demo 的语音接听会把当前麦克风、PC 配置、composer 和 AiNS 一起传入。以下代码取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">document.querySelector(&#39;#answer&#39;).onclick = function()
+{
+  e.session.answer({
+    mediaConstraints : {
+      audio : buildSelectedAudioConstraints(),
+      video : false
+    },
+    pcConfig             : Object.assign(pcConfig, { &#39;rtcpMuxPolicy&#39;: &#39;negotiate&#39; }),
+    extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
+    rtcOfferConstraints  : { offerToReceiveAudio: true },
+    extraFeatures        : extraFeatures,
+    mediaEffectsComposer : buildCallComposerOptions(),
+    aiNoiseSuppression   : buildCallAiNsOptions()
+  });
+
+  setStatus(&#39;audio answer&#39;);
+};
+</code></pre>
+</div><p>标准视频接听只把 <code>video: false</code> 换成 <code>video: buildSelectedVideoConstraints()</code>，并设置 <code>offerToReceiveVideo: true</code>。</p>
+<h2 id="3-7-newrtcsession-统一会话入口">3.7 <code>newRTCSession</code> 统一会话入口<a class="heading-anchor" href="#3-7-newrtcsession-统一会话入口" aria-label="链接到本节">#</a></h2>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">ua.on(&#39;newRTCSession&#39;, function(data)
 {
   const session = data.session;
@@ -398,6 +464,17 @@ ua.start();
 </tr>
 </tbody></table></div>
 <p>每一通电话都要重新绑定事件。不要把上一通的 composer、AiNS 控制器、统计实例或 <code>session.connection</code> 用到下一通。</p>
+<p>Demo 还在这个统一入口读取呼入方向和主叫号码：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">if (e.originator === &#39;remote&#39;)
+{
+  remoteNo = e.request.from.uri.user;
+  document.querySelector(&#39;#callee&#39;).value = remoteNo;
+
+  setStatus(`收到${e.request.mode === &#39;video&#39; ? &#39;视频&#39; : &#39;音频&#39;}呼叫`);
+  showIncomingCallNotification(e.request.mode, remoteNo);
+}
+</code></pre>
+</div><p>这段代码取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>。读取 <code>request</code> 只用于展示来电信息，真正接听仍要等用户点击后调用 <code>session.answer()</code>。</p>
 <p>如果页面只允许一通电话，可在已有会话时拒绝新呼入：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">if (currentSession &amp;&amp; currentSession !== data.session)
 {
@@ -539,6 +616,21 @@ ua.start();
 }
 </code></pre>
 </div><p>还可以在 <code>confirmed</code> 后通过 <code>CRTC.Utils.getStreams(session.connection, &#39;local&#39;/&#39;remote&#39;)</code> 获取已聚合的本地或远端流。<code>ontrack</code> 仍应保留，因为远端可能在早期媒体、重协商或共享时新增轨道。</p>
+<p>Base JS Demo 把本地音频/视频和远端聚合流分开处理。以下是 <a href="../../../demo/base-js/js/app.sdk-helper.js"><code>app.sdk-helper.js</code></a> 的核心节选：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function getStreams(pc)
+{
+  const localStream = CRTC.Utils.getStreams(pc, &#39;local&#39;);
+  const remoteStream = CRTC.Utils.getStreams(pc, &#39;remote&#39;);
+
+  bindMediaStreamIfChanged(remoteAudio, remoteStream.audioStream);
+  bindMediaStreamIfChanged(remoteVideo, remoteStream.mediaStream);
+
+  Promise.all([ localVideo.play(), remoteAudio.play(), remoteVideo.play() ])
+    .then(() =&gt; { })
+    .catch(() =&gt; { });
+}
+</code></pre>
+</div><p>实际 Demo 还会为本地预览克隆所需轨道，并在远端视频 track <code>ended</code> 时清空画面；业务页面可按自己的布局保留相同的生命周期处理。</p>
 <h2 id="3-10-挂断-拒接与取消">3.10 挂断、拒接与取消<a class="heading-anchor" href="#3-10-挂断-拒接与取消" aria-label="链接到本节">#</a></h2>
 <p>同一个 <code>terminate()</code> 可用于以下通话阶段：</p>
 <div class="table-wrap"><table>
@@ -602,6 +694,19 @@ session.on(&#39;ended&#39;, function() { clearSession(session); });
 <li>通话按钮、接听按钮、保持/静音/共享状态。</li>
 </ul>
 <p>会话内的统计实例和媒体效果控制器由会话释放；业务自行创建的 <code>MediaStream</code> 仍应停止其 tracks。</p>
+<p>Demo 的 <code>failed</code> 和 <code>ended</code> 都会清理统计引用、定时器和页面自建媒体流。以下节选自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">if (statsSession === e.session)
+{
+  statsSession = null;
+  resetSessionStatsPanel();
+}
+
+optionsTimer &amp;&amp; clearInterval(optionsTimer);
+
+cusMediaStream.getTracks().forEach((track) =&gt; track.stop());
+cusMediaStream = new MediaStream();
+</code></pre>
+</div><p>把这组操作同时放进两种结束路径，可以避免取消呼叫、拒接和正常挂断留下不同的页面残留。</p>
 <h2 id="3-12-页面销毁和-ua-停止">3.12 页面销毁和 UA 停止<a class="heading-anchor" href="#3-12-页面销毁和-ua-停止" aria-label="链接到本节">#</a></h2>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function disposeCallPage()
 {
@@ -616,13 +721,21 @@ session.on(&#39;ended&#39;, function() { clearSession(session); });
 }
 </code></pre>
 </div><p>如果 <code>UA</code> 是整个应用共享的单例，组件卸载时只清理组件拥有的会话和 DOM，不要停止其他页面仍在使用的 UA。只有退出账号、关闭通信模块或整个页面卸载时才调用 <code>ua.stop()</code>。</p>
+<p>Base JS Demo 的页面卸载处理位于 <a href="../../../demo/base-js/js/app.ui-bindings.js"><code>app.ui-bindings.js</code></a>：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">window.onbeforeunload = function()
+{
+  handleStop = true;
+  ua.stop();
+};
+</code></pre>
+</div><p>先设置 <code>handleStop</code> 是为了让 <code>disconnected</code> 回调知道这是主动停止，不展示被动断网提示。</p>
 <p><a href="02-quick-start.html">← 上一章：快速完成第一通电话</a> · <a href="04-media-features.html">下一章：媒体能力 →</a></p>
 
     </article>
     
     <nav class="page-toc" aria-label="本页目录">
       <h2>本页目录</h2>
-      <a class="toc-depth-2" href="#3-1-总体状态关系">3.1 总体状态关系</a><a class="toc-depth-2" href="#3-2-自动注册时序">3.2 自动注册时序</a><a class="toc-depth-2" href="#3-3-手动注册时序">3.3 手动注册时序</a><a class="toc-depth-2" href="#3-4-ua-网络事件与页面状态">3.4 UA 网络事件与页面状态</a><a class="toc-depth-2" href="#3-5-呼出完整时序">3.5 呼出完整时序</a><a class="toc-depth-2" href="#3-6-呼入与接听完整时序">3.6 呼入与接听完整时序</a><a class="toc-depth-2" href="#3-7-newrtcsession-统一会话入口">3.7 newRTCSession 统一会话入口</a><a class="toc-depth-2" href="#3-8-会话事件的触发条件和参数">3.8 会话事件的触发条件和参数</a><a class="toc-depth-2" href="#3-9-远端轨道与媒体播放">3.9 远端轨道与媒体播放</a><a class="toc-depth-2" href="#3-10-挂断-拒接与取消">3.10 挂断、拒接与取消</a><a class="toc-depth-2" href="#3-11-会话清理清单">3.11 会话清理清单</a><a class="toc-depth-2" href="#3-12-页面销毁和-ua-停止">3.12 页面销毁和 UA 停止</a>
+      <a class="toc-depth-2" href="#3-1-总体状态关系" title="3.1 总体状态关系">3.1 总体状态关系</a><a class="toc-depth-2" href="#3-2-自动注册时序" title="3.2 自动注册时序">3.2 自动注册时序</a><a class="toc-depth-2" href="#3-3-手动注册时序" title="3.3 手动注册时序">3.3 手动注册时序</a><a class="toc-depth-2" href="#3-4-ua-网络事件与页面状态" title="3.4 UA 网络事件与页面状态">3.4 UA 网络事件与页面状态</a><a class="toc-depth-2" href="#3-5-呼出完整时序" title="3.5 呼出完整时序">3.5 呼出完整时序</a><a class="toc-depth-2" href="#3-6-呼入与接听完整时序" title="3.6 呼入与接听完整时序">3.6 呼入与接听完整时序</a><a class="toc-depth-2" href="#3-7-newrtcsession-统一会话入口" title="3.7 newRTCSession 统一会话入口">3.7 newRTCSession 统一会话入口</a><a class="toc-depth-2" href="#3-8-会话事件的触发条件和参数" title="3.8 会话事件的触发条件和参数">3.8 会话事件的触发条件和参数</a><a class="toc-depth-2" href="#3-9-远端轨道与媒体播放" title="3.9 远端轨道与媒体播放">3.9 远端轨道与媒体播放</a><a class="toc-depth-2" href="#3-10-挂断-拒接与取消" title="3.10 挂断、拒接与取消">3.10 挂断、拒接与取消</a><a class="toc-depth-2" href="#3-11-会话清理清单" title="3.11 会话清理清单">3.11 会话清理清单</a><a class="toc-depth-2" href="#3-12-页面销毁和-ua-停止" title="3.12 页面销毁和 UA 停止">3.12 页面销毁和 UA 停止</a>
     </nav>
   </main>
   <button type="button" class="back-to-top" aria-label="回到顶部">↑</button>

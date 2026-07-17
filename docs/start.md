@@ -2,7 +2,7 @@
 
 > 浏览器采集本地媒体时，页面通常需要通过 HTTPS 或 localhost 提供。
 
-CRTC 的核心接入对象是 `CRTC.UA`。如果你拿到的是 release 压缩包，请把它当成交付包使用：核心 SDK 文件是 `dist/CRTC.min.js`，同时还会附带 Demo、变更说明和 PDF 文档。
+CRTC 的核心接入对象是 `CRTC.UA`。如果你拿到的是 release 压缩包，请把它当成交付包使用：核心 SDK 文件是 `dist/CRTC.min.js`，同时还会附带 Demo、变更说明和 HTML 用户指南。
 
 ## 1. 引入浏览器依赖
 
@@ -13,7 +13,7 @@ CRTC 的核心接入对象是 `CRTC.UA`。如果你拿到的是 release 压缩�
 <script src="./dist/CRTC.min.js"></script>
 ```
 
-release 压缩包会提供 `dist/CRTC.min.js`、`demo/**`、`CHANGELOG.md` 和 `docs/*.pdf`，但不会包含仓库里的源码。
+release 压缩包会提供 `dist/CRTC.min.js`、`demo/**`、`CHANGELOG.md` 和 `docs/*.html`（包含 `docs/assets/**`），但不会包含仓库里的源码。
 
 ## 2. 初始化 UA
 
@@ -124,6 +124,5 @@ session.terminate();
 - `dist/CRTC.min.js`
 - `demo/**`
 - `CHANGELOG.md`
-- `docs/*.pdf`
-
-
+- `docs/*.html`
+- `docs/assets/**`

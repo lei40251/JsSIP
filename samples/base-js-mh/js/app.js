@@ -141,6 +141,8 @@ const mbit = handleGetQuery('mbit') || 400;
 const rec = handleGetQuery('rec') || false;
 // 环境标识，用于切换不同的信令服务器/密码等配置
 const env = handleGetQuery('env');
+// 注册模式：默认 automatic；传 register=manual 时由页面按钮主动调用 ua.register()。
+const manualRegister = handleGetQuery('register') === 'manual';
 // 是否移除 REMB/Transport-CC 扩展（VoLTE 互通兼容）
 const noremb = handleGetQuery('noremb') || false;
 // 根据 env 参数选择对应的环境配置，默认使用 env_default
@@ -178,6 +180,8 @@ const configuration = {
   connection_recovery_min_interval : 2,
   // 注册过期时间（秒），UA 会周期性刷新注册
   register_expires                 : 20,
+  // automatic: ua.start() 连接成功后自动注册；manual: 等待页面按钮调用 ua.register()
+  register                         : !manualRegister,
   // 禁用 Session Timers（RFC 4028）
   session_timers                   : false,
   // 通话加密密钥
@@ -292,6 +296,12 @@ ua.on('connected', function()
   isShowUI = false;
 
   setStatus('信令连接成功');
+
+  // 手动注册演示：连接成功后等待用户点击“主动注册”。
+  if (manualRegister)
+  {
+    setStatus('信令连接成功，请点击“主动注册”');
+  }
 });
 
 /**
@@ -379,6 +389,14 @@ ua.on('registered', function(data)
 ua.on('registrationFailed', function(data)
 {
   setStatus(`注册失败${data.cause}`);
+});
+
+/**
+ * unregistered — SIP 主动注销或注册失效
+ */
+ua.on('unregistered', function(data)
+{
+  setStatus(`已注销${data && data.cause ? `：${data.cause}` : ''}`);
 });
 
 /**
@@ -510,7 +528,7 @@ ua.on('newRTCSession', function(e)
     VIDEO_PAUSING                : '视频暂停'
   };
 
-  const sessionStatsQualityNames = [ '未知', '极佳', '较好', '一般', '差', '极差', '已断开' ];
+  const sessionStatsQualityNames = [ '暂无数据', '极佳', '较好', '一般', '差', '极差', '严重异常' ];
 
   const formatSessionNetworkQuality = function(value)
   {
@@ -1254,12 +1272,8 @@ ua.on('newRTCSession', function(e)
       e.session.answer({
         rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
         mediaConstraints    : {
-          audio :
-          {
-            sampleRate   : 48000,
-            channelCount : 1
-          },
-          video : true
+          audio : buildSelectedAudioConstraints(),
+          video : buildSelectedVideoConstraints()
         },
         pcConfig : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' })
       });
@@ -1333,7 +1347,7 @@ ua.on('newRTCSession', function(e)
     }
     else
     {
-      d.accept(videoConstraints);
+      d.accept(buildSelectedVideoConstraints());
     }
   });
 
@@ -1422,11 +1436,16 @@ ua.on('newRTCSession', function(e)
         return;
       }
 
+      const remoteVideo2 = document.querySelector('#remoteVideo2');
+      const currentSharedStream = remoteVideo2.srcObject;
+      const nextSharedStream = event.streams[0];
+
       // 如果是活跃的、未静音的视频轨道且与当前辅助视频不同
-      if (event.track.readyState == 'live' && event.track.muted == false && document.querySelector('#remoteVideo2').srcObject.id != event.streams[0].id)
+      if (event.track.readyState == 'live' && event.track.muted == false && nextSharedStream &&
+        (!currentSharedStream || currentSharedStream.id != nextSharedStream.id))
       {
         // 渲染辅助视频流，将主视频缩小到右上角
-        document.querySelector('#remoteVideo2').srcObject = event.streams[0];
+        remoteVideo2.srcObject = nextSharedStream;
         document.querySelector('#remoteVideo').classList = 'w-25 position-absolute top-0 end-0';
       }
       else
@@ -1490,11 +1509,7 @@ ua.on('newRTCSession', function(e)
   {
     e.session.answer({
       mediaConstraints : {
-        audio :
-        {
-          sampleRate   : 48000,
-          channelCount : 1
-        },
+        audio : buildSelectedAudioConstraints(),
         video : false // 不采集视频
       },
       pcConfig             : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
@@ -1518,8 +1533,8 @@ ua.on('newRTCSession', function(e)
   {
     e.session.answer({
       mediaConstraints : {
-        audio : true,
-        video : videoConstraints
+        audio : buildSelectedAudioConstraints(),
+        video : buildSelectedVideoConstraints()
       },
       pcConfig             : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
       extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
@@ -1548,7 +1563,7 @@ ua.on('newRTCSession', function(e)
     e.session.answer({
       mediaConstraints : {
         audio : true,
-        video : videoConstraints
+        video : buildSelectedVideoConstraints()
       },
       pcConfig            : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
       extraHeaders        : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
@@ -1571,7 +1586,7 @@ ua.on('newRTCSession', function(e)
     e.session.answer({
       mediaConstraints : {
         audio : false, // 不采集音频
-        video : videoConstraints
+        video : buildSelectedVideoConstraints()
       },
       pcConfig            : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
       extraHeaders        : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
@@ -1647,7 +1662,7 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#toAudio').onclick = function()
   {
-    e.session.downgradeToAudio({ useUpdate: false }, () => { setStatus(`切换音频模式完成${curMode}`); });
+    e.session.downgradeToAudio({ useUpdate: useUpdate }, () => { setStatus(`切换音频模式完成${curMode}`); });
   };
 
   /**
@@ -1657,7 +1672,7 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#toVideo').onclick = function()
   {
-    e.session.upgradeToVideo({ useUpdate: false, videoConstraints: videoConstraints }, () => { setStatus(`切换视频模式完成${curMode}`); });
+    e.session.upgradeToVideo({ useUpdate: useUpdate, videoConstraints: buildSelectedVideoConstraints() }, () => { setStatus(`切换视频模式完成${curMode}`); });
   };
 
   // // b2b切换视频模式
@@ -1733,7 +1748,7 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#toVideoSendonly').onclick = function()
   {
-    e.session.upgradeToVideo({ sendOnly: true, useUpdate: useUpdate, videoConstraints: videoConstraints }, () => { setStatus('切换视频模式完成') + curMode; });
+    e.session.upgradeToVideo({ sendOnly: true, useUpdate: useUpdate, videoConstraints: buildSelectedVideoConstraints() }, () => { setStatus('切换视频模式完成') + curMode; });
   };
 
   /**
@@ -2293,13 +2308,9 @@ async function call(type, direction, mediaStream)
   {
     // 使用媒体约束让浏览器自动采集
     options['mediaConstraints'] = {
-      audio :
-      {
-        sampleRate   : 48000,
-        channelCount : 1
-      },
+      audio : buildSelectedAudioConstraints(),
       // 仅 video 和 onlyVideo 类型需要视频
-      video : (type === 'video' || type === 'onlyVideo') ? videoConstraints : false
+      video : (type === 'video' || type === 'onlyVideo') ? buildSelectedVideoConstraints() : false
     };
   }
 
@@ -2519,7 +2530,7 @@ function start()
   // 10 秒后检测网络连接和注册状态
   setTimeout(() =>
   {
-    if (!ua.isConnected() || !ua.isRegistered())
+    if (!ua.isConnected() || (!manualRegister && !ua.isRegistered()))
     {
       ua.stop();
       console.log('网络连接异常或未注册成功');

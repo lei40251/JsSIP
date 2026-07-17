@@ -145,6 +145,50 @@ Base JS Demo 中对应：
 
 这些函数位于 [`demo/base-js/js/app-media-effects.js`]。
 
+Demo 的实际初始配置只在页面选中 AiNS 时返回对象：
+
+```js
+function buildCallAiNsOptions()
+{
+  if (aiNsType !== 'AiNS')
+  {
+    return null;
+  }
+
+  return {
+    enabled             : true,
+    noiseReductionLevel : getCurrentAiNsLevel(),
+    outputGain          : 1,
+    assetConfig         : { cdnUrl: AI_NOISE_ASSET_ROOT }
+  };
+}
+```
+
+通话中热更新不会新建控制器，而是检查当前会话已经存在的 AiNS 实例：
+
+```js
+function applyAiNsLevelToCurrentCall(level)
+{
+  if (aiNsType !== 'AiNS' || !rtcSession)
+  {
+    return false;
+  }
+
+  const aiNsEngine = rtcSession.getAiNoiseSuppression();
+
+  if (!aiNsEngine)
+  {
+    return false;
+  }
+
+  aiNsEngine.setSuppressionLevel(level);
+
+  return true;
+}
+```
+
+两段代码均取自 [`app-media-effects.js`](../../demo/base-js/js/app-media-effects.js)。`false` 表示当前通话无法热更新，Demo 会提示“将在下一次呼叫/接听时生效”。
+
 ## 4.4 AI 虚拟背景
 
 SDK 会话集成中，本地摄像头是 `slot 0`。虚拟背景配置属于该输入源。
@@ -246,9 +290,102 @@ function clearVirtualBackground()
 - `applyCurrentVirtualBackgroundToSession()`：通话中切换背景。
 - 函数实现见 [`app-media-effects.js`]，页面控件见 [`index.html`]。
 
+Demo 把当前视频约束和页面选择转换为 AiVB 配置。以下是 [`app-media-effects.js`](../../demo/base-js/js/app-media-effects.js) 的模式构造节选：
+
+```js
+const aiVBOptions = {
+  assetConfig : { cdnUrl: AI_VB_TASKS_ROOT },
+  video       : {
+    width     : sourceWidth,
+    height    : sourceHeight,
+    targetFps : Math.min(sourceFps, 15)
+  }
+};
+
+if (virtualBackgroundType === 'blur')
+{
+  aiVBOptions.mode = 'blur';
+
+  return aiVBOptions;
+}
+
+const imageUrl = virtualBackgroundImgs[virtualBackgroundType];
+
+if (!imageUrl)
+{
+  return null;
+}
+
+aiVBOptions.mode = 'image';
+aiVBOptions.imageUrl = imageUrl;
+```
+
+通话中使用同一个构造结果更新 slot 0：
+
+```js
+const aiVBOptions = buildCurrentAiVBOptions();
+
+if (!aiVBOptions)
+{
+  sessionComposer.clearSourceAiVirtualBackground(0);
+}
+else
+{
+  sessionComposer.setSourceAiVirtualBackground(0, aiVBOptions);
+}
+```
+
+这样初始呼叫和通话中切换不会出现两套背景参数解析规则。
+
 ## 4.5 音视频混流
 
 启用 `mediaEffectsComposer` 后，本地摄像头作为 `slot 0`。SDK 将合成结果用于当前通话，业务无需再次获取输出流。
+
+Base JS Demo 根据页面当前镜像、水印和虚拟背景状态构造 composer。以下代码取自 [`app-media-effects.js`](../../demo/base-js/js/app-media-effects.js)：
+
+```js
+function buildCallComposerOptions()
+{
+  const outputMirror = document.getElementById('callMediaEffectsComposerOutputMirror').value === 'on';
+  const aiVBOptions = buildCurrentAiVBOptions();
+  const watermarks = buildCurrentWatermarks();
+  const hasComposerEffects = outputMirror || watermarks.length || aiVBOptions;
+  const composerOptions = {};
+
+  if (outputMirror)
+  {
+    composerOptions.mirror = true;
+  }
+
+  if (watermarks.length)
+  {
+    composerOptions.watermarks = watermarks;
+  }
+
+  if (aiVBOptions)
+  {
+    composerOptions.sources = [
+      {
+        aiVirtualBackground : aiVBOptions
+      }
+    ];
+  }
+
+  if (hasComposerEffects)
+  {
+    composerOptions.enableInsertable = true;
+  }
+
+  if (!hasComposerEffects)
+  {
+    return null;
+  }
+
+  return composerOptions;
+}
+```
+
+返回 `null` 表示本次呼叫不需要 composer，可以避免普通通话额外创建渲染链路。
 
 ### 会话配置
 
@@ -340,6 +477,27 @@ async function updateComposerDisplay()
 ```
 
 更新部分水印时，可先用 `getWatermarks()` 读取当前列表，按稳定 ID 替换对应项后再调用 `setWatermarks()`，避免误删其他水印。
+
+Demo 对单个文字水印的处理就是“读取当前列表→按 ID 合并→全量写回”：
+
+```js
+const watermarks = mergeSessionWatermarks(
+  watermark ? [ watermark ] : [],
+  [ CALL_TEXT_WATERMARK_ID ]
+);
+
+try
+{
+  await applyWatermarksToSession(watermarks);
+  setStatus(watermark ? '已应用当前文字水印到当前通话' : '已清除当前文字水印');
+}
+catch (error)
+{
+  console.warn('applyCurrentTextWatermarkToSession error', error);
+}
+```
+
+该节选来自 [`app-media-effects.js`](../../demo/base-js/js/app-media-effects.js)。图片水印使用相同流程，只替换稳定 ID 和水印构造函数。
 
 ### 水印参数
 
