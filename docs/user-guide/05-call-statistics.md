@@ -4,7 +4,7 @@
 
 每个 `RTCSession` 都会管理本通电话的统计实例。页面在 `newRTCSession` 中监听 `session` 的 `stats:*` 事件即可；挂断、呼叫失败和重呼时不需要自行启动或停止定时器。
 
-本章字段与 Base JS Demo 的统计浮层一一对应。先按 5.1 完成接入，再按 5.3～5.8 解释页面中的每一个值。
+先按 5.1 完成接入，再根据后续章节理解各字段的业务含义和展示方式。
 
 ## 5.1 完整接入示例
 
@@ -49,7 +49,7 @@ ua.on('newRTCSession', function(data)
 | `stats:report` | 可选 | `{ RTT, upStreams, downStreams }` | 保留原有上下行流展示或上报结构 |
 | `stats:stats-error` | 是 | `{ code, fatal, message, error, consecutiveErrors }` | 记录采样异常；不用于判断通话是否结束 |
 
-默认约每 `2000ms` 采样一次。第一轮主要用于建立码率、丢包率等增量指标的计算基线，部分值暂时为 `null` 属于正常现象。
+默认约每 `2000ms` 更新一次。通话刚开始时部分值暂时为 `null` 属于正常现象。
 
 ## 5.2 数值、单位与空值
 
@@ -85,46 +85,42 @@ function formatBitrate(value)
 
 ## 5.3 网络质量等级 0～6
 
-上行和下行分别计算。每个方向使用当前采样中最差一路媒体的丢包率，并结合当前 RTT 取较差结果；不会把多路 RTP 或多个时间窗口平均后掩盖当前弱网。
+SDK 分别提供上行和下行质量等级。业务页面应直接使用 SDK 输出的等级，不要根据 RTT 或丢包率自行复刻判定逻辑，以免版本升级后出现口径不一致。
 
-### 5.3.1 精确判定表
-
-| 等级 | 产生条件；满足任一项即可 | 含义 |
+| 等级 | 建议文案 | 页面处理 |
 | ---: | --- | --- |
-| `0` | 该方向没有活动媒体；或丢包率和 RTT 都不可用 | 暂无有效样本，不代表好或坏 |
-| `1` | 已有媒体样本，丢包率为 `0%`，并且 RTT `< 50ms` | 极佳 |
-| `2` | 丢包率 `> 0% 且 ≤ 10%`；或 RTT `≥ 50ms 且 ≤ 100ms` | 较好 |
-| `3` | 丢包率 `> 10% 且 ≤ 20%`；或 RTT `> 100ms 且 ≤ 200ms` | 一般 |
-| `4` | 丢包率 `> 20% 且 ≤ 30%`；或 RTT `> 200ms 且 ≤ 350ms` | 差 |
-| `5` | 丢包率 `> 30% 且 ≤ 40%`；或 RTT `> 350ms 且 ≤ 500ms` | 极差 |
-| `6` | 丢包率 `> 40%`；或 RTT `> 500ms`；或 PeerConnection 状态为 `failed` / `closed` | 网络不可用或接近不可用 |
+| `0` | 暂无数据 | 显示检测中，不参与好坏排序 |
+| `1` | 极佳 | 正常展示 |
+| `2` | 较好 | 正常展示 |
+| `3` | 一般 | 可使用中性提示 |
+| `4` | 较差 | 可提示用户检查网络 |
+| `5` | 很差 | 建议明显提示网络质量下降 |
+| `6` | 严重异常 | 结合连接状态和连续样本给出强提示 |
 
-边界值按表中的不等号判断。例如 RTT 正好 `500ms` 为 `5`，大于 `500ms` 才为 `6`；丢包率正好 `40%` 为 `5`，大于 `40%` 才为 `6`。
-
-### 5.3.2 什么时候会出现 0
+### 5.3.1 什么时候会出现 0
 
 常见情况：
 
-- 通话刚开始，第一份样本还没有建立增量基线。
+- 通话刚开始，统计结果尚未完整生成。
 - 纯音频通话中没有视频流；不存在的媒体方向不会被评为 `1`。
-- 本端没有活动 sender，所以上行没有可评价的媒体。
+- 本端没有活动的发送媒体，所以上行没有可评价的样本。
 - 远端尚未发送媒体，所以下行没有 inbound RTP。
 - 浏览器没有提供当前方向的 RTT 和丢包字段。
 - 切换设备、共享或重协商后，新的 RTP 报告尚未稳定。
 
 业务处理：显示“检测中/暂无数据”，继续等待后续样本。不要把 `0` 排在 `1` 前面当作“更好”。
 
-### 5.3.3 什么时候会出现 6
+### 5.3.2 什么时候会出现 6
 
 常见情况：
 
-- 当前方向最差媒体流的丢包率大于 `40%`。
-- 当前 RTT 大于 `500ms`。
-- `connectionState` 进入 `failed` 或 `closed`，此时上下行都直接为 `6`。
+- 当前网络质量严重下降。
+- 媒体连接进入失败或关闭状态。
+- SDK 判断当前方向已无法提供可用体验。
 
 单次 `6` 可能来自瞬时网络切换；连续多次为 `6`，并且连接状态、媒体码率或用户体验同时异常时，再展示强提醒。`closed` 也可能是正常挂断后的短暂统计结果，页面应在 `ended` / `failed` 时清空本通电话的数据。
 
-### 5.3.4 页面格式化
+### 5.3.3 页面格式化
 
 ```js
 const qualityNames = [
@@ -141,7 +137,7 @@ function formatQuality(level)
 
 ## 5.4 `stats:detailed-report.connection`
 
-Demo 的“网络连接”区域使用以下全部字段：
+连接区域可使用以下字段：
 
 | 字段 | 类型/可选值 | 含义与判读 |
 | --- | --- | --- |
@@ -167,7 +163,7 @@ Demo 的“网络连接”区域使用以下全部字段：
 
 数组中每一项代表本端发送的一路 RTP。音频、摄像头视频和共享视频可能各有一项；同类媒体存在多路编码时也可能出现多项。
 
-| 字段 | 类型/可选值 | Demo 展示 | 含义 |
+| 字段 | 类型/可选值 | 建议展示 | 含义 |
 | --- | --- | --- | --- |
 | `type` | `audio`、`video`、`shared`、`unknown` 或扩展字符串 | 用于媒体名称 | SDK 识别后的媒体类别 |
 | `kind` | `audio`、`video` 或 `null` | 用于媒体名称 | WebRTC 媒体类型 |
@@ -198,7 +194,7 @@ Demo 的“网络连接”区域使用以下全部字段：
 
 数组中每一项代表本端接收的一路 RTP。
 
-| 字段 | 类型/可选值 | Demo 展示 | 含义 |
+| 字段 | 类型/可选值 | 建议展示 | 含义 |
 | --- | --- | --- | --- |
 | `type` | `audio`、`video`、`shared`、`unknown` 或扩展字符串 | 用于媒体名称 | SDK 识别后的媒体类别 |
 | `kind` | `audio`、`video` 或 `null` | 用于媒体名称 | WebRTC 媒体类型 |
@@ -218,70 +214,57 @@ Demo 的“网络连接”区域使用以下全部字段：
 
 | 字段 | 类型/范围 | 说明 |
 | --- | --- | --- |
-| `RTT` | 非负整数，ms | 当前媒体反馈 RTT 优先；缺失时回退连接 RTT；仍缺失时为 `0` |
+| `RTT` | 非负整数，ms | SDK 提供的当前往返时延；暂无有效值时为 `0` |
 | `uplinkNetworkQuality` | `0～6` | 本端发送方向网络质量 |
 | `downlinkNetworkQuality` | `0～6` | 本端接收方向网络质量 |
 | `issues` | `Array<{ code, severity }>` | 当前样本达到诊断条件的问题 |
 
-Demo 的摘要事件只发送 `code` 和 `severity`。需要查看某个问题对应的流及触发证据时，可以读取：
-
-```js
-const fullReport = session.statsMonitor &&
-  session.statsMonitor.getLatestReport();
-
-if (fullReport)
-{
-  fullReport.quality.issues.forEach(function(issue)
-  {
-    console.log(issue.code, issue.severity, issue.streamId, issue.evidence);
-  });
-}
-```
-
 `severity` 范围为 `1～6`，数字越大越严重。它用于问题排序和提示强度，不等同于 HTTP、SIP 或浏览器错误码。
 
-## 5.8 全部质量问题码与触发条件
+## 5.8 质量问题码
+
+问题码用于页面提示和监控聚合。触发规则由 SDK 版本维护，业务只需根据 `code` 和 `severity` 选择合适的提示文案，不应在页面中自行复制质量判定规则。
 
 ### 上行和编码
 
-| `code` | Demo 中文 | 主要触发条件 | 严重度 |
-| --- | --- | --- | ---: |
-| `UPLINK_BANDWIDTH_LIMITED` | 上行带宽受限 | 视频 `qualityLimitationReason === 'bandwidth'` | 4 |
-| `UPLINK_BANDWIDTH_BUDGET_LOW` | 上行可用带宽不足 | 可用上行带宽小于所有活动发送层目标码率总和的 `80%` | 4 |
-| `UPLINK_PACKET_LOSS` | 上行丢包 | 远端反馈丢包 `>10%`；`>30%` 时更严重 | 4 / 6 |
-| `UPLINK_SEND_QUEUE_DELAY` | 上行发送排队 | 平均发送排队 `>50ms`；`>150ms` 时更严重 | 3 / 5 |
-| `UPLINK_HIGH_RETRANSMISSION` | 上行重传率高 | 重传包比例 `>10%`；`>25%` 时更严重 | 3 / 5 |
-| `UPLINK_FEEDBACK_REQUESTS` | 上行重传请求多 | 单轮 `NACK >10`，或 `PLI >2`，或 `FIR >2` | 3 |
-| `UPLINK_LOCAL_SEND_DISCARDS` | 上行本地丢弃 | 浏览器报告本轮发送包或字节被本地丢弃 | 4 |
-| `ENCODER_CPU_LIMITED` | 编码器 CPU 受限 | 视频 `qualityLimitationReason === 'cpu'` | 4 |
-| `ENCODER_SLOW` | 编码器过慢 | 平均编码耗时超过单帧预算 `80%`；超过 `150%` 时更严重 | 3 / 5 |
-| `ENCODER_FRAME_RATE_REDUCED` | 编码帧率下降 | 采集源 FPS `≥10`，实际编码 FPS 小于源 FPS 的 `70%` | 3 |
-| `ENCODER_RESOLUTION_REDUCED` | 编码分辨率下降 | 实际编码像素数小于采集源像素数的 `60%` | 3 |
+| `code` | 建议文案 |
+| --- | --- |
+| `UPLINK_BANDWIDTH_LIMITED` | 上行带宽受限 |
+| `UPLINK_BANDWIDTH_BUDGET_LOW` | 上行可用带宽不足 |
+| `UPLINK_PACKET_LOSS` | 上行丢包较高 |
+| `UPLINK_SEND_QUEUE_DELAY` | 上行发送排队明显 |
+| `UPLINK_HIGH_RETRANSMISSION` | 上行重传率较高 |
+| `UPLINK_FEEDBACK_REQUESTS` | 上行重传请求较多 |
+| `UPLINK_LOCAL_SEND_DISCARDS` | 本地发送数据被丢弃 |
+| `ENCODER_CPU_LIMITED` | 编码性能受限 |
+| `ENCODER_SLOW` | 视频编码速度较慢 |
+| `ENCODER_FRAME_RATE_REDUCED` | 编码帧率下降 |
+| `ENCODER_RESOLUTION_REDUCED` | 编码分辨率下降 |
 
 ### 下行和解码
 
-| `code` | Demo 中文 | 主要触发条件 | 严重度 |
-| --- | --- | --- | ---: |
-| `DOWNLINK_PACKET_LOSS` | 下行丢包 | 当前接收丢包 `>10%`；`>30%` 时更严重 | 4 / 6 |
-| `DOWNLINK_HIGH_JITTER` | 下行高抖动 | 抖动 `>50ms`；`>100ms` 时更严重 | 3 / 5 |
-| `DOWNLINK_PACKET_DISCARDS` | 下行本地丢弃 | 本轮有接收包被浏览器本地丢弃 | 3 |
-| `DOWNLINK_JITTER_BUFFER_DELAY` | 下行缓冲过高 | 平均抖动缓冲 `>200ms`；`>500ms` 时更严重 | 3 / 5 |
-| `DOWNLINK_TRANSPORT_STALLED` | 下行传输停滞 | 有下行流、远端未保持，且超过 `10s` 没收到包 | 5 |
-| `DOWNLINK_FEEDBACK_REQUESTS` | 下行重传请求多 | 单轮 `NACK >10`，或 `PLI >2`，或 `FIR >2` | 3 |
-| `VIDEO_DECODER_SLOW` | 解码器过慢 | 平均解码耗时达到单帧预算 `80%`；超过 `150%` 时更严重 | 3 / 5 |
-| `VIDEO_FRAME_DROPPING` | 视频丢帧 | 丢帧比例 `>10%`；`>30%` 时更严重 | 3 / 5 |
-| `VIDEO_FREEZING` | 视频卡顿 | 本轮新增冻结次数或冻结时长 | 5 |
-| `VIDEO_PAUSING` | 视频暂停 | 本轮新增暂停次数或暂停时长 | 4 |
+| `code` | 建议文案 |
+| --- | --- |
+| `DOWNLINK_PACKET_LOSS` | 下行丢包较高 |
+| `DOWNLINK_HIGH_JITTER` | 下行抖动较高 |
+| `DOWNLINK_PACKET_DISCARDS` | 本地接收数据被丢弃 |
+| `DOWNLINK_JITTER_BUFFER_DELAY` | 下行缓冲延迟较高 |
+| `DOWNLINK_TRANSPORT_STALLED` | 下行媒体传输停滞 |
+| `DOWNLINK_FEEDBACK_REQUESTS` | 下行重传请求较多 |
+| `VIDEO_DECODER_SLOW` | 视频解码速度较慢 |
+| `VIDEO_FRAME_DROPPING` | 视频丢帧明显 |
+| `VIDEO_FREEZING` | 视频出现卡顿 |
+| `VIDEO_PAUSING` | 视频出现暂停 |
 
 ### 连接
 
-| `code` | Demo 中文 | 主要触发条件 | 严重度 |
-| --- | --- | --- | ---: |
-| `HIGH_RTT` | 高延迟 | RTT `>200ms`；`>500ms` 时更严重 | 4 / 6 |
-| `CONNECTION_PATH_CHANGED` | 网络路径变化 | 本轮选中的 ICE candidate pair 发生变化 | 2 |
-| `CONNECTION_UNAVAILABLE` | 连接不可用 | `connectionState` 为 `failed` 或 `closed` | 6 |
+| `code` | 建议文案 |
+| --- | --- |
+| `HIGH_RTT` | 网络延迟较高 |
+| `CONNECTION_PATH_CHANGED` | 网络路径发生变化 |
+| `CONNECTION_UNAVAILABLE` | 媒体连接不可用 |
 
-切换摄像头、开始/停止共享、音视频模式变化或重协商后会进入短暂过渡期。过渡期继续采样，但暂缓瞬时问题诊断，避免把正常换轨抖动误报成故障。
+切换摄像头、开始/停止共享或改变音视频模式后，短时间的指标波动可能属于正常现象。页面应结合连续样本和用户实际体验判断是否提示。
 
 ## 5.9 兼容事件 `stats:network-quality`
 
@@ -297,15 +280,13 @@ if (fullReport)
 
 字段说明：
 
-| 字段 | 单位 | 计算口径 |
+| 字段 | 单位 | 含义 |
 | --- | --- | --- |
-| `RTT` | ms | 当前媒体 RTT 优先，缺失时回退连接 RTT |
-| `uplinkLoss` | `%` | 所有活动上行 RTP 中当前丢包率最大值 |
-| `downlinkLoss` | `%` | 所有下行 RTP 中当前丢包率最大值 |
-| `uplinkNetworkQuality` | `0～6` | 按 5.3 阈值计算 |
-| `downlinkNetworkQuality` | `0～6` | 按 5.3 阈值计算 |
-
-丢包和 RTT 使用当前采样，不做多样本平均。这样页面能更快反映用户此刻的听感和观感。
+| `RTT` | ms | 当前往返时延 |
+| `uplinkLoss` | `%` | 当前上行丢包率 |
+| `downlinkLoss` | `%` | 当前下行丢包率 |
+| `uplinkNetworkQuality` | `0～6` | 当前上行质量等级 |
+| `downlinkNetworkQuality` | `0～6` | 当前下行质量等级 |
 
 ## 5.10 兼容事件 `stats:report`
 
@@ -351,7 +332,7 @@ if (fullReport)
 - 页面不应把统计错误显示成通话失败。
 - 连续错误可上报监控系统，但仍以 `failed` / `ended` 和连接状态判断通话生命周期。
 
-## 5.12 最近报告与完整诊断
+## 5.12 最近统计结果
 
 ```js
 const monitor = currentSession && currentSession.statsMonitor;
@@ -372,17 +353,9 @@ if (monitor)
 | `getLatestLegacyReport()` | 最近兼容流报告或 `null` | 否 |
 | `getLatestReport()` | 最近完整诊断报告或 `null` | 否 |
 
-完整报告还包含采样阶段、候选路径、媒体源、RTP 累计/增量数据、问题证据、兼容等级和采样性能。页面常规展示使用 `stats:detailed-report` 即可；问题上报时可从完整报告选取必要字段，避免直接展示候选地址等网络信息。
+页面常规展示使用 `stats:detailed-report` 即可。问题上报时只选取排障需要的字段，并按产品安全要求脱敏。
 
 `session.statsMonitor` 在 PeerConnection 创建后可用，会话结束释放后为 `null`。会话内实例不要自行调用 `start()`、`stop()` 或 `reset()`。
-
-在 Base JS Demo 的通话建立后，可直接在浏览器控制台执行：
-
-```js
-getCurrentCallStats();
-```
-
-返回对象同时包含 `networkQuality`、`legacyReport` 和 `detailedReport`，便于把页面显示、兼容事件和完整诊断报告逐项对照。采样尚未产生或通话已结束时，对应值为 `null`。
 
 ## 5.13 独立 PeerConnection 监控
 
@@ -390,15 +363,9 @@ getCurrentCallStats();
 
 ```js
 const monitor = new CRTC.RTCStatsMonitor(peerConnection, {
-  sampleIntervalMs           : 2000,
-  legacyReportIntervalMs     : 2000,
-  backgroundSampleIntervalMs : 2000,
-  transitionGraceSamples     : 2,
-  enableDetailedReport       : true,
-  enableRawStatsLog          : false,
-  rawStatsLogIntervalMs      : 10000,
-  getStatsTimeoutMs          : 5000,
-  autoStart                  : true
+  sampleIntervalMs     : 2000,
+  enableDetailedReport : true,
+  autoStart            : true
 });
 
 monitor.on('detailed-report', renderStats);
@@ -411,18 +378,12 @@ monitor.stop();
 | 参数 | 类型 | 默认值 | 有效范围/说明 |
 | --- | --- | ---: | --- |
 | `sampleIntervalMs` | `number` | `2000` | 前台采样间隔，最小 `500` |
-| `legacyReportIntervalMs` | `number` | `2000` | 兼容事件输出间隔 |
-| `backgroundSampleIntervalMs` | `number` | `2000` | 页面后台采样间隔 |
-| `transitionGraceSamples` | `number` | `2` | 媒体变化后暂缓诊断的样本数，非负整数 |
 | `enableDetailedReport` | `boolean` | `true` | 是否发送详细摘要事件 |
-| `enableRawStatsLog` | `boolean` | `false` | 是否限频记录浏览器原始报告；生产建议关闭 |
-| `rawStatsLogIntervalMs` | `number` | `10000` | 原始报告日志最小间隔 |
-| `getStatsTimeoutMs` | `number` | `5000` | 单次采样超时，最小 `100` |
 | `autoStart` | `boolean` | `true` | 构造后是否立即采样 |
 
 ## 5.14 Demo 面板逐项对照
 
-Base JS Demo 的 `newRTCSession` 中完成了以下处理：
+示例统计面板可按以下字段组织：
 
 | 面板区域 | 使用字段 |
 | --- | --- |
@@ -432,6 +393,6 @@ Base JS Demo 的 `newRTCSession` 中完成了以下处理：
 | 网络质量 | `quality.RTT/uplinkNetworkQuality/downlinkNetworkQuality` |
 | 存在问题 | `quality.issues[].code/severity` |
 
-Demo 代码见 [`demo/base-js/js/app.js`](../../demo/base-js/js/app.js) 的 `RTCSession 统计事件接入示例`。运行和验证步骤见 [Base JS Demo 学习与验证](./08-demo-guide.md)，旧统计迁移见 [旧版功能升级指南](./07-upgrade-guide.md)。
+Demo 代码见 [`demo/base-js/js/app.js`] 的 `RTCSession 统计事件接入示例`。运行和验证步骤见 [Base JS Demo 学习与验证](./08-demo-guide.md)，旧统计迁移见 [旧版功能升级指南](./07-upgrade-guide.md)。
 
 [← 上一章：媒体能力](./04-media-features.md) · [下一章：SDK API 参考 →](./06-api-reference.md)

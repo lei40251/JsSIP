@@ -2,6 +2,7 @@
   const root = document.documentElement;
   const themeButton = document.querySelector('.theme-toggle');
   const navButton = document.querySelector('.nav-toggle');
+  const tocButton = document.querySelector('.toc-toggle');
   const sidebar = document.querySelector('.sidebar');
   const backdrop = document.querySelector('.sidebar-backdrop');
   const search = document.getElementById('global-search');
@@ -22,16 +23,47 @@
     if (document.querySelector('.mermaid[data-processed="true"]')) location.reload();
   });
 
-  function setNav(open) {
+  const desktopNav = matchMedia('(min-width: 861px)');
+
+  function setMobileNav(open) {
     sidebar?.classList.toggle('open', open);
     if (backdrop) backdrop.hidden = !open;
     navButton?.setAttribute('aria-expanded', String(open));
+    navButton?.setAttribute('aria-label', open ? '收起左侧目录' : '展开左侧目录');
   }
 
-  navButton?.addEventListener('click', () => setNav(!sidebar?.classList.contains('open')));
-  backdrop?.addEventListener('click', () => setNav(false));
+  function syncNavMode() {
+    if (desktopNav.matches) {
+      sidebar?.classList.remove('open');
+      if (backdrop) backdrop.hidden = true;
+      const expanded = !document.body.classList.contains('sidebar-collapsed');
+      navButton?.setAttribute('aria-expanded', String(expanded));
+      navButton?.setAttribute('aria-label', expanded ? '收起左侧目录' : '展开左侧目录');
+      return;
+    }
+    document.body.classList.remove('sidebar-collapsed');
+    setMobileNav(false);
+  }
+
+  navButton?.addEventListener('click', () => {
+    if (desktopNav.matches) {
+      document.body.classList.toggle('sidebar-collapsed');
+      syncNavMode();
+      return;
+    }
+    setMobileNav(!sidebar?.classList.contains('open'));
+  });
+  backdrop?.addEventListener('click', () => setMobileNav(false));
   sidebar?.addEventListener('click', (event) => {
-    if (event.target.closest('a')) setNav(false);
+    if (!desktopNav.matches && event.target.closest('a')) setMobileNav(false);
+  });
+  desktopNav.addEventListener?.('change', syncNavMode);
+  syncNavMode();
+
+  tocButton?.addEventListener('click', () => {
+    const collapsed = document.body.classList.toggle('toc-collapsed');
+    tocButton.setAttribute('aria-expanded', String(!collapsed));
+    tocButton.setAttribute('aria-label', collapsed ? '展开右侧目录' : '收起右侧目录');
   });
 
   document.querySelectorAll('.copy-code').forEach((button) => {

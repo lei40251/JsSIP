@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="CRTC Web SDK 系统学习文档：6. SDK API 参考">
-  <title>6. SDK API 参考 · CRTC Web SDK 系统学习</title>
+  <title>6. SDK API 参考 · CRTC Web SDK 系统学习指南</title>
   <link rel="stylesheet" href="assets/docs.css">
   <script>try{const t=localStorage.getItem('crtc-user-guide-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
   <script src="assets/search-index.js" defer></script>
@@ -13,21 +13,21 @@
 </head>
 <body data-page="06-api-reference.html">
   <header class="topbar">
-    <button type="button" class="icon-button nav-toggle" aria-label="打开目录" aria-expanded="false">☰</button>
-    <a class="brand" href="index.html">CRTC Web SDK 系统学习</a>
+    <button type="button" class="icon-button nav-toggle" aria-label="收起左侧目录" aria-expanded="true">☰</button>
+    <a class="brand" href="index.html">CRTC Web SDK 系统学习指南</a>
     <div class="search-shell">
       <label class="sr-only" for="global-search">搜索全部文档</label>
       <input id="global-search" type="search" autocomplete="off" placeholder="搜索 API、事件、功能…" aria-controls="search-results">
       <kbd>/</kbd>
       <div id="search-results" class="search-results" hidden></div>
     </div>
+    <button type="button" class="icon-button toc-toggle" aria-label="收起右侧目录" aria-expanded="true">◧</button>
     <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
   </header>
 
   <aside class="sidebar" aria-label="文档目录">
     
     <section class="nav-group">
-      <h2>系统学习指南</h2>
       
         <a class="nav-link" href="index.html">
           学习指南首页
@@ -64,7 +64,7 @@
     <article class="doc-content">
       <h1 id="6-sdk-api-参考">6. SDK API 参考<a class="heading-anchor" href="#6-sdk-api-参考" aria-label="链接到本节">#</a></h1>
 <p><a href="05-call-statistics.html">← 上一章：通话质量统计</a> · <a href="index.html">学习目录</a> · <a href="07-upgrade-guide.html">下一章：旧版功能升级 →</a></p>
-<p>本章集中列出 Base JS Demo 使用的 SDK 对象、方法和事件。每个条目均说明参数、可选值、返回值、触发条件和常见注意事项。</p>
+<p>本章集中列出常用的公开 SDK 对象、方法和事件。每个条目说明参数、可选值、返回值、触发条件和常见注意事项。</p>
 <h2 id="6-1-全局对象">6.1 全局对象<a class="heading-anchor" href="#6-1-全局对象" aria-label="链接到本节">#</a></h2>
 <h3 id="crtc-version"><code>CRTC.version</code><a class="heading-anchor" href="#crtc-version" aria-label="链接到本节">#</a></h3>
 <p>SDK 版本字符串：</p>
@@ -266,7 +266,7 @@ CRTC.debug.disable(&#39;CRTC:*&#39;);
 <td>SIP User-Agent 头</td>
 </tr>
 </tbody></table></div>
-<p><code>connection_recovery_min_interval</code> 必须小于或等于最大值。Demo 为快速联调使用 <code>2～3</code> 秒；生产值按网络和服务要求设置。</p>
+<p><code>connection_recovery_min_interval</code> 必须小于或等于最大值。生产值按网络和服务要求设置。</p>
 <h2 id="6-4-ua-方法">6.4 UA 方法<a class="heading-anchor" href="#6-4-ua-方法" aria-label="链接到本节">#</a></h2>
 <h3 id="start-void"><code>start(): void</code><a class="heading-anchor" href="#start-void" aria-label="链接到本节">#</a></h3>
 <p>启动 WSS；<code>register: true</code> 时连接成功后自动注册。重复启动前先确认 UA 当前状态。</p>
@@ -302,7 +302,7 @@ CRTC.debug.disable(&#39;CRTC:*&#39;);
 }
 </code></pre>
 </div><h3 id="call-target-options-promise-lt-rtcsession-gt"><code>call(target, options): Promise&lt;RTCSession&gt;</code><a class="heading-anchor" href="#call-target-options-promise-lt-rtcsession-gt" aria-label="链接到本节">#</a></h3>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const session = await ua.call(&#39;7301@example.com&#39;, {
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const session = await ua.call(&#39;bob@example.com&#39;, {
   pcConfig,
   mediaConstraints : {
     audio : { sampleRate: 48000, channelCount: 1 },
@@ -412,7 +412,7 @@ CRTC.debug.disable(&#39;CRTC:*&#39;);
 <td>启用混流、虚拟背景、镜像和水印</td>
 </tr>
 </tbody></table></div>
-<p><code>mediaStream</code> 至少包含业务需要发送的有效 track。自定义流和 <code>mediaConstraints</code> 同时存在时，不能假设 SDK 会额外采集并合并所有轨道；Demo 的特殊空轨场景显式构建完整流。</p>
+<p><code>mediaStream</code> 至少包含业务需要发送的有效 track。自定义流和 <code>mediaConstraints</code> 同时存在时，不能假设 SDK 会额外采集并合并所有轨道。</p>
 <p>Promise 可能因权限拒绝、约束不满足、媒体流无效或呼叫初始化失败而 reject。SIP 拒接/超时通常通过该 session 的 <code>failed</code> 事件处理。</p>
 <h3 id="sendoptions-target-body-options"><code>sendOptions(target, body?, options?)</code><a class="heading-anchor" href="#sendoptions-target-body-options" aria-label="链接到本节">#</a></h3>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">ua.sendOptions(`sip_ping@example.com`);
@@ -445,7 +445,7 @@ CRTC.debug.disable(&#39;CRTC:*&#39;);
 <td>可选额外头和事件处理</td>
 </tr>
 </tbody></table></div>
-<p>返回 OPTIONS 请求对象。Demo 在 iOS 场景定时发送；是否需要保活及发送周期应由部署环境决定。</p>
+<p>返回 OPTIONS 请求对象。是否需要用于保活及发送周期应由部署环境决定。</p>
 <h2 id="6-5-ua-事件">6.5 UA 事件<a class="heading-anchor" href="#6-5-ua-事件" aria-label="链接到本节">#</a></h2>
 <h3 id="注册和连接事件">注册和连接事件<a class="heading-anchor" href="#注册和连接事件" aria-label="链接到本节">#</a></h3>
 <div class="table-wrap"><table>
@@ -577,12 +577,6 @@ CRTC.debug.disable(&#39;CRTC:*&#39;);
 <td><code>incoming</code> / <code>outgoing</code></td>
 <td>会话创建后</td>
 <td>呼入或呼出</td>
-</tr>
-<tr>
-<td><code>status</code></td>
-<td><code>number</code></td>
-<td>会话全程</td>
-<td>SDK 会话状态；业务优先使用事件</td>
 </tr>
 <tr>
 <td><code>connection</code></td>
@@ -775,7 +769,7 @@ console.log(hold.local, hold.remote);
 <tr>
 <td><code>video_only</code></td>
 <td><code>boolean</code></td>
-<td>Demo 的摄像头关闭兼容选项，仅在对应场景使用</td>
+<td>特定兼容场景选项；普通接入不传</td>
 </tr>
 </tbody></table></div>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">session.mute({ audio: true });
@@ -847,7 +841,7 @@ await session.switchDevice(&#39;audio&#39;, microphoneDeviceId);
 </code></pre>
 </div><p>摄像头成功后监听 <code>cameraChanged({ videoStream })</code> 更新预览。</p>
 <h3 id="renegotiate-options-done-boolean"><code>renegotiate(options?, done?): boolean</code><a class="heading-anchor" href="#renegotiate-options-done-boolean" aria-label="链接到本节">#</a></h3>
-<p>手动触发重新协商。Demo 在特定摄像头切换后调用：</p>
+<p>手动触发重新协商。仅在设备切换未覆盖的新媒体方向等明确场景使用：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">session.switchDevice(&#39;camera&#39;, &#39;environment&#39;)
   .then(function()
   {
@@ -855,7 +849,7 @@ await session.switchDevice(&#39;audio&#39;, microphoneDeviceId);
   });
 </code></pre>
 </div><p><code>options.useUpdate</code> 选择 UPDATE/re-INVITE，<code>rtcOfferConstraints</code> 可指定 Offer 方向。一般设备切换由 SDK 已处理时不重复调用。</p>
-<h3 id="share-type-id-assembly-dual-skip-promise"><code>share(type, id?, assembly?, dual?, skip?): Promise</code><a class="heading-anchor" href="#share-type-id-assembly-dual-skip-promise" aria-label="链接到本节">#</a></h3>
+<h3 id="share-type-id-assembly-dual-promise"><code>share(type, id?, assembly?, dual?): Promise</code><a class="heading-anchor" href="#share-type-id-assembly-dual-promise" aria-label="链接到本节">#</a></h3>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -883,11 +877,6 @@ await session.switchDevice(&#39;audio&#39;, microphoneDeviceId);
 <td><code>dual</code></td>
 <td><code>boolean</code></td>
 <td><code>true</code> 使用双方支持的双流/BFCP 场景</td>
-</tr>
-<tr>
-<td><code>skip</code></td>
-<td><code>boolean</code></td>
-<td>特定共享兼容选项；普通接入不传</td>
 </tr>
 </tbody></table></div>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">await session.share(&#39;screen&#39;, null, null);
@@ -1120,7 +1109,7 @@ if (aiNS)
 <tr>
 <td><code>target</code></td>
 <td><code>output</code> / <code>source</code></td>
-<td>Demo 使用 <code>output</code></td>
+<td>输出级或输入源级水印</td>
 </tr>
 <tr>
 <td><code>type</code></td>
@@ -1140,7 +1129,7 @@ if (aiNS)
 <tr>
 <td><code>position</code></td>
 <td>7 个预设或 <code>{x,y}</code></td>
-<td>Demo 使用预设位置</td>
+<td>水印位置</td>
 </tr>
 <tr>
 <td><code>width/height</code></td>
@@ -1180,9 +1169,9 @@ if (aiNS)
 </tbody></table></div>
 <p>位置可选值：<code>top-left</code>、<code>top-center</code>、<code>top-right</code>、<code>center</code>、<code>bottom-left</code>、<code>bottom-center</code>、<code>bottom-right</code>。</p>
 <h3 id="setsourceaivirtualbackground-slot-options-void"><code>setSourceAiVirtualBackground(slot, options): void</code><a class="heading-anchor" href="#setsourceaivirtualbackground-slot-options-void" aria-label="链接到本节">#</a></h3>
-<p>Demo 使用 <code>slot: 0</code> 表示本地摄像头。<code>options.mode</code> 可为 <code>none/blur/image/color</code>，完整参数见第 4 章。</p>
+<p>会话集成时通常使用 <code>slot: 0</code> 表示本地摄像头。<code>options.mode</code> 可为 <code>none/blur/image/color</code>，完整参数见第 4 章。</p>
 <h3 id="clearsourceaivirtualbackground-slot-void"><code>clearSourceAiVirtualBackground(slot): void</code><a class="heading-anchor" href="#clearsourceaivirtualbackground-slot-void" aria-label="链接到本节">#</a></h3>
-<p>清除对应输入源的虚拟背景。Demo 使用 <code>clearSourceAiVirtualBackground(0)</code>。</p>
+<p>清除对应输入源的虚拟背景。本地摄像头通常使用 <code>clearSourceAiVirtualBackground(0)</code>。</p>
 <h2 id="6-12-rtcstatsmonitor-会话入口">6.12 RTCStatsMonitor 会话入口<a class="heading-anchor" href="#6-12-rtcstatsmonitor-会话入口" aria-label="链接到本节">#</a></h2>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const monitor = session.statsMonitor;
 
@@ -1217,7 +1206,6 @@ if (monitor)
 </tr>
 </tbody></table></div>
 <p>会话内实例由 session 管理，不要调用 <code>start/stop/reset</code>。独立 PC 的构造和生命周期见第 5 章。</p>
-<p>Base JS Demo 还将这三个读取方法组合为控制台辅助函数 <code>getCurrentCallStats()</code>；它只读取最近一次结果，不会触发额外采样。</p>
 <h2 id="6-13-rtcsession-事件-呼叫建立与结束">6.13 RTCSession 事件：呼叫建立与结束<a class="heading-anchor" href="#6-13-rtcsession-事件-呼叫建立与结束" aria-label="链接到本节">#</a></h2>
 <div class="table-wrap"><table>
 <thead>
@@ -1274,11 +1262,6 @@ if (monitor)
 <td>远端 SDP 包含视频媒体能力</td>
 </tr>
 <tr>
-<td><code>sdp</code></td>
-<td><code>{ originator, type, sdp }</code></td>
-<td>每次本地生成或远端接收 SDP；Demo 在互通场景修改 <code>d.sdp</code></td>
-</tr>
-<tr>
 <td><code>hold</code> / <code>unhold</code></td>
 <td>`{ originator: &#39;local&#39;</td>
 <td>&#39;remote&#39; }`</td>
@@ -1317,11 +1300,6 @@ if (monitor)
 <td><code>mediaEffectsIssue</code></td>
 <td><code>{ module, message, ... }</code></td>
 <td>AiNS/composer/虚拟背景异常或降级</td>
-</tr>
-<tr>
-<td><code>videoTrackState</code></td>
-<td><code>{ track, properties, value }</code></td>
-<td>视频 track 的 <code>muted/readyState/enabled/label</code> 等属性变化</td>
 </tr>
 <tr>
 <td><code>muted</code> / <code>unmuted</code></td>
@@ -1411,7 +1389,7 @@ if (monitor)
 <td>统计错误，不中断通话</td>
 </tr>
 </tbody></table></div>
-<p>全部字段、0～6 阈值和 24 个 issue 见 <a href="05-call-statistics.html">通话质量统计</a>。</p>
+<p>全部字段、质量等级含义和问题码见 <a href="05-call-statistics.html">通话质量统计</a>。</p>
 <h2 id="6-17-crtc-utils">6.17 <code>CRTC.Utils</code><a class="heading-anchor" href="#6-17-crtc-utils" aria-label="链接到本节">#</a></h2>
 <h3 id="设备与流">设备与流<a class="heading-anchor" href="#设备与流" aria-label="链接到本节">#</a></h3>
 <div class="table-wrap"><table>
@@ -1477,7 +1455,7 @@ const blackVideo = CRTC.Utils.generateAnBlackVideoTrack({
 <td>包含 <code>videoTrack</code>、预览/清理能力的对象</td>
 </tr>
 </tbody></table></div>
-<p>占位轨道用于明确的无设备业务场景。页面不再使用时应调用返回对象提供的清理能力或停止 tracks，避免长期占用 AudioContext/canvas 定时器。</p>
+<p>占位轨道用于明确的无设备业务场景。页面不再使用时应调用返回对象提供的清理能力或停止 tracks，避免资源长期占用。</p>
 <h2 id="6-18-使用约束总结">6.18 使用约束总结<a class="heading-anchor" href="#6-18-使用约束总结" aria-label="链接到本节">#</a></h2>
 <ul>
 <li><code>UA</code> 是应用/账号级；<code>RTCSession</code> 是单通电话级。</li>
@@ -1491,15 +1469,11 @@ const blackVideo = CRTC.Utils.generateAnBlackVideoTrack({
 </ul>
 <p><a href="05-call-statistics.html">← 上一章：通话质量统计</a> · <a href="07-upgrade-guide.html">下一章：旧版功能升级 →</a></p>
 
-      <nav class="page-pagination" aria-label="上一篇和下一篇">
-        <a class="previous" href="05-call-statistics.html"><span>上一篇</span>5. 通话质量统计</a>
-        <a class="next" href="07-upgrade-guide.html"><span>下一篇</span>7. 旧版功能升级指南</a>
-      </nav>
     </article>
     
     <nav class="page-toc" aria-label="本页目录">
       <h2>本页目录</h2>
-      <a class="toc-depth-2" href="#6-1-全局对象">6.1 全局对象</a><a class="toc-depth-3" href="#crtc-version">CRTC.version</a><a class="toc-depth-3" href="#crtc-debug-enable-namespace-disable-namespace">CRTC.debug.enable(namespace) / disable(namespace)</a><a class="toc-depth-2" href="#6-2-crtc-websocketinterface">6.2 CRTC.WebSocketInterface</a><a class="toc-depth-2" href="#6-3-new-crtc-ua-configuration">6.3 new CRTC.UA(configuration)</a><a class="toc-depth-3" href="#必填和常用配置">必填和常用配置</a><a class="toc-depth-2" href="#6-4-ua-方法">6.4 UA 方法</a><a class="toc-depth-3" href="#start-void">start(): void</a><a class="toc-depth-3" href="#stop-void">stop(): void</a><a class="toc-depth-3" href="#register-void">register(): void</a><a class="toc-depth-3" href="#isconnected-boolean">isConnected(): boolean</a><a class="toc-depth-3" href="#isregistered-boolean">isRegistered(): boolean</a><a class="toc-depth-3" href="#call-target-options-promise-lt-rtcsession-gt">call(target, options): Promise&amp;lt;RTCSession&amp;gt;</a><a class="toc-depth-3" href="#sendoptions-target-body-options">sendOptions(target, body?, options?)</a><a class="toc-depth-2" href="#6-5-ua-事件">6.5 UA 事件</a><a class="toc-depth-3" href="#注册和连接事件">注册和连接事件</a><a class="toc-depth-3" href="#newrtcsession">newRTCSession</a><a class="toc-depth-2" href="#6-6-rtcsession-常用属性">6.6 RTCSession 常用属性</a><a class="toc-depth-2" href="#6-7-rtcsession-呼叫控制方法">6.7 RTCSession 呼叫控制方法</a><a class="toc-depth-3" href="#answer-options-void">answer(options?): void</a><a class="toc-depth-3" href="#terminate-options-void">terminate(options?): void</a><a class="toc-depth-3" href="#isestablished-boolean">isEstablished(): boolean</a><a class="toc-depth-3" href="#hold-options-done-boolean-unhold-options-done-boolean">hold(options?, done?): boolean / unhold(options?, done?): boolean</a><a class="toc-depth-3" href="#isonhold-local-boolean-remote-boolean">isOnHold(): { local: boolean, remote: boolean }</a><a class="toc-depth-3" href="#mute-options-unmute-options">mute(options) / unmute(options)</a><a class="toc-depth-3" href="#ismuted-audio-boolean-video-boolean">isMuted(): { audio: boolean, video: boolean }</a><a class="toc-depth-3" href="#refer-target-options-void">refer(target, options?): void</a><a class="toc-depth-2" href="#6-8-rtcsession-媒体方法">6.8 RTCSession 媒体方法</a><a class="toc-depth-3" href="#switchdevice-type-deviceid-promise-lt-mediastream-gt">switchDevice(type, deviceId): Promise&amp;lt;MediaStream&amp;gt;</a><a class="toc-depth-3" href="#renegotiate-options-done-boolean">renegotiate(options?, done?): boolean</a><a class="toc-depth-3" href="#share-type-id-assembly-dual-skip-promise">share(type, id?, assembly?, dual?, skip?): Promise</a><a class="toc-depth-3" href="#unshare-void">unShare(): void</a><a class="toc-depth-3" href="#downgradetoaudio-options-done">downgradeToAudio(options?, done?)</a><a class="toc-depth-3" href="#upgradetovideo-options-done">upgradeToVideo(options?, done?)</a><a class="toc-depth-3" href="#setvideocontenthint-hint-share-void">setVideoContentHint(hint, share?): void</a><a class="toc-depth-2" href="#6-9-dtmf-与-sip-info">6.9 DTMF 与 SIP INFO</a><a class="toc-depth-3" href="#senddtmf-tones-options-void">sendDTMF(tones, options?): void</a><a class="toc-depth-3" href="#sendinfo-contenttype-body-options-void">sendInfo(contentType, body?, options?): void</a><a class="toc-depth-2" href="#6-10-ains-控制器">6.10 AiNS 控制器</a><a class="toc-depth-3" href="#可调参数">可调参数</a><a class="toc-depth-2" href="#6-11-mediaeffectscomposer-会话控制器">6.11 MediaEffectsComposer 会话控制器</a><a class="toc-depth-3" href="#会话控制方法">会话控制方法</a><a class="toc-depth-3" href="#getwatermarks-watermarkstate">getWatermarks(): WatermarkState[]</a><a class="toc-depth-3" href="#setmirror-enabled-promise-lt-configstate-gt">setMirror(enabled): Promise&amp;lt;ConfigState&amp;gt;</a><a class="toc-depth-3" href="#setwatermarks-watermarks-promise-lt-watermarkstate-gt">setWatermarks(watermarks): Promise&amp;lt;WatermarkState[]&amp;gt;</a><a class="toc-depth-3" href="#setsourceaivirtualbackground-slot-options-void">setSourceAiVirtualBackground(slot, options): void</a><a class="toc-depth-3" href="#clearsourceaivirtualbackground-slot-void">clearSourceAiVirtualBackground(slot): void</a><a class="toc-depth-2" href="#6-12-rtcstatsmonitor-会话入口">6.12 RTCStatsMonitor 会话入口</a><a class="toc-depth-2" href="#6-13-rtcsession-事件-呼叫建立与结束">6.13 RTCSession 事件：呼叫建立与结束</a><a class="toc-depth-2" href="#6-14-rtcsession-事件-媒体与控制">6.14 RTCSession 事件：媒体与控制</a><a class="toc-depth-2" href="#6-15-rtcsession-事件-sip-扩展消息">6.15 RTCSession 事件：SIP 扩展消息</a><a class="toc-depth-2" href="#6-16-rtcsession-统计事件">6.16 RTCSession 统计事件</a><a class="toc-depth-2" href="#6-17-crtc-utils">6.17 CRTC.Utils</a><a class="toc-depth-3" href="#设备与流">设备与流</a><a class="toc-depth-3" href="#占位轨道">占位轨道</a><a class="toc-depth-2" href="#6-18-使用约束总结">6.18 使用约束总结</a>
+      <a class="toc-depth-2" href="#6-1-全局对象">6.1 全局对象</a><a class="toc-depth-3" href="#crtc-version">CRTC.version</a><a class="toc-depth-3" href="#crtc-debug-enable-namespace-disable-namespace">CRTC.debug.enable(namespace) / disable(namespace)</a><a class="toc-depth-2" href="#6-2-crtc-websocketinterface">6.2 CRTC.WebSocketInterface</a><a class="toc-depth-2" href="#6-3-new-crtc-ua-configuration">6.3 new CRTC.UA(configuration)</a><a class="toc-depth-3" href="#必填和常用配置">必填和常用配置</a><a class="toc-depth-2" href="#6-4-ua-方法">6.4 UA 方法</a><a class="toc-depth-3" href="#start-void">start(): void</a><a class="toc-depth-3" href="#stop-void">stop(): void</a><a class="toc-depth-3" href="#register-void">register(): void</a><a class="toc-depth-3" href="#isconnected-boolean">isConnected(): boolean</a><a class="toc-depth-3" href="#isregistered-boolean">isRegistered(): boolean</a><a class="toc-depth-3" href="#call-target-options-promise-lt-rtcsession-gt">call(target, options): Promise&amp;lt;RTCSession&amp;gt;</a><a class="toc-depth-3" href="#sendoptions-target-body-options">sendOptions(target, body?, options?)</a><a class="toc-depth-2" href="#6-5-ua-事件">6.5 UA 事件</a><a class="toc-depth-3" href="#注册和连接事件">注册和连接事件</a><a class="toc-depth-3" href="#newrtcsession">newRTCSession</a><a class="toc-depth-2" href="#6-6-rtcsession-常用属性">6.6 RTCSession 常用属性</a><a class="toc-depth-2" href="#6-7-rtcsession-呼叫控制方法">6.7 RTCSession 呼叫控制方法</a><a class="toc-depth-3" href="#answer-options-void">answer(options?): void</a><a class="toc-depth-3" href="#terminate-options-void">terminate(options?): void</a><a class="toc-depth-3" href="#isestablished-boolean">isEstablished(): boolean</a><a class="toc-depth-3" href="#hold-options-done-boolean-unhold-options-done-boolean">hold(options?, done?): boolean / unhold(options?, done?): boolean</a><a class="toc-depth-3" href="#isonhold-local-boolean-remote-boolean">isOnHold(): { local: boolean, remote: boolean }</a><a class="toc-depth-3" href="#mute-options-unmute-options">mute(options) / unmute(options)</a><a class="toc-depth-3" href="#ismuted-audio-boolean-video-boolean">isMuted(): { audio: boolean, video: boolean }</a><a class="toc-depth-3" href="#refer-target-options-void">refer(target, options?): void</a><a class="toc-depth-2" href="#6-8-rtcsession-媒体方法">6.8 RTCSession 媒体方法</a><a class="toc-depth-3" href="#switchdevice-type-deviceid-promise-lt-mediastream-gt">switchDevice(type, deviceId): Promise&amp;lt;MediaStream&amp;gt;</a><a class="toc-depth-3" href="#renegotiate-options-done-boolean">renegotiate(options?, done?): boolean</a><a class="toc-depth-3" href="#share-type-id-assembly-dual-promise">share(type, id?, assembly?, dual?): Promise</a><a class="toc-depth-3" href="#unshare-void">unShare(): void</a><a class="toc-depth-3" href="#downgradetoaudio-options-done">downgradeToAudio(options?, done?)</a><a class="toc-depth-3" href="#upgradetovideo-options-done">upgradeToVideo(options?, done?)</a><a class="toc-depth-3" href="#setvideocontenthint-hint-share-void">setVideoContentHint(hint, share?): void</a><a class="toc-depth-2" href="#6-9-dtmf-与-sip-info">6.9 DTMF 与 SIP INFO</a><a class="toc-depth-3" href="#senddtmf-tones-options-void">sendDTMF(tones, options?): void</a><a class="toc-depth-3" href="#sendinfo-contenttype-body-options-void">sendInfo(contentType, body?, options?): void</a><a class="toc-depth-2" href="#6-10-ains-控制器">6.10 AiNS 控制器</a><a class="toc-depth-3" href="#可调参数">可调参数</a><a class="toc-depth-2" href="#6-11-mediaeffectscomposer-会话控制器">6.11 MediaEffectsComposer 会话控制器</a><a class="toc-depth-3" href="#会话控制方法">会话控制方法</a><a class="toc-depth-3" href="#getwatermarks-watermarkstate">getWatermarks(): WatermarkState[]</a><a class="toc-depth-3" href="#setmirror-enabled-promise-lt-configstate-gt">setMirror(enabled): Promise&amp;lt;ConfigState&amp;gt;</a><a class="toc-depth-3" href="#setwatermarks-watermarks-promise-lt-watermarkstate-gt">setWatermarks(watermarks): Promise&amp;lt;WatermarkState[]&amp;gt;</a><a class="toc-depth-3" href="#setsourceaivirtualbackground-slot-options-void">setSourceAiVirtualBackground(slot, options): void</a><a class="toc-depth-3" href="#clearsourceaivirtualbackground-slot-void">clearSourceAiVirtualBackground(slot): void</a><a class="toc-depth-2" href="#6-12-rtcstatsmonitor-会话入口">6.12 RTCStatsMonitor 会话入口</a><a class="toc-depth-2" href="#6-13-rtcsession-事件-呼叫建立与结束">6.13 RTCSession 事件：呼叫建立与结束</a><a class="toc-depth-2" href="#6-14-rtcsession-事件-媒体与控制">6.14 RTCSession 事件：媒体与控制</a><a class="toc-depth-2" href="#6-15-rtcsession-事件-sip-扩展消息">6.15 RTCSession 事件：SIP 扩展消息</a><a class="toc-depth-2" href="#6-16-rtcsession-统计事件">6.16 RTCSession 统计事件</a><a class="toc-depth-2" href="#6-17-crtc-utils">6.17 CRTC.Utils</a><a class="toc-depth-3" href="#设备与流">设备与流</a><a class="toc-depth-3" href="#占位轨道">占位轨道</a><a class="toc-depth-2" href="#6-18-使用约束总结">6.18 使用约束总结</a>
     </nav>
   </main>
   <button type="button" class="back-to-top" aria-label="回到顶部">↑</button>

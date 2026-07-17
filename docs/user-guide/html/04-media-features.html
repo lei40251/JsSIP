@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="CRTC Web SDK 系统学习文档：4. 媒体能力：AiNS、虚拟背景与混流">
-  <title>4. 媒体能力：AiNS、虚拟背景与混流 · CRTC Web SDK 系统学习</title>
+  <title>4. 媒体能力：AiNS、虚拟背景与混流 · CRTC Web SDK 系统学习指南</title>
   <link rel="stylesheet" href="assets/docs.css">
   <script>try{const t=localStorage.getItem('crtc-user-guide-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
   <script src="assets/search-index.js" defer></script>
@@ -13,21 +13,21 @@
 </head>
 <body data-page="04-media-features.html">
   <header class="topbar">
-    <button type="button" class="icon-button nav-toggle" aria-label="打开目录" aria-expanded="false">☰</button>
-    <a class="brand" href="index.html">CRTC Web SDK 系统学习</a>
+    <button type="button" class="icon-button nav-toggle" aria-label="收起左侧目录" aria-expanded="true">☰</button>
+    <a class="brand" href="index.html">CRTC Web SDK 系统学习指南</a>
     <div class="search-shell">
       <label class="sr-only" for="global-search">搜索全部文档</label>
       <input id="global-search" type="search" autocomplete="off" placeholder="搜索 API、事件、功能…" aria-controls="search-results">
       <kbd>/</kbd>
       <div id="search-results" class="search-results" hidden></div>
     </div>
+    <button type="button" class="icon-button toc-toggle" aria-label="收起右侧目录" aria-expanded="true">◧</button>
     <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
   </header>
 
   <aside class="sidebar" aria-label="文档目录">
     
     <section class="nav-group">
-      <h2>系统学习指南</h2>
       
         <a class="nav-link" href="index.html">
           学习指南首页
@@ -232,7 +232,7 @@ ans_onnx.tar.gz
   console.log(&#39;实际应用增益：&#39;, appliedGain);
 }
 </code></pre>
-</div><p>Base JS Demo 在呼叫/接听前通过下拉框决定是否创建 AiNS；通话中演示强度和输出增益热更新。若本通电话开始时未启用 AiNS，选择“开启”不会凭空创建当前控制器，应在下一次呼叫/接听参数中启用。</p>
+</div><p>若本通电话开始时未启用 AiNS，通话中无法通过 getter 创建控制器，应在下一次呼叫或接听参数中启用。</p>
 <p><code>getAiNoiseSuppression()</code> 在当前会话未配置 AiNS、控制器尚未创建或会话已结束时返回 <code>null</code>。</p>
 <h3 id="demo-对照">Demo 对照<a class="heading-anchor" href="#demo-对照" aria-label="链接到本节">#</a></h3>
 <p>Base JS Demo 中对应：</p>
@@ -241,7 +241,7 @@ ans_onnx.tar.gz
 <li><code>applyAiNsLevelToCurrentCall()</code>：通话中修改降噪强度。</li>
 <li><code>applyAiNsOutputGainToCurrentCall()</code>：通话中修改输出增益。</li>
 </ul>
-<p>这些函数位于 <a href="../../../demo/base-js/js/app-media-effects.js"><code>demo/base-js/js/app-media-effects.js</code></a>。</p>
+<p>这些函数位于 [<code>demo/base-js/js/app-media-effects.js</code>]。</p>
 <h2 id="4-4-ai-虚拟背景">4.4 AI 虚拟背景<a class="heading-anchor" href="#4-4-ai-虚拟背景" aria-label="链接到本节">#</a></h2>
 <p>SDK 会话集成中，本地摄像头是 <code>slot 0</code>。虚拟背景配置属于该输入源。</p>
 <h3 id="背景模式">背景模式<a class="heading-anchor" href="#背景模式" aria-label="链接到本节">#</a></h3>
@@ -387,7 +387,7 @@ function clearVirtualBackground()
 <ul>
 <li><code>buildCallComposerOptions()</code>：构造混流和虚拟背景初始配置。</li>
 <li><code>applyCurrentVirtualBackgroundToSession()</code>：通话中切换背景。</li>
-<li>函数实现见 <a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a>，页面控件见 <a href="../../../demo/base-js/index.html"><code>index.html</code></a>。</li>
+<li>函数实现见 [<code>app-media-effects.js</code>]，页面控件见 [<code>index.html</code>]。</li>
 </ul>
 <h2 id="4-5-音视频混流">4.5 音视频混流<a class="heading-anchor" href="#4-5-音视频混流" aria-label="链接到本节">#</a></h2>
 <p>启用 <code>mediaEffectsComposer</code> 后，本地摄像头作为 <code>slot 0</code>。SDK 将合成结果用于当前通话，业务无需再次获取输出流。</p>
@@ -426,48 +426,6 @@ function clearVirtualBackground()
 <td>输入源默认音频增益</td>
 </tr>
 <tr>
-<td><code>renderMode</code></td>
-<td>见下表</td>
-<td align="right"><code>auto</code></td>
-<td>渲染方式；普通接入使用 <code>auto</code></td>
-</tr>
-<tr>
-<td><code>workerUrl</code></td>
-<td><code>string | null</code></td>
-<td align="right"><code>null</code></td>
-<td>自定义 Worker 脚本地址</td>
-</tr>
-<tr>
-<td><code>dropFrameWhenBusy</code></td>
-<td><code>boolean</code></td>
-<td align="right"><code>true</code></td>
-<td>渲染忙时是否丢弃旧帧避免积压</td>
-</tr>
-<tr>
-<td><code>maxFrameQueue</code></td>
-<td>正整数</td>
-<td align="right"><code>1</code></td>
-<td>最大等待帧数</td>
-</tr>
-<tr>
-<td><code>preserveDrawingBuffer</code></td>
-<td><code>boolean</code></td>
-<td align="right"><code>true</code></td>
-<td>是否保留绘制缓冲</td>
-</tr>
-<tr>
-<td><code>enableInsertable</code></td>
-<td><code>boolean</code></td>
-<td align="right"><code>false</code></td>
-<td>是否请求可插入流输出能力；需浏览器支持</td>
-</tr>
-<tr>
-<td><code>manualCaptureFrameControl</code></td>
-<td><code>boolean</code></td>
-<td align="right"><code>true</code></td>
-<td>是否使用手动 requestFrame 控制输出</td>
-</tr>
-<tr>
 <td><code>sourceMirror</code></td>
 <td><code>boolean</code></td>
 <td align="right"><code>false</code></td>
@@ -498,36 +456,6 @@ function clearVirtualBackground()
 <td>各输入源的 slot、增益、镜像和虚拟背景</td>
 </tr>
 </tbody></table></div>
-<p><code>renderMode</code> 可选值：</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>值</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>auto</code></td>
-<td>自动选择并在能力不足时降级，普通接入推荐</td>
-</tr>
-<tr>
-<td><code>worker-webgl2</code></td>
-<td>Worker 中 WebGL2</td>
-</tr>
-<tr>
-<td><code>main-webgl2</code></td>
-<td>主线程 WebGL2</td>
-</tr>
-<tr>
-<td><code>worker-2d</code></td>
-<td>Worker 中 Canvas2D</td>
-</tr>
-<tr>
-<td><code>main-2d</code></td>
-<td>主线程 Canvas2D，兼容性优先</td>
-</tr>
-</tbody></table></div>
-<p>强制某种模式但浏览器不支持时可能触发降级或媒体效果事件。除非有明确兼容验证，不要固定渲染后端。</p>
 <p><code>sources[]</code>：</p>
 <div class="table-wrap"><table>
 <thead>
@@ -617,7 +545,7 @@ async function addScreenToComposer()
   ]);
 }
 </code></pre>
-</div><p>Demo 实际使用 <code>getWatermarks()</code> 读取当前列表，过滤同 ID 的旧水印后再调用 <code>setWatermarks()</code>，这样更新文字水印时不会误删图片水印。</p>
+</div><p>更新部分水印时，可先用 <code>getWatermarks()</code> 读取当前列表，按稳定 ID 替换对应项后再调用 <code>setWatermarks()</code>，避免误删其他水印。</p>
 <h3 id="水印参数">水印参数<a class="heading-anchor" href="#水印参数" aria-label="链接到本节">#</a></h3>
 <div class="table-wrap"><table>
 <thead>
@@ -714,7 +642,7 @@ async function addScreenToComposer()
 </tr>
 </tbody></table></div>
 <p>预设位置：<code>top-left</code>、<code>top-center</code>、<code>top-right</code>、<code>center</code>、<code>bottom-left</code>、<code>bottom-center</code>、<code>bottom-right</code>。</p>
-<p><code>width</code>、<code>height</code>、<code>fps</code> 和 <code>renderMode</code> 等构造参数不支持在已有实例上热更新。需要改变这些参数时，在下一次呼叫或接听中传入新配置。</p>
+<p><code>width</code>、<code>height</code> 和 <code>fps</code> 等初始参数不支持在已有实例上热更新。需要改变这些参数时，在下一次呼叫或接听中传入新配置。</p>
 <h2 id="4-6-统一处理媒体效果异常">4.6 统一处理媒体效果异常<a class="heading-anchor" href="#4-6-统一处理媒体效果异常" aria-label="链接到本节">#</a></h2>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">session.on(&#39;mediaEffectsIssue&#39;, function(event)
 {
@@ -723,12 +651,12 @@ async function addScreenToComposer()
 });
 </code></pre>
 </div><p>媒体效果失败时不要直接挂断。SDK 会尽量继续使用可用的原始媒体，业务可以关闭对应控件并提示用户。</p>
-<p>事件至少读取：</p>
+<p>建议只依赖以下稳定字段：</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
 <th>字段</th>
-<th>类型/常见值</th>
+<th>类型</th>
 <th>说明</th>
 </tr>
 </thead>
@@ -741,31 +669,6 @@ async function addScreenToComposer()
 <td><code>message</code></td>
 <td><code>string</code></td>
 <td>可记录的错误说明</td>
-</tr>
-<tr>
-<td><code>component</code></td>
-<td><code>string</code>（可能存在）</td>
-<td>具体组件</td>
-</tr>
-<tr>
-<td><code>stage</code></td>
-<td><code>string</code>（可能存在）</td>
-<td>失败阶段</td>
-</tr>
-<tr>
-<td><code>severity</code></td>
-<td><code>debug</code> / <code>warn</code> / <code>error</code>（可能存在）</td>
-<td>严重程度</td>
-</tr>
-<tr>
-<td><code>fallbackApplied</code></td>
-<td><code>boolean</code>（可能存在）</td>
-<td>是否已回退</td>
-</tr>
-<tr>
-<td><code>degraded</code></td>
-<td><code>boolean</code>（可能存在）</td>
-<td>是否处于降级状态</td>
 </tr>
 </tbody></table></div>
 <h3 id="常见故障与页面处理">常见故障与页面处理<a class="heading-anchor" href="#常见故障与页面处理" aria-label="链接到本节">#</a></h3>
@@ -798,8 +701,8 @@ async function addScreenToComposer()
 <td>提示资源不可用，保留其他效果</td>
 </tr>
 <tr>
-<td>composer 渲染降级</td>
-<td>Worker/WebGL/性能限制</td>
+<td>混流效果异常</td>
+<td>浏览器能力或性能限制</td>
 <td>降低输出尺寸/FPS，继续观察</td>
 </tr>
 <tr>
@@ -853,11 +756,6 @@ async function addScreenToComposer()
 <td><code>call/answer</code> 的 <code>mediaEffectsComposer</code></td>
 </tr>
 <tr>
-<td><code>renderMode</code></td>
-<td>否，下一通配置</td>
-<td>初始配置</td>
-</tr>
-<tr>
 <td>从未启用的 composer/AiNS</td>
 <td>不能靠 getter 创建</td>
 <td>下一通 <code>call/answer</code> 配置</td>
@@ -892,7 +790,7 @@ async function addScreenToComposer()
 <td><code>contentHint=&#39;detail&#39;/&#39;text&#39;</code>，同时验证清晰度和帧率</td>
 </tr>
 </tbody></table></div>
-<p>效果参数越高不一定体验越好。编码器 CPU 受限、FPS 下降、分辨率下降会在第 5 章的统计 issues 中体现。</p>
+<p>效果参数越高不一定体验越好。可结合第 5 章的码率、帧率、分辨率和质量提示观察实际体验。</p>
 <h2 id="4-9-上线检查">4.9 上线检查<a class="heading-anchor" href="#4-9-上线检查" aria-label="链接到本节">#</a></h2>
 <ul>
 <li>呼出和呼入都使用同一套媒体参数。</li>
@@ -905,10 +803,6 @@ async function addScreenToComposer()
 <p>旧版接口的逐项迁移见 <a href="07-upgrade-guide.html">旧版功能升级指南</a>。</p>
 <p><a href="03-call-lifecycle.html">← 上一章：通话流程与事件时序</a> · <a href="05-call-statistics.html">下一章：通话质量统计 →</a></p>
 
-      <nav class="page-pagination" aria-label="上一篇和下一篇">
-        <a class="previous" href="03-call-lifecycle.html"><span>上一篇</span>3. 注册、通话与事件时序</a>
-        <a class="next" href="05-call-statistics.html"><span>下一篇</span>5. 通话质量统计</a>
-      </nav>
     </article>
     
     <nav class="page-toc" aria-label="本页目录">

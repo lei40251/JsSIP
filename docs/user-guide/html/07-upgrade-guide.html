@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="CRTC Web SDK 系统学习文档：7. 旧版功能升级指南">
-  <title>7. 旧版功能升级指南 · CRTC Web SDK 系统学习</title>
+  <title>7. 旧版功能升级指南 · CRTC Web SDK 系统学习指南</title>
   <link rel="stylesheet" href="assets/docs.css">
   <script>try{const t=localStorage.getItem('crtc-user-guide-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
   <script src="assets/search-index.js" defer></script>
@@ -13,21 +13,21 @@
 </head>
 <body data-page="07-upgrade-guide.html">
   <header class="topbar">
-    <button type="button" class="icon-button nav-toggle" aria-label="打开目录" aria-expanded="false">☰</button>
-    <a class="brand" href="index.html">CRTC Web SDK 系统学习</a>
+    <button type="button" class="icon-button nav-toggle" aria-label="收起左侧目录" aria-expanded="true">☰</button>
+    <a class="brand" href="index.html">CRTC Web SDK 系统学习指南</a>
     <div class="search-shell">
       <label class="sr-only" for="global-search">搜索全部文档</label>
       <input id="global-search" type="search" autocomplete="off" placeholder="搜索 API、事件、功能…" aria-controls="search-results">
       <kbd>/</kbd>
       <div id="search-results" class="search-results" hidden></div>
     </div>
+    <button type="button" class="icon-button toc-toggle" aria-label="收起右侧目录" aria-expanded="true">◧</button>
     <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
   </header>
 
   <aside class="sidebar" aria-label="文档目录">
     
     <section class="nav-group">
-      <h2>系统学习指南</h2>
       
         <a class="nav-link" href="index.html">
           学习指南首页
@@ -64,21 +64,19 @@
     <article class="doc-content">
       <h1 id="7-旧版功能升级指南">7. 旧版功能升级指南<a class="heading-anchor" href="#7-旧版功能升级指南" aria-label="链接到本节">#</a></h1>
 <p><a href="06-api-reference.html">← 上一章：SDK API 参考</a> · <a href="index.html">学习目录</a> · <a href="08-demo-guide.html">下一章：Base JS Demo →</a></p>
-<p>本章用于把已有项目中的 AiNS、虚拟背景、混流和通话统计升级到当前接入方式。建议按“搜索旧入口 → 修改呼叫/接听参数 → 修改通话中控制 → 修改事件 → 删除旧生命周期代码 → 验证”的顺序逐项完成。</p>
+<p>本章用于把已有项目中的虚拟背景、旧版 <code>Mixer</code> 混流和通话统计升级到当前接入方式。建议按“搜索旧入口 → 修改呼叫/接听参数 → 修改通话中控制 → 修改事件 → 删除旧接入代码 → 验证”的顺序逐项完成。</p>
 <h2 id="7-1-升级前先做调用清单">7.1 升级前先做调用清单<a class="heading-anchor" href="#7-1-升级前先做调用清单" aria-label="链接到本节">#</a></h2>
 <p>在项目中搜索以下关键词：</p>
 <div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">new CRTC.getStats
-window.CRTCStats
-setMode(
-new CRTC.MediaStreamComposer
-getMediaStreamComposer
+new CRTC.Mixer
 appendStream
+removeStream
+clearStreams
 getMixedStream
 getVideoStream
 aiVirtualBackground
 aiVB
 getAiVBEngine
-aiNoiseSuppression
 </code></pre>
 </div><p>对每个命中位置标记它属于哪条路径：</p>
 <div class="table-wrap"><table>
@@ -106,7 +104,7 @@ aiNoiseSuppression
 </tr>
 <tr>
 <td>通话中设备/效果更新</td>
-<td><code>switchDevice()</code>、composer、AiNS 控制器</td>
+<td><code>switchDevice()</code>、composer、虚拟背景控制器</td>
 </tr>
 <tr>
 <td>结束和失败</td>
@@ -114,77 +112,8 @@ aiNoiseSuppression
 </tr>
 </tbody></table></div>
 <p>同一能力只改呼出、不改接听，是升级后最常见的不一致来源。</p>
-<h2 id="7-2-ains-升级">7.2 AiNS 升级<a class="heading-anchor" href="#7-2-ains-升级" aria-label="链接到本节">#</a></h2>
-<h3 id="7-2-1-当前推荐入口">7.2.1 当前推荐入口<a class="heading-anchor" href="#7-2-1-当前推荐入口" aria-label="链接到本节">#</a></h3>
-<p>初始启用放在呼叫或接听参数：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const aiNoiseSuppression = {
-  enabled             : true,
-  noiseReductionLevel : 80,
-  outputGain          : 1,
-  sampleRate          : 48000,
-  assetConfig         : {
-    cdnUrl : &#39;./assets/ains&#39;
-  }
-};
-
-await ua.call(target, {
-  mediaConstraints : {
-    audio : { sampleRate: 48000, channelCount: 1 },
-    video : videoConstraints
-  },
-  aiNoiseSuppression
-});
-</code></pre>
-</div><p>呼入同样传入：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">session.answer({
-  mediaConstraints : {
-    audio : { sampleRate: 48000, channelCount: 1 },
-    video : videoConstraints
-  },
-  aiNoiseSuppression
-});
-</code></pre>
-</div><h3 id="7-2-2-通话中参数变化">7.2.2 通话中参数变化<a class="heading-anchor" href="#7-2-2-通话中参数变化" aria-label="链接到本节">#</a></h3>
-<p>从当前会话获取控制器：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const aiNS = session.getAiNoiseSuppression();
-
-if (aiNS)
-{
-  aiNS.setSuppressionLevel(70);
-  aiNS.setOutputGain(1.1);
-}
-</code></pre>
-</div><div class="table-wrap"><table>
-<thead>
-<tr>
-<th>项目</th>
-<th>当前要求</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>降噪强度</td>
-<td><code>noiseReductionLevel</code> / <code>setSuppressionLevel()</code>，范围 <code>0～100</code></td>
-</tr>
-<tr>
-<td>输出增益</td>
-<td><code>outputGain</code> / <code>setOutputGain()</code>，范围 <code>0～4</code></td>
-</tr>
-<tr>
-<td>推荐采样率</td>
-<td><code>48000Hz</code></td>
-</tr>
-<tr>
-<td>资源目录</td>
-<td>包含 <code>ans.wasm</code>、<code>ans_onnx.tar.gz</code></td>
-</tr>
-<tr>
-<td>失败处理</td>
-<td>监听 <code>mediaEffectsIssue</code>；降噪失败时通话通常继续使用可用音频</td>
-</tr>
-</tbody></table></div>
-<p>升级时不要保存一个全局 AiNS 控制器跨通话复用。每次 <code>newRTCSession</code> 对应新的控制器；<code>getAiNoiseSuppression()</code> 返回 <code>null</code> 时表示当前会话未启用、尚未创建或已经释放。</p>
-<h2 id="7-3-虚拟背景升级">7.3 虚拟背景升级<a class="heading-anchor" href="#7-3-虚拟背景升级" aria-label="链接到本节">#</a></h2>
-<h3 id="7-3-1-初始参数位置变化">7.3.1 初始参数位置变化<a class="heading-anchor" href="#7-3-1-初始参数位置变化" aria-label="链接到本节">#</a></h3>
+<h2 id="7-2-虚拟背景升级">7.2 虚拟背景升级<a class="heading-anchor" href="#7-2-虚拟背景升级" aria-label="链接到本节">#</a></h2>
+<h3 id="7-2-1-初始参数位置变化">7.2.1 初始参数位置变化<a class="heading-anchor" href="#7-2-1-初始参数位置变化" aria-label="链接到本节">#</a></h3>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -231,7 +160,7 @@ if (aiNS)
 });
 </code></pre>
 </div><p>变化原因对接入的影响：虚拟背景现在属于 composer 中某一路视频源。<code>slot: 0</code> 表示当前通话的本地摄像头源；以后添加第二路视频时，可以针对不同 slot 使用不同效果。</p>
-<h3 id="7-3-2-通话中方法变化">7.3.2 通话中方法变化<a class="heading-anchor" href="#7-3-2-通话中方法变化" aria-label="链接到本节">#</a></h3>
+<h3 id="7-2-2-通话中方法变化">7.2.2 通话中方法变化<a class="heading-anchor" href="#7-2-2-通话中方法变化" aria-label="链接到本节">#</a></h3>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -265,7 +194,7 @@ if (composer)
 </div><p>清除：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">composer &amp;&amp; composer.clearSourceAiVirtualBackground(0);
 </code></pre>
-</div><h3 id="7-3-3-模式与参数迁移">7.3.3 模式与参数迁移<a class="heading-anchor" href="#7-3-3-模式与参数迁移" aria-label="链接到本节">#</a></h3>
+</div><h3 id="7-2-3-模式与参数迁移">7.2.3 模式与参数迁移<a class="heading-anchor" href="#7-2-3-模式与参数迁移" aria-label="链接到本节">#</a></h3>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -296,65 +225,60 @@ if (composer)
 </tr>
 </tbody></table></div>
 <p>升级后首次验证应分别覆盖模糊、图片、清除和挂断重呼。图片模式还需验证资源 URL、CORS 和 HTTPS。</p>
-<h2 id="7-4-混流升级">7.4 混流升级<a class="heading-anchor" href="#7-4-混流升级" aria-label="链接到本节">#</a></h2>
-<h3 id="7-4-1-类名与方法映射">7.4.1 类名与方法映射<a class="heading-anchor" href="#7-4-1-类名与方法映射" aria-label="链接到本节">#</a></h3>
+<h2 id="7-3-混流升级">7.3 混流升级<a class="heading-anchor" href="#7-3-混流升级" aria-label="链接到本节">#</a></h2>
+<p>早期版本通过 <code>Mixer.js</code> 提供 <code>CRTC.Mixer</code>，由页面创建混流实例、添加输入流并获取混流结果。升级时应迁移到 <code>MediaEffectsComposer</code>，普通通话优先使用 <code>RTCSession</code> 的集成方式。</p>
+<h3 id="7-3-1-旧-mixer-方法迁移">7.3.1 旧 Mixer 方法迁移<a class="heading-anchor" href="#7-3-1-旧-mixer-方法迁移" aria-label="链接到本节">#</a></h3>
 <div class="table-wrap"><table>
 <thead>
 <tr>
-<th>旧入口</th>
-<th>当前入口</th>
-<th>返回值变化</th>
+<th>早期 <code>CRTC.Mixer</code> 写法</th>
+<th>当前写法</th>
+<th>迁移说明</th>
 </tr>
 </thead>
 <tbody><tr>
-<td><code>new CRTC.MediaStreamComposer()</code></td>
-<td><code>new CRTC.MediaEffectsComposer()</code></td>
-<td>新类名</td>
+<td><code>new CRTC.Mixer(streams, options)</code></td>
+<td>在呼叫或接听参数中配置 <code>mediaEffectsComposer</code></td>
+<td>普通通话由会话使用该配置</td>
 </tr>
 <tr>
-<td><code>session.getMediaStreamComposer()</code></td>
-<td><code>session.getMediaEffectsComposer()</code></td>
-<td>未启用时为 <code>null</code></td>
+<td><code>mixer.appendStream(stream, options)</code></td>
+<td><code>composer.addSource(stream, options)</code></td>
+<td>添加或替换指定 slot 的视频源</td>
 </tr>
 <tr>
-<td><code>appendStream(stream, options)</code></td>
-<td><code>addSource(stream, options)</code></td>
-<td>添加/替换 slot</td>
+<td><code>mixer.removeStream(streamOrId)</code></td>
+<td><code>composer.removeSource(streamOrId)</code></td>
+<td>移除一路视频源</td>
 </tr>
 <tr>
-<td><code>removeStream(streamOrSlot)</code></td>
-<td><code>removeSource(streamOrSlot)</code></td>
-<td>移除一路源</td>
+<td><code>mixer.clearStreams()</code></td>
+<td><code>composer.clearSources()</code></td>
+<td>清空全部输入源</td>
 </tr>
 <tr>
-<td><code>clearStreams()</code></td>
-<td><code>clearSources()</code></td>
-<td>清空全部输入</td>
+<td><code>mixer.getMixedStream()</code> / <code>getVideoStream()</code></td>
+<td>普通通话无需由页面获取输出流</td>
+<td>继续通过当前 <code>RTCSession</code> 控制通话媒体</td>
 </tr>
 <tr>
-<td><code>getMixedStream()</code></td>
-<td><code>await getOutput({ type: &#39;mixed&#39; })</code></td>
-<td>当前统一入口为 Promise</td>
+<td><code>mixer.setGlobalMirror()</code> / <code>setOutputMirror()</code></td>
+<td><code>composer.setMirror(enabled)</code></td>
+<td>设置合成输出镜像</td>
 </tr>
 <tr>
-<td><code>getVideoStream()</code></td>
-<td><code>await getOutput({ type: &#39;video&#39; })</code></td>
-<td>当前统一入口为 Promise</td>
+<td><code>mixer.setWatermarks(items)</code></td>
+<td><code>composer.setWatermarks(items)</code></td>
+<td>更新水印</td>
 </tr>
 <tr>
-<td><code>getAudioStream(options)</code></td>
-<td><code>await getOutput({ type: &#39;audio&#39;, ...options })</code></td>
-<td>当前统一入口为 Promise</td>
-</tr>
-<tr>
-<td><code>releaseSubmixAudioStream(options)</code></td>
-<td><code>releaseOutput({ type: &#39;audio&#39;, ...options })</code></td>
-<td>与获取参数对应</td>
+<td><code>mixer.stop()</code></td>
+<td>结束使用后停止旧实例</td>
+<td>完成迁移后删除旧 Mixer 实例及其清理代码</td>
 </tr>
 </tbody></table></div>
-<p>兼容方法仍可能可调用，但新代码应统一使用当前名称，避免同一项目混用两套生命周期。</p>
-<h3 id="7-4-2-从业务自行换轨迁移到会话集成">7.4.2 从业务自行换轨迁移到会话集成<a class="heading-anchor" href="#7-4-2-从业务自行换轨迁移到会话集成" aria-label="链接到本节">#</a></h3>
-<p>旧项目可能自行创建 composer、获取输出、查找 sender 并调用 <code>replaceTrack()</code>。普通通话升级后优先把 composer 配置交给 <code>ua.call()</code> / <code>session.answer()</code>：</p>
+<h3 id="7-3-2-从旧-mixer-实例迁移到会话集成">7.3.2 从旧 Mixer 实例迁移到会话集成<a class="heading-anchor" href="#7-3-2-从旧-mixer-实例迁移到会话集成" aria-label="链接到本节">#</a></h3>
+<p>旧项目可能自行创建 <code>CRTC.Mixer</code>、获取混流输出，再把输出轨道用于通话。普通通话升级后，优先把混流配置交给 <code>ua.call()</code> / <code>session.answer()</code>：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const options = {
   mediaConstraints : { audio: true, video: videoConstraints },
   mediaEffectsComposer : {
@@ -370,6 +294,9 @@ if (composer)
 
 const session = await ua.call(target, options);
 </code></pre>
+</div><p>呼入接听使用相同的 <code>mediaEffectsComposer</code> 配置：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">session.answer(options);
+</code></pre>
 </div><p>当前会话需要动态更新时：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const composer = session.getMediaEffectsComposer();
 
@@ -379,15 +306,16 @@ if (composer)
   composer.setWatermarks([ watermark ]);
 }
 </code></pre>
-</div><p>升级影响：</p>
+</div><p>迁移后需要注意：</p>
 <ul>
-<li>不再由业务选择通话 sender 并替换 composer 输出轨道。</li>
-<li>设备切换、共享、音视频模式变化和会话结束继续围绕当前 <code>RTCSession</code> 操作。</li>
-<li><code>width/height/fps/renderMode</code> 等初始化参数不要在已有通话中强行改变；下一通呼叫重新配置。</li>
+<li>删除页面中创建、保存和停止旧 <code>CRTC.Mixer</code> 实例的代码。</li>
+<li>删除页面中获取旧混流输出并用于通话的代码。</li>
+<li>设备切换、共享、音视频模式变化和会话结束继续通过当前 <code>RTCSession</code> 操作。</li>
+<li><code>width/height/fps</code> 等初始化参数不要在已有通话中强行改变；下一通呼叫重新配置。</li>
 <li>通话结束后不要继续调用旧 composer 引用。</li>
 </ul>
-<h2 id="7-5-rtcstatsmonitor-升级概览">7.5 RTCStatsMonitor 升级概览<a class="heading-anchor" href="#7-5-rtcstatsmonitor-升级概览" aria-label="链接到本节">#</a></h2>
-<p>统计升级不只是类名变化，还改变了生命周期、采样口径、空值语义和诊断范围。</p>
+<h2 id="7-4-rtcstatsmonitor-升级概览">7.4 RTCStatsMonitor 升级概览<a class="heading-anchor" href="#7-4-rtcstatsmonitor-升级概览" aria-label="链接到本节">#</a></h2>
+<p>统计升级重点是接入入口、事件、字段单位、空值语义和页面展示。</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -398,13 +326,8 @@ if (composer)
 </thead>
 <tbody><tr>
 <td>会话入口</td>
-<td>页面在 <code>confirmed</code> 后 <code>new CRTC.getStats(session.connection)</code></td>
-<td><code>RTCSession</code> 创建 PC 后自动管理，页面监听 <code>session</code></td>
-</tr>
-<tr>
-<td>类名</td>
-<td><code>CRTC.getStats</code></td>
-<td><code>CRTC.RTCStatsMonitor</code>；<code>CRTC.getStats</code> 保留为兼容名称</td>
+<td>页面在 <code>confirmed</code> 后创建统计实例</td>
+<td>页面直接监听当前 <code>session</code> 的统计事件</td>
 </tr>
 <tr>
 <td>事件位置</td>
@@ -412,37 +335,27 @@ if (composer)
 <td>会话的 <code>stats:report</code> / <code>stats:network-quality</code>，并新增详细和错误事件</td>
 </tr>
 <tr>
-<td>停止</td>
-<td>页面调用 <code>stats.stop()</code> 或使用全局标记</td>
-<td>会话结束自动停止并释放</td>
-</tr>
-<tr>
-<td>媒体类型</td>
-<td>页面调用 <code>setMode()</code></td>
-<td>自动根据当前媒体报告识别</td>
-</tr>
-<tr>
-<td><code>reset()</code></td>
-<td>旧用法等同停止</td>
-<td>当前只清空基线并继续采样</td>
+<td>页面清理</td>
+<td>页面保存并停止会话统计实例</td>
+<td>页面只清理本次通话的展示数据和状态</td>
 </tr>
 <tr>
 <td>丢包/RTT</td>
-<td>旧实现中无包可能被当作 <code>100%</code> 丢包，字段缺失也可能被数值兜底</td>
-<td>缺少可比较数据保持无数据语义，质量等级使用 <code>0</code></td>
+<td>缺少数据时可能仍输出数值</td>
+<td>缺少有效样本时通过质量等级 <code>0</code> 表达暂无数据</td>
 </tr>
 <tr>
 <td>网络质量</td>
 <td>基础等级</td>
-<td>当前样本最差流 + 当前 RTT，并在连接失败时输出 <code>6</code></td>
+<td>继续使用 <code>0～6</code>，其中 <code>0</code> 表示暂无有效样本</td>
 </tr>
 <tr>
 <td>诊断</td>
 <td>RTT、丢包、码率等基础字段</td>
-<td>增加带宽、队列、重传、编解码、卡顿、路径变化等 issues</td>
+<td>新增详细摘要和问题码，便于页面提示与排障</td>
 </tr>
 </tbody></table></div>
-<h2 id="7-6-会话统计入口迁移">7.6 会话统计入口迁移<a class="heading-anchor" href="#7-6-会话统计入口迁移" aria-label="链接到本节">#</a></h2>
+<h2 id="7-5-会话统计入口迁移">7.5 会话统计入口迁移<a class="heading-anchor" href="#7-5-会话统计入口迁移" aria-label="链接到本节">#</a></h2>
 <p>旧写法：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">let stats;
 
@@ -499,28 +412,10 @@ session.on(&#39;ended&#39;, function()
 </tr>
 </tbody></table></div>
 <p>直接创建独立监控器时，事件名仍不带 <code>stats:</code> 前缀：<code>report</code>、<code>network-quality</code>、<code>detailed-report</code>、<code>stats-error</code>。</p>
-<h2 id="7-7-构造参数变化">7.7 构造参数变化<a class="heading-anchor" href="#7-7-构造参数变化" aria-label="链接到本节">#</a></h2>
-<p>旧位置参数：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const stats = new CRTC.getStats(pc, delay, interval);
-</code></pre>
-</div><p>当前对象参数：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const monitor = new CRTC.RTCStatsMonitor(pc, {
-  sampleIntervalMs           : 2000,
-  legacyReportIntervalMs     : 2000,
-  backgroundSampleIntervalMs : 2000,
-  transitionGraceSamples     : 2,
-  getStatsTimeoutMs          : 5000,
-  enableDetailedReport       : true,
-  enableRawStatsLog          : false,
-  rawStatsLogIntervalMs      : 10000,
-  autoStart                  : true
-});
-</code></pre>
-</div><p>旧的 <code>delay</code>、<code>interval</code> 数字位置参数不会自动转换为当前配置。只传 <code>pc</code> 的旧写法仍使用默认配置；仍传数字的项目必须改为对象。</p>
-<h2 id="7-8-网络质量等级的行为变化">7.8 网络质量等级的行为变化<a class="heading-anchor" href="#7-8-网络质量等级的行为变化" aria-label="链接到本节">#</a></h2>
+<h2 id="7-6-网络质量等级的行为变化">7.6 网络质量等级的行为变化<a class="heading-anchor" href="#7-6-网络质量等级的行为变化" aria-label="链接到本节">#</a></h2>
 <p>这是统计升级中最需要重新确认页面文案和告警逻辑的部分。</p>
 <h3 id="等级-0">等级 0<a class="heading-anchor" href="#等级-0" aria-label="链接到本节">#</a></h3>
-<p>当前 <code>0</code> 明确表示“暂无有效样本”，包括：没有该方向媒体、第一轮基线未建立、浏览器没有提供丢包和 RTT、媒体刚切换尚未稳定。<code>0</code> 不表示比 <code>1</code> 更好。</p>
+<p>当前 <code>0</code> 明确表示“暂无有效样本”，包括：没有该方向媒体、通话刚开始、浏览器没有提供丢包和 RTT、媒体刚切换尚未稳定。<code>0</code> 不表示比 <code>1</code> 更好。</p>
 <p>旧页面如果使用：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">if (quality &lt;= 2)
 {
@@ -537,48 +432,16 @@ else if (quality &lt;= 2)
   showGoodNetwork();
 }
 </code></pre>
-</div><h3 id="等级-1-6-的阈值">等级 1～6 的阈值<a class="heading-anchor" href="#等级-1-6-的阈值" aria-label="链接到本节">#</a></h3>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th align="right">等级</th>
-<th>当前丢包率或 RTT 条件；任一项满足</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="right"><code>1</code></td>
-<td>丢包 <code>0%</code> 且 RTT <code>&lt;50ms</code></td>
-</tr>
-<tr>
-<td align="right"><code>2</code></td>
-<td>丢包 <code>&gt;0%～10%</code>，或 RTT <code>50～100ms</code></td>
-</tr>
-<tr>
-<td align="right"><code>3</code></td>
-<td>丢包 <code>&gt;10%～20%</code>，或 RTT <code>&gt;100～200ms</code></td>
-</tr>
-<tr>
-<td align="right"><code>4</code></td>
-<td>丢包 <code>&gt;20%～30%</code>，或 RTT <code>&gt;200～350ms</code></td>
-</tr>
-<tr>
-<td align="right"><code>5</code></td>
-<td>丢包 <code>&gt;30%～40%</code>，或 RTT <code>&gt;350～500ms</code></td>
-</tr>
-<tr>
-<td align="right"><code>6</code></td>
-<td>丢包 <code>&gt;40%</code>，或 RTT <code>&gt;500ms</code>，或连接 <code>failed/closed</code></td>
-</tr>
-</tbody></table></div>
-<p>当前上行和下行都使用各自方向当前样本中最差一路 RTP 的丢包率；RTT 优先使用媒体反馈，缺失时回退连接 RTT。不会把多个时间窗口平均后再输出，所以瞬时变化比旧页面可能更明显。告警应采用“连续多次 + 用户体验/连接状态”的策略，不要看到单次 <code>4～6</code> 就自动挂断。</p>
+</div><h3 id="等级-1-6">等级 1～6<a class="heading-anchor" href="#等级-1-6" aria-label="链接到本节">#</a></h3>
+<p><code>1</code> 表示质量最好，等级越高表示体验越差，<code>6</code> 表示严重异常。页面应直接使用 SDK 输出等级，不要在业务代码中重新计算等级。告警建议结合连续多次结果、连接状态和用户实际体验，不要因单次 <code>4～6</code> 自动挂断。</p>
 <h3 id="空值与-0-的区别">空值与 0 的区别<a class="heading-anchor" href="#空值与-0-的区别" aria-label="链接到本节">#</a></h3>
 <ul>
 <li><code>stats:detailed-report</code> 中浏览器未提供的连接、流指标为 <code>null</code>。</li>
 <li>兼容 <code>stats:network-quality</code> 为保持数字字段，在 RTT/丢包缺失时可能输出 <code>0</code>。</li>
 <li>是否有有效网络样本，应看 <code>uplinkNetworkQuality/downlinkNetworkQuality</code> 是否为 <code>0</code>。</li>
 </ul>
-<p>完整字段和所有 issue 阈值见 <a href="05-call-statistics.html">通话质量统计</a>。</p>
-<h2 id="7-9-report-数据单位变化注意">7.9 <code>report</code> 数据单位变化注意<a class="heading-anchor" href="#7-9-report-数据单位变化注意" aria-label="链接到本节">#</a></h2>
+<p>完整字段和问题码见 <a href="05-call-statistics.html">通话质量统计</a>。</p>
+<h2 id="7-7-report-数据单位变化注意">7.7 <code>report</code> 数据单位变化注意<a class="heading-anchor" href="#7-7-report-数据单位变化注意" aria-label="链接到本节">#</a></h2>
 <p>兼容 <code>stats:report</code> 保留 <code>speed</code> 作为 kbps 展示值。新的 <code>stats:detailed-report</code> 使用：</p>
 <ul>
 <li><code>actualBitrateBps</code></li>
@@ -587,38 +450,10 @@ else if (quality &lt;= 2)
 <li><code>availableOutgoingBitrateBps</code></li>
 </ul>
 <p>这些字段单位全部是 <code>bps</code>。迁移页面时必须除以 <code>1000</code> 后显示 kbps，不能直接拼接 <code>kbps</code>，也不要重复除以 <code>1024</code>。</p>
-<h2 id="7-10-生命周期方法变化">7.10 生命周期方法变化<a class="heading-anchor" href="#7-10-生命周期方法变化" aria-label="链接到本节">#</a></h2>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>旧代码</th>
-<th>当前处理</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>window.CRTCStats = &#39;stop&#39;</code></td>
-<td>删除；当前实例不读取该变量</td>
-</tr>
-<tr>
-<td><code>stats.setMode(&#39;audio&#39;/&#39;video&#39;)</code></td>
-<td>删除；媒体类型自动识别</td>
-</tr>
-<tr>
-<td><code>stats.reset()</code> 用于停止</td>
-<td>改为 <code>stats.stop()</code>；当前 <code>reset()</code> 会继续运行</td>
-</tr>
-<tr>
-<td>会话结束手动 <code>stats.stop()</code></td>
-<td>删除；会话自动管理</td>
-</tr>
-<tr>
-<td>独立 PC 不停止</td>
-<td>页面不用该 PC 时仍必须 <code>monitor.stop()</code></td>
-</tr>
-</tbody></table></div>
-<p>当前 <code>reset()</code> 的含义：保持监控运行，清除旧累计值基线，随后重新建立码率和丢包增量。调用后短时间出现 <code>null</code> 或等级 <code>0</code> 属于预期。</p>
-<p>设备切换、共享开始/停止、音视频模式变化和重协商时，会话会让统计进入短暂过渡保护；通常不需要业务调用 <code>markTransition()</code>。</p>
-<h2 id="7-11-推荐的分阶段迁移">7.11 推荐的分阶段迁移<a class="heading-anchor" href="#7-11-推荐的分阶段迁移" aria-label="链接到本节">#</a></h2>
+<h2 id="7-8-统计代码清理">7.8 统计代码清理<a class="heading-anchor" href="#7-8-统计代码清理" aria-label="链接到本节">#</a></h2>
+<p>切换为 <code>session</code> 的统计事件后，删除页面中专门为会话统计创建、保存和停止独立实例的代码。<code>failed</code>、<code>ended</code> 事件中只需清理当前通话的页面状态和统计展示数据。</p>
+<p>如果业务确实需要监控一个不属于 <code>RTCSession</code> 的独立 <code>RTCPeerConnection</code>，仍可创建 <code>RTCStatsMonitor</code>，并在不再使用该连接时调用 <code>monitor.stop()</code>。</p>
+<h2 id="7-9-推荐的分阶段迁移">7.9 推荐的分阶段迁移<a class="heading-anchor" href="#7-9-推荐的分阶段迁移" aria-label="链接到本节">#</a></h2>
 <h3 id="阶段一-保持页面结构">阶段一：保持页面结构<a class="heading-anchor" href="#阶段一-保持页面结构" aria-label="链接到本节">#</a></h3>
 <p>只把事件改到 <code>session</code>：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">session.on(&#39;stats:report&#39;, oldReportHandler);
@@ -630,10 +465,10 @@ session.on(&#39;stats:network-quality&#39;, oldQualityHandler);
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">session.on(&#39;stats:detailed-report&#39;, renderDetailedPanel);
 session.on(&#39;stats:stats-error&#39;, reportStatsError);
 </code></pre>
-</div><p>按第 5 章展示连接、每路 RTP、质量和 issues。</p>
+</div><p>按第 5 章展示连接、媒体流、质量和问题码。</p>
 <h3 id="阶段三-删除旧资源管理">阶段三：删除旧资源管理<a class="heading-anchor" href="#阶段三-删除旧资源管理" aria-label="链接到本节">#</a></h3>
-<p>删除 <code>new CRTC.getStats(session.connection)</code>、全局 <code>stats</code>、<code>window.CRTCStats</code>、<code>setMode()</code> 和会话内 <code>stats.stop()</code>。</p>
-<h2 id="7-12-完整升级验证矩阵">7.12 完整升级验证矩阵<a class="heading-anchor" href="#7-12-完整升级验证矩阵" aria-label="链接到本节">#</a></h2>
+<p>删除页面中自行创建、保存和停止会话统计实例的代码，仅保留 <code>session</code> 统计事件及页面展示逻辑。</p>
+<h2 id="7-10-完整升级验证矩阵">7.10 完整升级验证矩阵<a class="heading-anchor" href="#7-10-完整升级验证矩阵" aria-label="链接到本节">#</a></h2>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -653,29 +488,24 @@ session.on(&#39;stats:stats-error&#39;, reportStatsError);
 <td><code>failed/ended</code> 后状态清理完整</td>
 </tr>
 <tr>
-<td>AiNS</td>
-<td>初始启用、强度/增益更新、资源 404</td>
-<td>可调整；失败不导致通话退出</td>
-</tr>
-<tr>
 <td>虚拟背景</td>
 <td>模糊、图片、清除、挂断重呼</td>
 <td>当前通话立即变化，重呼无旧状态</td>
 </tr>
 <tr>
 <td>混流</td>
-<td>会话集成、镜像、水印、第二路源</td>
-<td>slot 和输出效果正确</td>
+<td>旧 Mixer 迁移、会话集成、镜像、水印、第二路源</td>
+<td>不再依赖旧 Mixer，slot 和输出效果正确</td>
 </tr>
 <tr>
-<td>统计基线</td>
+<td>初始统计</td>
 <td>呼叫刚开始</td>
 <td>质量 <code>0</code> 显示检测中，不显示良好</td>
 </tr>
 <tr>
 <td>弱网</td>
-<td>RTT/丢包达到 2～6 档</td>
-<td>等级、issues 和页面文案一致</td>
+<td>使用可控网络环境观察质量下降</td>
+<td>等级、问题码和页面文案一致</td>
 </tr>
 <tr>
 <td>连接失败</td>
@@ -693,30 +523,27 @@ session.on(&#39;stats:stats-error&#39;, reportStatsError);
 <td>不复用旧 session、控制器或统计数据</td>
 </tr>
 </tbody></table></div>
-<h2 id="7-13-升级完成清单">7.13 升级完成清单<a class="heading-anchor" href="#7-13-升级完成清单" aria-label="链接到本节">#</a></h2>
+<h2 id="7-11-升级完成清单">7.11 升级完成清单<a class="heading-anchor" href="#7-11-升级完成清单" aria-label="链接到本节">#</a></h2>
 <ul>
 <li>呼出、所有接听按钮和 <code>upgradeToVideo()</code> 都使用一致的媒体参数。</li>
-<li>AiNS 位于 <code>options.aiNoiseSuppression</code>，虚拟背景位于 <code>mediaEffectsComposer.sources[0]</code>。</li>
+<li>虚拟背景位于 <code>mediaEffectsComposer.sources[0]</code>。</li>
 <li>通话内控制器从当前 <code>RTCSession</code> 获取，不跨通话缓存。</li>
-<li>普通通话不再由页面自行替换 composer 输出轨道。</li>
+<li>旧 <code>CRTC.Mixer</code> 已迁移到当前 <code>mediaEffectsComposer</code> 接入方式。</li>
+<li>普通通话不再由页面自行获取混流输出并用于通话。</li>
 <li>统计改为监听 <code>session</code> 的 <code>stats:*</code> 事件。</li>
 <li>页面已明确区分质量等级 <code>0</code>、数值 <code>0</code> 和字段 <code>null</code>。</li>
-<li>页面已适配等级 <code>6</code> 的网络阈值和连接失败语义。</li>
-<li>已删除 <code>window.CRTCStats</code>、<code>setMode()</code> 和会话统计的手动停止代码。</li>
+<li>页面已适配等级 <code>6</code> 的严重异常语义。</li>
+<li>已删除页面自行创建、保存和停止会话统计实例的代码。</li>
 <li>独立 PeerConnection 统计仍在不用时调用 <code>stop()</code>。</li>
 <li>已完成自动/手动注册、呼入/呼出、媒体效果、弱网、设备切换、共享、挂断和重呼验证。</li>
 </ul>
 <p><a href="06-api-reference.html">← 上一章：SDK API 参考</a> · <a href="08-demo-guide.html">下一章：Base JS Demo →</a></p>
 
-      <nav class="page-pagination" aria-label="上一篇和下一篇">
-        <a class="previous" href="06-api-reference.html"><span>上一篇</span>6. SDK API 参考</a>
-        <a class="next" href="08-demo-guide.html"><span>下一篇</span>8. Base JS Demo 完整学习与验证</a>
-      </nav>
     </article>
     
     <nav class="page-toc" aria-label="本页目录">
       <h2>本页目录</h2>
-      <a class="toc-depth-2" href="#7-1-升级前先做调用清单">7.1 升级前先做调用清单</a><a class="toc-depth-2" href="#7-2-ains-升级">7.2 AiNS 升级</a><a class="toc-depth-3" href="#7-2-1-当前推荐入口">7.2.1 当前推荐入口</a><a class="toc-depth-3" href="#7-2-2-通话中参数变化">7.2.2 通话中参数变化</a><a class="toc-depth-2" href="#7-3-虚拟背景升级">7.3 虚拟背景升级</a><a class="toc-depth-3" href="#7-3-1-初始参数位置变化">7.3.1 初始参数位置变化</a><a class="toc-depth-3" href="#7-3-2-通话中方法变化">7.3.2 通话中方法变化</a><a class="toc-depth-3" href="#7-3-3-模式与参数迁移">7.3.3 模式与参数迁移</a><a class="toc-depth-2" href="#7-4-混流升级">7.4 混流升级</a><a class="toc-depth-3" href="#7-4-1-类名与方法映射">7.4.1 类名与方法映射</a><a class="toc-depth-3" href="#7-4-2-从业务自行换轨迁移到会话集成">7.4.2 从业务自行换轨迁移到会话集成</a><a class="toc-depth-2" href="#7-5-rtcstatsmonitor-升级概览">7.5 RTCStatsMonitor 升级概览</a><a class="toc-depth-2" href="#7-6-会话统计入口迁移">7.6 会话统计入口迁移</a><a class="toc-depth-2" href="#7-7-构造参数变化">7.7 构造参数变化</a><a class="toc-depth-2" href="#7-8-网络质量等级的行为变化">7.8 网络质量等级的行为变化</a><a class="toc-depth-3" href="#等级-0">等级 0</a><a class="toc-depth-3" href="#等级-1-6-的阈值">等级 1～6 的阈值</a><a class="toc-depth-3" href="#空值与-0-的区别">空值与 0 的区别</a><a class="toc-depth-2" href="#7-9-report-数据单位变化注意">7.9 report 数据单位变化注意</a><a class="toc-depth-2" href="#7-10-生命周期方法变化">7.10 生命周期方法变化</a><a class="toc-depth-2" href="#7-11-推荐的分阶段迁移">7.11 推荐的分阶段迁移</a><a class="toc-depth-3" href="#阶段一-保持页面结构">阶段一：保持页面结构</a><a class="toc-depth-3" href="#阶段二-切换详细面板">阶段二：切换详细面板</a><a class="toc-depth-3" href="#阶段三-删除旧资源管理">阶段三：删除旧资源管理</a><a class="toc-depth-2" href="#7-12-完整升级验证矩阵">7.12 完整升级验证矩阵</a><a class="toc-depth-2" href="#7-13-升级完成清单">7.13 升级完成清单</a>
+      <a class="toc-depth-2" href="#7-1-升级前先做调用清单">7.1 升级前先做调用清单</a><a class="toc-depth-2" href="#7-2-虚拟背景升级">7.2 虚拟背景升级</a><a class="toc-depth-3" href="#7-2-1-初始参数位置变化">7.2.1 初始参数位置变化</a><a class="toc-depth-3" href="#7-2-2-通话中方法变化">7.2.2 通话中方法变化</a><a class="toc-depth-3" href="#7-2-3-模式与参数迁移">7.2.3 模式与参数迁移</a><a class="toc-depth-2" href="#7-3-混流升级">7.3 混流升级</a><a class="toc-depth-3" href="#7-3-1-旧-mixer-方法迁移">7.3.1 旧 Mixer 方法迁移</a><a class="toc-depth-3" href="#7-3-2-从旧-mixer-实例迁移到会话集成">7.3.2 从旧 Mixer 实例迁移到会话集成</a><a class="toc-depth-2" href="#7-4-rtcstatsmonitor-升级概览">7.4 RTCStatsMonitor 升级概览</a><a class="toc-depth-2" href="#7-5-会话统计入口迁移">7.5 会话统计入口迁移</a><a class="toc-depth-2" href="#7-6-网络质量等级的行为变化">7.6 网络质量等级的行为变化</a><a class="toc-depth-3" href="#等级-0">等级 0</a><a class="toc-depth-3" href="#等级-1-6">等级 1～6</a><a class="toc-depth-3" href="#空值与-0-的区别">空值与 0 的区别</a><a class="toc-depth-2" href="#7-7-report-数据单位变化注意">7.7 report 数据单位变化注意</a><a class="toc-depth-2" href="#7-8-统计代码清理">7.8 统计代码清理</a><a class="toc-depth-2" href="#7-9-推荐的分阶段迁移">7.9 推荐的分阶段迁移</a><a class="toc-depth-3" href="#阶段一-保持页面结构">阶段一：保持页面结构</a><a class="toc-depth-3" href="#阶段二-切换详细面板">阶段二：切换详细面板</a><a class="toc-depth-3" href="#阶段三-删除旧资源管理">阶段三：删除旧资源管理</a><a class="toc-depth-2" href="#7-10-完整升级验证矩阵">7.10 完整升级验证矩阵</a><a class="toc-depth-2" href="#7-11-升级完成清单">7.11 升级完成清单</a>
     </nav>
   </main>
   <button type="button" class="back-to-top" aria-label="回到顶部">↑</button>

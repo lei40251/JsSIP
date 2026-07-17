@@ -11,7 +11,7 @@
 <script src="./CRTC.min.js"></script>
 ```
 
-`adapter-latest.js` 用于浏览器 WebRTC 兼容，`CRTC.min.js` 是页面需要引入的 SDK 文件。Base JS Demo 使用 `dist/CRTC.min.js`。
+`adapter-latest.js` 用于浏览器 WebRTC 兼容，`CRTC.min.js` 是页面需要引入的 SDK 文件。实际路径以交付包的目录结构为准。
 
 ## 2.2 准备页面元素
 
@@ -323,7 +323,7 @@ const mediaConstraints = {
       if (currentSession && currentSession.direction === 'incoming')
       {
         currentSession.answer(buildCallOptions());
-        // 呼入在 answer() 调用后创建 connection。
+        // 接听后再绑定本次通话的远端媒体。
         bindRemoteMedia(currentSession);
         answerButton.disabled = true;
       }
@@ -334,7 +334,6 @@ const mediaConstraints = {
       currentSession && currentSession.terminate();
     });
 
-    CRTC.debug.enable('CRTC:*');
     ua.start();
   </script>
 </body>
@@ -350,8 +349,8 @@ const mediaConstraints = {
 3. `connected` 时只显示“正在注册”。
 4. `registered` 时开放呼叫按钮。
 5. 每次 `newRTCSession` 保存当前 session，并立即绑定本通电话事件。
-6. 呼出时 `ua.call()` 负责采集、创建 PC 和发送 INVITE。
-7. 呼入时用户点击后 `answer()` 负责创建 PC、采集和应答。
+6. 呼出时调用 `ua.call()`，通过 Promise 和会话事件处理后续状态。
+7. 呼入时由用户操作触发 `answer()`，并继续监听本通电话的事件。
 8. `connection.ontrack` 播放远端流。
 9. `failed` 或 `ended` 统一清理页面。
 

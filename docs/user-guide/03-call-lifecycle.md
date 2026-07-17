@@ -90,7 +90,7 @@ ua.start();
 | `connection_recovery_min_interval` | `2` 秒 | 信令恢复重试的最小间隔 |
 | `connection_recovery_max_interval` | `30` 秒 | 信令恢复重试的最大间隔 |
 
-Base JS Demo 为了便于快速观察刷新，设置 `register_expires: 20`，并把恢复间隔设置为 `2～3` 秒。业务项目应使用服务端要求的值，不必照搬 Demo 的短过期时间。
+注册有效期和恢复间隔应按 SIP 服务要求配置，不要直接照搬测试环境的短周期参数。
 
 ## 3.3 手动注册时序
 
@@ -138,12 +138,6 @@ ua.on('connected', function()
 ua.start();
 ```
 
-Base JS Demo 可使用下面的 URL 验证手动注册；不传 `register=manual` 时仍为自动注册：
-
-```text
-http://localhost:8080/demo/base-js/index.html?caller=7300&register=manual
-```
-
 自动注册与手动注册只改变 REGISTER 的触发方式，不改变 `registered`、`registrationFailed` 事件和后续呼叫 API。
 
 ## 3.4 UA 网络事件与页面状态
@@ -170,9 +164,7 @@ sequenceDiagram
     autonumber
     participant Page as "前端页面"
     participant UA as "CRTC.UA"
-    participant Media as "摄像头/麦克风"
-    participant Session as "RTCSession"
-    participant PC as "RTCPeerConnection"
+    participant Browser as "浏览器媒体权限"
     participant SIP as "SIP 服务/对端"
 
     Page->>UA: "ua.isRegistered()"
@@ -182,35 +174,24 @@ sequenceDiagram
     else 已注册
         UA-->>Page: "true"
         Page->>UA: "await ua.call(target, options)"
-        UA->>Media: "按 mediaConstraints 请求本地媒体"
+        UA->>Browser: "请求所需媒体权限"
         alt 权限拒绝/设备或约束失败
-            Media-->>UA: "reject Error"
+            Browser-->>UA: "返回错误"
             UA-->>Page: "ua.call() Promise reject"
             Page->>Page: "恢复按钮并提示权限/设备问题"
-        else 采集成功或使用 mediaStream
-            Media-->>Session: "本地 MediaStream"
-            Session->>PC: "创建 PC、加入轨道、生成 SDP Offer"
+        else 可以继续呼叫
             UA-->>Page: "newRTCSession({ originator: 'local', session, request })"
-            Page->>Session: "绑定本通电话全部事件"
-            UA->>SIP: "INVITE + SDP Offer + extraHeaders"
+            Page->>Page: "绑定本通电话全部事件"
+            UA->>SIP: "发起呼叫"
             UA-->>Page: "ua.call() resolve(session)"
-            SIP-->>Session: "100 Trying"
-            Session-->>Page: "trying"
-            SIP-->>Session: "180/183 等 1xx"
-            Session-->>Page: "progress({ originator: 'remote', response })"
-            opt 183 携带早期媒体
-                SIP-->>PC: "远端媒体轨道"
-                PC-->>Page: "connection.ontrack"
-            end
+            SIP-->>UA: "正在处理/振铃"
+            UA-->>Page: "trying / progress"
             alt 对端接听
-                SIP-->>Session: "200 OK + SDP Answer"
-                Session-->>Page: "accepted({ response })"
-                Session->>SIP: "ACK"
-                Session-->>Page: "confirmed"
-                Session-->>Page: "stats:* 周期事件"
-            else 拒接/取消/超时/协商失败
-                SIP-->>Session: "失败响应或超时"
-                Session-->>Page: "failed({ originator, message, cause })"
+                SIP-->>UA: "呼叫已接听"
+                UA-->>Page: "accepted / confirmed"
+            else 拒接/取消/超时或失败
+                SIP-->>UA: "失败响应或超时"
+                UA-->>Page: "failed({ originator, message, cause })"
                 Page->>Page: "清理本通电话 UI 和引用"
             end
         end
@@ -245,50 +226,39 @@ async function call(target)
 
 ## 3.6 呼入与接听完整时序
 
-呼入时先收到 `newRTCSession`。此时可以读取主叫、呼叫模式和随路头，但不要假设本地媒体已经采集。用户点击接听后调用 `answer(options)`；Demo 中 `answer()` 调用返回后即可读取 `session.connection` 并绑定浏览器事件。
+呼入时先收到 `newRTCSession`。此时可以读取主叫、呼叫模式和随路头，但不要假设本地媒体已经可用。用户点击接听后调用 `answer(options)`，随后再读取 `session.connection` 并绑定浏览器事件。
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant SIP as "SIP 服务/对端"
-    participant UA as "CRTC.UA"
-    participant Session as "RTCSession"
+    participant SDK as "CRTC SDK"
     participant Page as "前端页面"
-    participant Media as "摄像头/麦克风"
-    participant PC as "RTCPeerConnection"
+    participant Browser as "浏览器媒体权限"
 
-    SIP->>UA: "INVITE + SDP Offer"
-    UA->>Session: "创建呼入会话"
-    UA-->>Page: "newRTCSession({ originator: 'remote', session, request })"
+    SIP->>SDK: "发起来电"
+    SDK-->>Page: "newRTCSession({ originator: 'remote', session, request })"
     Page->>Page: "读取 request.from/request.mode/自定义头"
-    Page->>Session: "绑定 progress/accepted/confirmed/failed/ended 等事件"
-    Session->>SIP: "本地振铃响应"
-    Session-->>Page: "progress({ originator: 'local', response })"
+    Page->>Page: "绑定 progress/accepted/confirmed/failed/ended 等事件"
+    SDK-->>Page: "progress({ originator: 'local', response })"
     alt 用户接听
-        Page->>Session: "session.answer(options)"
-        Session->>PC: "创建 PC"
-        Page->>PC: "绑定 connection.ontrack"
-        Session->>Media: "按 mediaConstraints 请求媒体"
-        alt 采集/协商成功
-            Media-->>Session: "MediaStream"
-            Session->>PC: "加入轨道并生成 SDP Answer"
-            Session->>SIP: "200 OK + SDP Answer"
-            Session-->>Page: "accepted({ response })"
-            SIP->>Session: "ACK"
-            Session-->>Page: "confirmed"
-            Session-->>Page: "stats:* 周期事件"
-        else 采集或协商失败
-            Media-->>Session: "Error"
-            Session-->>Page: "failed({ cause }) 或 mediaerror"
+        Page->>SDK: "session.answer(options)"
+        SDK->>Browser: "请求所需媒体权限"
+        alt 接听成功
+            Browser-->>SDK: "允许"
+            SDK->>SIP: "接受来电"
+            SDK-->>Page: "accepted / confirmed"
+        else 权限、设备或接听失败
+            Browser-->>SDK: "错误"
+            SDK-->>Page: "failed({ cause }) 或 mediaerror"
             Page->>Page: "提示权限/设备并清理"
         end
     else 用户拒接
-        Page->>Session: "terminate({ status_code: 486 })"
-        Session->>SIP: "486 Busy Here"
-        Session-->>Page: "failed({ cause })"
+        Page->>SDK: "terminate({ status_code: 486 })"
+        SDK-->>Page: "failed({ cause })"
     else 对端取消
-        SIP->>Session: "CANCEL"
-        Session-->>Page: "failed({ cause })"
+        SIP->>SDK: "取消来电"
+        SDK-->>Page: "failed({ cause })"
     end
 ```
 
@@ -399,7 +369,7 @@ function bindPeerConnection(pc)
 
 ## 3.10 挂断、拒接与取消
 
-同一个 `terminate()` 会根据当前阶段发送不同信令：
+同一个 `terminate()` 可用于以下通话阶段：
 
 | 当前阶段 | 调用 | 结果 |
 | --- | --- | --- |

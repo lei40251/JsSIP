@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="CRTC Web SDK 系统学习文档：5. 通话质量统计">
-  <title>5. 通话质量统计 · CRTC Web SDK 系统学习</title>
+  <title>5. 通话质量统计 · CRTC Web SDK 系统学习指南</title>
   <link rel="stylesheet" href="assets/docs.css">
   <script>try{const t=localStorage.getItem('crtc-user-guide-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
   <script src="assets/search-index.js" defer></script>
@@ -13,21 +13,21 @@
 </head>
 <body data-page="05-call-statistics.html">
   <header class="topbar">
-    <button type="button" class="icon-button nav-toggle" aria-label="打开目录" aria-expanded="false">☰</button>
-    <a class="brand" href="index.html">CRTC Web SDK 系统学习</a>
+    <button type="button" class="icon-button nav-toggle" aria-label="收起左侧目录" aria-expanded="true">☰</button>
+    <a class="brand" href="index.html">CRTC Web SDK 系统学习指南</a>
     <div class="search-shell">
       <label class="sr-only" for="global-search">搜索全部文档</label>
       <input id="global-search" type="search" autocomplete="off" placeholder="搜索 API、事件、功能…" aria-controls="search-results">
       <kbd>/</kbd>
       <div id="search-results" class="search-results" hidden></div>
     </div>
+    <button type="button" class="icon-button toc-toggle" aria-label="收起右侧目录" aria-expanded="true">◧</button>
     <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
   </header>
 
   <aside class="sidebar" aria-label="文档目录">
     
     <section class="nav-group">
-      <h2>系统学习指南</h2>
       
         <a class="nav-link" href="index.html">
           学习指南首页
@@ -65,7 +65,7 @@
       <h1 id="5-通话质量统计">5. 通话质量统计<a class="heading-anchor" href="#5-通话质量统计" aria-label="链接到本节">#</a></h1>
 <p><a href="04-media-features.html">← 上一章：媒体能力</a> · <a href="index.html">学习目录</a> · <a href="06-api-reference.html">下一章：SDK API 参考 →</a></p>
 <p>每个 <code>RTCSession</code> 都会管理本通电话的统计实例。页面在 <code>newRTCSession</code> 中监听 <code>session</code> 的 <code>stats:*</code> 事件即可；挂断、呼叫失败和重呼时不需要自行启动或停止定时器。</p>
-<p>本章字段与 Base JS Demo 的统计浮层一一对应。先按 5.1 完成接入，再按 5.3～5.8 解释页面中的每一个值。</p>
+<p>先按 5.1 完成接入，再根据后续章节理解各字段的业务含义和展示方式。</p>
 <h2 id="5-1-完整接入示例">5.1 完整接入示例<a class="heading-anchor" href="#5-1-完整接入示例" aria-label="链接到本节">#</a></h2>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">ua.on(&#39;newRTCSession&#39;, function(data)
 {
@@ -132,7 +132,7 @@
 <td>记录采样异常；不用于判断通话是否结束</td>
 </tr>
 </tbody></table></div>
-<p>默认约每 <code>2000ms</code> 采样一次。第一轮主要用于建立码率、丢包率等增量指标的计算基线，部分值暂时为 <code>null</code> 属于正常现象。</p>
+<p>默认约每 <code>2000ms</code> 更新一次。通话刚开始时部分值暂时为 <code>null</code> 属于正常现象。</p>
 <h2 id="5-2-数值-单位与空值">5.2 数值、单位与空值<a class="heading-anchor" href="#5-2-数值-单位与空值" aria-label="链接到本节">#</a></h2>
 <div class="table-wrap"><table>
 <thead>
@@ -195,73 +195,71 @@ function formatBitrate(value)
 }
 </code></pre>
 </div><h2 id="5-3-网络质量等级-0-6">5.3 网络质量等级 0～6<a class="heading-anchor" href="#5-3-网络质量等级-0-6" aria-label="链接到本节">#</a></h2>
-<p>上行和下行分别计算。每个方向使用当前采样中最差一路媒体的丢包率，并结合当前 RTT 取较差结果；不会把多路 RTP 或多个时间窗口平均后掩盖当前弱网。</p>
-<h3 id="5-3-1-精确判定表">5.3.1 精确判定表<a class="heading-anchor" href="#5-3-1-精确判定表" aria-label="链接到本节">#</a></h3>
+<p>SDK 分别提供上行和下行质量等级。业务页面应直接使用 SDK 输出的等级，不要根据 RTT 或丢包率自行复刻判定逻辑，以免版本升级后出现口径不一致。</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
 <th align="right">等级</th>
-<th>产生条件；满足任一项即可</th>
-<th>含义</th>
+<th>建议文案</th>
+<th>页面处理</th>
 </tr>
 </thead>
 <tbody><tr>
 <td align="right"><code>0</code></td>
-<td>该方向没有活动媒体；或丢包率和 RTT 都不可用</td>
-<td>暂无有效样本，不代表好或坏</td>
+<td>暂无数据</td>
+<td>显示检测中，不参与好坏排序</td>
 </tr>
 <tr>
 <td align="right"><code>1</code></td>
-<td>已有媒体样本，丢包率为 <code>0%</code>，并且 RTT <code>&lt; 50ms</code></td>
 <td>极佳</td>
+<td>正常展示</td>
 </tr>
 <tr>
 <td align="right"><code>2</code></td>
-<td>丢包率 <code>&gt; 0% 且 ≤ 10%</code>；或 RTT <code>≥ 50ms 且 ≤ 100ms</code></td>
 <td>较好</td>
+<td>正常展示</td>
 </tr>
 <tr>
 <td align="right"><code>3</code></td>
-<td>丢包率 <code>&gt; 10% 且 ≤ 20%</code>；或 RTT <code>&gt; 100ms 且 ≤ 200ms</code></td>
 <td>一般</td>
+<td>可使用中性提示</td>
 </tr>
 <tr>
 <td align="right"><code>4</code></td>
-<td>丢包率 <code>&gt; 20% 且 ≤ 30%</code>；或 RTT <code>&gt; 200ms 且 ≤ 350ms</code></td>
-<td>差</td>
+<td>较差</td>
+<td>可提示用户检查网络</td>
 </tr>
 <tr>
 <td align="right"><code>5</code></td>
-<td>丢包率 <code>&gt; 30% 且 ≤ 40%</code>；或 RTT <code>&gt; 350ms 且 ≤ 500ms</code></td>
-<td>极差</td>
+<td>很差</td>
+<td>建议明显提示网络质量下降</td>
 </tr>
 <tr>
 <td align="right"><code>6</code></td>
-<td>丢包率 <code>&gt; 40%</code>；或 RTT <code>&gt; 500ms</code>；或 PeerConnection 状态为 <code>failed</code> / <code>closed</code></td>
-<td>网络不可用或接近不可用</td>
+<td>严重异常</td>
+<td>结合连接状态和连续样本给出强提示</td>
 </tr>
 </tbody></table></div>
-<p>边界值按表中的不等号判断。例如 RTT 正好 <code>500ms</code> 为 <code>5</code>，大于 <code>500ms</code> 才为 <code>6</code>；丢包率正好 <code>40%</code> 为 <code>5</code>，大于 <code>40%</code> 才为 <code>6</code>。</p>
-<h3 id="5-3-2-什么时候会出现-0">5.3.2 什么时候会出现 0<a class="heading-anchor" href="#5-3-2-什么时候会出现-0" aria-label="链接到本节">#</a></h3>
+<h3 id="5-3-1-什么时候会出现-0">5.3.1 什么时候会出现 0<a class="heading-anchor" href="#5-3-1-什么时候会出现-0" aria-label="链接到本节">#</a></h3>
 <p>常见情况：</p>
 <ul>
-<li>通话刚开始，第一份样本还没有建立增量基线。</li>
+<li>通话刚开始，统计结果尚未完整生成。</li>
 <li>纯音频通话中没有视频流；不存在的媒体方向不会被评为 <code>1</code>。</li>
-<li>本端没有活动 sender，所以上行没有可评价的媒体。</li>
+<li>本端没有活动的发送媒体，所以上行没有可评价的样本。</li>
 <li>远端尚未发送媒体，所以下行没有 inbound RTP。</li>
 <li>浏览器没有提供当前方向的 RTT 和丢包字段。</li>
 <li>切换设备、共享或重协商后，新的 RTP 报告尚未稳定。</li>
 </ul>
 <p>业务处理：显示“检测中/暂无数据”，继续等待后续样本。不要把 <code>0</code> 排在 <code>1</code> 前面当作“更好”。</p>
-<h3 id="5-3-3-什么时候会出现-6">5.3.3 什么时候会出现 6<a class="heading-anchor" href="#5-3-3-什么时候会出现-6" aria-label="链接到本节">#</a></h3>
+<h3 id="5-3-2-什么时候会出现-6">5.3.2 什么时候会出现 6<a class="heading-anchor" href="#5-3-2-什么时候会出现-6" aria-label="链接到本节">#</a></h3>
 <p>常见情况：</p>
 <ul>
-<li>当前方向最差媒体流的丢包率大于 <code>40%</code>。</li>
-<li>当前 RTT 大于 <code>500ms</code>。</li>
-<li><code>connectionState</code> 进入 <code>failed</code> 或 <code>closed</code>，此时上下行都直接为 <code>6</code>。</li>
+<li>当前网络质量严重下降。</li>
+<li>媒体连接进入失败或关闭状态。</li>
+<li>SDK 判断当前方向已无法提供可用体验。</li>
 </ul>
 <p>单次 <code>6</code> 可能来自瞬时网络切换；连续多次为 <code>6</code>，并且连接状态、媒体码率或用户体验同时异常时，再展示强提醒。<code>closed</code> 也可能是正常挂断后的短暂统计结果，页面应在 <code>ended</code> / <code>failed</code> 时清空本通电话的数据。</p>
-<h3 id="5-3-4-页面格式化">5.3.4 页面格式化<a class="heading-anchor" href="#5-3-4-页面格式化" aria-label="链接到本节">#</a></h3>
+<h3 id="5-3-3-页面格式化">5.3.3 页面格式化<a class="heading-anchor" href="#5-3-3-页面格式化" aria-label="链接到本节">#</a></h3>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const qualityNames = [
   &#39;暂无数据&#39;, &#39;极佳&#39;, &#39;较好&#39;, &#39;一般&#39;, &#39;差&#39;, &#39;极差&#39;, &#39;已断开或极差&#39;
 ];
@@ -274,7 +272,7 @@ function formatQuality(level)
 }
 </code></pre>
 </div><h2 id="5-4-stats-detailed-report-connection">5.4 <code>stats:detailed-report.connection</code><a class="heading-anchor" href="#5-4-stats-detailed-report-connection" aria-label="链接到本节">#</a></h2>
-<p>Demo 的“网络连接”区域使用以下全部字段：</p>
+<p>连接区域可使用以下字段：</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -335,7 +333,7 @@ function formatQuality(level)
 <tr>
 <th>字段</th>
 <th>类型/可选值</th>
-<th>Demo 展示</th>
+<th>建议展示</th>
 <th>含义</th>
 </tr>
 </thead>
@@ -455,7 +453,7 @@ function formatQuality(level)
 <tr>
 <th>字段</th>
 <th>类型/可选值</th>
-<th>Demo 展示</th>
+<th>建议展示</th>
 <th>含义</th>
 </tr>
 </thead>
@@ -539,7 +537,7 @@ function formatQuality(level)
 <tbody><tr>
 <td><code>RTT</code></td>
 <td>非负整数，ms</td>
-<td>当前媒体反馈 RTT 优先；缺失时回退连接 RTT；仍缺失时为 <code>0</code></td>
+<td>SDK 提供的当前往返时延；暂无有效值时为 <code>0</code></td>
 </tr>
 <tr>
 <td><code>uplinkNetworkQuality</code></td>
@@ -557,95 +555,60 @@ function formatQuality(level)
 <td>当前样本达到诊断条件的问题</td>
 </tr>
 </tbody></table></div>
-<p>Demo 的摘要事件只发送 <code>code</code> 和 <code>severity</code>。需要查看某个问题对应的流及触发证据时，可以读取：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const fullReport = session.statsMonitor &amp;&amp;
-  session.statsMonitor.getLatestReport();
-
-if (fullReport)
-{
-  fullReport.quality.issues.forEach(function(issue)
-  {
-    console.log(issue.code, issue.severity, issue.streamId, issue.evidence);
-  });
-}
-</code></pre>
-</div><p><code>severity</code> 范围为 <code>1～6</code>，数字越大越严重。它用于问题排序和提示强度，不等同于 HTTP、SIP 或浏览器错误码。</p>
-<h2 id="5-8-全部质量问题码与触发条件">5.8 全部质量问题码与触发条件<a class="heading-anchor" href="#5-8-全部质量问题码与触发条件" aria-label="链接到本节">#</a></h2>
+<p><code>severity</code> 范围为 <code>1～6</code>，数字越大越严重。它用于问题排序和提示强度，不等同于 HTTP、SIP 或浏览器错误码。</p>
+<h2 id="5-8-质量问题码">5.8 质量问题码<a class="heading-anchor" href="#5-8-质量问题码" aria-label="链接到本节">#</a></h2>
+<p>问题码用于页面提示和监控聚合。触发规则由 SDK 版本维护，业务只需根据 <code>code</code> 和 <code>severity</code> 选择合适的提示文案，不应在页面中自行复制质量判定规则。</p>
 <h3 id="上行和编码">上行和编码<a class="heading-anchor" href="#上行和编码" aria-label="链接到本节">#</a></h3>
 <div class="table-wrap"><table>
 <thead>
 <tr>
 <th><code>code</code></th>
-<th>Demo 中文</th>
-<th>主要触发条件</th>
-<th align="right">严重度</th>
+<th>建议文案</th>
 </tr>
 </thead>
 <tbody><tr>
 <td><code>UPLINK_BANDWIDTH_LIMITED</code></td>
 <td>上行带宽受限</td>
-<td>视频 <code>qualityLimitationReason === &#39;bandwidth&#39;</code></td>
-<td align="right">4</td>
 </tr>
 <tr>
 <td><code>UPLINK_BANDWIDTH_BUDGET_LOW</code></td>
 <td>上行可用带宽不足</td>
-<td>可用上行带宽小于所有活动发送层目标码率总和的 <code>80%</code></td>
-<td align="right">4</td>
 </tr>
 <tr>
 <td><code>UPLINK_PACKET_LOSS</code></td>
-<td>上行丢包</td>
-<td>远端反馈丢包 <code>&gt;10%</code>；<code>&gt;30%</code> 时更严重</td>
-<td align="right">4 / 6</td>
+<td>上行丢包较高</td>
 </tr>
 <tr>
 <td><code>UPLINK_SEND_QUEUE_DELAY</code></td>
-<td>上行发送排队</td>
-<td>平均发送排队 <code>&gt;50ms</code>；<code>&gt;150ms</code> 时更严重</td>
-<td align="right">3 / 5</td>
+<td>上行发送排队明显</td>
 </tr>
 <tr>
 <td><code>UPLINK_HIGH_RETRANSMISSION</code></td>
-<td>上行重传率高</td>
-<td>重传包比例 <code>&gt;10%</code>；<code>&gt;25%</code> 时更严重</td>
-<td align="right">3 / 5</td>
+<td>上行重传率较高</td>
 </tr>
 <tr>
 <td><code>UPLINK_FEEDBACK_REQUESTS</code></td>
-<td>上行重传请求多</td>
-<td>单轮 <code>NACK &gt;10</code>，或 <code>PLI &gt;2</code>，或 <code>FIR &gt;2</code></td>
-<td align="right">3</td>
+<td>上行重传请求较多</td>
 </tr>
 <tr>
 <td><code>UPLINK_LOCAL_SEND_DISCARDS</code></td>
-<td>上行本地丢弃</td>
-<td>浏览器报告本轮发送包或字节被本地丢弃</td>
-<td align="right">4</td>
+<td>本地发送数据被丢弃</td>
 </tr>
 <tr>
 <td><code>ENCODER_CPU_LIMITED</code></td>
-<td>编码器 CPU 受限</td>
-<td>视频 <code>qualityLimitationReason === &#39;cpu&#39;</code></td>
-<td align="right">4</td>
+<td>编码性能受限</td>
 </tr>
 <tr>
 <td><code>ENCODER_SLOW</code></td>
-<td>编码器过慢</td>
-<td>平均编码耗时超过单帧预算 <code>80%</code>；超过 <code>150%</code> 时更严重</td>
-<td align="right">3 / 5</td>
+<td>视频编码速度较慢</td>
 </tr>
 <tr>
 <td><code>ENCODER_FRAME_RATE_REDUCED</code></td>
 <td>编码帧率下降</td>
-<td>采集源 FPS <code>≥10</code>，实际编码 FPS 小于源 FPS 的 <code>70%</code></td>
-<td align="right">3</td>
 </tr>
 <tr>
 <td><code>ENCODER_RESOLUTION_REDUCED</code></td>
 <td>编码分辨率下降</td>
-<td>实际编码像素数小于采集源像素数的 <code>60%</code></td>
-<td align="right">3</td>
 </tr>
 </tbody></table></div>
 <h3 id="下行和解码">下行和解码<a class="heading-anchor" href="#下行和解码" aria-label="链接到本节">#</a></h3>
@@ -653,70 +616,48 @@ if (fullReport)
 <thead>
 <tr>
 <th><code>code</code></th>
-<th>Demo 中文</th>
-<th>主要触发条件</th>
-<th align="right">严重度</th>
+<th>建议文案</th>
 </tr>
 </thead>
 <tbody><tr>
 <td><code>DOWNLINK_PACKET_LOSS</code></td>
-<td>下行丢包</td>
-<td>当前接收丢包 <code>&gt;10%</code>；<code>&gt;30%</code> 时更严重</td>
-<td align="right">4 / 6</td>
+<td>下行丢包较高</td>
 </tr>
 <tr>
 <td><code>DOWNLINK_HIGH_JITTER</code></td>
-<td>下行高抖动</td>
-<td>抖动 <code>&gt;50ms</code>；<code>&gt;100ms</code> 时更严重</td>
-<td align="right">3 / 5</td>
+<td>下行抖动较高</td>
 </tr>
 <tr>
 <td><code>DOWNLINK_PACKET_DISCARDS</code></td>
-<td>下行本地丢弃</td>
-<td>本轮有接收包被浏览器本地丢弃</td>
-<td align="right">3</td>
+<td>本地接收数据被丢弃</td>
 </tr>
 <tr>
 <td><code>DOWNLINK_JITTER_BUFFER_DELAY</code></td>
-<td>下行缓冲过高</td>
-<td>平均抖动缓冲 <code>&gt;200ms</code>；<code>&gt;500ms</code> 时更严重</td>
-<td align="right">3 / 5</td>
+<td>下行缓冲延迟较高</td>
 </tr>
 <tr>
 <td><code>DOWNLINK_TRANSPORT_STALLED</code></td>
-<td>下行传输停滞</td>
-<td>有下行流、远端未保持，且超过 <code>10s</code> 没收到包</td>
-<td align="right">5</td>
+<td>下行媒体传输停滞</td>
 </tr>
 <tr>
 <td><code>DOWNLINK_FEEDBACK_REQUESTS</code></td>
-<td>下行重传请求多</td>
-<td>单轮 <code>NACK &gt;10</code>，或 <code>PLI &gt;2</code>，或 <code>FIR &gt;2</code></td>
-<td align="right">3</td>
+<td>下行重传请求较多</td>
 </tr>
 <tr>
 <td><code>VIDEO_DECODER_SLOW</code></td>
-<td>解码器过慢</td>
-<td>平均解码耗时达到单帧预算 <code>80%</code>；超过 <code>150%</code> 时更严重</td>
-<td align="right">3 / 5</td>
+<td>视频解码速度较慢</td>
 </tr>
 <tr>
 <td><code>VIDEO_FRAME_DROPPING</code></td>
-<td>视频丢帧</td>
-<td>丢帧比例 <code>&gt;10%</code>；<code>&gt;30%</code> 时更严重</td>
-<td align="right">3 / 5</td>
+<td>视频丢帧明显</td>
 </tr>
 <tr>
 <td><code>VIDEO_FREEZING</code></td>
-<td>视频卡顿</td>
-<td>本轮新增冻结次数或冻结时长</td>
-<td align="right">5</td>
+<td>视频出现卡顿</td>
 </tr>
 <tr>
 <td><code>VIDEO_PAUSING</code></td>
-<td>视频暂停</td>
-<td>本轮新增暂停次数或暂停时长</td>
-<td align="right">4</td>
+<td>视频出现暂停</td>
 </tr>
 </tbody></table></div>
 <h3 id="连接">连接<a class="heading-anchor" href="#连接" aria-label="链接到本节">#</a></h3>
@@ -724,31 +665,23 @@ if (fullReport)
 <thead>
 <tr>
 <th><code>code</code></th>
-<th>Demo 中文</th>
-<th>主要触发条件</th>
-<th align="right">严重度</th>
+<th>建议文案</th>
 </tr>
 </thead>
 <tbody><tr>
 <td><code>HIGH_RTT</code></td>
-<td>高延迟</td>
-<td>RTT <code>&gt;200ms</code>；<code>&gt;500ms</code> 时更严重</td>
-<td align="right">4 / 6</td>
+<td>网络延迟较高</td>
 </tr>
 <tr>
 <td><code>CONNECTION_PATH_CHANGED</code></td>
-<td>网络路径变化</td>
-<td>本轮选中的 ICE candidate pair 发生变化</td>
-<td align="right">2</td>
+<td>网络路径发生变化</td>
 </tr>
 <tr>
 <td><code>CONNECTION_UNAVAILABLE</code></td>
-<td>连接不可用</td>
-<td><code>connectionState</code> 为 <code>failed</code> 或 <code>closed</code></td>
-<td align="right">6</td>
+<td>媒体连接不可用</td>
 </tr>
 </tbody></table></div>
-<p>切换摄像头、开始/停止共享、音视频模式变化或重协商后会进入短暂过渡期。过渡期继续采样，但暂缓瞬时问题诊断，避免把正常换轨抖动误报成故障。</p>
+<p>切换摄像头、开始/停止共享或改变音视频模式后，短时间的指标波动可能属于正常现象。页面应结合连续样本和用户实际体验判断是否提示。</p>
 <h2 id="5-9-兼容事件-stats-network-quality">5.9 兼容事件 <code>stats:network-quality</code><a class="heading-anchor" href="#5-9-兼容事件-stats-network-quality" aria-label="链接到本节">#</a></h2>
 <div class="code-block"><div class="code-toolbar"><span>ts</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-ts">{
   RTT: number,
@@ -764,36 +697,35 @@ if (fullReport)
 <tr>
 <th>字段</th>
 <th>单位</th>
-<th>计算口径</th>
+<th>含义</th>
 </tr>
 </thead>
 <tbody><tr>
 <td><code>RTT</code></td>
 <td>ms</td>
-<td>当前媒体 RTT 优先，缺失时回退连接 RTT</td>
+<td>当前往返时延</td>
 </tr>
 <tr>
 <td><code>uplinkLoss</code></td>
 <td><code>%</code></td>
-<td>所有活动上行 RTP 中当前丢包率最大值</td>
+<td>当前上行丢包率</td>
 </tr>
 <tr>
 <td><code>downlinkLoss</code></td>
 <td><code>%</code></td>
-<td>所有下行 RTP 中当前丢包率最大值</td>
+<td>当前下行丢包率</td>
 </tr>
 <tr>
 <td><code>uplinkNetworkQuality</code></td>
 <td><code>0～6</code></td>
-<td>按 5.3 阈值计算</td>
+<td>当前上行质量等级</td>
 </tr>
 <tr>
 <td><code>downlinkNetworkQuality</code></td>
 <td><code>0～6</code></td>
-<td>按 5.3 阈值计算</td>
+<td>当前下行质量等级</td>
 </tr>
 </tbody></table></div>
-<p>丢包和 RTT 使用当前采样，不做多样本平均。这样页面能更快反映用户此刻的听感和观感。</p>
 <h2 id="5-10-兼容事件-stats-report">5.10 兼容事件 <code>stats:report</code><a class="heading-anchor" href="#5-10-兼容事件-stats-report" aria-label="链接到本节">#</a></h2>
 <div class="code-block"><div class="code-toolbar"><span>ts</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-ts">{
   RTT: number,
@@ -889,7 +821,7 @@ if (fullReport)
 <li>页面不应把统计错误显示成通话失败。</li>
 <li>连续错误可上报监控系统，但仍以 <code>failed</code> / <code>ended</code> 和连接状态判断通话生命周期。</li>
 </ul>
-<h2 id="5-12-最近报告与完整诊断">5.12 最近报告与完整诊断<a class="heading-anchor" href="#5-12-最近报告与完整诊断" aria-label="链接到本节">#</a></h2>
+<h2 id="5-12-最近统计结果">5.12 最近统计结果<a class="heading-anchor" href="#5-12-最近统计结果" aria-label="链接到本节">#</a></h2>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const monitor = currentSession &amp;&amp; currentSession.statsMonitor;
 
 if (monitor)
@@ -925,24 +857,14 @@ if (monitor)
 <td>否</td>
 </tr>
 </tbody></table></div>
-<p>完整报告还包含采样阶段、候选路径、媒体源、RTP 累计/增量数据、问题证据、兼容等级和采样性能。页面常规展示使用 <code>stats:detailed-report</code> 即可；问题上报时可从完整报告选取必要字段，避免直接展示候选地址等网络信息。</p>
+<p>页面常规展示使用 <code>stats:detailed-report</code> 即可。问题上报时只选取排障需要的字段，并按产品安全要求脱敏。</p>
 <p><code>session.statsMonitor</code> 在 PeerConnection 创建后可用，会话结束释放后为 <code>null</code>。会话内实例不要自行调用 <code>start()</code>、<code>stop()</code> 或 <code>reset()</code>。</p>
-<p>在 Base JS Demo 的通话建立后，可直接在浏览器控制台执行：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">getCurrentCallStats();
-</code></pre>
-</div><p>返回对象同时包含 <code>networkQuality</code>、<code>legacyReport</code> 和 <code>detailedReport</code>，便于把页面显示、兼容事件和完整诊断报告逐项对照。采样尚未产生或通话已结束时，对应值为 <code>null</code>。</p>
 <h2 id="5-13-独立-peerconnection-监控">5.13 独立 PeerConnection 监控<a class="heading-anchor" href="#5-13-独立-peerconnection-监控" aria-label="链接到本节">#</a></h2>
 <p>只有监控不属于 <code>RTCSession</code> 的 PeerConnection 时才直接创建：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const monitor = new CRTC.RTCStatsMonitor(peerConnection, {
-  sampleIntervalMs           : 2000,
-  legacyReportIntervalMs     : 2000,
-  backgroundSampleIntervalMs : 2000,
-  transitionGraceSamples     : 2,
-  enableDetailedReport       : true,
-  enableRawStatsLog          : false,
-  rawStatsLogIntervalMs      : 10000,
-  getStatsTimeoutMs          : 5000,
-  autoStart                  : true
+  sampleIntervalMs     : 2000,
+  enableDetailedReport : true,
+  autoStart            : true
 });
 
 monitor.on(&#39;detailed-report&#39;, renderStats);
@@ -967,46 +889,10 @@ monitor.stop();
 <td>前台采样间隔，最小 <code>500</code></td>
 </tr>
 <tr>
-<td><code>legacyReportIntervalMs</code></td>
-<td><code>number</code></td>
-<td align="right"><code>2000</code></td>
-<td>兼容事件输出间隔</td>
-</tr>
-<tr>
-<td><code>backgroundSampleIntervalMs</code></td>
-<td><code>number</code></td>
-<td align="right"><code>2000</code></td>
-<td>页面后台采样间隔</td>
-</tr>
-<tr>
-<td><code>transitionGraceSamples</code></td>
-<td><code>number</code></td>
-<td align="right"><code>2</code></td>
-<td>媒体变化后暂缓诊断的样本数，非负整数</td>
-</tr>
-<tr>
 <td><code>enableDetailedReport</code></td>
 <td><code>boolean</code></td>
 <td align="right"><code>true</code></td>
 <td>是否发送详细摘要事件</td>
-</tr>
-<tr>
-<td><code>enableRawStatsLog</code></td>
-<td><code>boolean</code></td>
-<td align="right"><code>false</code></td>
-<td>是否限频记录浏览器原始报告；生产建议关闭</td>
-</tr>
-<tr>
-<td><code>rawStatsLogIntervalMs</code></td>
-<td><code>number</code></td>
-<td align="right"><code>10000</code></td>
-<td>原始报告日志最小间隔</td>
-</tr>
-<tr>
-<td><code>getStatsTimeoutMs</code></td>
-<td><code>number</code></td>
-<td align="right"><code>5000</code></td>
-<td>单次采样超时，最小 <code>100</code></td>
 </tr>
 <tr>
 <td><code>autoStart</code></td>
@@ -1016,7 +902,7 @@ monitor.stop();
 </tr>
 </tbody></table></div>
 <h2 id="5-14-demo-面板逐项对照">5.14 Demo 面板逐项对照<a class="heading-anchor" href="#5-14-demo-面板逐项对照" aria-label="链接到本节">#</a></h2>
-<p>Base JS Demo 的 <code>newRTCSession</code> 中完成了以下处理：</p>
+<p>示例统计面板可按以下字段组织：</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -1045,18 +931,14 @@ monitor.stop();
 <td><code>quality.issues[].code/severity</code></td>
 </tr>
 </tbody></table></div>
-<p>Demo 代码见 <a href="../../../demo/base-js/js/app.js"><code>demo/base-js/js/app.js</code></a> 的 <code>RTCSession 统计事件接入示例</code>。运行和验证步骤见 <a href="08-demo-guide.html">Base JS Demo 学习与验证</a>，旧统计迁移见 <a href="07-upgrade-guide.html">旧版功能升级指南</a>。</p>
+<p>Demo 代码见 [<code>demo/base-js/js/app.js</code>] 的 <code>RTCSession 统计事件接入示例</code>。运行和验证步骤见 <a href="08-demo-guide.html">Base JS Demo 学习与验证</a>，旧统计迁移见 <a href="07-upgrade-guide.html">旧版功能升级指南</a>。</p>
 <p><a href="04-media-features.html">← 上一章：媒体能力</a> · <a href="06-api-reference.html">下一章：SDK API 参考 →</a></p>
 
-      <nav class="page-pagination" aria-label="上一篇和下一篇">
-        <a class="previous" href="04-media-features.html"><span>上一篇</span>4. 媒体能力：AiNS、虚拟背景与混流</a>
-        <a class="next" href="06-api-reference.html"><span>下一篇</span>6. SDK API 参考</a>
-      </nav>
     </article>
     
     <nav class="page-toc" aria-label="本页目录">
       <h2>本页目录</h2>
-      <a class="toc-depth-2" href="#5-1-完整接入示例">5.1 完整接入示例</a><a class="toc-depth-2" href="#5-2-数值-单位与空值">5.2 数值、单位与空值</a><a class="toc-depth-2" href="#5-3-网络质量等级-0-6">5.3 网络质量等级 0～6</a><a class="toc-depth-3" href="#5-3-1-精确判定表">5.3.1 精确判定表</a><a class="toc-depth-3" href="#5-3-2-什么时候会出现-0">5.3.2 什么时候会出现 0</a><a class="toc-depth-3" href="#5-3-3-什么时候会出现-6">5.3.3 什么时候会出现 6</a><a class="toc-depth-3" href="#5-3-4-页面格式化">5.3.4 页面格式化</a><a class="toc-depth-2" href="#5-4-stats-detailed-report-connection">5.4 stats:detailed-report.connection</a><a class="toc-depth-2" href="#5-5-stats-detailed-report-outbound">5.5 stats:detailed-report.outbound[]</a><a class="toc-depth-2" href="#5-6-stats-detailed-report-inbound">5.6 stats:detailed-report.inbound[]</a><a class="toc-depth-2" href="#5-7-stats-detailed-report-quality">5.7 stats:detailed-report.quality</a><a class="toc-depth-2" href="#5-8-全部质量问题码与触发条件">5.8 全部质量问题码与触发条件</a><a class="toc-depth-3" href="#上行和编码">上行和编码</a><a class="toc-depth-3" href="#下行和解码">下行和解码</a><a class="toc-depth-3" href="#连接">连接</a><a class="toc-depth-2" href="#5-9-兼容事件-stats-network-quality">5.9 兼容事件 stats:network-quality</a><a class="toc-depth-2" href="#5-10-兼容事件-stats-report">5.10 兼容事件 stats:report</a><a class="toc-depth-2" href="#5-11-stats-stats-error">5.11 stats:stats-error</a><a class="toc-depth-2" href="#5-12-最近报告与完整诊断">5.12 最近报告与完整诊断</a><a class="toc-depth-2" href="#5-13-独立-peerconnection-监控">5.13 独立 PeerConnection 监控</a><a class="toc-depth-2" href="#5-14-demo-面板逐项对照">5.14 Demo 面板逐项对照</a>
+      <a class="toc-depth-2" href="#5-1-完整接入示例">5.1 完整接入示例</a><a class="toc-depth-2" href="#5-2-数值-单位与空值">5.2 数值、单位与空值</a><a class="toc-depth-2" href="#5-3-网络质量等级-0-6">5.3 网络质量等级 0～6</a><a class="toc-depth-3" href="#5-3-1-什么时候会出现-0">5.3.1 什么时候会出现 0</a><a class="toc-depth-3" href="#5-3-2-什么时候会出现-6">5.3.2 什么时候会出现 6</a><a class="toc-depth-3" href="#5-3-3-页面格式化">5.3.3 页面格式化</a><a class="toc-depth-2" href="#5-4-stats-detailed-report-connection">5.4 stats:detailed-report.connection</a><a class="toc-depth-2" href="#5-5-stats-detailed-report-outbound">5.5 stats:detailed-report.outbound[]</a><a class="toc-depth-2" href="#5-6-stats-detailed-report-inbound">5.6 stats:detailed-report.inbound[]</a><a class="toc-depth-2" href="#5-7-stats-detailed-report-quality">5.7 stats:detailed-report.quality</a><a class="toc-depth-2" href="#5-8-质量问题码">5.8 质量问题码</a><a class="toc-depth-3" href="#上行和编码">上行和编码</a><a class="toc-depth-3" href="#下行和解码">下行和解码</a><a class="toc-depth-3" href="#连接">连接</a><a class="toc-depth-2" href="#5-9-兼容事件-stats-network-quality">5.9 兼容事件 stats:network-quality</a><a class="toc-depth-2" href="#5-10-兼容事件-stats-report">5.10 兼容事件 stats:report</a><a class="toc-depth-2" href="#5-11-stats-stats-error">5.11 stats:stats-error</a><a class="toc-depth-2" href="#5-12-最近统计结果">5.12 最近统计结果</a><a class="toc-depth-2" href="#5-13-独立-peerconnection-监控">5.13 独立 PeerConnection 监控</a><a class="toc-depth-2" href="#5-14-demo-面板逐项对照">5.14 Demo 面板逐项对照</a>
     </nav>
   </main>
   <button type="button" class="back-to-top" aria-label="回到顶部">↑</button>

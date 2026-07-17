@@ -4,20 +4,11 @@
 
 Base JS Demo 是一份可运行的完整接入示例，覆盖 UA 创建、自动/手动注册、呼入呼出、媒体设备、音视频模式、共享、AiNS、虚拟背景、镜像、水印、DTMF、SIP INFO、呼转和通话质量统计。
 
-本章按“先运行 → 看懂页面参数 → 完成基础通话 → 逐项验证功能 → 对照代码迁移”的顺序使用。
+本章按“先运行 → 配置环境 → 完成基础通话 → 逐项验证功能 → 迁移到业务页面”的顺序使用。
 
-## 8.1 Demo 文件分工
+## 8.1 使用建议
 
-| 文件 | 主要内容 |
-| --- | --- |
-| [`demo/base-js/index.html`](../../demo/base-js/index.html) | 页面元素、按钮、统计浮层和资源引入顺序 |
-| [`demo/base-js/js/app.js`](../../demo/base-js/js/app.js) | UA 配置、注册、会话事件、呼叫/接听、模式、共享和统计 |
-| [`demo/base-js/js/app-media-effects.js`](../../demo/base-js/js/app-media-effects.js) | AiNS、虚拟背景、composer、镜像和水印参数 |
-| [`demo/base-js/js/app.ui-bindings.js`](../../demo/base-js/js/app.ui-bindings.js) | 页面控件与 SDK 调用的直接绑定 |
-| [`demo/base-js/js/app.sdk-helper.js`](../../demo/base-js/js/app.sdk-helper.js) | URL 参数、设备、媒体流和页面辅助函数 |
-| [`demo/config.js`](../../demo/config.js) | 环境、WSS、SIP 域、授权和 ICE/TURN 配置 |
-
-阅读顺序建议：先在 `app.js` 找 `configuration`、UA 事件、`newRTCSession` 和 `call()`，再到 `app-media-effects.js` 看媒体参数，最后看 UI 绑定。
+建议先完成注册、语音通话和音视频通话，再逐项验证设备切换、媒体效果、共享和统计。迁移到业务页面时，以本指南中的公开 SDK 调用为准，不要复制 Demo 的测试账号或环境配置。
 
 ## 8.2 运行条件
 
@@ -36,100 +27,49 @@ python -m http.server 8080
 打开两个账号：
 
 ```text
-http://localhost:8080/demo/base-js/index.html?caller=7300
-http://localhost:8080/demo/base-js/index.html?caller=7301
+http://localhost:8080/demo/base-js/index.html?caller=1001
+http://localhost:8080/demo/base-js/index.html?caller=1002
 ```
 
-第一次打开页面时允许音视频权限。Demo 会进行一次预采集以获得完整设备名称，随后停止这次预采集的 tracks。
+第一次打开页面时允许音视频权限，设备列表才能显示完整名称。
 
 ## 8.3 环境配置
 
-`demo/config.js` 中每个 `env_*` 对象表示一套环境：
+运行前应按交付说明准备以下信息：
 
-```js
-const envs = {
-  env_default : {
-    signalingUrl       : 'wss://sip.example.com/wss',
-    sipDomain          : 'example.com',
-    secretKey          : 'SDK 授权码',
-    iceServers         : [
-      {
-        urls       : 'turn:turn.example.com:3478?transport=udp',
-        username   : 'turn-user',
-        credential : 'turn-password'
-      }
-    ],
-    iceTransportPolicy : 'relay',
-    password           : '可选密码前缀'
-  }
-};
-```
+| 配置 | 用途 |
+| --- | --- |
+| WSS 地址 | 连接 SIP 信令服务 |
+| SIP 域和测试账号 | 生成当前账号及被叫地址 |
+| 注册凭据 | 完成 SIP 鉴权 |
+| SDK 授权码 | 初始化 SDK |
+| STUN/TURN 配置 | 建立 WebRTC 媒体连接 |
 
-| 字段 | 类型/可选值 | 必填 | 用途 |
-| --- | --- | --- | --- |
-| `signalingUrl` | `wss://...` | 是 | SIP over WebSocket 地址 |
-| `sipDomain` | 域名或服务约定地址 | 是 | 生成当前账号和被叫 SIP URI |
-| `secretKey` | `string` | 是 | SDK 授权 |
-| `iceServers` | `RTCIceServer[] \| null` | 视网络 | STUN/TURN 列表 |
-| `iceTransportPolicy` | `all` / `relay` | 否 | `all` 允许所有候选；`relay` 强制 TURN |
-| `password` | `string` | 否 | Demo 账号密码拼接使用的前缀 |
+这些值必须属于同一套可用环境。不要在公开文档、代码仓库或公开页面中写入真实密码、授权码或 TURN 凭据。
 
-环境选择：
-
-```text
-?caller=7300&env=dev
-```
-
-`env=dev` 对应 `env_dev`；不传 `env` 使用 `env_default`。如果名称不存在，页面无法得到完整配置。
-
-## 8.4 URL 参数完整说明
+## 8.4 URL 参数说明
 
 | 参数 | 示例 | 默认值 | 作用 |
 | --- | --- | --- | --- |
-| `caller` | `7300` | 无 | 当前 SIP 账号；运行 Demo 时必须传 |
-| `env` | `dev` | `default` | 选择 `env_dev` 等环境 |
+| `caller` | `1001` | 无 | 当前 SIP 账号；运行 Demo 时必须传 |
 | `register` | `manual` | 自动注册 | `manual` 时连接后显式调用 `ua.register()` |
-| `xdata` | Base64 字符串 | `dGVzdCB4LWRhdGE=` | INVITE 的 `X-Data` 随路数据 |
-| `mbit` | `800` | `400` | 视频最大码率，单位 kbps |
-| `rec` | `30` | 关闭 | Demo 录音时长，单位秒 |
-| `noremb` | `true` | `false` | 互通场景的 REMB/Transport-CC 处理选项 |
-| `ext` | `BFCP,BP720P` | 无 | 逗号分隔的扩展能力 |
 
 组合示例：
 
 ```text
-http://localhost:8080/demo/base-js/index.html?caller=7300&env=dev&register=manual&mbit=800&ext=BP720P
+http://localhost:8080/demo/base-js/index.html?caller=1001&register=manual
 ```
-
-`ext=BP720P` 会把默认摄像头约束从 `640×480@15fps` 调整为 `1280×720@15fps`。其他扩展必须与服务端和对端能力一致。
 
 ## 8.5 Demo 的 UA 配置
 
-Demo 生成：
-
-```js
-const configuration = {
-  sockets                          : socket,
-  uri                              : `sip:${account}@${sipDomain}`,
-  display_name                     : account,
-  password                         : `${password || 'yl_19'}${account}`,
-  connection_recovery_max_interval : 3,
-  connection_recovery_min_interval : 2,
-  register_expires                 : 20,
-  register                         : !manualRegister,
-  session_timers                   : false,
-  secret_key                       : secretKey
-};
-```
-
-这些值用于演示，不等于所有项目的推荐生产值：账号密码生成规则、注册过期时间、Session Timer 和重连间隔应按你的 SIP 服务要求配置。
+Demo 会根据已配置的环境和账号创建 `CRTC.UA`。客户项目应使用服务方提供的 WSS、SIP URI、鉴权凭据、授权码和注册参数，不要迁移 Demo 的测试账号规则。完整 UA 配置见 [SDK API 参考](./06-api-reference.md)。
 
 ### 自动注册
 
 默认 URL：
 
 ```text
-?caller=7300
+?caller=1001
 ```
 
 `ua.start()` 连接成功后自动注册，事件顺序通常为 `connected → registered`。
@@ -137,32 +77,16 @@ const configuration = {
 ### 手动注册
 
 ```text
-?caller=7300&register=manual
+?caller=1001&register=manual
 ```
 
 配置 `register: false`；`connected` 回调调用 `ua.register()`。最终仍以 `registered` 事件作为可呼叫条件。
 
-页面启动 10 秒后会检查 `isConnected()` 和 `isRegistered()`。任一为 false 时 Demo 停止 UA 并输出网络或注册异常。
+页面以 `isConnected()` 和 `isRegistered()` 判断当前是否可以呼叫，注册失败时应先检查环境和账号配置。
 
 ## 8.6 WebRTC 网络配置
 
-Demo 的 `pcConfig`：
-
-```js
-const pcConfig = {
-  iceServers,
-  iceTransportPolicy,
-  iceCandidatePoolSize : 4,
-  bundlePolicy         : 'max-compat'
-};
-```
-
-| 字段 | Demo 值 | 说明 |
-| --- | --- | --- |
-| `iceServers` | 来自环境 | STUN/TURN 凭据 |
-| `iceTransportPolicy` | `all` 或 `relay` | 是否强制中继 |
-| `iceCandidatePoolSize` | `4` | 预收集候选以减少建连等待 |
-| `bundlePolicy` | `max-compat` | Demo 使用的媒体协商兼容策略 |
+呼叫和接听参数中的 `pcConfig` 应使用服务方提供的 STUN/TURN 配置。是否强制使用 TURN 以及其他兼容参数必须以部署要求为准，不要照搬测试环境值。
 
 注册成功但没有媒体时，先检查 ICE/TURN，不要只检查 WSS。强制 `relay` 时 TURN 地址、凭据、UDP/TCP 端口或防火墙任一异常都会导致媒体失败。
 
@@ -170,7 +94,7 @@ const pcConfig = {
 
 ### 呼叫号码
 
-输入账号部分，例如 `7301`。Demo 调用：
+输入账号部分，例如 `1002`。Demo 调用：
 
 ```js
 await ua.call(`${number}@${sipDomain}`, options);
@@ -212,7 +136,7 @@ await ua.call(`${number}@${sipDomain}`, options);
 | UI 值 | SDK 配置 | 说明 |
 | --- | --- | --- |
 | 空 | 不传背景配置 | 不启用虚拟背景 |
-| `none` | `mode: 'none'` | 运行人物分割但不替换背景的演示选项 |
+| `none` | `mode: 'none'` | 暂不替换背景 |
 | `img1` / `img2` | `mode: 'image'` | 使用 Demo 图片资源 |
 | `blur` | `mode: 'blur'` | 背景模糊 |
 
@@ -252,40 +176,24 @@ await ua.call(`${number}@${sipDomain}`, options);
 
 ## 8.9 基础呼叫按钮
 
-| 按钮 | `call(type, direction)` | 媒体内容 |
+| 按钮 | 核心 SDK 调用 | 媒体内容 |
 | --- | --- | --- |
-| 语音外呼 | `call()` | 麦克风音频，无视频 |
-| 音视频外呼 | `call('video')` | 麦克风 + 摄像头 |
-| 单视频外呼 | `call('onlyVideo')` | 无音频，视频双向能力按呼叫配置 |
-| 共享桌面外呼 | `call('screen')` | 屏幕视频 + 麦克风音频的自定义流 |
-| 音视频外呼（无设备） | `call('callnull')` | 静默音频 + 黑屏视频 |
-| 无麦克风 | `call('callnullaudio')` | 静默音频 + 摄像头 |
-| 无摄像头 | `call('callnullvideo')` | 麦克风 + 黑屏视频 |
+| 语音外呼 | `ua.call()` | 麦克风音频，无视频 |
+| 音视频外呼 | `ua.call()` | 麦克风 + 摄像头 |
+| 共享桌面 | `session.share()` | 通话中共享屏幕 |
 
 呼叫公共步骤：
 
 1. `ua.isRegistered()` 必须为 true。
 2. 终止当前已有会话。
-3. 构建 `extraHeaders`、`extraFeatures` 和 `pcConfig`。
+3. 构建当前业务需要的 `pcConfig` 和呼叫参数。
 4. 写入当前 composer、虚拟背景和 AiNS 配置。
 5. 优先使用自定义 `mediaStream`，否则使用 `mediaConstraints`。
 6. 写入选中的 camera/mic deviceId。
 7. `await ua.call()`。
-8. 在 session 上绑定远端早期音频轨道。
+8. 在 session 上处理远端媒体和通话事件。
 
-Demo 的 `extraHeaders`：
-
-```js
-[
-  `X-Data: ${xdata}`,
-  `X-UA: ${navigator.userAgent}`,
-  `X-Direction: ${direction || 'sendrecv'}`
-]
-```
-
-自定义头的名称、编码和服务端处理规则需双方约定。
-
-B2B 按钮还依赖特定外部服务获取目标号码和随路数据，只在相应服务可用时验证；普通 SDK 接入不需要这一步。
+需要使用自定义 SIP 头时，其名称、编码和服务端处理规则必须由双方约定；无明确要求时不要添加。
 
 ## 8.10 接听按钮
 
@@ -295,10 +203,6 @@ B2B 按钮还依赖特定外部服务获取目标号码和随路数据，只在�
 | --- | --- |
 | 语音接听 | 麦克风音频，`video: false` |
 | 音视频接听 | 麦克风 + 摄像头 |
-| 单视频接听 | 无音频，只使用视频 |
-| 音视频接听（空音频） | 静默音频 + 摄像头 |
-| 单自定义视频接听 | 自定义视频流，无常规音频 |
-| 音频自定义视频接听 | 麦克风 + 自定义视频流 |
 
 每个接听入口都应同时检查：`pcConfig`、媒体约束/自定义流、当前选中设备、composer 和 AiNS。只在呼出路径启用媒体能力会导致接听后功能不一致。
 
@@ -309,9 +213,6 @@ B2B 按钮还依赖特定外部服务获取目标号码和随路数据，只在�
 | 切换音频模式 | `downgradeToAudio()` | `{ useUpdate }` |
 | 切换音视频模式 | `upgradeToVideo()` | `{ useUpdate, videoConstraints }` |
 | 切换单向视频 | `upgradeToVideo()` | `{ sendOnly: true, useUpdate, videoConstraints }` |
-| 自定义流视频模式 | `upgradeToVideo()` | `{ useUpdate, videoStream }` |
-| 自定义流单向视频 | `upgradeToVideo()` | `{ sendOnly: true, useUpdate, videoStream/videoConstraints }` |
-| 替换自定义流 | `switchDevice()` 后按需调用 `renegotiate()` | 摄像头可传设备 ID、`user` 或 `environment`；仅在新的媒体方向需要 SDP 协商时调用 `renegotiate()` |
 
 模式切换完成后监听 `mode({ mode: 'audio'|'video' })` 更新页面。不要只在按钮点击时先改 UI，因为远端可能拒绝或协商失败。
 
@@ -320,7 +221,7 @@ B2B 按钮还依赖特定外部服务获取目标号码和随路数据，只在�
 | 控件 | SDK 调用 | 参数/返回值 |
 | --- | --- | --- |
 | 麦克风关/开 | `mute({ audio: true })` / `unmute({ audio: true })` | `isMuted().audio` 可读当前状态 |
-| 摄像头关 | `mute({ video: true })` | Demo 也演示 `video_only: true` 兼容选项 |
+| 摄像头关 | `mute({ video: true })` | 关闭本地视频 |
 | 摄像头开 | `unmute({ video: true })` | 监听 `unmuted` |
 | 选择摄像头 | `switchDevice('camera', deviceId)` | Promise；完成后触发 `cameraChanged` |
 | 选择麦克风 | `switchDevice('audio', deviceId)` | Promise |
@@ -399,21 +300,17 @@ session.on('stats:report', function() {});
 | 网络质量 | RTT、上行等级、下行等级 |
 | 存在问题 | issue code 的中文名和 `L1～L6` 严重度 |
 
-质量 `0` 显示暂无数据；不是最佳网络。质量 `6` 可能来自 `>40%` 丢包、`>500ms` RTT 或连接 `failed/closed`。完整解释见 [通话质量统计](./05-call-statistics.md)。
+质量 `0` 显示暂无数据；不是最佳网络。质量 `6` 表示严重异常，应结合连接状态和连续样本提示。完整解释见 [通话质量统计](./05-call-statistics.md)。
 
 会话失败/结束或当前统计会话切换时，Demo 清空旧面板，防止重呼显示上一通数据。
 
 ## 8.16 媒体效果资源检查
 
-确认以下资源可直接返回文件内容：
+确认配置目录中的以下资源可直接返回文件内容：
 
 ```text
-demo/base-js/assets/ains/ans.wasm
-demo/base-js/assets/ains/ans_onnx.tar.gz
-demo/base-js/assets/aivb/vision.js
-demo/base-js/assets/aivb/vision_wasm_internal.wasm
-demo/base-js/assets/aivb/vision_wasm_nosimd_internal.wasm
-demo/base-js/assets/aivb/selfie_segmenter_landscape.tflite
+AiNS: ans.wasm、ans_onnx.tar.gz
+虚拟背景: vision.js、相关 WASM 文件、selfie_segmenter_landscape.tflite
 ```
 
 检查项：
@@ -429,8 +326,8 @@ demo/base-js/assets/aivb/selfie_segmenter_landscape.tflite
 
 ### 阶段 A：注册
 
-1. 账号 7300 默认自动注册，确认 `connected → registered`。
-2. 账号 7301 使用 `register=manual`，确认连接后手动注册成功。
+1. 账号 A 使用自动注册，确认 `connected → registered`。
+2. 账号 B 使用 `register=manual`，确认连接后手动注册成功。
 3. 修改为错误密码，确认 `registrationFailed` 且呼叫被禁止。
 4. 临时断网，观察 offline/disconnected；恢复后等待重新连接和注册。
 
@@ -479,7 +376,7 @@ demo/base-js/assets/aivb/selfie_segmenter_landscape.tflite
 
 | 现象 | 检查顺序 |
 | --- | --- |
-| 页面没有注册 | `caller`、环境名、WSS、证书、账号密码、授权码、10 秒超时日志 |
+| 页面没有注册 | `caller`、WSS、证书、账号密码、授权码和注册失败信息 |
 | `connected` 但不能呼叫 | 等待 `registered`；手动模式确认调用 `ua.register()` |
 | 收到来电但没有声音/画面 | 接听参数、权限、选中设备、ICE/TURN、`connection.ontrack` |
 | `ua.call()` reject | 权限、OverconstrainedError、设备被占用、自定义流是否含有效轨道 |
@@ -488,10 +385,10 @@ demo/base-js/assets/aivb/selfie_segmenter_landscape.tflite
 | 虚拟背景无变化 | composer、slot 0、模型资源、图片 CORS、`mediaEffectsIssue` |
 | 图片水印不显示 | URL/CORS、宽高、透明度是否为 0、位置是否超出画面 |
 | 共享失败 | HTTPS、浏览器支持、用户是否取消选择、DOM 渲染函数是否加载 |
-| 统计显示 `-` | 浏览器字段缺失或基线未建立；等待后续样本 |
+| 统计显示 `-` | 浏览器字段缺失或结果尚未生成；等待后续样本 |
 | 统计显示质量 `0` | 当前方向无有效样本，不是网络最佳 |
 | 视频不自动播放 | 处理 `play()` reject，提供用户点击“恢复播放” |
-| Demo 改了但行为没变 | 确认加载的 `dist/CRTC.min.js` 版本并清理浏览器缓存 |
+| 页面更新后行为没变 | 确认加载的 SDK 版本和脚本地址，并清理浏览器缓存 |
 
 ## 8.19 从 Demo 迁移到业务页面
 
@@ -506,9 +403,9 @@ demo/base-js/assets/aivb/selfie_segmenter_landscape.tflite
 
 业务页面需要替换的部分：
 
-- Demo 的测试账号拼接和环境选择方式。
+- Demo 的测试账号和环境选择方式。
 - 全局变量改为框架状态或组件状态。
-- B2B、特殊空轨、双流等非当前产品场景可不接入。
+- 未使用的扩展能力无需从 Demo 迁移。
 - 日志、错误提示、权限引导和监控上报改为产品实现。
 - 账号密码、TURN 凭据和授权信息应由安全配置流程提供。
 
@@ -524,9 +421,7 @@ demo/base-js/assets/aivb/selfie_segmenter_landscape.tflite
 - 虚拟背景、输出镜像、文字/图片水印。
 - 屏幕、DOM、图片、视频分享。
 - DTMF、SIP INFO 和呼转。
-- 完整统计面板、质量 0～6 和所有 issue 的正确解释。
-
-通话建立并等待至少一个统计周期后，还可在控制台执行 `getCurrentCallStats()`，同时查看兼容网络质量、兼容流报告和完整诊断报告。这样可以把页面摘要与原始字段一一对照；尚未产生报告时返回值中的对应项为 `null`。
+- 完整统计面板、质量 0～6 和问题码的正确解释。
 - 挂断重呼后无旧 session、控制器、媒体流或统计数据残留。
 
 [← 上一章：旧版功能升级](./07-upgrade-guide.md) · [返回学习目录](./README.md)

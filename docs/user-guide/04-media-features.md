@@ -131,7 +131,7 @@ function updateAiNS(level, gain)
 }
 ```
 
-Base JS Demo 在呼叫/接听前通过下拉框决定是否创建 AiNS；通话中演示强度和输出增益热更新。若本通电话开始时未启用 AiNS，选择“开启”不会凭空创建当前控制器，应在下一次呼叫/接听参数中启用。
+若本通电话开始时未启用 AiNS，通话中无法通过 getter 创建控制器，应在下一次呼叫或接听参数中启用。
 
 `getAiNoiseSuppression()` 在当前会话未配置 AiNS、控制器尚未创建或会话已结束时返回 `null`。
 
@@ -143,7 +143,7 @@ Base JS Demo 中对应：
 - `applyAiNsLevelToCurrentCall()`：通话中修改降噪强度。
 - `applyAiNsOutputGainToCurrentCall()`：通话中修改输出增益。
 
-这些函数位于 [`demo/base-js/js/app-media-effects.js`](../../demo/base-js/js/app-media-effects.js)。
+这些函数位于 [`demo/base-js/js/app-media-effects.js`]。
 
 ## 4.4 AI 虚拟背景
 
@@ -244,7 +244,7 @@ function clearVirtualBackground()
 
 - `buildCallComposerOptions()`：构造混流和虚拟背景初始配置。
 - `applyCurrentVirtualBackgroundToSession()`：通话中切换背景。
-- 函数实现见 [`app-media-effects.js`](../../demo/base-js/js/app-media-effects.js)，页面控件见 [`index.html`](../../demo/base-js/index.html)。
+- 函数实现见 [`app-media-effects.js`]，页面控件见 [`index.html`]。
 
 ## 4.5 音视频混流
 
@@ -258,30 +258,11 @@ function clearVirtualBackground()
 | `fps` | 正整数 | 通常 `15` | 输出帧率；部分需要帧率纠偏的浏览器环境会使用适配值 |
 | `backgroundColor` | CSS color | `#000` | 无画面区域背景色 |
 | `audioGain` | `number` | `0.8` | 输入源默认音频增益 |
-| `renderMode` | 见下表 | `auto` | 渲染方式；普通接入使用 `auto` |
-| `workerUrl` | `string \| null` | `null` | 自定义 Worker 脚本地址 |
-| `dropFrameWhenBusy` | `boolean` | `true` | 渲染忙时是否丢弃旧帧避免积压 |
-| `maxFrameQueue` | 正整数 | `1` | 最大等待帧数 |
-| `preserveDrawingBuffer` | `boolean` | `true` | 是否保留绘制缓冲 |
-| `enableInsertable` | `boolean` | `false` | 是否请求可插入流输出能力；需浏览器支持 |
-| `manualCaptureFrameControl` | `boolean` | `true` | 是否使用手动 requestFrame 控制输出 |
 | `sourceMirror` | `boolean` | `false` | 输入源默认镜像 |
 | `mirror` | `boolean` | `false` | 最终输出是否镜像 |
 | `mirrorWatermarksWithOutput` | `boolean` | `false` | 输出镜像时水印是否一起镜像 |
 | `watermarks` | 对象、数组或 `null` | `[]` | 初始水印配置 |
 | `sources` | 数组或 `null` | `null` | 各输入源的 slot、增益、镜像和虚拟背景 |
-
-`renderMode` 可选值：
-
-| 值 | 说明 |
-| --- | --- |
-| `auto` | 自动选择并在能力不足时降级，普通接入推荐 |
-| `worker-webgl2` | Worker 中 WebGL2 |
-| `main-webgl2` | 主线程 WebGL2 |
-| `worker-2d` | Worker 中 Canvas2D |
-| `main-2d` | 主线程 Canvas2D，兼容性优先 |
-
-强制某种模式但浏览器不支持时可能触发降级或媒体效果事件。除非有明确兼容验证，不要固定渲染后端。
 
 `sources[]`：
 
@@ -358,7 +339,7 @@ async function updateComposerDisplay()
 }
 ```
 
-Demo 实际使用 `getWatermarks()` 读取当前列表，过滤同 ID 的旧水印后再调用 `setWatermarks()`，这样更新文字水印时不会误删图片水印。
+更新部分水印时，可先用 `getWatermarks()` 读取当前列表，按稳定 ID 替换对应项后再调用 `setWatermarks()`，避免误删其他水印。
 
 ### 水印参数
 
@@ -381,7 +362,7 @@ Demo 实际使用 `getWatermarks()` 读取当前列表，过滤同 ID 的旧水�
 
 预设位置：`top-left`、`top-center`、`top-right`、`center`、`bottom-left`、`bottom-center`、`bottom-right`。
 
-`width`、`height`、`fps` 和 `renderMode` 等构造参数不支持在已有实例上热更新。需要改变这些参数时，在下一次呼叫或接听中传入新配置。
+`width`、`height` 和 `fps` 等初始参数不支持在已有实例上热更新。需要改变这些参数时，在下一次呼叫或接听中传入新配置。
 
 ## 4.6 统一处理媒体效果异常
 
@@ -395,17 +376,12 @@ session.on('mediaEffectsIssue', function(event)
 
 媒体效果失败时不要直接挂断。SDK 会尽量继续使用可用的原始媒体，业务可以关闭对应控件并提示用户。
 
-事件至少读取：
+建议只依赖以下稳定字段：
 
-| 字段 | 类型/常见值 | 说明 |
+| 字段 | 类型 | 说明 |
 | --- | --- | --- |
 | `module` | `AiNS` / `MediaEffectsComposer` | 出问题的能力 |
 | `message` | `string` | 可记录的错误说明 |
-| `component` | `string`（可能存在） | 具体组件 |
-| `stage` | `string`（可能存在） | 失败阶段 |
-| `severity` | `debug` / `warn` / `error`（可能存在） | 严重程度 |
-| `fallbackApplied` | `boolean`（可能存在） | 是否已回退 |
-| `degraded` | `boolean`（可能存在） | 是否处于降级状态 |
 
 ### 常见故障与页面处理
 
@@ -415,7 +391,7 @@ session.on('mediaEffectsIssue', function(event)
 | 输入流没有音频 track | 纯视频、自定义流构造错误 | 不启用 AiNS，检查媒体流 |
 | 虚拟背景模型失败 | 模型/WASM/vision.js 不可访问 | 清除背景效果，继续摄像头 |
 | 图片背景或水印失败 | URL、CORS、图片解码 | 提示资源不可用，保留其他效果 |
-| composer 渲染降级 | Worker/WebGL/性能限制 | 降低输出尺寸/FPS，继续观察 |
+| 混流效果异常 | 浏览器能力或性能限制 | 降低输出尺寸/FPS，继续观察 |
 | 控制器为 `null` | 本通电话没有初始化该能力或已结束 | 不调用方法，下次 call/answer 配置 |
 
 ## 4.7 初始配置和热更新边界
@@ -429,7 +405,6 @@ session.on('mediaEffectsIssue', function(event)
 | 输出镜像 | 是 | `setMirror(boolean)` |
 | 水印列表 | 是 | `setWatermarks()` |
 | composer 宽、高、FPS | 否，下一通配置 | `call/answer` 的 `mediaEffectsComposer` |
-| `renderMode` | 否，下一通配置 | 初始配置 |
 | 从未启用的 composer/AiNS | 不能靠 getter 创建 | 下一通 `call/answer` 配置 |
 
 ## 4.8 性能选择建议
@@ -442,7 +417,7 @@ session.on('mediaEffectsIssue', function(event)
 | 多路输入 | 控制每路分辨率/FPS，观察 CPU、掉帧和编码耗时 |
 | 屏幕文字内容 | `contentHint='detail'/'text'`，同时验证清晰度和帧率 |
 
-效果参数越高不一定体验越好。编码器 CPU 受限、FPS 下降、分辨率下降会在第 5 章的统计 issues 中体现。
+效果参数越高不一定体验越好。可结合第 5 章的码率、帧率、分辨率和质量提示观察实际体验。
 
 ## 4.9 上线检查
 

@@ -2,7 +2,7 @@
 
 [← 上一章：通话质量统计](./05-call-statistics.md) · [学习目录](./README.md) · [下一章：旧版功能升级 →](./07-upgrade-guide.md)
 
-本章集中列出 Base JS Demo 使用的 SDK 对象、方法和事件。每个条目均说明参数、可选值、返回值、触发条件和常见注意事项。
+本章集中列出常用的公开 SDK 对象、方法和事件。每个条目说明参数、可选值、返回值、触发条件和常见注意事项。
 
 ## 6.1 全局对象
 
@@ -83,7 +83,7 @@ const ua = new CRTC.UA({
 | `connection_recovery_max_interval` | 正数 | 否 | `30` 秒 | WSS 恢复最大间隔 |
 | `user_agent` | `string` | 否 | SDK 默认值 | SIP User-Agent 头 |
 
-`connection_recovery_min_interval` 必须小于或等于最大值。Demo 为快速联调使用 `2～3` 秒；生产值按网络和服务要求设置。
+`connection_recovery_min_interval` 必须小于或等于最大值。生产值按网络和服务要求设置。
 
 ## 6.4 UA 方法
 
@@ -144,7 +144,7 @@ if (!ua.isRegistered())
 ### `call(target, options): Promise<RTCSession>`
 
 ```js
-const session = await ua.call('7301@example.com', {
+const session = await ua.call('bob@example.com', {
   pcConfig,
   mediaConstraints : {
     audio : { sampleRate: 48000, channelCount: 1 },
@@ -182,7 +182,7 @@ const session = await ua.call('7301@example.com', {
 | `aiNoiseSuppression` | AiNS 配置 | 无 | 启用本地麦克风 AI 降噪 |
 | `mediaEffectsComposer` | composer 配置 | 无 | 启用混流、虚拟背景、镜像和水印 |
 
-`mediaStream` 至少包含业务需要发送的有效 track。自定义流和 `mediaConstraints` 同时存在时，不能假设 SDK 会额外采集并合并所有轨道；Demo 的特殊空轨场景显式构建完整流。
+`mediaStream` 至少包含业务需要发送的有效 track。自定义流和 `mediaConstraints` 同时存在时，不能假设 SDK 会额外采集并合并所有轨道。
 
 Promise 可能因权限拒绝、约束不满足、媒体流无效或呼叫初始化失败而 reject。SIP 拒接/超时通常通过该 session 的 `failed` 事件处理。
 
@@ -198,7 +198,7 @@ ua.sendOptions(`sip_ping@example.com`);
 | `body` | `string` | 否 | 可选消息体 |
 | `options` | `object` | 否 | 可选额外头和事件处理 |
 
-返回 OPTIONS 请求对象。Demo 在 iOS 场景定时发送；是否需要保活及发送周期应由部署环境决定。
+返回 OPTIONS 请求对象。是否需要用于保活及发送周期应由部署环境决定。
 
 ## 6.5 UA 事件
 
@@ -245,7 +245,6 @@ ua.on('newRTCSession', function(data)
 | --- | --- | --- | --- |
 | `id` | `string` | 会话创建后 | 本通电话标识 |
 | `direction` | `incoming` / `outgoing` | 会话创建后 | 呼入或呼出 |
-| `status` | `number` | 会话全程 | SDK 会话状态；业务优先使用事件 |
 | `connection` | `RTCPeerConnection` | PC 创建后 | 浏览器媒体连接；结束后不可继续使用 |
 | `statsMonitor` | `RTCStatsMonitor \| null` | PC 创建并启用统计后 | 本通电话统计；结束释放后为 `null` |
 | `start_time` | `Date` 等 | 建立后 | 通话开始时间 |
@@ -333,7 +332,7 @@ console.log(hold.local, hold.remote);
 | --- | --- | --- |
 | `audio` | `boolean` | 是否静音/恢复本地音频 |
 | `video` | `boolean` | 是否关闭/恢复本地视频 |
-| `video_only` | `boolean` | Demo 的摄像头关闭兼容选项，仅在对应场景使用 |
+| `video_only` | `boolean` | 特定兼容场景选项；普通接入不传 |
 
 ```js
 session.mute({ audio: true });
@@ -376,7 +375,7 @@ await session.switchDevice('audio', microphoneDeviceId);
 
 ### `renegotiate(options?, done?): boolean`
 
-手动触发重新协商。Demo 在特定摄像头切换后调用：
+手动触发重新协商。仅在设备切换未覆盖的新媒体方向等明确场景使用：
 
 ```js
 session.switchDevice('camera', 'environment')
@@ -388,7 +387,7 @@ session.switchDevice('camera', 'environment')
 
 `options.useUpdate` 选择 UPDATE/re-INVITE，`rtcOfferConstraints` 可指定 Offer 方向。一般设备切换由 SDK 已处理时不重复调用。
 
-### `share(type, id?, assembly?, dual?, skip?): Promise`
+### `share(type, id?, assembly?, dual?): Promise`
 
 | 参数 | 类型/可选值 | 说明 |
 | --- | --- | --- |
@@ -396,7 +395,6 @@ session.switchDevice('camera', 'environment')
 | `id` | CSS selector / `null` | HTML、图片、视频元素；屏幕传 `null` |
 | `assembly` | function / `null` | DOM 转画布函数，如 `html2canvas` |
 | `dual` | `boolean` | `true` 使用双方支持的双流/BFCP 场景 |
-| `skip` | `boolean` | 特定共享兼容选项；普通接入不传 |
 
 ```js
 await session.share('screen', null, null);
@@ -527,11 +525,11 @@ if (aiNS)
 | 字段 | 类型/可选值 | 默认/说明 |
 | --- | --- | --- |
 | `id` | `string` | 业务唯一标识，便于更新/移除 |
-| `target` | `output` / `source` | Demo 使用 `output` |
+| `target` | `output` / `source` | 输出级或输入源级水印 |
 | `type` | `text` / `image` | 水印类型 |
 | `text` | `string` | 文字水印内容 |
 | `image` | URL 或图片/画布/视频/ImageBitmap | 图片水印内容 |
-| `position` | 7 个预设或 `{x,y}` | Demo 使用预设位置 |
+| `position` | 7 个预设或 `{x,y}` | 水印位置 |
 | `width/height` | 正数 | 图片绘制尺寸 |
 | `opacity` | `0～1` | 透明度 |
 | `fontSize` | 正数 | 文字字号 |
@@ -544,11 +542,11 @@ if (aiNS)
 
 ### `setSourceAiVirtualBackground(slot, options): void`
 
-Demo 使用 `slot: 0` 表示本地摄像头。`options.mode` 可为 `none/blur/image/color`，完整参数见第 4 章。
+会话集成时通常使用 `slot: 0` 表示本地摄像头。`options.mode` 可为 `none/blur/image/color`，完整参数见第 4 章。
 
 ### `clearSourceAiVirtualBackground(slot): void`
 
-清除对应输入源的虚拟背景。Demo 使用 `clearSourceAiVirtualBackground(0)`。
+清除对应输入源的虚拟背景。本地摄像头通常使用 `clearSourceAiVirtualBackground(0)`。
 
 ## 6.12 RTCStatsMonitor 会话入口
 
@@ -570,8 +568,6 @@ if (monitor)
 
 会话内实例由 session 管理，不要调用 `start/stop/reset`。独立 PC 的构造和生命周期见第 5 章。
 
-Base JS Demo 还将这三个读取方法组合为控制台辅助函数 `getCurrentCallStats()`；它只读取最近一次结果，不会触发额外采样。
-
 ## 6.13 RTCSession 事件：呼叫建立与结束
 
 | 事件 | 参数字段 | 精确触发条件 |
@@ -590,7 +586,6 @@ Base JS Demo 还将这三个读取方法组合为控制台辅助函数 `getCurre
 | 事件 | 参数 | 触发条件 |
 | --- | --- | --- |
 | `remoteSupportsVideo` | 无需参数 | 远端 SDP 包含视频媒体能力 |
-| `sdp` | `{ originator, type, sdp }` | 每次本地生成或远端接收 SDP；Demo 在互通场景修改 `d.sdp` |
 | `hold` / `unhold` | `{ originator: 'local'|'remote' }` | 本端或远端保持状态变化 |
 | `mode` | `{ mode: 'audio'|'video' }` | 音视频升级/降级完成 |
 | `cameraChanged` | `{ videoStream: MediaStream }` | `switchDevice('camera', ...)` 成功 |
@@ -599,7 +594,6 @@ Base JS Demo 还将这三个读取方法组合为控制台辅助函数 `getCurre
 | `peerconnection:iceConnectionState` | ICE 状态字符串 | PC 的 ICE 连接状态改变 |
 | `mediaerror` | `{ type, mediastream }` | 本地媒体轨道/流出现已知异常 |
 | `mediaEffectsIssue` | `{ module, message, ... }` | AiNS/composer/虚拟背景异常或降级 |
-| `videoTrackState` | `{ track, properties, value }` | 视频 track 的 `muted/readyState/enabled/label` 等属性变化 |
 | `muted` / `unmuted` | `{ audio, video }` | 本端静音/恢复操作成功 |
 | `upgradeToVideo` | `{ accept, reject, ... }` | 远端请求从音频升级视频 |
 
@@ -643,7 +637,7 @@ REFER、NOTIFY 和 INFO 的具体业务含义依赖 SIP 服务约定。不要只
 | `stats:report` | `{ RTT, upStreams, downStreams }` | 兼容流报告 |
 | `stats:stats-error` | `{ code, fatal, message, error, consecutiveErrors }` | 统计错误，不中断通话 |
 
-全部字段、0～6 阈值和 24 个 issue 见 [通话质量统计](./05-call-statistics.md)。
+全部字段、质量等级含义和问题码见 [通话质量统计](./05-call-statistics.md)。
 
 ## 6.17 `CRTC.Utils`
 
@@ -675,7 +669,7 @@ const blackVideo = CRTC.Utils.generateAnBlackVideoTrack({
 | `generateAnEmptyAudioTrack()` | 无 | Promise，包含 `audioTrack` 和相关清理对象 |
 | `generateAnBlackVideoTrack(options)` | `svgSource,width,height,fps` | 包含 `videoTrack`、预览/清理能力的对象 |
 
-占位轨道用于明确的无设备业务场景。页面不再使用时应调用返回对象提供的清理能力或停止 tracks，避免长期占用 AudioContext/canvas 定时器。
+占位轨道用于明确的无设备业务场景。页面不再使用时应调用返回对象提供的清理能力或停止 tracks，避免资源长期占用。
 
 ## 6.18 使用约束总结
 

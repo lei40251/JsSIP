@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="CRTC Web SDK 系统学习文档：1. SIP 与 WebRTC 基础">
-  <title>1. SIP 与 WebRTC 基础 · CRTC Web SDK 系统学习</title>
+  <title>1. SIP 与 WebRTC 基础 · CRTC Web SDK 系统学习指南</title>
   <link rel="stylesheet" href="assets/docs.css">
   <script>try{const t=localStorage.getItem('crtc-user-guide-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
   <script src="assets/search-index.js" defer></script>
@@ -13,21 +13,21 @@
 </head>
 <body data-page="01-sip-webrtc-basics.html">
   <header class="topbar">
-    <button type="button" class="icon-button nav-toggle" aria-label="打开目录" aria-expanded="false">☰</button>
-    <a class="brand" href="index.html">CRTC Web SDK 系统学习</a>
+    <button type="button" class="icon-button nav-toggle" aria-label="收起左侧目录" aria-expanded="true">☰</button>
+    <a class="brand" href="index.html">CRTC Web SDK 系统学习指南</a>
     <div class="search-shell">
       <label class="sr-only" for="global-search">搜索全部文档</label>
       <input id="global-search" type="search" autocomplete="off" placeholder="搜索 API、事件、功能…" aria-controls="search-results">
       <kbd>/</kbd>
       <div id="search-results" class="search-results" hidden></div>
     </div>
+    <button type="button" class="icon-button toc-toggle" aria-label="收起右侧目录" aria-expanded="true">◧</button>
     <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
   </header>
 
   <aside class="sidebar" aria-label="文档目录">
     
     <section class="nav-group">
-      <h2>系统学习指南</h2>
       
         <a class="nav-link" href="index.html">
           学习指南首页
@@ -268,8 +268,8 @@ BYE → / ← BYE
 </ul>
 <p>如果 <code>session.connection.ontrack</code> 在 confirmed 前收到远端音频，页面应优先播放这路早期媒体，避免本地回铃音和远端提示音同时播放。</p>
 <h2 id="1-8-呼入和呼出为什么时序不同">1.8 呼入和呼出为什么时序不同<a class="heading-anchor" href="#1-8-呼入和呼出为什么时序不同" aria-label="链接到本节">#</a></h2>
-<p>呼出：页面调用 <code>ua.call()</code>，SDK先准备本地媒体和 SDP Offer，再发送 INVITE，所以 Promise 可能因媒体权限/约束失败而 reject。</p>
-<p>呼入：SDK先收到远端 INVITE 并产生 <code>newRTCSession</code>，用户尚未接听，因此本地摄像头/麦克风和 PeerConnection 可能还未创建。调用 <code>session.answer(options)</code> 后才准备本地媒体并发送 SDP Answer。</p>
+<p>呼出：页面调用 <code>ua.call()</code> 后可能触发浏览器媒体授权，因此 Promise 可能因权限、设备或媒体约束问题而 reject。</p>
+<p>呼入：收到 <code>newRTCSession</code> 时用户尚未接听，不应假设本地媒体或 <code>session.connection</code> 已经可用。调用 <code>session.answer(options)</code> 后再按接听流程使用媒体连接。</p>
 <p>这决定了两条规则：</p>
 <ol>
 <li>呼入页面不要在收到来电时就假设 <code>session.connection</code> 可用。</li>
@@ -302,7 +302,7 @@ BYE → / ← BYE
 </tr>
 </tbody></table></div>
 <p>页面调用 <code>mute()</code> 只改变本地轨道发送状态，不一定等同于修改 SDP 方向。<code>hold()</code>、音视频升级/降级、共享或某些设备操作可能触发重新协商。</p>
-<p>普通接入不要直接正则修改 SDP。确有互通要求时，应明确修改的媒体行、方向、编码或带宽字段，并覆盖呼出、呼入、UPDATE/re-INVITE、共享和重协商路径。</p>
+<p>普通接入不要直接修改 SDP。确有互通要求时，应先与 SDK 服务方确认受支持的配置或兼容方案。</p>
 <h2 id="1-10-ice-建连的实际过程">1.10 ICE 建连的实际过程<a class="heading-anchor" href="#1-10-ice-建连的实际过程" aria-label="链接到本节">#</a></h2>
 <div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">收集本地 candidate
 → 通过 SDP 交换候选和凭据
@@ -432,10 +432,10 @@ console.log(stream.getVideoTracks());
 <ul>
 <li>SDK 管理的通话 track 由会话流程处理。</li>
 <li>页面自行创建的预览、屏幕流、占位流必须由页面停止。</li>
-<li>不要提前 stop 一个仍被通话 sender 使用的自定义 track。</li>
+<li>不要提前停止一个仍被当前通话使用的自定义 track。</li>
 </ul>
 <h2 id="1-12-本地预览和实际发送不是同一件事">1.12 本地预览和实际发送不是同一件事<a class="heading-anchor" href="#1-12-本地预览和实际发送不是同一件事" aria-label="链接到本节">#</a></h2>
-<p><code>localVideo.srcObject = stream</code> 只是把某个流显示在页面，不代表该流一定已经发送。实际发送取决于 RTCSession 的 sender、当前协商方向和 track 状态。</p>
+<p><code>localVideo.srcObject = stream</code> 只是把某个流显示在页面，不代表该流一定已经发送。实际发送取决于当前会话配置、媒体方向和 track 状态。</p>
 <p>类似地，CSS：</p>
 <div class="code-block"><div class="code-toolbar"><span>css</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-css">video { transform: scaleX(-1); }
 </code></pre>
@@ -481,18 +481,31 @@ console.log(stream.getVideoTracks());
 </tr>
 </tbody></table></div>
 <h2 id="1-14-ains-虚拟背景-混流与通话的关系">1.14 AiNS、虚拟背景、混流与通话的关系<a class="heading-anchor" href="#1-14-ains-虚拟背景-混流与通话的关系" aria-label="链接到本节">#</a></h2>
-<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">麦克风 ── AiNS ─────────────┐
-                            ├─ MediaEffectsComposer/媒体管线 ─→ RTCSession sender
-摄像头 ── 虚拟背景(slot 0) ─┤
-其他音视频源(slot 1...) ────┘
-</code></pre>
-</div><ul>
-<li>AiNS 处理本地音频。</li>
-<li>虚拟背景作用于 composer 的某一路视频源，通话摄像头通常是 slot 0。</li>
-<li>composer 可处理镜像、水印和多路输入。</li>
-<li>这些能力通过 <code>ua.call()</code> / <code>session.answer()</code> 的 options 初始化，并从当前 session 获取控制器动态调整。</li>
-<li>效果失败时应尽量保持基础通话，不要把效果异常当作 SIP 通话失败。</li>
-</ul>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>能力</th>
+<th>用途</th>
+<th>接入方式</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>AiNS</td>
+<td>改善本地麦克风的降噪效果</td>
+<td>在呼叫/接听参数中启用，从当前会话调整强度和增益</td>
+</tr>
+<tr>
+<td>虚拟背景</td>
+<td>模糊或替换本地摄像头背景</td>
+<td>在媒体效果配置中启用，从当前会话切换或清除背景</td>
+</tr>
+<tr>
+<td>混流</td>
+<td>合成摄像头、屏幕、镜像和水印等内容</td>
+<td>在呼叫/接听参数中配置，从当前会话更新输入和显示效果</td>
+</tr>
+</tbody></table></div>
+<p>效果异常时应尽量保持基础通话，不要把媒体效果异常当作 SIP 通话失败。</p>
 <h2 id="1-15-通话统计的基本方向">1.15 通话统计的基本方向<a class="heading-anchor" href="#1-15-通话统计的基本方向" aria-label="链接到本节">#</a></h2>
 <p>从当前浏览器视角：</p>
 <div class="table-wrap"><table>
@@ -514,7 +527,7 @@ console.log(stream.getVideoTracks());
 <td>本端用户听到/看到远端的质量</td>
 </tr>
 </tbody></table></div>
-<p>例如“对方说我声音断断续续”优先看上行音频；“我听对方断断续续”优先看下行音频。网络质量 <code>0</code> 表示暂无有效样本，<code>1</code> 最好，<code>6</code> 最差或连接不可用，详细阈值见第 5 章。</p>
+<p>例如“对方说我声音断断续续”优先看上行音频；“我听对方断断续续”优先看下行音频。网络质量 <code>0</code> 表示暂无有效样本，<code>1</code> 最好，<code>6</code> 表示严重异常，等级含义见第 5 章。</p>
 <h2 id="1-16-接入前信息清单">1.16 接入前信息清单<a class="heading-anchor" href="#1-16-接入前信息清单" aria-label="链接到本节">#</a></h2>
 <p>开始写代码前应拿到：</p>
 <ul>
@@ -581,16 +594,12 @@ console.log(stream.getVideoTracks());
 <tr>
 <td>通话统计</td>
 <td>后续样本出现有效字段</td>
-<td>PC、浏览器兼容、基线等待</td>
+<td>媒体连接、浏览器兼容、继续等待后续结果</td>
 </tr>
 </tbody></table></div>
 <p>下一章会把这套流程写成一份可直接运行的完整页面，第 3 章再展开注册和通话时序。</p>
 <p><a href="index.html">← 学习目录</a> · <a href="02-quick-start.html">下一章：快速完成第一通电话 →</a></p>
 
-      <nav class="page-pagination" aria-label="上一篇和下一篇">
-        <a class="previous" href="index.html"><span>上一篇</span>CRTC Web SDK 系统学习指南</a>
-        <a class="next" href="02-quick-start.html"><span>下一篇</span>2. 快速完成第一通电话</a>
-      </nav>
     </article>
     
     <nav class="page-toc" aria-label="本页目录">

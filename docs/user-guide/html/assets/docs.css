@@ -202,3 +202,32 @@ body.diagram-open { overflow: hidden; }
   .table-wrap, .code-block { break-inside: avoid; }
   a { color: inherit; text-decoration: underline; }
 }
+
+
+/* CRTC user guide navigation controls. */
+.nav-toggle { display: inline-block; }
+.toc-toggle { display: inline-block; }
+.sidebar { transition: transform .2s ease, box-shadow .2s ease; }
+.layout { transition: width .2s ease, margin-left .2s ease; }
+
+@media (min-width: 1181px) {
+  body.sidebar-collapsed .sidebar { transform: translateX(-105%); box-shadow: none; }
+  body.sidebar-collapsed .layout {
+    width: min(1500px, 100%);
+    margin-left: max(0px, calc((100vw - 1500px) / 2));
+  }
+  body.sidebar-collapsed .page-toc {
+    right: max(38px, calc((100vw - 1500px) / 2 + 38px));
+  }
+  body.toc-collapsed .layout { grid-template-columns: minmax(0, 1fr); }
+  body.toc-collapsed .page-toc { display: none; }
+}
+
+@media (min-width: 861px) and (max-width: 1180px) {
+  body.sidebar-collapsed .sidebar { transform: translateX(-105%); box-shadow: none; }
+  body.sidebar-collapsed .layout { width: 100%; margin-left: 0; }
+}
+
+@media (max-width: 1180px) {
+  .toc-toggle { display: none; }
+}

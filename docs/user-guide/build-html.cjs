@@ -26,6 +26,44 @@ const sharedAssetsDir = path.resolve(
   '../../samples/trtc/web-api-deep-dive/html/assets'
 );
 
+const userGuideCss = `
+
+/* CRTC user guide navigation controls. */
+.nav-toggle { display: inline-block; }
+.toc-toggle { display: inline-block; }
+.sidebar { transition: transform .2s ease, box-shadow .2s ease; }
+.layout { transition: width .2s ease, margin-left .2s ease; }
+
+@media (min-width: 1181px) {
+  body.sidebar-collapsed .sidebar { transform: translateX(-105%); box-shadow: none; }
+  body.sidebar-collapsed .layout {
+    width: min(1500px, 100%);
+    margin-left: max(0px, calc((100vw - 1500px) / 2));
+  }
+  body.sidebar-collapsed .page-toc {
+    right: max(38px, calc((100vw - 1500px) / 2 + 38px));
+  }
+  body.toc-collapsed .layout { grid-template-columns: minmax(0, 1fr); }
+  body.toc-collapsed .page-toc { display: none; }
+}
+
+@media (min-width: 861px) and (max-width: 1180px) {
+  body.sidebar-collapsed .sidebar { transform: translateX(-105%); box-shadow: none; }
+  body.sidebar-collapsed .layout { width: 100%; margin-left: 0; }
+}
+
+@media (max-width: 1180px) {
+  .toc-toggle { display: none; }
+}
+`;
+
+function replaceRequired(source, search, replacement, label) {
+  if (!source.includes(search)) {
+    throw new Error(`无法生成文档交互：未找到 ${label}`);
+  }
+  return source.replace(search, replacement);
+}
+
 fs.mkdirSync(assetsDir, { recursive: true });
 
 for (const name of fs.readdirSync(outputDir)) {
@@ -33,10 +71,8 @@ for (const name of fs.readdirSync(outputDir)) {
 }
 
 function syncAssets() {
-  fs.copyFileSync(
-    path.join(sharedAssetsDir, 'docs.css'),
-    path.join(assetsDir, 'docs.css')
-  );
+  const docsCss = fs.readFileSync(path.join(sharedAssetsDir, 'docs.css'), 'utf8');
+  fs.writeFileSync(path.join(assetsDir, 'docs.css'), docsCss + userGuideCss, 'utf8');
   fs.copyFileSync(
     path.join(sharedAssetsDir, 'mermaid.min.js'),
     path.join(assetsDir, 'mermaid.min.js')
@@ -46,9 +82,75 @@ function syncAssets() {
     path.join(assetsDir, 'mermaid.LICENSE')
   );
 
-  const docsJs = fs.readFileSync(path.join(sharedAssetsDir, 'docs.js'), 'utf8')
+  let docsJs = fs.readFileSync(path.join(sharedAssetsDir, 'docs.js'), 'utf8')
     .replaceAll('trtc-docs-theme', 'crtc-user-guide-theme')
     .replaceAll('__TRTC_DOC_SEARCH__', '__CRTC_USER_GUIDE_SEARCH__');
+
+  docsJs = replaceRequired(
+    docsJs,
+    "  const navButton = document.querySelector('.nav-toggle');\n  const sidebar = document.querySelector('.sidebar');",
+    "  const navButton = document.querySelector('.nav-toggle');\n  const tocButton = document.querySelector('.toc-toggle');\n  const sidebar = document.querySelector('.sidebar');",
+    '目录按钮初始化代码'
+  );
+
+  docsJs = replaceRequired(
+    docsJs,
+    `  function setNav(open) {
+    sidebar?.classList.toggle('open', open);
+    if (backdrop) backdrop.hidden = !open;
+    navButton?.setAttribute('aria-expanded', String(open));
+  }
+
+  navButton?.addEventListener('click', () => setNav(!sidebar?.classList.contains('open')));
+  backdrop?.addEventListener('click', () => setNav(false));
+  sidebar?.addEventListener('click', (event) => {
+    if (event.target.closest('a')) setNav(false);
+  });`,
+    `  const desktopNav = matchMedia('(min-width: 861px)');
+
+  function setMobileNav(open) {
+    sidebar?.classList.toggle('open', open);
+    if (backdrop) backdrop.hidden = !open;
+    navButton?.setAttribute('aria-expanded', String(open));
+    navButton?.setAttribute('aria-label', open ? '收起左侧目录' : '展开左侧目录');
+  }
+
+  function syncNavMode() {
+    if (desktopNav.matches) {
+      sidebar?.classList.remove('open');
+      if (backdrop) backdrop.hidden = true;
+      const expanded = !document.body.classList.contains('sidebar-collapsed');
+      navButton?.setAttribute('aria-expanded', String(expanded));
+      navButton?.setAttribute('aria-label', expanded ? '收起左侧目录' : '展开左侧目录');
+      return;
+    }
+    document.body.classList.remove('sidebar-collapsed');
+    setMobileNav(false);
+  }
+
+  navButton?.addEventListener('click', () => {
+    if (desktopNav.matches) {
+      document.body.classList.toggle('sidebar-collapsed');
+      syncNavMode();
+      return;
+    }
+    setMobileNav(!sidebar?.classList.contains('open'));
+  });
+  backdrop?.addEventListener('click', () => setMobileNav(false));
+  sidebar?.addEventListener('click', (event) => {
+    if (!desktopNav.matches && event.target.closest('a')) setMobileNav(false);
+  });
+  desktopNav.addEventListener?.('change', syncNavMode);
+  syncNavMode();
+
+  tocButton?.addEventListener('click', () => {
+    const collapsed = document.body.classList.toggle('toc-collapsed');
+    tocButton.setAttribute('aria-expanded', String(!collapsed));
+    tocButton.setAttribute('aria-label', collapsed ? '展开右侧目录' : '收起右侧目录');
+  });`,
+    '目录开关代码'
+  );
+
   fs.writeFileSync(path.join(assetsDir, 'docs.js'), docsJs, 'utf8');
 }
 
@@ -124,7 +226,6 @@ const documents = markdownFiles.map((name) => {
 function navHtml(activeFile) {
   return `
     <section class="nav-group">
-      <h2>系统学习指南</h2>
       ${documents.map((doc) => `
         <a class="nav-link${doc.file === activeFile ? ' active' : ''}" href="${doc.file}">
           ${escapeHtml(doc.navTitle)}
@@ -149,7 +250,7 @@ function transformMarkdownLinks(href) {
   return `../${href}`;
 }
 
-function renderDocument(doc, index) {
+function renderDocument(doc) {
   const toc = [];
   const slugs = new Map();
   const renderer = new Renderer();
@@ -187,8 +288,6 @@ function renderDocument(doc, index) {
     .replace(/<table>/g, '<div class="table-wrap"><table>')
     .replace(/<\/table>/g, '</table></div>');
 
-  const previous = documents[index - 1];
-  const next = documents[index + 1];
   const tocHtml = toc.length ? `
     <nav class="page-toc" aria-label="本页目录">
       <h2>本页目录</h2>
@@ -201,7 +300,7 @@ function renderDocument(doc, index) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="CRTC Web SDK 系统学习文档：${escapeHtml(doc.title)}">
-  <title>${escapeHtml(doc.title)} · CRTC Web SDK 系统学习</title>
+  <title>${doc.file === 'index.html' ? 'CRTC Web SDK 系统学习指南' : `${escapeHtml(doc.title)} · CRTC Web SDK 系统学习指南`}</title>
   <link rel="stylesheet" href="assets/docs.css">
   <script>try{const t=localStorage.getItem('crtc-user-guide-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
   <script src="assets/search-index.js" defer></script>
@@ -210,14 +309,15 @@ function renderDocument(doc, index) {
 </head>
 <body data-page="${escapeHtml(doc.file)}">
   <header class="topbar">
-    <button type="button" class="icon-button nav-toggle" aria-label="打开目录" aria-expanded="false">☰</button>
-    <a class="brand" href="index.html">CRTC Web SDK 系统学习</a>
+    <button type="button" class="icon-button nav-toggle" aria-label="收起左侧目录" aria-expanded="true">☰</button>
+    <a class="brand" href="index.html">CRTC Web SDK 系统学习指南</a>
     <div class="search-shell">
       <label class="sr-only" for="global-search">搜索全部文档</label>
       <input id="global-search" type="search" autocomplete="off" placeholder="搜索 API、事件、功能…" aria-controls="search-results">
       <kbd>/</kbd>
       <div id="search-results" class="search-results" hidden></div>
     </div>
+    ${toc.length ? '<button type="button" class="icon-button toc-toggle" aria-label="收起右侧目录" aria-expanded="true">◧</button>' : ''}
     <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
   </header>
 
@@ -229,10 +329,6 @@ function renderDocument(doc, index) {
   <main class="layout">
     <article class="doc-content">
       ${body}
-      <nav class="page-pagination" aria-label="上一篇和下一篇">
-        ${previous ? `<a class="previous" href="${previous.file}"><span>上一篇</span>${escapeHtml(previous.title)}</a>` : '<span></span>'}
-        ${next ? `<a class="next" href="${next.file}"><span>下一篇</span>${escapeHtml(next.title)}</a>` : '<span></span>'}
-      </nav>
     </article>
     ${tocHtml}
   </main>
@@ -241,8 +337,8 @@ function renderDocument(doc, index) {
 </html>`;
 }
 
-documents.forEach((doc, index) => {
-  fs.writeFileSync(path.join(outputDir, doc.file), renderDocument(doc, index), 'utf8');
+documents.forEach((doc) => {
+  fs.writeFileSync(path.join(outputDir, doc.file), renderDocument(doc), 'utf8');
 });
 
 const searchEntries = [];

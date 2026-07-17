@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="CRTC Web SDK 系统学习文档：2. 快速完成第一通电话">
-  <title>2. 快速完成第一通电话 · CRTC Web SDK 系统学习</title>
+  <title>2. 快速完成第一通电话 · CRTC Web SDK 系统学习指南</title>
   <link rel="stylesheet" href="assets/docs.css">
   <script>try{const t=localStorage.getItem('crtc-user-guide-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
   <script src="assets/search-index.js" defer></script>
@@ -13,21 +13,21 @@
 </head>
 <body data-page="02-quick-start.html">
   <header class="topbar">
-    <button type="button" class="icon-button nav-toggle" aria-label="打开目录" aria-expanded="false">☰</button>
-    <a class="brand" href="index.html">CRTC Web SDK 系统学习</a>
+    <button type="button" class="icon-button nav-toggle" aria-label="收起左侧目录" aria-expanded="true">☰</button>
+    <a class="brand" href="index.html">CRTC Web SDK 系统学习指南</a>
     <div class="search-shell">
       <label class="sr-only" for="global-search">搜索全部文档</label>
       <input id="global-search" type="search" autocomplete="off" placeholder="搜索 API、事件、功能…" aria-controls="search-results">
       <kbd>/</kbd>
       <div id="search-results" class="search-results" hidden></div>
     </div>
+    <button type="button" class="icon-button toc-toggle" aria-label="收起右侧目录" aria-expanded="true">◧</button>
     <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
   </header>
 
   <aside class="sidebar" aria-label="文档目录">
     
     <section class="nav-group">
-      <h2>系统学习指南</h2>
       
         <a class="nav-link" href="index.html">
           学习指南首页
@@ -69,7 +69,7 @@
 <div class="code-block"><div class="code-toolbar"><span>html</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-html">&lt;script src=&quot;./adapter-latest.js&quot;&gt;&lt;/script&gt;
 &lt;script src=&quot;./CRTC.min.js&quot;&gt;&lt;/script&gt;
 </code></pre>
-</div><p><code>adapter-latest.js</code> 用于浏览器 WebRTC 兼容，<code>CRTC.min.js</code> 是页面需要引入的 SDK 文件。Base JS Demo 使用 <code>dist/CRTC.min.js</code>。</p>
+</div><p><code>adapter-latest.js</code> 用于浏览器 WebRTC 兼容，<code>CRTC.min.js</code> 是页面需要引入的 SDK 文件。实际路径以交付包的目录结构为准。</p>
 <h2 id="2-2-准备页面元素">2.2 准备页面元素<a class="heading-anchor" href="#2-2-准备页面元素" aria-label="链接到本节">#</a></h2>
 <div class="code-block"><div class="code-toolbar"><span>html</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-html">&lt;p id=&quot;status&quot;&gt;尚未启动&lt;/p&gt;
 &lt;video id=&quot;remoteVideo&quot; autoplay playsinline&gt;&lt;/video&gt;
@@ -470,7 +470,7 @@ const ua = new CRTC.UA({
       if (currentSession &amp;&amp; currentSession.direction === &#39;incoming&#39;)
       {
         currentSession.answer(buildCallOptions());
-        // 呼入在 answer() 调用后创建 connection。
+        // 接听后再绑定本次通话的远端媒体。
         bindRemoteMedia(currentSession);
         answerButton.disabled = true;
       }
@@ -481,7 +481,6 @@ const ua = new CRTC.UA({
       currentSession &amp;&amp; currentSession.terminate();
     });
 
-    CRTC.debug.enable(&#39;CRTC:*&#39;);
     ua.start();
   &lt;/script&gt;
 &lt;/body&gt;
@@ -495,8 +494,8 @@ const ua = new CRTC.UA({
 <li><code>connected</code> 时只显示“正在注册”。</li>
 <li><code>registered</code> 时开放呼叫按钮。</li>
 <li>每次 <code>newRTCSession</code> 保存当前 session，并立即绑定本通电话事件。</li>
-<li>呼出时 <code>ua.call()</code> 负责采集、创建 PC 和发送 INVITE。</li>
-<li>呼入时用户点击后 <code>answer()</code> 负责创建 PC、采集和应答。</li>
+<li>呼出时调用 <code>ua.call()</code>，通过 Promise 和会话事件处理后续状态。</li>
+<li>呼入时由用户操作触发 <code>answer()</code>，并继续监听本通电话的事件。</li>
 <li><code>connection.ontrack</code> 播放远端流。</li>
 <li><code>failed</code> 或 <code>ended</code> 统一清理页面。</li>
 </ol>
@@ -679,10 +678,6 @@ ua.on(&#39;connected&#39;, function()
 </ul>
 <p><a href="01-sip-webrtc-basics.html">← 上一章：SIP 与 WebRTC 基础</a> · <a href="03-call-lifecycle.html">下一章：通话流程与事件时序 →</a></p>
 
-      <nav class="page-pagination" aria-label="上一篇和下一篇">
-        <a class="previous" href="01-sip-webrtc-basics.html"><span>上一篇</span>1. SIP 与 WebRTC 基础</a>
-        <a class="next" href="03-call-lifecycle.html"><span>下一篇</span>3. 注册、通话与事件时序</a>
-      </nav>
     </article>
     
     <nav class="page-toc" aria-label="本页目录">
