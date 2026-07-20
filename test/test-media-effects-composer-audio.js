@@ -3,6 +3,7 @@ const { runSuite } = require('./include/manual-test-suite');
 const {
   assert,
   MediaEffectsComposer,
+  ComposerConfig,
   MockMediaStream,
   MockVideoElement,
   MockAudioContext,
@@ -146,6 +147,8 @@ async function testNewPublicApiConfigAndOutputs()
 
   assert.strictEqual(videoOutput.getVideoTracks().length, 1);
   assert.strictEqual(mixedOutput.getVideoTracks().length, 1);
+  assert.notStrictEqual(mixedOutput, videoOutput);
+  assert.strictEqual(mixedOutput.getVideoTracks()[0], videoOutput.getVideoTracks()[0]);
   assert.strictEqual(mixedOutput.getAudioTracks().length, 1);
   assert.strictEqual(busOutput.getAudioTracks().length, 1);
   assert.strictEqual(isolatedOutput.getAudioTracks().length, 1);
@@ -672,6 +675,37 @@ async function testMixedStreamCreatesStableAudioTrackBeforeSources()
   mixer.stop();
 }
 
+async function testFullCapacityAllowsSameSlotReplacementAndStateIsIsolated()
+{
+  resetMockState();
+
+  const mixer = new MediaEffectsComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+
+  for (let slot = 0; slot < ComposerConfig.getMaxSources(); slot++)
+  {
+    assert.strictEqual(mixer.addSource(createStream(), {
+      slot,
+      aiVirtualBackground : slot === 3 ? {
+        enabled        : true,
+        mode           : 'blur',
+        postProcessing : { foregroundBrightness: 1.2 }
+      } : null
+    }), true);
+  }
+
+  const snapshot = mixer.getState();
+
+  snapshot.sources[3].aiVirtualBackground.postProcessing.foregroundBrightness = 0;
+  assert.strictEqual(mixer.getState().sources[3].aiVirtualBackground.postProcessing.foregroundBrightness, 1.2);
+
+  const replacement = createStream();
+
+  assert.strictEqual(mixer.addSource(replacement, 3), true);
+  assert.strictEqual(mixer.getSources().length, ComposerConfig.getMaxSources());
+  assert.strictEqual(mixer.getSources().find((source) => source.slot === 3).streamId, replacement.id);
+  mixer.stop();
+}
+
 const TESTS = [
   { name: 'testPlainAudioRequestWithoutSourceDoesNotCreateAudioContext', fn: testPlainAudioRequestWithoutSourceDoesNotCreateAudioContext },
   { name: 'testAppendAudioSourceInjectsAudioTrack', fn: testAppendAudioSourceInjectsAudioTrack },
@@ -694,7 +728,8 @@ const TESTS = [
   { name: 'testReleaseIsolatedSubmixAudioStreamClosesContext', fn: testReleaseIsolatedSubmixAudioStreamClosesContext },
   { name: 'testSlotAudioStreamDefaultsToNewDestinationTrack', fn: testSlotAudioStreamDefaultsToNewDestinationTrack },
   { name: 'testAudioTrackEndedDisconnectsSourceAndBus', fn: testAudioTrackEndedDisconnectsSourceAndBus },
-  { name: 'testMixedStreamCreatesStableAudioTrackBeforeSources', fn: testMixedStreamCreatesStableAudioTrackBeforeSources }
+  { name: 'testMixedStreamCreatesStableAudioTrackBeforeSources', fn: testMixedStreamCreatesStableAudioTrackBeforeSources },
+  { name: 'testFullCapacityAllowsSameSlotReplacementAndStateIsIsolated', fn: testFullCapacityAllowsSameSlotReplacementAndStateIsIsolated }
 ];
 
 async function run(customSuiteName)

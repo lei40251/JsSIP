@@ -168,6 +168,19 @@ export interface MediaEffectsComposerState {
   config: MediaEffectsComposerConfigState;
   render: MediaEffectsComposerRenderState;
   audio: MediaEffectsComposerAudioState;
+  issues: MediaEffectsIssue[];
+}
+
+export interface MediaEffectsIssue {
+  module?: string;
+  component?: string;
+  stage?: string;
+  severity?: 'info' | 'warn' | 'error' | string;
+  message: string;
+  fallbackApplied?: boolean;
+  degraded?: boolean;
+  details?: Record<string, any>;
+  timestamp?: number;
 }
 
 export interface MediaEffectsComposerCapabilityReport {
@@ -177,6 +190,8 @@ export interface MediaEffectsComposerCapabilityReport {
   features: {
     multiSource: boolean;
     sourceAiVirtualBackground: boolean;
+    sourceAiVirtualBackgroundSupported: boolean;
+    sourceAiVirtualBackgroundEnabled: boolean;
     outputMirror: boolean;
     audioSubmix: boolean;
     insertableStreamsConfigured: boolean;
@@ -295,9 +310,9 @@ export interface MediaEffectsComposerInstance {
   ): Promise<MediaEffectsComposerWatermarkState[]>;
   clearWatermarks(filter?: MediaEffectsComposerWatermarkFilter): Promise<MediaEffectsComposerConfigState>;
   getWatermarks(): MediaEffectsComposerWatermarkState[];
-  setSourceAiVirtualBackground(slotOrTarget: number | string, options: AiVBOptions | null): void;
-  getSourceAiVirtualBackground(slotOrTarget: number | string): AiVBOptions | null;
-  clearSourceAiVirtualBackground(slotOrTarget: number | string): void;
+  setSourceAiVirtualBackground(slotOrTarget: number | string | MediaStream | HTMLVideoElement, options: boolean | AiVBOptions | null): AiVBOptions | null;
+  getSourceAiVirtualBackground(slotOrTarget: number | string | MediaStream | HTMLVideoElement): AiVBOptions | null;
+  clearSourceAiVirtualBackground(slotOrTarget: number | string | MediaStream | HTMLVideoElement): void;
   setConfig(patch: MediaEffectsComposerConfigPatch): Promise<MediaEffectsComposerConfigState>;
   getRenderInfo(): MediaEffectsComposerRenderState;
   getAudioInfo(): MediaEffectsComposerAudioState;
@@ -338,6 +353,7 @@ export interface AiVBAssetOptions {
   moduleUrl?: string;
   wasmBaseUrl?: string;
   modelUrl?: string;
+  scriptNonce?: string;
 }
 
 export interface AiVBOptions {

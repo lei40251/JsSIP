@@ -88,6 +88,11 @@ class MockAudioContext
 
   async resume()
   {
+    if (MockAudioContext.resumeError)
+    {
+      throw MockAudioContext.resumeError;
+    }
+
     this.state = 'running';
   }
 
@@ -126,6 +131,7 @@ class MockAudioContext
 MockAudioContext.instances = [];
 MockAudioContext.addedModules = [];
 MockAudioContext.addModuleError = null;
+MockAudioContext.resumeError = null;
 
 class MockAudioWorkletNode extends MockAudioNode
 {
@@ -168,6 +174,7 @@ function resetMockState()
   MockAudioContext.instances = [];
   MockAudioContext.addedModules = [];
   MockAudioContext.addModuleError = null;
+  MockAudioContext.resumeError = null;
 }
 
 function installBrowserMocks(options = {})
@@ -222,6 +229,7 @@ function installBrowserMocks(options = {})
     };
 
     MockAudioContext.addModuleError = options.addModuleError || null;
+    MockAudioContext.resumeError = options.resumeError || null;
   }
 
   return function restore()
@@ -465,6 +473,71 @@ async function testWorkletPortWarningIsRecordedInEngineIssueHistory()
   }
 }
 
+async function testAudioContextResumeFailureRejectsInsteadOfReturningSilentOutput()
+{
+  resetMockState();
+  const restore = installBrowserMocks({
+    resumeError : new Error('autoplay blocked')
+  });
+
+  try
+  {
+    const Engine = loadEngine();
+    const engine = new Engine();
+
+    await assert.rejects(async() =>
+    {
+      await engine.process(createInputStream().stream);
+    }, /autoplay blocked/);
+    assert.strictEqual(engine.getLastIssue().stage, 'audio-context-resume');
+    await engine.destroy();
+  }
+  finally
+  {
+    restore();
+  }
+}
+
+async function testProcessorErrorReconnectsRawAudioAndBoundsIssueHistory()
+{
+  resetMockState();
+  const restore = installBrowserMocks();
+
+  try
+  {
+    const Engine = loadEngine();
+    const engine = new Engine();
+
+    await engine.process(createInputStream().stream);
+
+    const sourceNode = engine.sourceNode;
+    const outputGainNode = engine.outputGainNode;
+
+    engine.getProcessor().workletNode.onprocessorerror({ message: 'processor crashed' });
+
+    assert.strictEqual(sourceNode.disconnected, true);
+    assert.strictEqual(sourceNode.connectedTo, outputGainNode);
+    assert.strictEqual(engine.isEnabled(), false);
+    assert.strictEqual(engine.getLastIssue().stage, 'worklet-processor-error');
+
+    for (let i = 0; i < 60; i++)
+    {
+      engine.getProcessor().workletNode.port.emitMessage({
+        type    : 'AINS_UNSUPPORTED_CHANNEL_LAYOUT',
+        message : `warning-${i}`
+      });
+    }
+
+    assert.strictEqual(engine.getIssues().length, 50);
+    assert.strictEqual(engine.getLastIssue().message, 'warning-59');
+    await engine.destroy();
+  }
+  finally
+  {
+    restore();
+  }
+}
+
 async function run()
 {
   let passed = 0;
@@ -476,7 +549,9 @@ async function run()
     { name: 'testReplaceAudioTrackPreservesVideoTrack', fn: testReplaceAudioTrackPreservesVideoTrack },
     { name: 'testProcessFailsWhenAssetFetchFails', fn: testProcessFailsWhenAssetFetchFails },
     { name: 'testProcessFailsWhenWorkletRegistrationFails', fn: testProcessFailsWhenWorkletRegistrationFails },
-    { name: 'testWorkletPortWarningIsRecordedInEngineIssueHistory', fn: testWorkletPortWarningIsRecordedInEngineIssueHistory }
+    { name: 'testWorkletPortWarningIsRecordedInEngineIssueHistory', fn: testWorkletPortWarningIsRecordedInEngineIssueHistory },
+    { name: 'testAudioContextResumeFailureRejectsInsteadOfReturningSilentOutput', fn: testAudioContextResumeFailureRejectsInsteadOfReturningSilentOutput },
+    { name: 'testProcessorErrorReconnectsRawAudioAndBoundsIssueHistory', fn: testProcessorErrorReconnectsRawAudioAndBoundsIssueHistory }
   ];
 
   for (const test of TESTS)

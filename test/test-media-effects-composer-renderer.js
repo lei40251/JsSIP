@@ -885,6 +885,130 @@ async function testComposerConfigSourceOptions()
     ComposerConfig.normalizeSourceOptions({ slot: 1, sourceMirror: true }, 0, 0.8),
     { slot: 1, sourceMirror: true }
   );
+  assert.strictEqual(ComposerConfig.normalizeSourceOptions({ slot: 999 }, 0, 0.8).slot, 8);
+}
+
+
+async function testConsumedInsertableFrameSourceClosesOnSuccessAndCreationFailure()
+{
+  resetMockState();
+  enableInsertableMocks();
+
+  const mixer = new MediaEffectsComposer([ createStream() ], {
+    width            : 320,
+    height           : 180,
+    fps              : 15,
+    renderMode       : 'main-2d',
+    enableInsertable : true
+  });
+
+  mixer.getVideoStream();
+  await flushAsync();
+
+  const successfulSource = {
+    closed : false,
+    close()
+    {
+      this.closed = true;
+    }
+  };
+
+  mixer._outMgr.onFramePresented({
+    frameSource         : successfulSource,
+    frameSourceConsumed : true,
+    timestamp           : 1
+  });
+  await flushAsync();
+  assert.strictEqual(successfulSource.closed, true);
+
+  const FailedVideoFrame = function()
+  {
+    throw new Error('frame construction failed');
+  };
+  const failedSource = {
+    closed : false,
+    close()
+    {
+      this.closed = true;
+    }
+  };
+
+  global.VideoFrame = FailedVideoFrame;
+  global.window.VideoFrame = FailedVideoFrame;
+  mixer._outMgr.onFramePresented({
+    frameSource         : failedSource,
+    frameSourceConsumed : true,
+    timestamp           : 2
+  });
+  await flushAsync();
+  assert.strictEqual(failedSource.closed, true);
+  mixer.stop();
+}
+
+
+async function testRepeatedInsertableWriteFailureSwitchesLiveOutputToCaptureStream()
+{
+  resetMockState();
+  enableInsertableMocks();
+
+  const mixer = new MediaEffectsComposer([ createStream() ], {
+    width            : 320,
+    height           : 180,
+    fps              : 15,
+    renderMode       : 'main-2d',
+    enableInsertable : true
+  });
+  const output = mixer.getVideoStream();
+  const oldTrack = output.getVideoTracks()[0];
+  const writer = MockVideoTrackGenerator.instances[0]._writer;
+
+  await flushAsync();
+  writer.write = () => Promise.reject(new Error('writer closed'));
+
+  for (let attempt = 0; attempt < 5; attempt++)
+  {
+    mixer._outMgr.onFramePresented({ canvas: mixer._canvas, timestamp: attempt + 10 });
+    await flushAsync();
+  }
+
+  const nextTrack = output.getVideoTracks()[0];
+
+  assert.notStrictEqual(nextTrack, oldTrack);
+  assert.strictEqual(oldTrack.readyState, 'ended');
+  assert.strictEqual(nextTrack.readyState, 'live');
+  assert.strictEqual(mixer.getRenderInfo().outputMode, 'capture-stream');
+  mixer.stop();
+}
+
+
+async function testRequestFrameFailureSwitchesLiveOutputToAutomaticCapture()
+{
+  resetMockState();
+  MockCanvasElement.captureTrackHasRequestFrame = true;
+
+  const mixer = new MediaEffectsComposer([ createStream() ], {
+    width                     : 320,
+    height                    : 180,
+    fps                       : 15,
+    renderMode                : 'main-2d',
+    manualCaptureFrameControl : true
+  });
+  const output = mixer.getVideoStream();
+  const oldTrack = output.getVideoTracks()[0];
+
+  oldTrack.requestFrame = () =>
+  {
+    throw new Error('requestFrame unavailable');
+  };
+  mixer._outMgr.onFramePresented({ canvas: mixer._canvas, timestamp: 20 });
+
+  const nextTrack = output.getVideoTracks()[0];
+
+  assert.notStrictEqual(nextTrack, oldTrack);
+  assert.strictEqual(oldTrack.readyState, 'ended');
+  assert.strictEqual(nextTrack.readyState, 'live');
+  assert.strictEqual(mixer.getRenderInfo().captureFrameControlMode, 'auto-capture-fps');
+  mixer.stop();
 }
 
 
@@ -1123,6 +1247,9 @@ const TESTS = [
   { name: 'testWorkerWebGL2AiVBDisablesDirectInsertableBitmapPath', fn: testWorkerWebGL2AiVBDisablesDirectInsertableBitmapPath },
   { name: 'testComposerConfigDefaults', fn: testComposerConfigDefaults },
   { name: 'testComposerConfigSourceOptions', fn: testComposerConfigSourceOptions },
+  { name: 'testConsumedInsertableFrameSourceClosesOnSuccessAndCreationFailure', fn: testConsumedInsertableFrameSourceClosesOnSuccessAndCreationFailure },
+  { name: 'testRepeatedInsertableWriteFailureSwitchesLiveOutputToCaptureStream', fn: testRepeatedInsertableWriteFailureSwitchesLiveOutputToCaptureStream },
+  { name: 'testRequestFrameFailureSwitchesLiveOutputToAutomaticCapture', fn: testRequestFrameFailureSwitchesLiveOutputToAutomaticCapture },
   { name: 'testDefaultPrefersCaptureStreamEvenWhenInsertableSupported', fn: testDefaultPrefersCaptureStreamEvenWhenInsertableSupported },
   { name: 'testCaptureStreamActiveSinkIsDisposedOnStop', fn: testCaptureStreamActiveSinkIsDisposedOnStop },
   { name: 'testInsertableVideoStreamPreferredWhenSupported', fn: testInsertableVideoStreamPreferredWhenSupported },

@@ -549,6 +549,61 @@ async function testGetStatsTimeoutEmitsErrorAndReleasesSamplingLock()
   monitor.stop();
 }
 
+async function testPromiseFailureFallsBackToCallbackGetStats()
+{
+  const report = createStats(1000, 1);
+  const pc = createPc([]);
+
+  pc.getStats = function(success)
+  {
+    if (typeof success === 'function')
+    {
+      success(report);
+
+      return;
+    }
+
+    return Promise.reject(new Error('promise overload is broken'));
+  };
+
+  const monitor = new RTCStatsMonitor(pc, { autoStart: false });
+  const detailed = await monitor._collect();
+
+  assert.strictEqual(detailed.outbound.length, 2);
+  assert.strictEqual(monitor.compatibility.api.promiseGetStats, true);
+  assert.strictEqual(monitor.compatibility.api.callbackGetStats, true);
+}
+
+async function testListenerFailureDoesNotPolluteSamplingAndLatestReportIsIsolated()
+{
+  const monitor = new RTCStatsMonitor(createPc([ createStats(1000, 1) ]), {
+    autoStart              : false,
+    transitionGraceSamples : 0
+  });
+  const errors = [];
+
+  monitor._schedule = () => {};
+  monitor._started = true;
+  monitor._runId = 1;
+  monitor.on('detailed-report', () =>
+  {
+    throw new Error('consumer listener failed');
+  });
+  monitor.on('stats-error', (error) => errors.push(error));
+
+  await monitor._sample();
+
+  assert.strictEqual(errors.length, 0);
+  assert.strictEqual(monitor._consecutiveErrors, 0);
+  const firstSnapshot = monitor.getLatestReport();
+
+  firstSnapshot.connection.connectionState = 'mutated';
+  firstSnapshot.outbound.length = 0;
+  assert.strictEqual(monitor.getLatestReport().connection.connectionState, 'connected');
+  assert.strictEqual(monitor.getLatestReport().outbound.length, 2);
+  monitor.stop();
+}
+
 async function testStopAndImmediateRestartDuringInFlightSample()
 {
   let resolveFirst;
@@ -761,6 +816,8 @@ async function run()
       { name: 'treats reset counters as a new baseline', fn: testCounterResetDoesNotCreateNegativeRate },
       { name: 'supports both historical callback getStats signatures', fn: testCallbackGetStatsSignatures },
       { name: 'times out silent getStats callbacks and releases the sampling lock', fn: testGetStatsTimeoutEmitsErrorAndReleasesSamplingLock },
+      { name: 'falls back to callback getStats when the Promise overload rejects', fn: testPromiseFailureFallsBackToCallbackGetStats },
+      { name: 'isolates sampling from listener failures and snapshot mutation', fn: testListenerFailureDoesNotPolluteSamplingAndLatestReportIsIsolated },
       { name: 'restarts cleanly when stop and start occur during an in-flight sample', fn: testStopAndImmediateRestartDuringInFlightSample },
       { name: 'returns from transition grace samples to active phase', fn: testTransitionGraceSamplesReturnToActive },
       { name: 'keeps reset running while rebuilding the sampling baseline', fn: testResetKeepsRunningAndRebuildsBaseline },

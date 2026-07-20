@@ -974,6 +974,27 @@ async function testConfigClampsPostProcessingRanges()
   assert.strictEqual(config.segmentation.frameSkip, 120);
 }
 
+async function testSourceAiVBNormalizesBooleanAndUnknownModeSafely()
+{
+  delete require.cache[require.resolve('../lib/MediaEffectsComposer/AiVirtualBackground/AiVBState')];
+  const SourceAiVBManager = require('../lib/MediaEffectsComposer/AiVirtualBackground/AiVBState');
+  const manager = new SourceAiVBManager();
+  const enabled = manager.normalizeInput(true);
+  const unknown = manager.normalizeInput({ enabled: true, mode: 'unexpected-effect' });
+  const clamped = manager.normalizeInput({
+    enabled        : true,
+    mode           : 'blur',
+    blurRadius     : 999,
+    postProcessing : { maxBlurRadius: 12 }
+  });
+
+  assert.strictEqual(enabled.mode, 'blur');
+  assert.strictEqual(enabled.blurRadius, enabled.postProcessing.blurRadius);
+  assert.strictEqual(unknown.mode, 'none');
+  assert.strictEqual(clamped.blurRadius, 12);
+  assert.strictEqual(clamped.postProcessing.blurRadius, 12);
+}
+
 async function testSourceAiVBManagerUsesScaledCanvasForSegmentation()
 {
   delete require.cache[require.resolve('../lib/MediaEffectsComposer/AiVirtualBackground/AiVBState')];
@@ -1568,6 +1589,36 @@ async function testSourceAiVBManagerKeepsPreviousBackgroundUntilNextImageLoads()
   assert.strictEqual(renderable.backgroundImage, secondImage);
 }
 
+async function testSourceAiVBManagerDoesNotRetryFailedBackgroundEveryFrame()
+{
+  delete require.cache[require.resolve('../lib/MediaEffectsComposer/AiVirtualBackground/AiVBState')];
+  const SourceAiVBManager = require('../lib/MediaEffectsComposer/AiVirtualBackground/AiVBState');
+  const manager = new SourceAiVBManager();
+  const source = { slot: 0 };
+  const videoElement = {
+    readyState  : 2,
+    videoWidth  : 640,
+    videoHeight : 480
+  };
+
+  createdImages = [];
+  MockImageElement.autoLoad = false;
+  manager.setSourceConfig(source, {
+    enabled        : true,
+    mode           : 'image',
+    imageUrl       : 'broken.png',
+    runtimeEnabled : false
+  });
+
+  manager.getRenderableState(source, videoElement);
+  assert.strictEqual(createdImages.length, 1);
+  createdImages[0].triggerError();
+
+  manager.getRenderableState(source, videoElement);
+  manager.getRenderableState(source, videoElement);
+  assert.strictEqual(createdImages.length, 1);
+}
+
 async function run()
 {
   const restoreBrowserMocks = installBrowserMocks();
@@ -1589,6 +1640,7 @@ async function run()
     { name: 'testConfigRejectsLegacySegmentationOptions', fn: testConfigRejectsLegacySegmentationOptions },
     { name: 'testConfigRejectsLegacyPostProcessingOptions', fn: testConfigRejectsLegacyPostProcessingOptions },
     { name: 'testConfigClampsPostProcessingRanges', fn: testConfigClampsPostProcessingRanges },
+    { name: 'testSourceAiVBNormalizesBooleanAndUnknownModeSafely', fn: testSourceAiVBNormalizesBooleanAndUnknownModeSafely },
     { name: 'testSourceAiVBManagerUsesScaledCanvasForSegmentation', fn: testSourceAiVBManagerUsesScaledCanvasForSegmentation },
     { name: 'testSourceAiVBManagerStoresFrameWithSegmentationMask', fn: testSourceAiVBManagerStoresFrameWithSegmentationMask },
     { name: 'testSourceAiVBManagerQueuesLatestFrameWhileSegmentationPending', fn: testSourceAiVBManagerQueuesLatestFrameWhileSegmentationPending },
@@ -1596,7 +1648,8 @@ async function run()
     { name: 'testSourceAiVBManagerStartsRuntimeByDefaultAfterStartupDelay', fn: testSourceAiVBManagerStartsRuntimeByDefaultAfterStartupDelay },
     { name: 'testSourceAiVBManagerBlocksRepeatedInitAfterReportedFailure', fn: testSourceAiVBManagerBlocksRepeatedInitAfterReportedFailure },
     { name: 'testSourceAiVBManagerDoesNotPileSegmentationWorkWhileQueued', fn: testSourceAiVBManagerDoesNotPileSegmentationWorkWhileQueued },
-    { name: 'testSourceAiVBManagerKeepsPreviousBackgroundUntilNextImageLoads', fn: testSourceAiVBManagerKeepsPreviousBackgroundUntilNextImageLoads }
+    { name: 'testSourceAiVBManagerKeepsPreviousBackgroundUntilNextImageLoads', fn: testSourceAiVBManagerKeepsPreviousBackgroundUntilNextImageLoads },
+    { name: 'testSourceAiVBManagerDoesNotRetryFailedBackgroundEveryFrame', fn: testSourceAiVBManagerDoesNotRetryFailedBackgroundEveryFrame }
   ];
 
   try

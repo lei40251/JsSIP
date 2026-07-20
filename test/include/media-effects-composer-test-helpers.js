@@ -105,6 +105,11 @@ class MockMediaStream
   {
     this._tracks.push(track);
   }
+
+  removeTrack(track)
+  {
+    this._tracks = this._tracks.filter((item) => item !== track);
+  }
 }
 
 class MockHTMLMediaElement {}
