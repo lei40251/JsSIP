@@ -130,13 +130,18 @@
                       </div>
                       <div class="call-field">
                         <div class="call-field-label">数字头像</div>
-                        <select id="metaavatar" class="form-select">
-                          <option value="default">默认</option>
-                          <option value="wav2lip256_avatar1">人物一</option>
-                          <option value="wav2lip256_avatar2">人物二</option>
-                          <option value="wav2lip256_avatar3">人物三</option>
-                          <option value="wav2lip256_avatar4">人物四</option>
-                        </select>
+                        <div class="metaavatar-controls">
+                          <select id="metaavatar" class="form-select">
+                            <option value="default">默认</option>
+                            <option value="wav2lip256_avatar1">人物一</option>
+                            <option value="wav2lip256_avatar2">人物二</option>
+                            <option value="wav2lip256_avatar3">人物三</option>
+                            <option value="wav2lip256_avatar4">人物四</option>
+                            <option value="custom">自定义</option>
+                          </select>
+                          <input id="metaavatarCustom" class="form-control hide" type="text"
+                            placeholder="头像标识" autocomplete="off" />
+                        </div>
                       </div>
                     </div>
                   </div>

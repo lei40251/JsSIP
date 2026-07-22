@@ -42,10 +42,9 @@ function releaseMetaHuman()
 function syncMetaHumanConfigFromUI()
 {
   const metaFlagSelect = document.querySelector('#metaflag');
-  const metaAvatarSelect = document.querySelector('#metaavatar');
 
   metaFlagSelect && (metaflag = normalizeMetaHumanFlag(metaFlagSelect.value));
-  metaAvatarSelect && (metaavatar = metaAvatarSelect.value);
+  syncMetaHumanAvatarFromUI();
 
   if (mh)
   {
@@ -56,6 +55,26 @@ function syncMetaHumanConfigFromUI()
       aiNoiseSuppression : buildCallAiNsOptions()
     });
   }
+}
+
+/**
+ * 读取数字头像下拉框；选择“自定义”时读取自定义输入框。
+ */
+function syncMetaHumanAvatarFromUI()
+{
+  const metaAvatarSelect = document.querySelector('#metaavatar');
+  const metaAvatarCustomInput = document.querySelector('#metaavatarCustom');
+
+  if (!metaAvatarSelect)
+  {
+    return;
+  }
+
+  const avatarValue = metaAvatarSelect.value === 'custom' && metaAvatarCustomInput
+    ? metaAvatarCustomInput.value.trim()
+    : metaAvatarSelect.value;
+
+  metaavatar = avatarValue || 'default';
 }
 
 /**
@@ -295,7 +314,43 @@ document.querySelector('#metaHuman').onclick = function()
 
 document.querySelector('#metaavatar').onchange = function()
 {
-  metaavatar = this.options[this.selectedIndex].value;
+  const metaAvatarCustomInput = document.querySelector('#metaavatarCustom');
+  const metaAvatarGrid = this.closest('.call-config-grid-meta');
+  const useCustomAvatar = this.value === 'custom';
+
+  metaAvatarCustomInput.classList.toggle('hide', !useCustomAvatar);
+  metaAvatarGrid.classList.toggle('metaavatar-custom-active', useCustomAvatar);
+
+  if (useCustomAvatar)
+  {
+    metaAvatarCustomInput.focus();
+    setStatus('请输入自定义数字头像标识');
+
+    return;
+  }
+
+  syncMetaHumanAvatarFromUI();
+
+  if (mh)
+  {
+    mh.updateConfig({ avatar: metaavatar });
+  }
+
+  setStatus(`数字人: ${metaavatar}`);
+};
+
+document.querySelector('#metaavatarCustom').onchange = function()
+{
+  this.value = this.value.trim();
+
+  if (!this.value)
+  {
+    setStatus('自定义数字头像标识不能为空');
+
+    return;
+  }
+
+  syncMetaHumanAvatarFromUI();
 
   if (mh)
   {
