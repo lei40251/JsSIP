@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.7.20266242134
+ * CRTC v1.13.7.20267232041
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.7.405212484268 (Web)',
+  USER_AGENT: 'UA/1.13.7.405214464082 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.7.405212484268');
+debug('version %s', '1.13.7.405214464082');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,7 +16893,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.7.405212484268';
+    return '1.13.7.405214464082';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":71,"debug":76}],39:[function(require,module,exports){
@@ -21872,10 +21872,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
              * SDK只对H264过滤保留两个,以兼容其他通用端,SBC对外呼手机的呼叫做媒体过滤
              */
             if (_this18._ua.sk[7] >= 3) {
-              // 删除 extmap 仅保留 urn:3gpp:video-orientation
+              // 删除多余 extmap，保留必需的 RTP 头扩展
               if (media.ext) {
+                var keptExtmaps = ['params:rtp-hdrext:sdes:mid', 'abs-send-time', 'transport-wide-cc', 'video-orientation'];
                 media.ext = media.ext.filter(function (ext) {
-                  return ext.uri === 'urn:3gpp:video-orientation';
+                  return typeof ext.uri === 'string' && keptExtmaps.some(function (item) {
+                    return ext.uri.includes(item);
+                  });
                 });
               }
               if (media.type === 'video') {
@@ -21895,7 +21898,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         desc.sdp = sdp_transform.write(sdp);
 
         // 兼容chrome<71版本  https://github.com/webrtcHacks/adapter/issues/919
-        desc.sdp = desc.sdp.replace(/a=extmap-allow-mixed.*\r\n/g, '');
+        // desc.sdp = desc.sdp.replace(/a=extmap-allow-mixed.*\r\n/g, '');
+
         _this18._customizedMode === 'paphone' && (desc.sdp = Utils.compatiblePayload(desc.sdp));
 
         // 非BFCP修改为根据配置参数设置 profile-level-id
