@@ -355,7 +355,7 @@ await session.switchDevice('audio', microphoneDeviceId);
 
 摄像头成功后监听 `cameraChanged({ videoStream })` 更新预览。
 
-### `renegotiate(): boolean`
+### `renegotiate(options?, done?): boolean`
 
 手动触发重新协商。仅在设备切换未覆盖的新媒体方向等明确场景使用：
 
@@ -368,6 +368,8 @@ session.switchDevice('camera', 'environment')
 ```
 
 一般设备切换由 SDK 已处理时不重复调用；Demo 仅在移动端前后摄像头兼容切换后调用。
+
+默认情况下重新协商失败会结束会话。附加屏幕轨等可降级能力可传入 `{ terminateOnFailure: false }`，并通过完成回调的 `error` 参数回退该能力，同时保留原通话。
 
 ### `share(type, id?, assembly?, dual?): Promise`
 
@@ -480,6 +482,8 @@ if (aiNS)
 ## 6.11 MediaEffectsComposer 会话控制器
 
 通过 `session.getMediaEffectsComposer()` 获取；本通电话未传 `mediaEffectsComposer` 或已释放时返回 `null`。
+
+`session.getComposerInputStream()` 返回进入 composer 前的本端原始 `MediaStream`，未启用 composer 时返回 `null`。需要把同一采集源复用到另一条 `RTCSession` 时，应 clone 轨道后再传入，不能直接停止或修改返回流中的轨道。
 
 ### 会话控制方法
 
@@ -744,6 +748,7 @@ e.session.on('stats:stats-error', function(error)
 | `getCameras()` | 无 | Promise 设备数组或错误对象 | 摄像头列表 |
 | `getMicrophones()` | 无 | Promise 设备数组或错误对象 | 麦克风列表 |
 | `getStreams(pc, type)` | PC、`local`/`remote` | 流集合或 `null` | 获取本地/远端聚合流 |
+| `closeMediaStream(stream)` | `MediaStream` | `void` | 停止并释放流中的全部 track |
 | `isVideoTrackHealthy(stream)` | `MediaStream` | `boolean` | 检查视频 track 是否可用 |
 
 设备项常见字段：`kind`、`label`、`deviceId`。未授权前 `label` 可能为空。

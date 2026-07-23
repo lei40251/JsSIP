@@ -2,7 +2,7 @@
 
 [← 上一章：旧版功能升级](./07-upgrade-guide.md) · [学习目录](./README.md)
 
-Base JS Demo 是一份可运行的 SDK 接入示例，覆盖 UA 创建、自动/主动注册、呼入呼出、媒体设备、音视频模式、共享、AiNS、虚拟背景、镜像、水印、DTMF、SIP INFO、呼转和通话质量统计。
+Base JS Demo 是一份可运行的 SDK 接入示例，覆盖模式初始化、自动注册、主动注销/重新注册、呼入呼出、三方通话、媒体设备、音视频模式、共享、AiNS、虚拟背景、镜像、水印、DTMF、SIP INFO、呼转和通话质量统计。
 
 本章不仅说明按钮用途，还按“页面入口 → Demo 代码位置 → SDK 调用 → 事件反馈 → 清理与验证”解释主要功能。客户可以先按功能运行，再根据函数名定位源码。
 
@@ -33,9 +33,10 @@ session.on(...) → failed / ended 清理
 
 | 功能 | 页面入口 | 代码定位 | 主要 SDK 调用/事件 |
 | --- | --- | --- | --- |
-| 自动/主动注册 | 注册控制区、`register=manual` | `manualRegister`、`registerUa`、`unregisterUa` | `start()`、`register()`、`unregister()`、注册事件 |
+| 自动注册、主动注销/重新注册 | 顶部初始化区、注册控制区 | `initializeDemoMode`、`registerUa`、`unregisterUa` | `start()`、`register()`、`unregister()`、注册事件 |
 | 语音/视频外呼 | `#call`、`#callVideo` | `call(type, direction, mediaStream)` | `ua.call()`、`newRTCSession` |
 | 语音/视频接听 | `#answer`、`#answerVideo` | `newRTCSession` 中的按钮绑定 | `session.answer()` |
+| 三方通话 | 三方模式下的会议成员区 | `app-conference.js` | `ua.call()`、`session.answer()`、`getMediaEffectsComposer()`、`renegotiate()` |
 | 设备选择 | `#cameras`、`#mics` | `buildSelected*Constraints()`、设备 `change` 事件 | `CRTC.Utils.get*()`、`switchDevice()` |
 | 音视频模式切换 | `#toAudio`、`#toVideo`、`#toVideoSendonly` | `newRTCSession` 中的模式按钮绑定 | `downgradeToAudio()`、`upgradeToVideo()`、`mode` |
 | 媒体效果 | 输出镜像、虚拟背景和水印控件 | `buildCallComposerOptions()`、`buildCallAiNsOptions()` | `getMediaEffectsComposer()`、`getAiNoiseSuppression()` |
@@ -87,13 +88,14 @@ http://localhost:8080/demo/base-js/index.html?caller=1002
 | 参数 | 示例 | 默认值 | 作用 |
 | --- | --- | --- | --- |
 | `caller` | `1001` | 无 | 当前 SIP 账号；运行 Demo 时必须传 |
-| `register` | `manual` | 自动注册 | `manual` 时只连接 WSS，等待点击“主动注册” |
 
-组合示例：
+示例：
 
 ```text
-http://localhost:8080/demo/base-js/index.html?caller=1001&register=manual
+http://localhost:8080/demo/base-js/index.html?caller=1001
 ```
+
+页面打开后不会创建 UA 或连接信令。选择“初始化点对点”或“初始化三方”后，Demo 创建当前页面唯一的 UA，并自动连接和注册。
 
 ## 8.5 Demo 的 UA 配置
 
@@ -112,7 +114,7 @@ const configuration = {
   connection_recovery_max_interval : 3,
   connection_recovery_min_interval : 2,
   register_expires                 : 20,
-  register                         : !manualRegister,
+  register                         : true,
   session_timers                   : false,
   secret_key                       : secretKey
 };
@@ -140,11 +142,6 @@ ua.on('connected', function()
   disconnectedBy = null;
   isShowUI = false;
   setStatus('信令连接成功');
-
-  if (manualRegister)
-  {
-    setStatus('信令连接成功，请点击“主动注册”');
-  }
 });
 
 ua.on('registered', function(data)
@@ -155,13 +152,9 @@ ua.on('registered', function(data)
 
 只看到“信令连接成功”时还不能呼叫，必须继续等待 `registered`。
 
-### 主动注册与注销
+### 主动注销与重新注册
 
-```text
-?caller=1001&register=manual
-```
-
-该模式配置 `register: false`。`ua.start()` 只建立 WSS；收到 `connected` 后，页面显示“已连接，等待主动注册”，不会立即发送 REGISTER。
+初始化后 Demo 固定自动注册。注册控制区仍保留主动注销和重新注册，用于验证注册生命周期。
 
 注册控制区对应代码位于 [`app.ui-bindings.js`](../../demo/base-js/js/app.ui-bindings.js)：
 
@@ -185,13 +178,12 @@ document.querySelector('#unregisterUa').onclick = function()
 
 完整验证顺序：
 
-1. 等待状态变为“已连接，等待主动注册”。
-2. 点击“主动注册”，最终以 `registered` 事件和“已注册”状态为准。
-3. 点击“主动注销”，等待 `unregistered` 事件和“未注册”状态。
-4. 再次点击“主动注册”，确认可以重新注册并呼叫。
-5. 未注册时点击外呼，`call()` 会通过 `isRegistered()` 阻止呼叫。
+1. 选择点对点或三方模式，等待 `registered` 事件和“注册成功”状态。
+2. 点击“主动注销”，等待 `unregistered` 事件和“未注册”状态。
+3. 点击“主动注册”，确认可以重新注册并呼叫。
+4. 未注册时点击外呼，`call()` 会通过 `isRegistered()` 阻止呼叫。
 
-自动模式也可以使用主动注销/重新注册按钮。为避免影响通话验证，建议在没有活动通话时操作。注册状态处理集中在 [`app.js`](../../demo/base-js/js/app.js) 的 `connected`、`registered`、`registrationFailed`、`unregistered` 和 `disconnected` 事件中。
+为避免影响通话验证，建议在没有活动通话时注销或重新注册。注册状态处理集中在 [`app.js`](../../demo/base-js/js/app.js) 的 `connected`、`registered`、`registrationFailed`、`unregistered` 和 `disconnected` 事件中。
 
 ## 8.6 WebRTC 网络配置
 
@@ -919,9 +911,9 @@ function handleSessionMediaEffectsIssue(d)
 ### 阶段 A：注册
 
 1. 账号 A 使用自动注册，确认 `connected → registered`。
-2. 账号 B 使用 `register=manual`，确认连接后保持未注册。
-3. 点击“主动注册”，确认 `registered`；点击“主动注销”，确认 `unregistered`。
-4. 再次主动注册，确认可以恢复呼叫。
+2. 账号 B 初始化后确认自动触发 `registered`。
+3. 点击“主动注销”，确认 `unregistered`。
+4. 再次点击“主动注册”，确认可以恢复呼叫。
 5. 修改为错误密码，确认 `registrationFailed` 且呼叫被禁止。
 6. 临时断网，观察 offline/disconnected；恢复后确认 WSS 重连，再按当前注册模式完成注册。
 
@@ -971,7 +963,7 @@ function handleSessionMediaEffectsIssue(d)
 | 现象 | 检查顺序 |
 | --- | --- |
 | 页面没有注册 | `caller`、WSS、证书、账号密码、授权码和注册失败信息 |
-| `connected` 但不能呼叫 | 自动模式等待 `registered`；主动模式点击“主动注册”并检查注册事件 |
+| `connected` 但不能呼叫 | 等待 `registered`；若注册失败，检查账号鉴权和注册事件 |
 | 收到来电但没有声音/画面 | 接听参数、权限、选中设备、ICE/TURN、`connection.ontrack` |
 | `ua.call()` reject | 权限、OverconstrainedError、设备被占用、自定义流是否含有效轨道 |
 | `getMediaEffectsComposer()` 为 `null` | 本通电话的 call/answer options 未传 composer，或会话已结束 |
@@ -1028,7 +1020,7 @@ function start()
 
   setTimeout(() =>
   {
-    if (!ua.isConnected() || (!manualRegister && !ua.isRegistered()))
+    if (!ua.isConnected() || !ua.isRegistered())
     {
       ua.stop();
       console.log('网络连接异常或未注册成功');
@@ -1071,7 +1063,7 @@ window.onbeforeunload = function()
 
 只依赖本学习文档和 Base JS Demo，应能完成：
 
-- 自动注册、主动注册、主动注销和重新注册，并正确处理连接/注册失败。
+- 初始化后自动注册、主动注销和重新注册，并正确处理连接/注册失败。
 - 音频、视频呼入呼出、取消、拒接和双方挂断。
 - 远端音视频和共享流播放。
 - camera/mic 切换、静音、保持和音视频模式切换。

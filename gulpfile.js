@@ -383,6 +383,7 @@ gulp.task('test-files', function()
     'test/test-UA-no-WebRTC.js',
     'test/test-digestAuthentication.js',
     'test/test-rtc-stats-monitor.js',
+    'test/test-conference.js',
     'test/test-ains.js',
     'test/test-aivb.js',
     'test/test-media-effects-composer-audio.js',
@@ -488,6 +489,10 @@ gulp.task('sdk-test', function(done)
     .then(function()
     {
       return require('./test/test-rtc-stats-monitor').run();
+    })
+    .then(function()
+    {
+      return runner.run('Conference', require('./test/test-conference'));
     })
     .then(function()
     {

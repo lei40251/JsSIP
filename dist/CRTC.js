@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.5.20267171442
+ * CRTC v2.0.5.20267232142
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -218,10 +218,15 @@ var AiNSWorkletRuntime = require('./AiNSWorkletRuntime');
 var logger = new Logger('AiNoiseSuppression');
 var getErrorMessage = issueUtils.getErrorMessage;
 function cloneIssue(issue) {
-  return issue && typeof issue === 'object' ? JSON.parse(JSON.stringify(issue)) : null;
+  if (!issue || typeof issue !== 'object') return null;
+  try {
+    return JSON.parse(JSON.stringify(issue));
+  } catch (error) {
+    return Object.assign({}, issue);
+  }
 }
 function isAiNSSupported() {
-  return typeof AudioContext !== 'undefined' && typeof AudioWorkletNode !== 'undefined' && typeof WebAssembly !== 'undefined';
+  return typeof AudioContext !== 'undefined' && typeof AudioWorkletNode !== 'undefined' && typeof WebAssembly !== 'undefined' && typeof MediaStream !== 'undefined' && typeof Blob !== 'undefined' && typeof fetch === 'function' && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function';
 }
 
 /**
@@ -235,7 +240,10 @@ function collectCapabilityReport(engine) {
     audioContext: typeof AudioContext !== 'undefined',
     audioWorklet: typeof AudioWorkletNode !== 'undefined',
     webAssembly: typeof WebAssembly !== 'undefined',
-    mediaStream: typeof MediaStream !== 'undefined'
+    mediaStream: typeof MediaStream !== 'undefined',
+    blob: typeof Blob !== 'undefined',
+    fetch: typeof fetch === 'function',
+    objectUrl: typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function'
   };
   var missing = Object.keys(requirements).filter(key => !requirements[key]);
   var supported = missing.length === 0 && isAiNSSupported();
@@ -295,13 +303,18 @@ class AiNoiseSuppressionEngine {
     // -- 引擎入口处使用的输入/输出流引用 --
     this.inputStream = null;
     this.outputStream = null;
+    this._destroyed = false;
+    this._operationGeneration = 0;
+    this._operationQueue = Promise.resolve();
+    this._inputTrackEndedHandler = null;
 
     // -- Worklet 运行时 --
     this._workletRuntime = new AiNSWorkletRuntime({
       sampleRate: normalizedOptions.sampleRate,
       noiseReductionLevel: normalizedOptions.noiseReductionLevel,
       assetConfig: normalizedOptions.assetConfig,
-      onIssue: this._reportIssue.bind(this)
+      onIssue: this._reportIssue.bind(this),
+      onRuntimeFailure: this._fallbackToRawAudio.bind(this)
     });
     logger.debug(`constructor: ${JSON.stringify(this.config)}`);
   }
@@ -319,6 +332,9 @@ class AiNoiseSuppressionEngine {
       severity: 'error'
     }, issue);
     this._issues.push(cloneIssue(normalizedIssue));
+    if (this._issues.length > 50) {
+      this._issues.splice(0, this._issues.length - 50);
+    }
     if (!this._onIssue) return;
     try {
       this._onIssue(normalizedIssue);
@@ -346,20 +362,22 @@ class AiNoiseSuppressionEngine {
    * @param {{inputStream: MediaStream}} [params]
    * @returns {Promise<MediaStream>}
    */
-  async init(params = {}) {
+  init(params = {}) {
     logger.debug('init()');
     if (!params.inputStream) {
       throw new Error('inputStream required');
     }
-    this.inputStream = params.inputStream;
-    this.setInput(this.inputStream);
-    await this.ensureGraph();
-    if (!this.processedStream) {
-      throw new Error('AiNoiseSuppression.init: failed to create processed MediaStream');
-    }
-    this.outputStream = this.processedStream;
-    logger.debug(`init() complete: hasOutput=${Boolean(this.outputStream)}`);
-    return this.outputStream;
+    return this._enqueueGraphOperation(async () => {
+      this.inputStream = params.inputStream;
+      this.setInput(this.inputStream);
+      await this.ensureGraph();
+      if (!this.processedStream) {
+        throw new Error('AiNoiseSuppression.init: failed to create processed MediaStream');
+      }
+      this.outputStream = this.processedStream;
+      logger.debug(`init() complete: hasOutput=${Boolean(this.outputStream)}`);
+      return this.outputStream;
+    });
   }
 
   /** @returns {MediaStream|null} */
@@ -384,22 +402,26 @@ class AiNoiseSuppressionEngine {
    * @param {MediaStream|MediaStreamTrack} input
    * @returns {Promise<MediaStream>}
    */
-  async replaceAudioTrack(input) {
+  replaceAudioTrack(input) {
     logger.debug('replaceAudioTrack()');
-    var nextAudioTrack = this._getInputAudioTrack(input);
-    if (!nextAudioTrack) {
-      throw new Error('AiNoiseSuppression: replacement input has no audio track');
-    }
-    var nextStream = this._buildReplacedAudioStream(nextAudioTrack);
-    this.originalTrack = nextAudioTrack;
-    this.originalStream = nextStream;
-    await this.ensureGraph();
-    if (!this.processedStream) {
-      throw new Error('AiNoiseSuppression.replaceAudioTrack: failed to create processed MediaStream');
-    }
-    this.outputStream = this.processedStream;
-    this.inputStream = this.originalStream;
-    return this.outputStream;
+    return this._enqueueGraphOperation(async () => {
+      var nextAudioTrack = this._getInputAudioTrack(input);
+      if (!nextAudioTrack) {
+        throw new Error('AiNoiseSuppression: replacement input has no audio track');
+      }
+      var nextStream = this._buildReplacedAudioStream(nextAudioTrack);
+      this._unbindInputTrackEnded();
+      this.originalTrack = nextAudioTrack;
+      this.originalStream = nextStream;
+      this._bindInputTrackEnded(nextAudioTrack);
+      await this.ensureGraph();
+      if (!this.processedStream) {
+        throw new Error('AiNoiseSuppression.replaceAudioTrack: failed to create processed MediaStream');
+      }
+      this.outputStream = this.processedStream;
+      this.inputStream = this.originalStream;
+      return this.outputStream;
+    });
   }
 
   /**
@@ -500,8 +522,16 @@ class AiNoiseSuppressionEngine {
 
   async destroy() {
     logger.debug('destroy()');
+    this._destroyed = true;
+    this._operationGeneration += 1;
+    await this._operationQueue.catch(() => {});
     await this.teardownGraph();
-    this._workletRuntime.destroy();
+    try {
+      this._workletRuntime.destroy();
+    } catch (error) {
+      logger.warn(`destroy() worklet cleanup failed: ${getErrorMessage(error)}`);
+    }
+    this._unbindInputTrackEnded();
     this.originalTrack = null;
     this.originalStream = null;
     this.inputStream = null;
@@ -519,16 +549,20 @@ class AiNoiseSuppressionEngine {
       if (!audioTrack) {
         throw new Error('AiNoiseSuppression: input stream has no audio track');
       }
+      this._unbindInputTrackEnded();
       this.originalStream = input;
       this.originalTrack = audioTrack;
+      this._bindInputTrackEnded(audioTrack);
       logger.debug(`setInput() stream resolved: audioTracks=${input.getAudioTracks().length} totalTracks=${input.getTracks().length}`);
       return;
     }
     if (!input || input.kind !== 'audio') {
       throw new Error('AiNoiseSuppression: input track must be audio');
     }
+    this._unbindInputTrackEnded();
     this.originalTrack = input;
     this.originalStream = new MediaStream([input]);
+    this._bindInputTrackEnded(input);
     logger.debug('setInput() single audio track wrapped into MediaStream');
   }
   _getInputAudioTrack(input) {
@@ -565,9 +599,16 @@ class AiNoiseSuppressionEngine {
     if (!this.originalTrack || !this.originalStream) {
       throw new Error('AiNoiseSuppression: missing source audio track');
     }
-    this.audioContext = this.audioContext || new AudioContext({
-      sampleRate: this.config.sampleRate
-    });
+    if (!this.audioContext) {
+      try {
+        this.audioContext = new AudioContext({
+          sampleRate: this.config.sampleRate
+        });
+      } catch (error) {
+        logger.warn(`AudioContext sampleRate fallback applied: ${getErrorMessage(error)}`);
+        this.audioContext = new AudioContext();
+      }
+    }
     if (this.audioContext.state !== 'running') {
       try {
         await this.audioContext.resume();
@@ -583,6 +624,7 @@ class AiNoiseSuppressionEngine {
             sampleRate: this.audioContext ? this.audioContext.sampleRate : this.config.sampleRate
           }
         });
+        throw error;
       }
     }
     await this._workletRuntime.initialize();
@@ -625,33 +667,105 @@ class AiNoiseSuppressionEngine {
   }
   async teardownGraph() {
     logger.debug('teardownGraph() start');
+    var nodes = [this.workletNode, this.outputGainNode, this.sourceNode, this.destination];
+    this.workletNode = null;
+    this.outputGainNode = null;
+    this.sourceNode = null;
+    this.destination = null;
+    nodes.forEach(node => {
+      if (!node || !node.disconnect) return;
+      try {
+        node.disconnect();
+      } catch (error) {
+        logger.warn(`teardownGraph() disconnect failed: ${getErrorMessage(error)}`);
+      }
+    });
+    if (this.processedTrack && this.processedTrack.stop) {
+      try {
+        this.processedTrack.stop();
+      } catch (error) {
+        logger.warn(`teardownGraph() processed track stop failed: ${getErrorMessage(error)}`);
+      }
+    }
+    var audioContext = this.audioContext;
+    this.audioContext = null;
+    if (audioContext && audioContext.close) {
+      try {
+        await audioContext.close();
+      } catch (error) {
+        logger.warn(`teardownGraph() context close failed: ${getErrorMessage(error)}`);
+      }
+    }
+    this.processedTrack = null;
+    this.processedStream = null;
+    logger.debug('teardownGraph() complete');
+  }
+  _enqueueGraphOperation(operation) {
+    if (this._destroyed) {
+      return Promise.reject(new Error('AiNoiseSuppression has been destroyed'));
+    }
+    var generation = ++this._operationGeneration;
+    var result = this._operationQueue.catch(() => {}).then(async () => {
+      if (this._destroyed) throw new Error('AiNoiseSuppression has been destroyed');
+      var value = await operation();
+      if (this._destroyed || generation !== this._operationGeneration) {
+        throw new Error('AiNoiseSuppression operation superseded');
+      }
+      return value;
+    });
+    this._operationQueue = result.catch(() => {});
+    return result;
+  }
+  _bindInputTrackEnded(track) {
+    this._unbindInputTrackEnded();
+    if (!track || !track.addEventListener) {
+      return;
+    }
+    this._inputTrackEndedHandler = () => {
+      this._workletRuntime.setNsEnabled(false);
+      if (this.processedTrack && this.processedTrack.stop) {
+        try {
+          this.processedTrack.stop();
+        } catch (error) {}
+      }
+      this._reportIssue({
+        stage: 'input-track-ended',
+        severity: 'warn',
+        message: 'AI noise suppression input track ended',
+        fallbackApplied: true,
+        degraded: true
+      });
+    };
+    track.addEventListener('ended', this._inputTrackEndedHandler);
+  }
+  _unbindInputTrackEnded() {
+    if (this.originalTrack && this._inputTrackEndedHandler && this.originalTrack.removeEventListener) {
+      try {
+        this.originalTrack.removeEventListener('ended', this._inputTrackEndedHandler);
+      } catch (error) {}
+    }
+    this._inputTrackEndedHandler = null;
+  }
+  _fallbackToRawAudio(reason) {
+    if (!this.sourceNode || !this.outputGainNode) {
+      return false;
+    }
     try {
-      if (this.workletNode) {
-        this.workletNode.disconnect();
-        this.workletNode = null;
-      }
-      if (this.outputGainNode) {
-        this.outputGainNode.disconnect();
-        this.outputGainNode = null;
-      }
-      if (this.sourceNode) {
-        this.sourceNode.disconnect();
-        this.sourceNode = null;
-      }
-      if (this.destination) {
-        this.destination.disconnect();
-        this.destination = null;
-      }
-      if (this.audioContext) {
-        await this.audioContext.close();
-        this.audioContext = null;
-      }
+      this.sourceNode.disconnect();
+      this.sourceNode.connect(this.outputGainNode);
+      this.enabled = false;
+      this._workletRuntime.setNsEnabled(false);
+      logger.warn(`AI noise suppression switched to raw audio: ${reason || 'runtime failure'}`);
+      return true;
     } catch (error) {
-      logger.warn('teardownGraph() | ignore cleanup error', error);
-    } finally {
-      this.processedTrack = null;
-      this.processedStream = null;
-      logger.debug('teardownGraph() complete');
+      this._reportIssue({
+        stage: 'raw-audio-fallback',
+        severity: 'error',
+        message: getErrorMessage(error),
+        fallbackApplied: false,
+        degraded: true
+      });
+      return false;
     }
   }
 }
@@ -672,7 +786,8 @@ var WORKLET_MESSAGE_TYPES = {
 };
 var WORKLET_EVENT_TYPES = {
   INIT_FAILED: 'AINS_WORKLET_INIT_FAILED',
-  UNSUPPORTED_CHANNEL_LAYOUT: 'AINS_UNSUPPORTED_CHANNEL_LAYOUT'
+  UNSUPPORTED_CHANNEL_LAYOUT: 'AINS_UNSUPPORTED_CHANNEL_LAYOUT',
+  PROCESSING_FAILED: 'AINS_WORKLET_PROCESSING_FAILED'
 };
 var getErrorMessage = issueUtils.getErrorMessage;
 
@@ -698,25 +813,29 @@ function getAssetUrls(cdnUrl) {
  */
 async function fetchAsset(url, timeoutMs = DEFAULT_FETCH_TIMEOUT_MS) {
   logger.debug(`fetchAsset() start: url=${url} timeoutMs=${timeoutMs}`);
+  var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
   var timeoutResolve = null;
   var trackedTimeoutPromise = new Promise((_, reject) => {
     var timerId = setTimeout(() => {
+      if (controller) controller.abort();
       reject(new Error(`Timed out fetching asset after ${timeoutMs}ms: ${url}`));
     }, timeoutMs);
     timeoutResolve = () => clearTimeout(timerId);
   });
   var response = null;
   try {
-    response = await Promise.race([fetch(url), trackedTimeoutPromise]);
+    response = await Promise.race([fetch(url, controller ? {
+      signal: controller.signal
+    } : undefined), trackedTimeoutPromise]);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch asset: url=${url} status=${response.status} statusText=${response.statusText}`);
+    }
+    var bytes = await Promise.race([response.arrayBuffer(), trackedTimeoutPromise]);
+    logger.debug(`fetchAsset() complete: url=${url} bytes=${bytes.byteLength}`);
+    return bytes;
   } finally {
     if (timeoutResolve) timeoutResolve();
   }
-  if (!response.ok) {
-    throw new Error(`Failed to fetch asset: url=${url} status=${response.status} statusText=${response.statusText}`);
-  }
-  var bytes = await response.arrayBuffer();
-  logger.debug(`fetchAsset() complete: url=${url} bytes=${bytes.byteLength}`);
-  return bytes;
 }
 
 /**
@@ -760,10 +879,12 @@ module.exports = class AiNSWorkletRuntime {
   constructor(config = {}) {
     var normalizedConfig = AiNSConfig.create(config);
     this._onIssue = typeof config.onIssue === 'function' ? config.onIssue : null;
+    this._onRuntimeFailure = typeof config.onRuntimeFailure === 'function' ? config.onRuntimeFailure : null;
     this._cdnUrl = normalizedConfig.assetConfig && normalizedConfig.assetConfig.cdnUrl || DEFAULT_CDN_URL;
     this.assets = null;
     this.workletNode = null;
     this.isInitialized = false;
+    this.initializingPromise = null;
     this.bypassEnabled = false;
     this.config = {
       sampleRate: normalizedConfig.sampleRate,
@@ -820,6 +941,17 @@ module.exports = class AiNSWorkletRuntime {
       logger.debug('initialize() skipped: already initialized');
       return;
     }
+    if (this.initializingPromise) {
+      return this.initializingPromise;
+    }
+    this.initializingPromise = this._initializeAssets();
+    try {
+      await this.initializingPromise;
+    } finally {
+      this.initializingPromise = null;
+    }
+  }
+  async _initializeAssets() {
     logger.debug('initialize() start');
     var assetUrls = getAssetUrls(this._cdnUrl);
     logger.debug(`initialize() asset urls: ${JSON.stringify(assetUrls)}`);
@@ -935,6 +1067,34 @@ module.exports = class AiNSWorkletRuntime {
             cdnUrl: this._cdnUrl
           }, data.details || {})
         });
+      } else if (data.type === WORKLET_EVENT_TYPES.PROCESSING_FAILED) {
+        this.bypassEnabled = true;
+        this._reportIssue({
+          component: 'AiNSWorkletSource',
+          stage: 'worklet-processing',
+          severity: 'error',
+          message: data.message || 'AudioWorklet processing failed and switched to bypass',
+          fallbackApplied: true,
+          degraded: true,
+          details: data.details || {}
+        });
+      }
+    };
+    this.workletNode.onprocessorerror = event => {
+      this.bypassEnabled = true;
+      this._reportIssue({
+        stage: 'worklet-processor-error',
+        severity: 'error',
+        message: event && event.message ? event.message : 'AudioWorklet processor error',
+        fallbackApplied: true,
+        degraded: true
+      });
+      if (this._onRuntimeFailure) {
+        try {
+          this._onRuntimeFailure(event && event.message ? event.message : 'AudioWorklet processor error');
+        } catch (error) {
+          logger.warn(`Runtime failure callback failed: ${getErrorMessage(error)}`);
+        }
       }
     };
     logger.debug('createAudioWorkletNode() complete');
@@ -999,11 +1159,18 @@ module.exports = class AiNSWorkletRuntime {
   destroy() {
     logger.debug('destroy()');
     if (this.workletNode) {
-      this.workletNode.disconnect();
+      if (this.workletNode.port) this.workletNode.port.onmessage = null;
+      this.workletNode.onprocessorerror = null;
+      try {
+        this.workletNode.disconnect();
+      } catch (error) {
+        logger.warn(`destroy() disconnect failed: ${getErrorMessage(error)}`);
+      }
       this.workletNode = null;
     }
     this.assets = null;
     this.isInitialized = false;
+    this.initializingPromise = null;
   }
 
   /**
@@ -1304,7 +1471,8 @@ function workletMain() {
      */
     var WorkletEventTypes = {
       INIT_FAILED: 'AINS_WORKLET_INIT_FAILED',
-      UNSUPPORTED_CHANNEL_LAYOUT: 'AINS_UNSUPPORTED_CHANNEL_LAYOUT'
+      UNSUPPORTED_CHANNEL_LAYOUT: 'AINS_UNSUPPORTED_CHANNEL_LAYOUT',
+      PROCESSING_FAILED: 'AINS_WORKLET_PROCESSING_FAILED'
     };
     class DeepFilterAudioProcessor extends AudioWorkletProcessor {
       constructor(options) {
@@ -1321,12 +1489,16 @@ function workletMain() {
         this.inputBuffer = new Float32Array(this.bufferSize);
         this.outputBuffer = new Float32Array(this.bufferSize);
         this.hasReportedUnsupportedChannelLayout = false;
+        this.hasReportedProcessingFailure = false;
         try {
           initSync(options.processorOptions.wasmBytes);
           var modelBytes = new Uint8Array(options.processorOptions.modelBytes);
           var suppressionLevel = options.processorOptions.suppressionLevel;
           var handle = ans_create(modelBytes, suppressionLevel == null ? 50 : suppressionLevel);
           var frameLength = ans_get_frame_length(handle);
+          if (!handle || !Number.isFinite(frameLength) || frameLength <= 0 || frameLength > 4096) {
+            throw new Error('DeepFilter returned invalid model handle or frame length');
+          }
           this.dfModel = {
             handle,
             frameLength
@@ -1407,9 +1579,21 @@ function workletMain() {
             }
             break;
           case WorkletMessageTypes.SET_BYPASS:
-            this.bypass = Boolean(data.value);
+            if (this.bypass !== Boolean(data.value)) {
+              this.bypass = Boolean(data.value);
+              this.resetBuffers();
+            }
             break;
         }
+      }
+      resetBuffers() {
+        this.inputWritePos = 0;
+        this.inputReadPos = 0;
+        this.outputWritePos = 0;
+        this.outputReadPos = 0;
+        this.inputBuffer.fill(0);
+        this.outputBuffer.fill(0);
+        if (this.tempFrame) this.tempFrame.fill(0);
       }
       getInputAvailable() {
         return (this.inputWritePos - this.inputReadPos + this.bufferSize) % this.bufferSize;
@@ -1433,44 +1617,63 @@ function workletMain() {
           this.passthroughInputChannels(inputChannels, outputList, sourceLimit);
           return true;
         }
-        for (var i = 0; i < input.length; i++) {
-          this.inputBuffer[this.inputWritePos] = input[i];
-          this.inputWritePos = (this.inputWritePos + 1) % this.bufferSize;
-        }
-        var frameLength = this.dfModel.frameLength;
-        while (this.getInputAvailable() >= frameLength) {
-          for (var _i = 0; _i < frameLength; _i++) {
-            this.tempFrame[_i] = this.inputBuffer[this.inputReadPos];
-            this.inputReadPos = (this.inputReadPos + 1) % this.bufferSize;
+        try {
+          for (var i = 0; i < input.length; i++) {
+            this.inputBuffer[this.inputWritePos] = input[i];
+            this.inputWritePos = (this.inputWritePos + 1) % this.bufferSize;
           }
-          var processed = ans_process_frame(this.dfModel.handle, this.tempFrame);
-          for (var _i2 = 0; _i2 < processed.length; _i2++) {
-            this.outputBuffer[this.outputWritePos] = processed[_i2];
-            this.outputWritePos = (this.outputWritePos + 1) % this.bufferSize;
+          var frameLength = this.dfModel.frameLength;
+          while (this.getInputAvailable() >= frameLength) {
+            for (var _i = 0; _i < frameLength; _i++) {
+              this.tempFrame[_i] = this.inputBuffer[this.inputReadPos];
+              this.inputReadPos = (this.inputReadPos + 1) % this.bufferSize;
+            }
+            var processed = ans_process_frame(this.dfModel.handle, this.tempFrame);
+            if (!processed || !Number.isFinite(processed.length) || processed.length > this.bufferSize) {
+              throw new Error('DeepFilter returned invalid processed frame');
+            }
+            for (var _i2 = 0; _i2 < processed.length; _i2++) {
+              this.outputBuffer[this.outputWritePos] = processed[_i2];
+              this.outputWritePos = (this.outputWritePos + 1) % this.bufferSize;
+            }
           }
-        }
-        var outputAvailable = this.getOutputAvailable();
-        if (outputAvailable >= 128) {
-          for (var inputNum = 0; inputNum < sourceLimit; inputNum++) {
-            var output = outputList[inputNum];
-            var channelCount = output.length;
-            for (var channelNum = 0; channelNum < channelCount; channelNum++) {
-              var outputChannel = output[channelNum];
-              var readPos = this.outputReadPos;
-              for (var _i3 = 0; _i3 < 128; _i3++) {
-                outputChannel[_i3] = this.outputBuffer[readPos];
-                readPos = (readPos + 1) % this.bufferSize;
+          var outputAvailable = this.getOutputAvailable();
+          if (outputAvailable >= 128) {
+            for (var inputNum = 0; inputNum < sourceLimit; inputNum++) {
+              var output = outputList[inputNum];
+              var channelCount = output.length;
+              for (var channelNum = 0; channelNum < channelCount; channelNum++) {
+                var outputChannel = output[channelNum];
+                var readPos = this.outputReadPos;
+                for (var _i3 = 0; _i3 < 128; _i3++) {
+                  outputChannel[_i3] = this.outputBuffer[readPos];
+                  readPos = (readPos + 1) % this.bufferSize;
+                }
+              }
+            }
+            this.outputReadPos = (this.outputReadPos + 128) % this.bufferSize;
+          } else {
+            for (var _inputNum = 0; _inputNum < sourceLimit; _inputNum++) {
+              var _output = outputList[_inputNum];
+              var _channelCount = _output.length;
+              for (var _channelNum = 0; _channelNum < _channelCount; _channelNum++) {
+                _output[_channelNum].fill(0);
               }
             }
           }
-          this.outputReadPos = (this.outputReadPos + 128) % this.bufferSize;
-        } else {
-          for (var _inputNum = 0; _inputNum < sourceLimit; _inputNum++) {
-            var _output = outputList[_inputNum];
-            var _channelCount = _output.length;
-            for (var _channelNum = 0; _channelNum < _channelCount; _channelNum++) {
-              _output[_channelNum].fill(0);
-            }
+        } catch (error) {
+          this.bypass = true;
+          this.isInitialized = false;
+          this.resetBuffers();
+          this.passthroughInputChannels(inputChannels, outputList, sourceLimit);
+          if (!this.hasReportedProcessingFailure && this.port && typeof this.port.postMessage === 'function') {
+            this.hasReportedProcessingFailure = true;
+            try {
+              this.port.postMessage({
+                type: WorkletEventTypes.PROCESSING_FAILED,
+                message: error && error.message ? error.message : String(error)
+              });
+            } catch (postError) {}
           }
         }
         return true;
@@ -4168,7 +4371,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.5.405214342884 (Web)',
+  USER_AGENT: 'UA/2.0.5.405214464284 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17423,7 +17626,7 @@ var debug = require('debug')('CRTC');
 var RTCStatsMonitor = require('./RTCStatsMonitor');
 var MediaEffectsComposer = require('./MediaEffectsComposer/MediaEffectsComposer');
 var MetaHumanClient = require('./MetaHumanClient');
-debug('version %s', '2.0.5.405214342884');
+debug('version %s', '2.0.5.405214464284');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17464,7 +17667,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.5.405214342884';
+    return '2.0.5.405214464284';
   }
 };
 },{"./Constants":30,"./Exceptions":35,"./Grammar":36,"./MediaEffectsComposer/MediaEffectsComposer":47,"./MetaHumanClient":59,"./NameAddrHeader":60,"./RTCStatsMonitor":70,"./UA":78,"./URI":79,"./Utils":80,"./WebSocketInterface":81,"debug":86}],38:[function(require,module,exports){
@@ -17594,6 +17797,7 @@ var segmentationHelpers = SegmentationCommon.createSegmentationHelpers();
 
 /** window 上存储 MediaPipe Tasks 全局变量的键名 */
 var TASKS_GLOBAL = 'CRTCAiVBVisionTasks';
+var TASKS_BY_URL_GLOBAL = 'CRTCAiVBVisionTasksByUrl';
 
 /** 注入的 script 加载完成后设置的 data 属性，值为 'true' */
 var SCRIPT_READY_ATTR = 'data-aivb-ready';
@@ -17647,17 +17851,22 @@ module.exports = class AiVBAssetLoader {
     if (typeof window === 'undefined' || typeof document === 'undefined') {
       throw new Error('AiVirtualBackground requires browser environment');
     }
+    var moduleUrl = this.assetConfig.moduleUrl;
+    var tasksByUrl = window[TASKS_BY_URL_GLOBAL] || (window[TASKS_BY_URL_GLOBAL] = {});
 
     // 已加载 —— 立即返回
-    if (window[TASKS_GLOBAL]) {
-      return window[TASKS_GLOBAL];
+    if (tasksByUrl[moduleUrl]) {
+      return tasksByUrl[moduleUrl];
     }
-    var moduleUrl = this.assetConfig.moduleUrl;
+    if (window[TASKS_GLOBAL] && Object.keys(tasksByUrl).length === 0) {
+      tasksByUrl[moduleUrl] = window[TASKS_GLOBAL];
+      return tasksByUrl[moduleUrl];
+    }
 
     // 其他调用方正在加载此 moduleUrl —— 等待它完成
     if (TASKS_LOAD_PROMISES[moduleUrl]) {
       await TASKS_LOAD_PROMISES[moduleUrl];
-      return window[TASKS_GLOBAL];
+      return tasksByUrl[moduleUrl];
     }
     TASKS_LOAD_PROMISES[moduleUrl] = this.loadTasksRuntime(moduleUrl);
     try {
@@ -17666,7 +17875,7 @@ module.exports = class AiVBAssetLoader {
       delete TASKS_LOAD_PROMISES[moduleUrl];
     }
     logger.debug(`Loaded MediaPipe Tasks runtime: ${moduleUrl}`);
-    return window[TASKS_GLOBAL];
+    return tasksByUrl[moduleUrl];
   }
 
   /**
@@ -17681,11 +17890,17 @@ module.exports = class AiVBAssetLoader {
    * @returns {Promise<void>}
    */
   async loadTasksRuntime(moduleUrl) {
-    var selector = `script[data-aivb-module="${moduleUrl}"]`;
-    var existingScript = document.querySelector(selector);
+    var scripts = document.querySelectorAll ? document.querySelectorAll('script[data-aivb-module]') : [];
+    var existingScript = null;
+    for (var index = 0; index < scripts.length; index++) {
+      if (scripts[index].getAttribute('data-aivb-module') === moduleUrl) {
+        existingScript = scripts[index];
+        break;
+      }
+    }
     if (existingScript) {
       await this.waitForExistingScript(existingScript, moduleUrl);
-      return window[TASKS_GLOBAL];
+      return window[TASKS_BY_URL_GLOBAL] && window[TASKS_BY_URL_GLOBAL][moduleUrl];
     }
     await new Promise((resolve, reject) => {
       var script = document.createElement('script');
@@ -17703,18 +17918,24 @@ module.exports = class AiVBAssetLoader {
       script.type = 'module';
       script.async = true;
       script.setAttribute('data-aivb-module', moduleUrl);
+      if (this.assetConfig.scriptNonce) {
+        script.nonce = this.assetConfig.scriptNonce;
+      }
 
       // 内联 ESM import —— 无需单独的 JS 文件
-      script.textContent = `import { FilesetResolver, ImageSegmenter } from '${moduleUrl}';
-        window.${TASKS_GLOBAL} = { FilesetResolver, ImageSegmenter };`;
+      script.textContent = `import { FilesetResolver, ImageSegmenter } from ${JSON.stringify(moduleUrl)};
+        window.${TASKS_BY_URL_GLOBAL} = window.${TASKS_BY_URL_GLOBAL} || {};
+        window.${TASKS_BY_URL_GLOBAL}[${JSON.stringify(moduleUrl)}] = { FilesetResolver, ImageSegmenter };
+        window.${TASKS_GLOBAL} = window.${TASKS_BY_URL_GLOBAL}[${JSON.stringify(moduleUrl)}];`;
       script.onerror = () => {
         cleanup();
         script.setAttribute(SCRIPT_ERROR_ATTR, 'true');
+        if (script.parentNode) script.parentNode.removeChild(script);
         reject(new Error(`Failed to load MediaPipe Tasks runtime: ${moduleUrl}`));
       };
       document.head.appendChild(script);
       intervalId = window.setInterval(() => {
-        if (window[TASKS_GLOBAL]) {
+        if (window[TASKS_BY_URL_GLOBAL] && window[TASKS_BY_URL_GLOBAL][moduleUrl]) {
           cleanup();
           script.setAttribute(SCRIPT_READY_ATTR, 'true');
           script.removeAttribute(SCRIPT_ERROR_ATTR);
@@ -17723,6 +17944,7 @@ module.exports = class AiVBAssetLoader {
       }, SCRIPT_POLL_INTERVAL_MS);
       timeoutId = window.setTimeout(() => {
         cleanup();
+        if (script.parentNode) script.parentNode.removeChild(script);
         reject(new Error(`Timed out waiting for MediaPipe Tasks runtime: ${moduleUrl}`));
       }, SCRIPT_WAIT_TIMEOUT_MS);
     });
@@ -17744,7 +17966,7 @@ module.exports = class AiVBAssetLoader {
    */
   async waitForExistingScript(script, moduleUrl) {
     // 情况 1：全局变量已可用
-    if (window[TASKS_GLOBAL]) {
+    if (window[TASKS_BY_URL_GLOBAL] && window[TASKS_BY_URL_GLOBAL][moduleUrl]) {
       return;
     }
 
@@ -17755,7 +17977,7 @@ module.exports = class AiVBAssetLoader {
 
     // 边缘情况：script 标记为就绪但全局变量缺失
     if (script.getAttribute(SCRIPT_READY_ATTR) === 'true') {
-      if (window[TASKS_GLOBAL]) {
+      if (window[TASKS_BY_URL_GLOBAL] && window[TASKS_BY_URL_GLOBAL][moduleUrl]) {
         return;
       }
       throw new Error(`MediaPipe Tasks runtime loaded but global not found: ${moduleUrl}`);
@@ -17774,9 +17996,14 @@ module.exports = class AiVBAssetLoader {
         }
       }
       intervalId = window.setInterval(() => {
-        if (window[TASKS_GLOBAL] || script.getAttribute(SCRIPT_READY_ATTR) === 'true') {
+        if (window[TASKS_BY_URL_GLOBAL] && window[TASKS_BY_URL_GLOBAL][moduleUrl]) {
           cleanup();
           resolve();
+          return;
+        }
+        if (script.getAttribute(SCRIPT_READY_ATTR) === 'true') {
+          cleanup();
+          reject(new Error(`MediaPipe Tasks runtime loaded but global not found: ${moduleUrl}`));
           return;
         }
         if (script.getAttribute(SCRIPT_ERROR_ATTR) === 'true') {
@@ -17822,7 +18049,7 @@ var SEGMENTATION_OPTION_KEYS = ['delegate', 'frameSkip'];
 var POST_PROCESSING_OPTION_KEYS = ['blurRadius', 'maxBlurRadius', 'foregroundBrightness', 'foregroundContrast', 'foregroundSaturate'];
 
 /** `assetConfig` 选项块下已识别的 key */
-var ASSET_CONFIG_OPTION_KEYS = ['cdnUrl', 'moduleUrl', 'wasmBaseUrl', 'modelUrl'];
+var ASSET_CONFIG_OPTION_KEYS = ['cdnUrl', 'moduleUrl', 'wasmBaseUrl', 'modelUrl', 'scriptNonce'];
 
 // ---------------------------------------------------------------------------
 // 默认值
@@ -17984,7 +18211,8 @@ exports.normalizeAssetConfig = function (assetConfig) {
   var normalized = {
     moduleUrl: DEFAULT_TASKS_MODULE_URL,
     wasmBaseUrl: DEFAULT_TASKS_WASM_BASE_URL,
-    modelUrl: DEFAULT_MODEL_URL
+    modelUrl: DEFAULT_MODEL_URL,
+    scriptNonce: ''
   };
   if (!assetConfig || typeof assetConfig !== 'object') {
     return normalized;
@@ -18008,6 +18236,9 @@ exports.normalizeAssetConfig = function (assetConfig) {
   }
   if (typeof assetConfig.modelUrl === 'string' && assetConfig.modelUrl.trim()) {
     normalized.modelUrl = assetConfig.modelUrl.trim();
+  }
+  if (typeof assetConfig.scriptNonce === 'string' && assetConfig.scriptNonce.trim()) {
+    normalized.scriptNonce = assetConfig.scriptNonce.trim();
   }
   return normalized;
 };
@@ -18210,6 +18441,7 @@ var DEFAULT_RUNTIME_STARTUP_DELAY_MS = 1500;
 
 /** 分割器运行时默认最大帧率，平衡效果与性能 */
 var DEFAULT_MAX_RUNTIME_FPS = 15;
+var VALID_MODES = ['image', 'color', 'blur', 'none'];
 var getErrorMessage = issueUtils.getErrorMessage;
 
 // =============================================================================
@@ -18259,7 +18491,7 @@ function clampNumber(value, min, max, fallback) {
 function resolveMode(options) {
   var rawMode = typeof options.mode === 'string' ? options.mode.trim().toLowerCase() : '';
   if (rawMode) {
-    return rawMode;
+    return VALID_MODES.indexOf(rawMode) !== -1 ? rawMode : 'none';
   }
   if (typeof options.imageUrl === 'string') {
     return 'image';
@@ -18308,8 +18540,10 @@ function normalizeConfig(input) {
     return null;
   }
 
-  // true → 空对象（使用全部默认值）
-  var options = input === true ? {} : cloneObject(input);
+  // true → 默认模糊背景
+  var options = input === true ? {
+    mode: 'blur'
+  } : cloneObject(input);
 
   // 显式禁用
   if (options.enabled === false) {
@@ -18335,8 +18569,8 @@ function normalizeConfig(input) {
     // 背景图片 URL
     backgroundColor: mode === 'color' && typeof value === 'string' ? value : null,
     // 背景色
-    blurRadius: mode === 'blur' && Number.isFinite(value) ? value : postProcessing.blurRadius,
-    // 模糊半径
+    blurRadius: postProcessing.blurRadius,
+    // 模糊半径（始终使用钳位后的后处理值）
     modelPath: typeof options.modelPath === 'string' && options.modelPath.trim() ? options.modelPath.trim() : null,
     // 分割模型路径
     runtimeEnabled: options.runtimeEnabled !== false,
@@ -18519,6 +18753,7 @@ module.exports = class AiVBState {
     state.config = config;
     state.disposed = false;
     state.generation += 1; // 递增代数，使旧异步回调失效
+    this._invalidateSegmentationState(state);
     state.runtimeAllowedAt = this._now() + config.startupDelayMs; // 最早允许启动分割的时间
 
     if (!isRuntimeEnabled(config)) {
@@ -18991,6 +19226,7 @@ module.exports = class AiVBState {
     if (!image) {
       state.bgImageStatus = 'error';
       state.bgImageError = 'Image element is unavailable';
+      state.bgImagePendingUrl = state.config.imageUrl;
       if (this._logger) {
         this._logger.warn(`AiVB background image unavailable: url=${state.config && state.config.imageUrl ? state.config.imageUrl : ''} ` + `mode=${state.config && state.config.mode ? state.config.mode : ''}`);
       }
@@ -19026,7 +19262,7 @@ module.exports = class AiVBState {
         return;
       }
       state.loadingImage = false;
-      state.bgImagePendingUrl = null;
+      state.bgImagePendingUrl = imageUrl;
       state.bgImageStatus = 'error';
       state.bgImageError = 'Failed to load background image';
       if (this._logger) {
@@ -19172,6 +19408,11 @@ module.exports = class AiVBState {
     promise.then(result => {
       // generation 不匹配 → 状态已被替换，忽略过时结果
       if (state.disposed || state.generation !== generation) {
+        if (result && result.segmentationMask && typeof result.segmentationMask.close === 'function') {
+          try {
+            result.segmentationMask.close();
+          } catch (error) {}
+        }
         return;
       }
       if (!result || !result.segmentationMask) {
@@ -19203,13 +19444,14 @@ module.exports = class AiVBState {
         }
       });
     }).finally(() => {
-      if (state.disposed || state.generation !== generation) {
-        return;
+      if (state.segFrameMap) {
+        state.segFrameMap.delete(promise);
       }
+      var isCurrentGeneration = !state.disposed && state.generation === generation;
 
       // 当前进行中的 Promise 完成 → 提升排队中的 Promise 为进行中
       if (state.activeSegPromise === promise) {
-        if (state.queuedSegPromise) {
+        if (isCurrentGeneration && state.queuedSegPromise) {
           state.activeSegPromise = state.queuedSegPromise;
           state.activeSegFrame = state.queuedSegFrame;
           state.activeSegCanvas = state.queuedSegCanvas;
@@ -19223,13 +19465,11 @@ module.exports = class AiVBState {
           state.queuedFrameCanvas = null;
           state.queuedFrameContext = null;
           state.pendingSegmentation = true;
-          state.segFrameMap.delete(promise);
           return;
         }
         state.activeSegPromise = null;
         state.activeSegFrame = null;
         state.pendingSegmentation = false;
-        state.segFrameMap.delete(promise);
         return;
       }
 
@@ -19237,9 +19477,23 @@ module.exports = class AiVBState {
       if (state.queuedSegPromise === promise) {
         state.queuedSegPromise = null;
         state.queuedSegFrame = null;
-        state.segFrameMap.delete(promise);
       }
     });
+  }
+  _invalidateSegmentationState(state) {
+    if (!state) {
+      return;
+    }
+    state.pendingSegmentation = false;
+    state.activeSegPromise = null;
+    state.queuedSegPromise = null;
+    state.activeSegFrame = null;
+    state.queuedSegFrame = null;
+    state.lastQueuedSegAt = 0;
+    state.lastSegAt = 0;
+    if (state.segFrameMap) {
+      state.segFrameMap.clear();
+    }
   }
 
   /**
@@ -19433,6 +19687,7 @@ var DEFAULT_DELEGATE = 'GPU';
 var DEFAULT_MASK_EDGE_BLUR_PX = 1;
 var DEFAULT_MASK_ALPHA_BIAS = 0.16;
 var DEFAULT_MASK_INSET_PX = 0.75;
+var SEGMENTATION_TIMEOUT_MS = 10000;
 function normalizeDelegate() {
   return DEFAULT_DELEGATE;
 }
@@ -19489,6 +19744,7 @@ module.exports = class MediaPipeSegmenterRuntime {
 
     /** @type {CanvasRenderingContext2D|null} featherCanvas 的 2D 上下文 */
     this.featherContext = null;
+    this.lastSegmentationTimestampMs = 0;
   }
   _reportIssue(issue) {
     if (!this._onIssue) return;
@@ -19682,14 +19938,34 @@ module.exports = class MediaPipeSegmenterRuntime {
       reject: rejectPending,
       promise
     };
-    var timestampMs = typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now();
+    var nowMs = typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now();
+    var timestampMs = Math.max(nowMs, this.lastSegmentationTimestampMs + 1);
+    var settled = false;
+    var timeoutId = setTimeout(() => {
+      if (settled || !this.pendingRequest || this.pendingRequest.promise !== promise) {
+        return;
+      }
+      settled = true;
+      var pending = this.pendingRequest;
+      this.pendingRequest = null;
+      pending.reject(new Error('MediaPipe segmentation timed out'));
+      this.processQueuedRequest();
+    }, SEGMENTATION_TIMEOUT_MS);
+    if (this.pendingRequest && this.pendingRequest.promise === promise) {
+      this.pendingRequest.timeoutId = timeoutId;
+    }
+    this.lastSegmentationTimestampMs = timestampMs;
     try {
       // MediaPipe VIDEO 模式的分割是基于回调的
       this.segmenter.segmentForVideo(videoElement, timestampMs, result => {
         // 防止 destroy() 已将 pendingRequest 置空后的过时回调
         if (!this.pendingRequest || this.pendingRequest.promise !== promise) {
+          clearTimeout(timeoutId);
+          this.closeSegmentationResult(result);
           return;
         }
+        settled = true;
+        clearTimeout(timeoutId);
         var pending = this.pendingRequest;
         this.pendingRequest = null;
         try {
@@ -19704,9 +19980,13 @@ module.exports = class MediaPipeSegmenterRuntime {
         }
       });
     } catch (error) {
+      settled = true;
+      clearTimeout(timeoutId);
       var pending = this.pendingRequest;
       this.pendingRequest = null;
-      pending.reject(error);
+      if (pending) {
+        pending.reject(error);
+      }
       this.processQueuedRequest();
     }
     return promise;
@@ -19894,6 +20174,7 @@ module.exports = class MediaPipeSegmenterRuntime {
     if (this.pendingRequest) {
       var pending = this.pendingRequest;
       this.pendingRequest = null;
+      if (pending.timeoutId) clearTimeout(pending.timeoutId);
       pending.reject(new Error('MediaPipe segmenter destroyed'));
     }
 
@@ -19912,20 +20193,26 @@ module.exports = class MediaPipeSegmenterRuntime {
         logger.debug(`destroy() ignored initialize error: ${error.message}`);
       }
     }
-    if (this.segmenter && typeof this.segmenter.close === 'function') {
-      await this.segmenter.close();
+    try {
+      if (this.segmenter && typeof this.segmenter.close === 'function') {
+        await this.segmenter.close();
+      }
+    } catch (error) {
+      logger.warn(`Failed to close MediaPipe segmenter: ${error.message || String(error)}`);
+    } finally {
+      this.segmenter = null;
+      this.assetUrls = null;
+      this.initialized = false;
+      this.initializingPromise = null;
+      this.labels = [];
+      this.personMaskIndex = 0;
+      this.maskCanvas = null;
+      this.maskContext = null;
+      this.maskImageData = null;
+      this.featherCanvas = null;
+      this.featherContext = null;
+      this.lastSegmentationTimestampMs = 0;
     }
-    this.segmenter = null;
-    this.assetUrls = null;
-    this.initialized = false;
-    this.initializingPromise = null;
-    this.labels = [];
-    this.personMaskIndex = 0;
-    this.maskCanvas = null;
-    this.maskContext = null;
-    this.maskImageData = null;
-    this.featherCanvas = null;
-    this.featherContext = null;
   }
 };
 },{"../../Logger":38,"./AiVBAssetLoader":39,"./AiVBSegmentationCommon":41}],44:[function(require,module,exports){
@@ -20349,9 +20636,14 @@ class AudioMixer {
     this._audioContext = null;
     this._audioReadyPr = null;
     if (audioContext) {
-      this._audioContextClosePromise = Promise.resolve(audioContext.close()).catch(error => {
+      try {
+        this._audioContextClosePromise = Promise.resolve(audioContext.close()).catch(error => {
+          this._logger.warn(`Failed to close AudioContext: ${error.message || String(error)}`);
+        });
+      } catch (error) {
+        this._audioContextClosePromise = Promise.resolve();
         this._logger.warn(`Failed to close AudioContext: ${error.message || String(error)}`);
-      });
+      }
     }
     this._audioSources = new Set();
     this._audioBuses.forEach(bus => {
@@ -20412,15 +20704,39 @@ class AudioMixer {
       }
       this._audioContext = this._createAudioContext(AudioContextConstructor);
     }
-    if (this._audioReadyPr) {
-      return this._audioReadyPr;
-    }
-
-    // 浏览器自动暂停时，尝试恢复
-    var resumePromise = this._audioContext.state === 'suspended' ? this._audioContext.resume() : Promise.resolve();
-    this._audioReadyPr = resumePromise.then(() => {
-      if (this._getDestroyed()) {
+    if (!this._audioReadyPr) {
+      // 共享 Promise 只负责 AudioContext 就绪；destination 由各调用方随后独立确保。
+      var resumePromise = this._audioContext.state === 'suspended' ? Promise.resolve().then(() => this._audioContext.resume()) : Promise.resolve();
+      this._audioReadyPr = resumePromise.then(() => {
+        if (this._getDestroyed()) {
+          return false;
+        }
+        this._updateAudioInfo({
+          status: this._audioContext.state === 'suspended' ? 'suspended' : 'ready',
+          reason: ''
+        });
+        return true;
+      }).catch(error => {
+        this._updateAudioInfo({
+          status: 'failed',
+          reason: 'AudioContext resume failed',
+          lastError: error.message || String(error)
+        });
+        this._reportIssue({
+          stage: 'audio-context-resume',
+          message: getErrorMessage(error),
+          details: {
+            contextState: this._audioContext ? this._audioContext.state : ''
+          }
+        });
+        return false;
+      }).then(ready => {
         this._audioReadyPr = null;
+        return ready;
+      });
+    }
+    return this._audioReadyPr.then(ready => {
+      if (!ready || this._getDestroyed()) {
         return false;
       }
       if (options.defaultDestination && !this._audioDestination) {
@@ -20430,30 +20746,8 @@ class AudioMixer {
         this._compressorNode = this._createCompressor();
         this._compressorNode.connect(this._audioDestination);
       }
-      this._updateAudioInfo({
-        status: this._audioContext.state === 'suspended' ? 'suspended' : 'ready',
-        reason: ''
-      });
-      this._audioReadyPr = null;
       return true;
-    }).catch(error => {
-      this._updateAudioInfo({
-        status: 'failed',
-        reason: 'AudioContext resume failed',
-        lastError: error.message || String(error)
-      });
-      this._reportIssue({
-        stage: 'audio-context-resume',
-        message: getErrorMessage(error),
-        details: {
-          contextState: this._audioContext ? this._audioContext.state : '',
-          defaultDestination: Boolean(options.defaultDestination)
-        }
-      });
-      this._audioReadyPr = null;
-      return false;
     });
-    return this._audioReadyPr;
   }
 
   /**
@@ -21071,6 +21365,11 @@ class AudioMixer {
         this.disconnectSource(source);
       }
     }
+    var audioSourceNode = null;
+    var masterGainNode = null;
+    var gainNode = null;
+    var createdAudioSource = false;
+    var createdMasterGain = false;
     try {
       if (this._logger) {
         this._logger.debug(`Connecting audio source: id=${source.id} target=${bus ? `bus:${bus.key}` : 'default'}`);
@@ -21079,9 +21378,11 @@ class AudioMixer {
         this._syncSourceOutputGains(source);
         return true;
       }
-      var audioSourceNode = source.audioSourceNode || this._audioContext.createMediaStreamSource(stream);
-      var masterGainNode = source.masterGainNode || this._audioContext.createGain();
-      var gainNode = this._audioContext.createGain();
+      createdAudioSource = !source.audioSourceNode;
+      createdMasterGain = !source.masterGainNode;
+      audioSourceNode = source.audioSourceNode || this._audioContext.createMediaStreamSource(stream);
+      masterGainNode = source.masterGainNode || this._audioContext.createGain();
+      gainNode = this._audioContext.createGain();
       this._setGainValue(gainNode, source.gain);
       this._registerOutputGain(source, gainNode);
       if (!source.audioSourceNode) {
@@ -21122,6 +21423,20 @@ class AudioMixer {
       this._logger.debug('audio tracks: ', stream.getAudioTracks().length);
       return true;
     } catch (error) {
+      if (bus && bus.connections.has(source.id)) {
+        bus.connections.delete(source.id);
+      }
+      this._disposeOutputGain(source, gainNode, true);
+      if (createdAudioSource || createdMasterGain) {
+        if (createdAudioSource) this._safeDisconnect(audioSourceNode);
+        if (createdMasterGain) this._safeDisconnect(masterGainNode);
+        this._unbindAudioTrackListeners(source);
+        if (createdAudioSource) source.audioSourceNode = null;
+        if (createdMasterGain) source.masterGainNode = null;
+        source.audioStream = null;
+        source.audioTrackId = null;
+        source.audioTrackSignature = null;
+      }
       this._logger.warn(`Failed to connect audio source: ${error.message}`);
       this._reportIssue({
         stage: 'audio-source-connect',
@@ -21470,7 +21785,7 @@ exports.normalizeSlot = function (value, index) {
     logger.debug(`normalizeSlot invalid: value=${value} index=${index}`);
     return null;
   }
-  return Math.max(0, Math.floor(numberValue)) + index;
+  return Math.min(MAX_SOURCES - 1, Math.max(0, Math.floor(numberValue)) + index);
 };
 
 /**
@@ -21588,6 +21903,11 @@ class LayoutEngine {
     this._lastPayloadStats = null;
     if (this._logger) {
       this._logger.debug('LayoutEngine constructed');
+    }
+  }
+  setCanvas(canvas) {
+    if (canvas) {
+      this._canvas = canvas;
     }
   }
 
@@ -22024,6 +22344,7 @@ class MediaEffectsComposer {
     options = options || {};
     videos = videos || [];
     this._onIssue = typeof options.onIssue === 'function' ? options.onIssue : null;
+    this._onOutputVideoTrackChanged = typeof options.onOutputVideoTrackChanged === 'function' ? options.onOutputVideoTrackChanged : null;
     this._issues = [];
 
     // 统一为数组，方便后续统一遍历
@@ -22149,7 +22470,13 @@ class MediaEffectsComposer {
       createSinkVideo: stream => this._createSinkVideoElement(stream),
       disposeSinkVideo: video => this._disposeSinkVideoElement(video),
       logger: logger,
-      onIssue: this._recordIssue.bind(this)
+      onIssue: this._recordIssue.bind(this),
+      onVideoTrackChanged: change => {
+        if (this._onOutputVideoTrackChanged) {
+          return this._onOutputVideoTrackChanged(change);
+        }
+        return undefined;
+      }
     });
 
     // -----------------------------------------------------------------------
@@ -22175,7 +22502,8 @@ class MediaEffectsComposer {
       syncExternalSourceAudio: () => this._syncExternalSourceAudio(),
       onStateChange: () => {},
       onFramePresented: frameCtx => this._outMgr.onFramePresented(frameCtx),
-      onIssue: this._recordIssue.bind(this)
+      onIssue: this._recordIssue.bind(this),
+      onCanvasChange: canvas => this._replaceOutputCanvas(canvas)
     });
 
     // -----------------------------------------------------------------------
@@ -22479,6 +22807,19 @@ class MediaEffectsComposer {
     if (resized) {
       logger.debug(`Canvas prepared: ${width}x${height}`);
     }
+  }
+  _replaceOutputCanvas(canvas) {
+    if (!canvas || canvas === this._canvas) {
+      return;
+    }
+    this._canvas = canvas;
+    this._canvas.setAttribute('style', 'display:none');
+    this._outMgr.setCanvas(canvas);
+    if (this._layoutEngine && this._layoutEngine.setCanvas) {
+      this._layoutEngine.setCanvas(canvas);
+    }
+    this._lastRenderWidth = null;
+    this._lastRenderHeight = null;
   }
 
   /**
@@ -22886,7 +23227,10 @@ class MediaEffectsComposer {
    */
   async _getMixedOutput() {
     this._renderLoop.resume();
-    var mixedVideoStream = this._getVideoOutputSync();
+    var videoStream = this._getVideoOutputSync();
+    var existingMixedStream = this._outMgr.mixedStream;
+    var hasLiveMixedVideo = existingMixedStream && existingMixedStream.getVideoTracks && existingMixedStream.getVideoTracks().some(track => track && track.readyState === 'live');
+    var mixedVideoStream = hasLiveMixedVideo ? existingMixedStream : new MediaStream(videoStream.getVideoTracks());
     this._outMgr.setMixedStream(mixedVideoStream);
     var mixedAudioStream = await this._audioComposer.getStableAudioStream();
     logger.debug(`getMixedStream() audio resolved: tracks=${mixedAudioStream ? mixedAudioStream.getAudioTracks().length : 0}`);
@@ -22919,13 +23263,35 @@ class MediaEffectsComposer {
       return;
     }
     this._destroyed = true;
-    this._renderLoop.stop();
-    this._removeSourcesInternal(undefined);
-    this._audioComposer.stop();
-    this._sourceAiVBManager.clear();
-    this._layoutEngine.clearAudioPlaceholderCache();
-    this._renderLoop.destroy();
-    this._outMgr.stop();
+    var cleanupSteps = [{
+      name: 'render loop stop',
+      run: () => this._renderLoop.stop()
+    }, {
+      name: 'source removal',
+      run: () => this._removeSourcesInternal(undefined)
+    }, {
+      name: 'audio mixer stop',
+      run: () => this._audioComposer.stop()
+    }, {
+      name: 'AiVB clear',
+      run: () => this._sourceAiVBManager.clear()
+    }, {
+      name: 'layout cache clear',
+      run: () => this._layoutEngine.clearAudioPlaceholderCache()
+    }, {
+      name: 'renderer destroy',
+      run: () => this._renderLoop.destroy()
+    }, {
+      name: 'output stream stop',
+      run: () => this._outMgr.stop()
+    }];
+    cleanupSteps.forEach(step => {
+      try {
+        step.run();
+      } catch (error) {
+        logger.warn(`Composer ${step.name} failed: ${error.message || String(error)}`);
+      }
+    });
     logger.debug('stop complete');
   }
 
@@ -22955,20 +23321,15 @@ class MediaEffectsComposer {
       videos = [videos];
     }
     var maxSources = MediaEffectsComposerConfig.getMaxSources();
-    var currentCount = this._sources.length;
-    var available = Math.max(0, maxSources - currentCount);
-    if (available <= 0) {
-      logger.warn(`addSource: max sources (${maxSources}) reached, skipping all`);
-      return false;
-    }
-    if (videos.length > available) {
-      logger.warn(`addSource: truncating ${videos.length - available} source(s) to enforce ${maxSources}-source limit`);
-      videos = videos.slice(0, available);
-    }
     var appended = false;
     var sourceOptionsList = optionsOrSlot instanceof Array ? optionsOrSlot : null;
     videos.forEach((video, index) => {
       var sourceOptions = this._normalizeSourceOptions(sourceOptionsList ? sourceOptionsList[index] : optionsOrSlot, sourceOptionsList ? 0 : index);
+      var replacesExistingSlot = typeof sourceOptions.slot === 'number' && this._sources.some(source => source.slot === sourceOptions.slot);
+      if (!replacesExistingSlot && this._sources.length >= maxSources) {
+        logger.warn(`addSource: max sources (${maxSources}) reached, skipping source at index ${index}`);
+        return;
+      }
       this._sourceRegistry.add(video, sourceOptions);
       appended = true;
       if (this._audioComposer.hasAudioContext || this._audioComposer.requested) {
@@ -23314,13 +23675,17 @@ class MediaEffectsComposer {
    */
   getCapabilityReport() {
     this._assertNotDestroyed('getCapabilityReport()');
+    var sourceAiVirtualBackgroundSupported = Boolean(typeof document !== 'undefined' && document.createElement && typeof WebAssembly !== 'undefined');
+    var sourceAiVirtualBackgroundEnabled = Boolean(this._config.hasSourceAiVirtualBackground);
     return {
       limits: {
         maxSources: MediaEffectsComposerConfig.getMaxSources()
       },
       features: {
         multiSource: MediaEffectsComposerConfig.getMaxSources() > 1,
-        sourceAiVirtualBackground: Boolean(this._config.hasSourceAiVirtualBackground),
+        sourceAiVirtualBackground: sourceAiVirtualBackgroundEnabled,
+        sourceAiVirtualBackgroundSupported: sourceAiVirtualBackgroundSupported,
+        sourceAiVirtualBackgroundEnabled: sourceAiVirtualBackgroundEnabled,
         outputMirror: true,
         audioSubmix: true,
         insertableStreamsConfigured: Boolean(this._config.enableInsertable)
@@ -23519,6 +23884,7 @@ class OutputStream {
     this._disposeSinkVideo = options.disposeSinkVideo;
     this._logger = options.logger;
     this._onIssue = typeof options.onIssue === 'function' ? options.onIssue : null;
+    this._onVideoTrackChanged = typeof options.onVideoTrackChanged === 'function' ? options.onVideoTrackChanged : null;
 
     /** @type {MediaStream|null} 通过 getMixedStream() 返回的完整混合流 */
     this._mixedStream = null;
@@ -23807,18 +24173,58 @@ class OutputStream {
     try {
       this._capturedVideoTrack.requestFrame();
     } catch (error) {
-      this._manualFrameControl = false;
+      var fallbackApplied = this._fallbackToAutomaticCapture(error);
       if (this._logger) {
         this._logger.warn(`captureStream requestFrame failed, fallback to auto capture timing: ${error.message || String(error)}`);
       }
       this._reportIssue({
         stage: 'capture-stream-request-frame',
         message: getErrorMessage(error),
+        fallbackApplied: fallbackApplied,
         details: {
           manualCaptureFrameControl: true
         }
       });
     }
+  }
+  _fallbackToAutomaticCapture(error) {
+    var capturedStream = null;
+    try {
+      capturedStream = this._config.fps ? this._canvas.captureStream(this._config.fps) : this._canvas.captureStream();
+    } catch (fallbackError) {
+      this._manualFrameControl = false;
+      if (this._logger) {
+        this._logger.warn(`Automatic capture fallback failed: ${fallbackError.message || String(fallbackError)}`);
+      }
+      return false;
+    }
+    var nextTrack = capturedStream && capturedStream.getVideoTracks ? capturedStream.getVideoTracks()[0] : null;
+    if (!nextTrack) {
+      this._manualFrameControl = false;
+      return false;
+    }
+    var previousStream = this._capturedStream;
+    var previousTrack = this._capturedVideoTrack;
+    this._capturedStreams.push(capturedStream);
+    this._capturedStream = capturedStream;
+    this._canvas.stream = capturedStream;
+    this._configCaptureFrameCtrl(capturedStream);
+    this._manualFrameControl = false;
+    this._ensureActiveCaptureSink(capturedStream);
+    this._replaceOutputVideoTrack(previousTrack, nextTrack, 'capture-stream-auto-fallback');
+    if (previousStream && previousStream !== capturedStream) {
+      previousStream.getTracks().forEach(track => {
+        if (track && track.stop) {
+          try {
+            track.stop();
+          } catch (stopError) {}
+        }
+      });
+    }
+    if (this._logger) {
+      this._logger.warn(`captureStream requestFrame failed; switched to automatic capture: ${getErrorMessage(error)}`);
+    }
+    return true;
   }
   _createInsertableStream() {
     if (!this._insertableByCfg) {
@@ -23902,16 +24308,18 @@ class OutputStream {
       this._requestCaptureFrame();
     }
     if (!this._insertableActive || !this._writer || !this._generatorTrack) {
+      this._closeConsumedFrameSource(frameCtx);
       return;
     }
     if (this._generatorTrack.readyState && this._generatorTrack.readyState !== 'live') {
+      this._closeConsumedFrameSource(frameCtx);
       return;
     }
     if (this._pendingWrite) {
       var replacedFrame = this._latestPendingFrame;
       this._latestPendingFrame = frameCtx;
       if (replacedFrame) {
-        this._closeFrameSource(replacedFrame.frameSource);
+        this._closeConsumedFrameSource(replacedFrame);
       }
       return;
     }
@@ -23946,19 +24354,22 @@ class OutputStream {
   }
   async _writePresentedFrame(frameCtx) {
     if (!frameCtx || !frameCtx.canvas && !frameCtx.frameSource || !this._writer) {
+      this._closeConsumedFrameSource(frameCtx);
       return;
     }
-    var videoFrame = await this._createVideoFrameForFrame(frameCtx);
-    if (!videoFrame) {
-      return;
-    }
+    var videoFrame = null;
     try {
+      videoFrame = await this._createVideoFrameForFrame(frameCtx);
+      if (!videoFrame) {
+        return;
+      }
       await this._writer.write(videoFrame);
       this._writeFailCount = 0;
     } finally {
-      if (videoFrame.close) {
+      if (videoFrame && videoFrame.close) {
         videoFrame.close();
       }
+      this._closeConsumedFrameSource(frameCtx);
     }
   }
   async _createVideoFrameForFrame(frameCtx) {
@@ -24015,19 +24426,122 @@ class OutputStream {
       }
     });
     if (this._writeFailCount >= this._maxWriteFails) {
-      this._insertableActive = false;
+      var continuousWriteFailures = this._writeFailCount;
+      var fallbackApplied = this._fallbackInsertableToCaptureStream();
       if (this._logger) {
         this._logger.warn('Insertable frame writing disabled due to repeated failures');
       }
       this._reportIssue({
         stage: 'insertable-frame-write-disabled',
         message: 'Insertable frame writing disabled due to repeated failures',
+        fallbackApplied: fallbackApplied,
         details: {
-          continuousWriteFailures: this._writeFailCount,
+          continuousWriteFailures: continuousWriteFailures,
           maxContinuousWriteFailures: this._maxWriteFails
         }
       });
     }
+  }
+  _fallbackInsertableToCaptureStream() {
+    var capturedStream = null;
+    try {
+      capturedStream = this._createPrefCaptureStream();
+    } catch (error) {
+      capturedStream = null;
+    }
+    var nextTrack = capturedStream && capturedStream.getVideoTracks ? capturedStream.getVideoTracks()[0] : null;
+    if (!nextTrack) {
+      this._insertableActive = false;
+      return false;
+    }
+    var previousTrack = this._generatorTrack;
+    this._insertableActive = false;
+    this._capturedStreams.push(capturedStream);
+    this._capturedStream = capturedStream;
+    this._canvas.stream = capturedStream;
+    this._configCaptureFrameCtrl(capturedStream);
+    this._ensureActiveCaptureSink(capturedStream);
+    this._replaceOutputVideoTrack(previousTrack, nextTrack, 'insertable-write-fallback');
+    this._teardownInsertableState(true);
+    if (this._manualFrameControl) {
+      this._requestCaptureFrame();
+    }
+    return true;
+  }
+  _replaceOutputVideoTrack(previousTrack, nextTrack, reason) {
+    if (!nextTrack || nextTrack === previousTrack) {
+      return;
+    }
+    var streams = [this._videoStream, this._mixedStream].filter((stream, index, list) => stream && list.indexOf(stream) === index);
+    streams.forEach(stream => {
+      if (previousTrack && stream.getTracks && stream.getTracks().indexOf(previousTrack) !== -1) {
+        try {
+          stream.removeTrack(previousTrack);
+        } catch (error) {
+          if (this._logger) this._logger.warn(`Failed to remove previous output track: ${getErrorMessage(error)}`);
+        }
+      }
+      if (stream.getVideoTracks && stream.getVideoTracks().indexOf(nextTrack) === -1) {
+        try {
+          stream.addTrack(nextTrack);
+        } catch (error) {
+          if (this._logger) this._logger.warn(`Failed to add replacement output track: ${getErrorMessage(error)}`);
+        }
+      }
+    });
+    if (!this._onVideoTrackChanged) {
+      return;
+    }
+    try {
+      Promise.resolve(this._onVideoTrackChanged({
+        previousTrack: previousTrack || null,
+        track: nextTrack,
+        reason: reason || ''
+      })).catch(error => {
+        if (this._logger) this._logger.warn(`Output video track callback failed: ${getErrorMessage(error)}`);
+      });
+    } catch (error) {
+      if (this._logger) this._logger.warn(`Output video track callback failed: ${getErrorMessage(error)}`);
+    }
+  }
+  setCanvas(canvas) {
+    if (!canvas || canvas === this._canvas) {
+      return;
+    }
+    this._canvas = canvas;
+    if (!this._capturedStream) {
+      return;
+    }
+    var capturedStream = null;
+    try {
+      capturedStream = this._createPrefCaptureStream();
+    } catch (error) {
+      this._reportIssue({
+        stage: 'capture-stream-canvas-rebind',
+        message: getErrorMessage(error),
+        fallbackApplied: false
+      });
+      return;
+    }
+    var previousStream = this._capturedStream;
+    var previousTrack = this._capturedVideoTrack;
+    var nextTrack = capturedStream && capturedStream.getVideoTracks ? capturedStream.getVideoTracks()[0] : null;
+    if (!nextTrack) {
+      return;
+    }
+    this._capturedStreams.push(capturedStream);
+    this._capturedStream = capturedStream;
+    this._canvas.stream = capturedStream;
+    this._configCaptureFrameCtrl(capturedStream);
+    this._ensureActiveCaptureSink(capturedStream);
+    this._replaceOutputVideoTrack(previousTrack, nextTrack, 'renderer-canvas-replaced');
+    previousStream.getTracks().forEach(track => {
+      if (track && track.stop) {
+        try {
+          track.stop();
+        } catch (error) {}
+      }
+    });
   }
 
   /**
@@ -24107,7 +24621,9 @@ class OutputStream {
     this._teardownCaptureSink();
     this._capturedStreams.forEach(stream => {
       stream.getTracks().forEach(track => {
-        track.stop();
+        try {
+          track.stop();
+        } catch (error) {}
       });
     });
     this._capturedStreams = [];
@@ -24130,7 +24646,7 @@ class OutputStream {
     this._lastTimestampUs = 0;
     this._writeFailCount = 0;
     if (pendingFrame) {
-      this._closeFrameSource(pendingFrame.frameSource);
+      this._closeConsumedFrameSource(pendingFrame);
     }
     if (this._writer) {
       try {
@@ -24160,6 +24676,11 @@ class OutputStream {
       try {
         frameSource.close();
       } catch (error) {}
+    }
+  }
+  _closeConsumedFrameSource(frameCtx) {
+    if (frameCtx && frameCtx.frameSourceConsumed === true) {
+      this._closeFrameSource(frameCtx.frameSource);
     }
   }
 
@@ -24237,7 +24758,7 @@ function createRenderer(canvas, config, hooks) {
     return createMain2D(canvas, config, false, '');
   }
   if (forceMainThread && (mode === 'worker-webgl2' || mode === 'worker-2d')) {
-    return createMainFallback(canvas, config, mode, 'Active source/output effects require a main-thread renderer');
+    return createMainFallback(canvas, config, mode, 'Active source/output effects require a main-thread renderer', hooks);
   }
 
   // Try Worker path
@@ -24258,7 +24779,7 @@ function createRenderer(canvas, config, hooks) {
     } catch (error) {
       errors.push(error.message || String(error));
       if (mode === 'worker-webgl2' || mode === 'worker-2d') {
-        return createMainFallback(canvas, config, mode, errors.join('; '));
+        return createMainFallback(canvas, config, mode, errors.join('; '), hooks);
       }
     }
   }
@@ -24279,9 +24800,22 @@ function createRenderer(canvas, config, hooks) {
   }
 
   // Ultimate fallback: main thread Canvas2D
-  return createMain2D(canvas, config, errors.length > 0, errors.join('; '));
+  try {
+    return createMain2D(canvas, config, errors.length > 0, errors.join('; '));
+  } catch (error) {
+    errors.push(error.message || String(error));
+    var replacementCanvas = createReplacementCanvas(canvas);
+    if (!replacementCanvas) {
+      throw error;
+    }
+    var _renderer2 = createMain2D(replacementCanvas, config, true, errors.join('; '));
+    if (hooks.onCanvasChange) {
+      hooks.onCanvasChange(replacementCanvas);
+    }
+    return _renderer2;
+  }
 }
-function createMainFallback(canvas, config, requestedMode, reason) {
+function createMainFallback(canvas, config, requestedMode, reason, hooks) {
   if (config.forceMain2DRenderer === true) {
     return createMain2D(canvas, config, true, reason);
   }
@@ -24296,7 +24830,29 @@ function createMainFallback(canvas, config, requestedMode, reason) {
       return renderer;
     } catch (error) {}
   }
-  return createMain2D(canvas, config, true, reason);
+  try {
+    return createMain2D(canvas, config, true, reason);
+  } catch (error) {
+    var replacementCanvas = createReplacementCanvas(canvas);
+    if (!replacementCanvas) {
+      throw error;
+    }
+    var _renderer3 = createMain2D(replacementCanvas, config, true, `${reason}; ${error.message || String(error)}`);
+    if (hooks && hooks.onCanvasChange) {
+      hooks.onCanvasChange(replacementCanvas);
+    }
+    return _renderer3;
+  }
+}
+function createReplacementCanvas(canvas) {
+  if (typeof document === 'undefined' || !document.createElement) {
+    return null;
+  }
+  var replacement = document.createElement('canvas');
+  replacement.width = canvas && canvas.width ? canvas.width : 1;
+  replacement.height = canvas && canvas.height ? canvas.height : 1;
+  replacement.setAttribute('style', 'display:none');
+  return replacement;
 }
 function createMain2D(canvas, config, isFallback, reason) {
   var renderer = new MainCanvas2DRenderer(config, {
@@ -24333,6 +24889,7 @@ class RenderLoop {
     this._onStateChange = options.onStateChange;
     this._onFramePresented = options.onFramePresented;
     this._onIssue = typeof options.onIssue === 'function' ? options.onIssue : null;
+    this._onCanvasChange = typeof options.onCanvasChange === 'function' ? options.onCanvasChange : null;
 
     /** @type {BaseRenderer|null} 当前使用的渲染后端实例 */
     this._renderer = null;
@@ -24458,7 +25015,8 @@ class RenderLoop {
       this._renderer = createRenderer(this._canvas, this._config, {
         onWorkerFatalError: reason => {
           this.fallbackRenderer(reason || 'Worker renderer failed at runtime');
-        }
+        },
+        onCanvasChange: canvas => this._commitCanvasChange(canvas)
       });
       this._bindFrameCb(this._renderer);
       this._logRenderPath(this._renderer.getInfo(), 'create');
@@ -24599,14 +25157,8 @@ class RenderLoop {
     if (currentInfo.actualMode === 'main-2d') {
       return false;
     }
-    if (!currentInfo.isWorker && currentInfo.actualMode !== 'worker-failed') {
-      return false;
-    }
-    if (this._renderer && this._renderer.destroy) {
-      this._renderer.destroy();
-    }
     if (this._config.renderMode === 'auto' && currentInfo.actualMode !== 'worker-2d') {
-      var mainWebGL2 = this._tryFallbackToMainWebGL2(currentInfo, reason);
+      var mainWebGL2 = currentInfo.actualMode === 'main-webgl2' ? false : this._tryFallbackToMainWebGL2(currentInfo, reason);
       if (mainWebGL2) {
         return true;
       }
@@ -24625,33 +25177,31 @@ class RenderLoop {
     if (currentInfo.actualMode === 'main-2d') {
       return false;
     }
-    if (!info && this._renderer && this._renderer.destroy) {
-      this._renderer.destroy();
+    try {
+      this._activateRenderer(() => new MainCanvas2DRenderer(this._config, {
+        requestedMode: currentInfo.requestedMode || this._config.renderMode,
+        actualMode: 'main-2d',
+        isWorker: false,
+        isWebGL2: false,
+        isFallback: true,
+        reason: reason,
+        droppedFrames: currentInfo.droppedFrames || 0,
+        renderedFrames: currentInfo.renderedFrames || 0
+      }), 'fallback-main-2d');
+      return true;
+    } catch (error) {
+      this._reportIssue({
+        stage: 'renderer-fallback-main-2d-failed',
+        message: getErrorMessage(error),
+        fallbackApplied: false
+      });
+      return false;
     }
-    var renderer = new MainCanvas2DRenderer(this._config, {
-      requestedMode: currentInfo.requestedMode || this._config.renderMode,
-      actualMode: 'main-2d',
-      isWorker: false,
-      isWebGL2: false,
-      isFallback: true,
-      reason: reason,
-      droppedFrames: currentInfo.droppedFrames || 0,
-      renderedFrames: currentInfo.renderedFrames || 0
-    });
-    renderer.init(this._canvas);
-    this._renderer = renderer;
-    this._bindFrameCb(this._renderer);
-    this._logRenderPath(this._renderer.getInfo(), 'fallback-main-2d');
-    this._rendererErrorCount = 0;
-    return true;
   }
   fallbackRendererToMainThread(reason, info) {
     var currentInfo = info || (this._renderer && this._renderer.getInfo ? this._renderer.getInfo() : {});
     if (!currentInfo.isWorker && currentInfo.actualMode !== 'worker-failed') {
       return false;
-    }
-    if (this._renderer && this._renderer.destroy) {
-      this._renderer.destroy();
     }
     if (this._config.forceMain2DRenderer !== true && currentInfo.actualMode !== 'worker-2d') {
       var mainWebGL2 = this._tryFallbackToMainWebGL2(currentInfo, reason);
@@ -24666,14 +25216,11 @@ class RenderLoop {
     if (currentInfo.actualMode === 'worker-2d' || currentInfo.actualMode === 'worker-init') {
       return false;
     }
-    if (this._renderer && this._renderer.destroy) {
-      this._renderer.destroy();
-    }
     return this._tryFallbackToWorker2D(currentInfo, reason);
   }
   _tryFallbackToMainWebGL2(currentInfo, reason) {
     try {
-      var renderer = new MainWebGL2Renderer(this._config, {
+      this._activateRenderer(() => new MainWebGL2Renderer(this._config, {
         requestedMode: currentInfo.requestedMode || this._config.renderMode,
         actualMode: 'main-webgl2',
         isWorker: false,
@@ -24682,12 +25229,7 @@ class RenderLoop {
         reason: reason,
         droppedFrames: currentInfo.droppedFrames || 0,
         renderedFrames: currentInfo.renderedFrames || 0
-      });
-      renderer.init(this._canvas);
-      this._renderer = renderer;
-      this._bindFrameCb(this._renderer);
-      this._logRenderPath(this._renderer.getInfo(), 'fallback-main-webgl2');
-      this._rendererErrorCount = 0;
+      }), 'fallback-main-webgl2');
       if (this._logger) {
         this._logger.warn(`Fallback succeeded: main-webgl2 reason=${reason}`);
       }
@@ -24721,7 +25263,7 @@ class RenderLoop {
       var workerConfig = Object.assign({}, this._config, {
         renderMode: 'worker-2d'
       });
-      var renderer = new WorkerRenderer(workerConfig, {
+      this._activateRenderer(() => new WorkerRenderer(workerConfig, {
         requestedMode: currentInfo.requestedMode || this._config.renderMode,
         actualMode: 'worker-init',
         isWorker: true,
@@ -24733,12 +25275,7 @@ class RenderLoop {
         onFatalError: fallbackReason => {
           this.fallbackRendererToMain2D(fallbackReason || 'Worker Canvas2D renderer failed at runtime');
         }
-      });
-      renderer.init(this._canvas);
-      this._renderer = renderer;
-      this._bindFrameCb(this._renderer);
-      this._logRenderPath(this._renderer.getInfo(), 'fallback-worker-2d');
-      this._rendererErrorCount = 0;
+      }), 'fallback-worker-2d');
       if (this._logger) {
         this._logger.warn(`Fallback succeeded: worker-2d reason=${reason}`);
       }
@@ -24767,6 +25304,63 @@ class RenderLoop {
       return false;
     }
   }
+  _activateRenderer(createCandidate, trigger) {
+    var previousRenderer = this._renderer;
+    var candidate = createCandidate();
+    var nextCanvas = this._canvas;
+    try {
+      candidate.init(nextCanvas);
+    } catch (firstError) {
+      if (candidate && candidate.destroy) {
+        try {
+          candidate.destroy();
+        } catch (error) {}
+      }
+      nextCanvas = createReplacementCanvas(this._canvas);
+      if (!nextCanvas) {
+        throw firstError;
+      }
+      candidate = createCandidate();
+      try {
+        candidate.init(nextCanvas);
+      } catch (replacementError) {
+        if (candidate && candidate.destroy) {
+          try {
+            candidate.destroy();
+          } catch (error) {}
+        }
+        replacementError.previousRendererError = firstError;
+        throw replacementError;
+      }
+    }
+    if (previousRenderer && previousRenderer.destroy) {
+      try {
+        previousRenderer.destroy();
+      } catch (error) {
+        if (this._logger) this._logger.warn(`Previous renderer destroy failed: ${getErrorMessage(error)}`);
+      }
+    }
+    this._renderer = candidate;
+    if (nextCanvas !== this._canvas) {
+      this._commitCanvasChange(nextCanvas);
+    }
+    this._bindFrameCb(candidate);
+    this._logRenderPath(candidate.getInfo(), trigger);
+    this._rendererErrorCount = 0;
+  }
+  _commitCanvasChange(canvas) {
+    if (!canvas || canvas === this._canvas) {
+      return;
+    }
+    this._canvas = canvas;
+    if (this._onCanvasChange) {
+      try {
+        this._onCanvasChange(canvas);
+      } catch (error) {
+        if (this._logger) this._logger.warn(`Canvas change callback failed: ${getErrorMessage(error)}`);
+      }
+    }
+  }
 
   /**
    * 调度下一帧 rAF。
@@ -24791,7 +25385,7 @@ class RenderLoop {
     }
     var info = renderer.getInfo();
     this._logRenderPath(info, 'runtime');
-    if (info.actualMode === 'worker-failed' || info.isWorker && info.isFallback && info.reason) {
+    if (info.actualMode === 'worker-failed') {
       this._rendererErrorCount += 1;
       if (this._rendererErrorCount >= 2) {
         this.fallbackRenderer(info.reason || 'Worker renderer failed at runtime');
@@ -25025,14 +25619,24 @@ class Sources {
 
     // 先通知外部断开音频连接
     if (this._onBeforeRemove) {
-      this._onBeforeRemove(source);
+      try {
+        this._onBeforeRemove(source);
+      } catch (error) {
+        if (this._logger) this._logger.warn(`Source before-remove cleanup failed: ${error.message || String(error)}`);
+      }
     }
 
     // 如果是 composer 内部创建的 video 元素，清理 DOM
     if (source.ownedVideo && source.video) {
-      source.video.pause();
-      source.video.srcObject = null;
-      source.video.remove();
+      try {
+        source.video.pause();
+      } catch (error) {}
+      try {
+        source.video.srcObject = null;
+      } catch (error) {}
+      try {
+        source.video.remove();
+      } catch (error) {}
     }
     var index = this.sources.indexOf(source);
     if (index !== -1) {
@@ -25042,7 +25646,11 @@ class Sources {
 
     // 通知外部源已移除（渲染器清理、画布清空等）
     if (this._onAfterRemove) {
-      this._onAfterRemove(source);
+      try {
+        this._onAfterRemove(source);
+      } catch (error) {
+        if (this._logger) this._logger.warn(`Source after-remove cleanup failed: ${error.message || String(error)}`);
+      }
     }
     if (this._logger) {
       this._logger.debug(`Source removed: id=${source.id} remaining=${this.sources.length}`);
@@ -25065,7 +25673,7 @@ class Sources {
         slot: source.slot,
         gain: source.gain,
         sourceMirror: typeof source.mirrorX === 'boolean' ? source.mirrorX : null,
-        aiVirtualBackground: source.aiVirtualBackground || null,
+        aiVirtualBackground: cloneSnapshotValue(source.aiVirtualBackground),
         hasAudio: this.hasLiveAudioTrack(source),
         hasVideo: this.hasVideoTrack(source)
       };
@@ -25262,6 +25870,18 @@ class Sources {
     }
   }
 }
+function cloneSnapshotValue(value) {
+  if (value instanceof Array) {
+    return value.map(cloneSnapshotValue);
+  }
+  if (value && typeof value === 'object') {
+    return Object.keys(value).reduce((snapshot, key) => {
+      snapshot[key] = cloneSnapshotValue(value[key]);
+      return snapshot;
+    }, {});
+  }
+  return value === undefined ? null : value;
+}
 module.exports = Sources;
 },{}],51:[function(require,module,exports){
 "use strict";
@@ -25281,6 +25901,12 @@ var DEFAULT_FONT_SIZE = 28;
 var DEFAULT_PADDING = 3;
 var DEFAULT_BACKGROUND_RADIUS = 3;
 var DEFAULT_MARGIN = 16;
+var MAX_WATERMARKS = 32;
+var MAX_TEXT_LENGTH = 256;
+var MAX_FONT_SIZE = 256;
+var MAX_SURFACE_DIMENSION = 4096;
+var MAX_SURFACE_PIXELS = 16777216;
+var IMAGE_LOAD_TIMEOUT_MS = 15000;
 class Watermark {
   /**
    * @param {Object} options
@@ -25292,6 +25918,7 @@ class Watermark {
     this._onIssue = typeof options.onIssue === 'function' ? options.onIssue : null;
     this._watermarks = [];
     this._seq = 0;
+    this._generation = 0;
     if (this._logger) {
       this._logger.debug('Watermark constructed');
     }
@@ -25329,12 +25956,13 @@ class Watermark {
    * @returns {Promise<Array<Object>>} 当前水印快照
    */
   setWatermarks(watermarks) {
-    var list = this._normalizeWatermarkList(watermarks);
+    var list = this._normalizeWatermarkList(watermarks).slice(0, MAX_WATERMARKS);
+    var generation = ++this._generation;
     if (this._logger) {
       this._logger.debug(`Setting watermarks: count=${list.length}`);
     }
     this._watermarks = list.map(watermark => this._normalizeWatermark(watermark));
-    var loads = this._watermarks.map(watermark => this._prepareWatermark(watermark));
+    var loads = this._watermarks.map(watermark => this._prepareWatermark(watermark, generation));
     return Promise.all(loads).then(() => this.getWatermarks());
   }
 
@@ -25348,6 +25976,7 @@ class Watermark {
       this._logger.debug(`Clearing watermarks: filter=${JSON.stringify(filter || null)}`);
     }
     if (!filter) {
+      this._generation += 1;
       this._watermarks = [];
       return;
     }
@@ -25433,22 +26062,22 @@ class Watermark {
     var type = input.type === 'image' || input.image ? 'image' : 'text';
     var target = input.target === 'source' ? 'source' : 'output';
     var id = typeof input.id === 'string' && input.id ? input.id : `watermark-${++this._seq}`;
-    var fontSize = normalizePositiveInteger(input.fontSize, DEFAULT_FONT_SIZE);
+    var fontSize = normalizeBoundedInteger(input.fontSize, 1, MAX_FONT_SIZE, DEFAULT_FONT_SIZE);
     var backgroundRadiusInput = input.backgroundRadius !== undefined ? input.backgroundRadius : input.borderRadius;
     return {
       id: id,
       target: target,
       type: type,
-      text: typeof input.text === 'string' ? input.text : '',
+      text: typeof input.text === 'string' ? input.text.slice(0, MAX_TEXT_LENGTH) : '',
       imageInput: input.image || null,
       image: null,
       slot: normalizeSlot(input.slot),
       sourceId: typeof input.sourceId === 'string' ? input.sourceId : null,
       streamId: typeof input.streamId === 'string' ? input.streamId : null,
       position: normalizePosition(input.position),
-      width: normalizePositiveInteger(input.width, null),
-      height: normalizePositiveInteger(input.height, null),
-      font: typeof input.font === 'string' && input.font ? input.font : null,
+      width: normalizeBoundedInteger(input.width, 1, MAX_SURFACE_DIMENSION, null),
+      height: normalizeBoundedInteger(input.height, 1, MAX_SURFACE_DIMENSION, null),
+      font: typeof input.font === 'string' && input.font ? input.font.slice(0, MAX_TEXT_LENGTH) : null,
       fontSize: fontSize,
       color: typeof input.color === 'string' ? input.color : DEFAULT_TEXT_COLOR,
       backgroundColor: typeof input.backgroundColor === 'string' ? input.backgroundColor : DEFAULT_TEXT_BACKGROUND,
@@ -25460,19 +26089,19 @@ class Watermark {
       reason: ''
     };
   }
-  _prepareWatermark(watermark) {
+  _prepareWatermark(watermark, generation) {
     if (this._logger) {
       this._logger.debug(`Preparing watermark: id=${watermark.id} type=${watermark.type} target=${watermark.target}`);
     }
     if (watermark.type === 'image') {
-      return this._prepareImageWatermark(watermark);
+      return this._prepareImageWatermark(watermark, generation);
     }
     watermark.image = this._createTextSurface(watermark);
     watermark.status = watermark.image ? 'ready' : 'error';
     watermark.reason = watermark.image ? '' : 'Canvas is unavailable';
     return Promise.resolve(watermark);
   }
-  _prepareImageWatermark(watermark) {
+  _prepareImageWatermark(watermark, generation) {
     var image = watermark.imageInput;
     if (!image) {
       watermark.status = 'error';
@@ -25492,11 +26121,17 @@ class Watermark {
         this._logger.debug(`Loading watermark image: id=${watermark.id} url=${image}`);
       }
       return this._loadImage(image).then(loadedImage => {
+        if (generation !== this._generation) {
+          return watermark;
+        }
         watermark.image = loadedImage;
         watermark.status = 'ready';
         watermark.reason = '';
         return watermark;
       }).catch(error => {
+        if (generation !== this._generation) {
+          return watermark;
+        }
         watermark.status = 'error';
         watermark.reason = error.message || String(error);
         if (this._logger) {
@@ -25514,6 +26149,13 @@ class Watermark {
         return watermark;
       });
     }
+    var imageWidth = Number(image.width || image.videoWidth || image.naturalWidth);
+    var imageHeight = Number(image.height || image.videoHeight || image.naturalHeight);
+    if (!Number.isFinite(imageWidth) || !Number.isFinite(imageHeight) || imageWidth <= 0 || imageHeight <= 0 || imageWidth > MAX_SURFACE_DIMENSION || imageHeight > MAX_SURFACE_DIMENSION || imageWidth * imageHeight > MAX_SURFACE_PIXELS) {
+      watermark.status = 'error';
+      watermark.reason = 'Invalid or oversized image surface';
+      return Promise.resolve(watermark);
+    }
     watermark.image = image;
     watermark.status = 'ready';
     watermark.reason = '';
@@ -25529,9 +26171,36 @@ class Watermark {
         return;
       }
       var image = new Image();
+      var settled = false;
+      var timeoutId = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        image.onload = null;
+        image.onerror = null;
+        try {
+          image.src = '';
+        } catch (error) {}
+        reject(new Error(`Timed out loading image: ${url}`));
+      }, IMAGE_LOAD_TIMEOUT_MS);
+      var settle = callback => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeoutId);
+        image.onload = null;
+        image.onerror = null;
+        callback();
+      };
       image.crossOrigin = 'anonymous';
-      image.onload = () => resolve(image);
-      image.onerror = () => reject(new Error(`Failed to load image: ${url}`));
+      image.onload = () => settle(() => {
+        var width = Number(image.naturalWidth || image.width);
+        var height = Number(image.naturalHeight || image.height);
+        if (!width || !height || width > MAX_SURFACE_DIMENSION || height > MAX_SURFACE_DIMENSION || width * height > MAX_SURFACE_PIXELS) {
+          reject(new Error(`Invalid or oversized image: ${url}`));
+          return;
+        }
+        resolve(image);
+      });
+      image.onerror = () => settle(() => reject(new Error(`Failed to load image: ${url}`)));
       image.src = url;
     });
   }
@@ -25551,8 +26220,13 @@ class Watermark {
     var measured = metrics ? metrics.width : text.length * watermark.fontSize * 0.6;
     var ascent = metrics && Number.isFinite(metrics.actualBoundingBoxAscent) ? metrics.actualBoundingBoxAscent : watermark.fontSize * 0.8;
     var descent = metrics && Number.isFinite(metrics.actualBoundingBoxDescent) ? metrics.actualBoundingBoxDescent : watermark.fontSize * 0.25;
-    var width = Math.max(1, Math.ceil(measured + watermark.padding * 2));
-    var height = Math.max(1, Math.ceil(ascent + descent + watermark.padding * 2));
+    var width = Math.min(MAX_SURFACE_DIMENSION, Math.max(1, Math.ceil(measured + watermark.padding * 2)));
+    var height = Math.min(MAX_SURFACE_DIMENSION, Math.max(1, Math.ceil(ascent + descent + watermark.padding * 2)));
+    if (width * height > MAX_SURFACE_PIXELS) {
+      var scale = Math.sqrt(MAX_SURFACE_PIXELS / (width * height));
+      width = Math.max(1, Math.floor(width * scale));
+      height = Math.max(1, Math.floor(height * scale));
+    }
     canvas.width = width;
     canvas.height = height;
     context.font = font;
@@ -25689,10 +26363,10 @@ class Watermark {
     return true;
   }
 }
-function normalizePositiveInteger(value, fallback) {
+function normalizeBoundedInteger(value, min, max, fallback) {
   var numberValue = Number(value);
-  if (Number.isFinite(numberValue) && numberValue > 0) {
-    return Math.floor(numberValue);
+  if (Number.isFinite(numberValue) && numberValue >= min) {
+    return Math.min(max, Math.floor(numberValue));
   }
   return fallback;
 }
@@ -26360,8 +27034,10 @@ module.exports = class MainWebGL2Renderer {
     });
     var sourceWatermarkMirrorX = payload.outputMirrorX;
     var outputWatermarkMirrorX = payload.mirrorWatermarksWithOutput === false ? false : payload.outputMirrorX;
-    this._drawWatermarks(payload.sourceWatermarks, payload.height, sourceWatermarkMirrorX, payload.width);
-    this._drawWatermarks(payload.outputWatermarks, payload.height, outputWatermarkMirrorX, payload.width);
+    var activeWatermarkKeys = {};
+    this._drawWatermarks(payload.sourceWatermarks, payload.height, sourceWatermarkMirrorX, payload.width, activeWatermarkKeys);
+    this._drawWatermarks(payload.outputWatermarks, payload.height, outputWatermarkMirrorX, payload.width, activeWatermarkKeys);
+    this._cleanupUnusedWatermarkTextures(activeWatermarkKeys);
     gl.flush();
     this._info.renderedFrames += 1;
     this._emitFramePresented({
@@ -26601,12 +27277,12 @@ module.exports = class MainWebGL2Renderer {
    * @param {Array<Object>} watermarks - 水印绘制项
    * @param {number} canvasHeight - 画布总高度
    */
-  _drawWatermarks(watermarks, canvasHeight, outputMirrorX, outputWidth) {
+  _drawWatermarks(watermarks, canvasHeight, outputMirrorX, outputWidth, activeKeys) {
     if (!this._gl || !(watermarks || []).length) {
       return;
     }
     var gl = this._gl;
-    var activeKeys = {};
+    activeKeys = activeKeys || {};
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     (watermarks || []).forEach(watermark => {
@@ -26622,7 +27298,6 @@ module.exports = class MainWebGL2Renderer {
       this._drawItem(watermark, canvasHeight, outputMirrorX, outputWidth);
     });
     gl.disable(gl.BLEND);
-    this._cleanupUnusedWatermarkTextures(activeKeys);
   }
 
   /**
@@ -27470,6 +28145,8 @@ function workerMain() {
   var aivbRuntimeStates = Object.create(null); // runtimeKey → MediaPipe segmenter 实例
   var aivbModulePromises = Object.create(null); // moduleUrl → 动态 import() Promise（去重）
   var aivbBackgroundStates = Object.create(null); // imageUrl → 背景图 ImageBitmap 缓存
+  var MAX_AIVB_RUNTIME_CACHE = 4;
+  var MAX_AIVB_BACKGROUND_CACHE = 8;
   var dynamicImport = new Function('moduleUrl', 'return import(moduleUrl);');
   self.SEGMENTATION_COMMON_INJECT_MARKER = '__SEGMENTATION_COMMON_INJECT__';
 
@@ -27686,6 +28363,9 @@ void main() {
           throw new Error('MediaPipe Tasks module is missing exports');
         }
         return module;
+      }).catch(function (error) {
+        delete aivbModulePromises[moduleUrl];
+        throw error;
       });
     }
     return aivbModulePromises[moduleUrl];
@@ -27708,11 +28388,21 @@ void main() {
     var runtimeKey = getRuntimeKey(config);
     var runtimeState = aivbRuntimeStates[runtimeKey];
     if (!runtimeState) {
+      var runtimeKeys = Object.keys(aivbRuntimeStates);
+      if (runtimeKeys.length >= MAX_AIVB_RUNTIME_CACHE) {
+        var staleRuntimeKey = runtimeKeys[0];
+        var staleRuntime = aivbRuntimeStates[staleRuntimeKey];
+        if (staleRuntime && staleRuntime.segmenter && typeof staleRuntime.segmenter.close === 'function') {
+          Promise.resolve(staleRuntime.segmenter.close()).catch(function () {});
+        }
+        delete aivbRuntimeStates[staleRuntimeKey];
+      }
       runtimeState = {
         segmenter: null,
         labels: [],
         ready: false,
-        initializing: null
+        initializing: null,
+        lastTimestamp: 0
       };
       aivbRuntimeStates[runtimeKey] = runtimeState;
     }
@@ -27837,12 +28527,43 @@ void main() {
       height: draw.height
     };
   }
+  async function fetchBackgroundBitmap(url) {
+    var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var timeoutId = null;
+    try {
+      var timeoutPromise = new Promise(function (resolve, reject) {
+        timeoutId = setTimeout(function () {
+          if (controller) controller.abort();
+          reject(new Error('Timed out loading background image'));
+        }, 15000);
+      });
+      var response = await Promise.race([fetch(url, controller ? {
+        signal: controller.signal
+      } : undefined), timeoutPromise]);
+      if (!response.ok) {
+        throw new Error('Failed to load background image: ' + response.status);
+      }
+      var blob = await Promise.race([response.blob(), timeoutPromise]);
+      return await Promise.race([createImageBitmap(blob), timeoutPromise]);
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
+  }
   async function ensureBackgroundImage(url) {
     if (!url) {
       return null;
     }
     var backgroundState = aivbBackgroundStates[url];
     if (!backgroundState) {
+      var backgroundKeys = Object.keys(aivbBackgroundStates);
+      if (backgroundKeys.length >= MAX_AIVB_BACKGROUND_CACHE) {
+        var staleBackgroundKey = backgroundKeys[0];
+        var staleBackground = aivbBackgroundStates[staleBackgroundKey];
+        if (staleBackground && staleBackground.bitmap && typeof staleBackground.bitmap.close === 'function') {
+          staleBackground.bitmap.close();
+        }
+        delete aivbBackgroundStates[staleBackgroundKey];
+      }
       backgroundState = {
         bitmap: null,
         promise: null,
@@ -27853,15 +28574,11 @@ void main() {
     if (backgroundState.bitmap) {
       return backgroundState.bitmap;
     }
+    if (backgroundState.error && !backgroundState.promise) {
+      return null;
+    }
     if (!backgroundState.promise) {
-      backgroundState.promise = fetch(url).then(function (response) {
-        if (!response.ok) {
-          throw new Error('Failed to load background image: ' + response.status);
-        }
-        return response.blob();
-      }).then(function (blob) {
-        return createImageBitmap(blob);
-      }).then(function (bitmap) {
+      backgroundState.promise = fetchBackgroundBitmap(url).then(function (bitmap) {
         backgroundState.bitmap = bitmap;
         backgroundState.error = '';
         backgroundState.promise = null;
@@ -27920,8 +28637,23 @@ void main() {
   }
   async function runSegmentation(sourceState, runtimeState, input) {
     return new Promise(function (resolve, reject) {
+      var settled = false;
+      var timestamp = Math.max(now(), Number(runtimeState.lastTimestamp || 0) + 1);
+      var timeoutId = setTimeout(function () {
+        if (!settled) {
+          settled = true;
+          reject(new Error('AiVirtualBackground segmentation timed out'));
+        }
+      }, 10000);
+      runtimeState.lastTimestamp = timestamp;
       try {
-        runtimeState.segmenter.segmentForVideo(input, now(), function (result) {
+        runtimeState.segmenter.segmentForVideo(input, timestamp, function (result) {
+          if (settled) {
+            segmentationCommon.closeSegmentationResult(result);
+            return;
+          }
+          settled = true;
+          clearTimeout(timeoutId);
           try {
             resolve(createMaskCanvas(sourceState, runtimeState, result));
           } catch (error) {
@@ -27931,6 +28663,8 @@ void main() {
           }
         });
       } catch (error) {
+        settled = true;
+        clearTimeout(timeoutId);
         reject(error);
       }
     });
@@ -27973,7 +28707,10 @@ void main() {
   // 支持三种背景模式：blur（模糊）、image（图片）、color（纯色）
   async function getRenderableSurface(item) {
     if (!hasAiVirtualBackground(item)) {
-      return item.frame;
+      return {
+        surface: item.frame,
+        sourceMirrorApplied: false
+      };
     }
     var sourceState = resolveAiVBState(item.id, item.aiVirtualBackground);
     var mask = await ensureLatestMask(item);
@@ -27983,10 +28720,16 @@ void main() {
     var foregroundSurface = ensureCanvasSize(sourceState.foregroundSurface, drawWidth, drawHeight);
     var outputSurface = ensureCanvasSize(sourceState.outputSurface, drawWidth, drawHeight);
     if (!foregroundSurface || !foregroundSurface.context || !outputSurface || !outputSurface.context) {
-      return item.frame;
+      return {
+        surface: item.frame,
+        sourceMirrorApplied: false
+      };
     }
     if (!mask) {
-      return item.frame;
+      return {
+        surface: item.frame,
+        sourceMirrorApplied: false
+      };
     }
     foregroundSurface.context.clearRect(0, 0, drawWidth, drawHeight);
     foregroundSurface.context.filter = buildForegroundEnhancementFilter(item.aiVirtualBackground.postProcessing);
@@ -27997,8 +28740,9 @@ void main() {
     foregroundSurface.context.globalCompositeOperation = 'source-over';
     outputSurface.context.clearRect(0, 0, drawWidth, drawHeight);
     if (item.aiVirtualBackground.mode === 'blur') {
+      var postProcessing = item.aiVirtualBackground.postProcessing || {};
       outputSurface.context.save();
-      outputSurface.context.filter = 'blur(' + (Number(item.aiVirtualBackground.blurRadius) || 16) + 'px)';
+      outputSurface.context.filter = 'blur(' + (Number(postProcessing.blurRadius) || 16) + 'px)';
       drawSurface(outputSurface.context, foregroundSource, 0, 0, drawWidth, drawHeight, Boolean(item.mirrorX), false);
       outputSurface.context.restore();
     } else if (item.aiVirtualBackground.mode === 'image') {
@@ -28013,11 +28757,17 @@ void main() {
       outputSurface.context.fillStyle = item.aiVirtualBackground.backgroundColor || '#00ff00';
       outputSurface.context.fillRect(0, 0, drawWidth, drawHeight);
     } else {
-      return item.frame;
+      return {
+        surface: item.frame,
+        sourceMirrorApplied: false
+      };
     }
     outputSurface.context.drawImage(foregroundSurface.canvas, 0, 0, drawWidth, drawHeight);
     sourceState.renderedSinceSeg += 1;
-    return outputSurface.canvas;
+    return {
+      surface: outputSurface.canvas,
+      sourceMirrorApplied: true
+    };
   }
 
   // =============================================================================
@@ -28174,6 +28924,8 @@ void main() {
   async function renderWebGL2(payload) {
     var color = parseColor(payload.backgroundColor || '#000');
     var items = payload.items || [];
+    var activeTextureIds = Object.create(null);
+    var activeWatermarkIds = Object.create(null);
     gl.useProgram(program);
     gl.clearColor(color[0], color[1], color[2], color[3]);
     gl.clear(gl.COLOR_BUFFER_BIT);
@@ -28184,17 +28936,34 @@ void main() {
       if (!item.frame || !item.draw) {
         continue;
       }
-      var surface = await getRenderableSurface(item);
+      var renderable = await getRenderableSurface(item);
+      var surface = renderable.surface;
       var texture = getTexture(item.id);
+      activeTextureIds[item.id] = true;
       var draw = resolveDrawRect(item.draw, outputMirrorX);
       gl.bindTexture(gl.TEXTURE_2D, texture);
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, surface);
       gl.uniform1f(opacityLocation, 1);
-      drawRect(draw, Boolean(item.mirrorX) !== outputMirrorX);
+      drawRect(draw, (renderable.sourceMirrorApplied ? false : Boolean(item.mirrorX)) !== outputMirrorX);
     }
     drawWatermarksWebGL2(payload.sourceWatermarks || [], outputMirrorX);
     drawWatermarksWebGL2(payload.outputWatermarks || [], mirrorWatermarksWithOutput ? outputMirrorX : false);
+    (payload.sourceWatermarks || []).concat(payload.outputWatermarks || []).forEach(function (watermark) {
+      if (watermark && watermark.id) activeWatermarkIds[watermark.id] = true;
+    });
+    Object.keys(textures).forEach(function (id) {
+      if (!activeTextureIds[id]) {
+        gl.deleteTexture(textures[id]);
+        delete textures[id];
+      }
+    });
+    Object.keys(watermarkTextures).forEach(function (id) {
+      if (!activeWatermarkIds[id]) {
+        gl.deleteTexture(watermarkTextures[id]);
+        delete watermarkTextures[id];
+      }
+    });
     gl.flush();
   }
   function drawWatermarksWebGL2(watermarks, applyMirror) {
@@ -28237,9 +29006,10 @@ void main() {
       if (!item.frame || !item.draw) {
         continue;
       }
-      var surface = await getRenderableSurface(item);
+      var renderable = await getRenderableSurface(item);
+      var surface = renderable.surface;
       var draw = resolveDrawRect(item.draw, outputMirrorX);
-      drawSurface(ctx, surface, draw.x, draw.y, draw.width, draw.height, Boolean(item.mirrorX) !== outputMirrorX, false);
+      drawSurface(ctx, surface, draw.x, draw.y, draw.width, draw.height, (renderable.sourceMirrorApplied ? false : Boolean(item.mirrorX)) !== outputMirrorX, false);
     }
     drawWatermarksCanvas2D(payload.sourceWatermarks || [], outputMirrorX);
     drawWatermarksCanvas2D(payload.outputWatermarks || [], mirrorWatermarksWithOutput ? outputMirrorX : false);
@@ -30036,6 +30806,14 @@ module.exports = class RTCSession extends EventEmitter {
   getMediaEffectsComposer() {
     return this._mediaPipeline.getMediaEffectsComposer();
   }
+
+  /**
+   * Return the original local input stream currently feeding the session
+   * MediaEffectsComposer. Callers must clone tracks before reusing them.
+   */
+  getComposerInputStream() {
+    return this._mediaEffectsComposerInputStream;
+  }
   getAiNoiseSuppression() {
     return this._mediaPipeline.getAiNoiseSuppression();
   }
@@ -30679,9 +31457,19 @@ module.exports = class RTCSession extends EventEmitter {
       mediaConstraints.video = false;
     }
 
-    // Create a new RTCPeerConnection instance.
-    // TODO: This may throw an error, should react.
-    this._createRTCConnection(pcConfig, rtcConstraints);
+    // Create a new RTCPeerConnection instance. Configuration errors are
+    // synchronous, so they must also close the incoming INVITE lifecycle.
+    try {
+      this._createRTCConnection(pcConfig, rtcConstraints);
+    } catch (error) {
+      try {
+        request.reply(500, 'Failed to create peer connection');
+      } catch (replyError) {
+        logger.warn(replyError);
+      }
+      this._failed('system', null, CRTC_C.causes.WEBRTC_ERROR);
+      throw error;
+    }
 
     // 根据自定义流确定是否需要获取对应设备的流
     mediaStream && mediaStream.getTracks().forEach(track => {
@@ -30801,12 +31589,10 @@ module.exports = class RTCSession extends EventEmitter {
       this._connecting(request);
       if (!this._late_sdp) {
         return this._createLocalDescription('answer', rtcAnswerConstraints).catch(error => {
-          request.reply(500);
           throw new Error(`_createLocalDescription() failed ${error.message}`);
         });
       } else {
         return this._createLocalDescription('offer', this._rtcOfferConstraints).catch(error => {
-          request.reply(500);
           throw new Error(`_createLocalDescription() failed ${error.message}`);
         });
       }
@@ -30839,6 +31625,15 @@ module.exports = class RTCSession extends EventEmitter {
         return;
       }
       logger.warn(error);
+
+      // answer() 的媒体和 SDP 处理在异步链中执行。任何未被前置分支收口的
+      // 异常都必须结束本次呼入，否则会话会停留在 ANSWERED，主叫持续振铃。
+      try {
+        request.reply(500, 'Failed to create answer');
+      } catch (replyError) {
+        logger.warn(replyError);
+      }
+      this._failed('system', null, CRTC_C.causes.WEBRTC_ERROR);
     });
   }
 
@@ -32201,8 +32996,15 @@ module.exports = class RTCSession extends EventEmitter {
         }
       },
       failed: () => {
+        var cause = options.failed ? options.failed : CRTC_C.causes.WEBRTC_ERROR;
+        if (options.terminateOnFailure === false) {
+          if (done) {
+            done(new Error(cause));
+          }
+          return;
+        }
         this.terminate({
-          cause: options.failed ? options.failed : CRTC_C.causes.WEBRTC_ERROR,
+          cause: cause,
           status_code: 500,
           reason_phrase: 'Media Renegotiation Failed'
         });
@@ -37053,6 +37855,7 @@ module.exports = class MediaPipeline {
    */
   stopSessionAiNoiseSuppression() {
     var session = this._session;
+    session._aiNSOperationGeneration = (session._aiNSOperationGeneration || 0) + 1;
     var engine = session._sessionAiNSEngine;
     var aiNSInputStream = session._aiNSInputStream;
 
@@ -37100,13 +37903,32 @@ module.exports = class MediaPipeline {
     if (!normalizedOptions || !stream.getAudioTracks || stream.getAudioTracks().length === 0) {
       return stream;
     }
+    var generation = (session._aiNSOperationGeneration || 0) + 1;
+    var previousEngine = session._sessionAiNSEngine;
+    var previousInputStream = session._aiNSInputStream;
+    var engine = null;
+    session._aiNSOperationGeneration = generation;
+    session._sessionAiNSEngine = null;
+    session._aiNSInputStream = null;
+    if (previousEngine && typeof previousEngine.destroy === 'function') {
+      Promise.resolve(previousEngine.destroy()).catch(error => {
+        logger.warn(`${session._id} destroy previous ai noise suppression failed:`, error);
+      });
+    }
+    if (previousInputStream !== stream) {
+      this.safeCloseMediaStream(previousInputStream, 'close previous ai noise suppression input stream failed');
+    }
     try {
-      this.stopSessionAiNoiseSuppression();
       var AiNSEngine = getAiNSEngineCtor();
-      session._sessionAiNSEngine = new AiNSEngine(Object.assign({}, normalizedOptions, {
+      engine = new AiNSEngine(Object.assign({}, normalizedOptions, {
         onIssue: this.emitMediaEffectsIssue.bind(this)
       }));
-      var processedStream = await session._sessionAiNSEngine.process(stream);
+      var processedStream = await engine.process(stream);
+      if (session._aiNSOperationGeneration !== generation) {
+        await engine.destroy();
+        return stream;
+      }
+      session._sessionAiNSEngine = engine;
       session._aiNSInputStream = stream;
       return processedStream instanceof MediaStream ? processedStream : stream;
     } catch (error) {
@@ -37126,7 +37948,17 @@ module.exports = class MediaPipeline {
           }
         });
       }
-      this.stopSessionAiNoiseSuppression();
+      if (engine && typeof engine.destroy === 'function') {
+        try {
+          await engine.destroy();
+        } catch (destroyError) {
+          logger.warn(`${session._id} destroy failed ai noise suppression engine:`, destroyError);
+        }
+      }
+      if (session._aiNSOperationGeneration === generation) {
+        session._sessionAiNSEngine = null;
+        session._aiNSInputStream = null;
+      }
       return stream;
     }
   }
@@ -37154,17 +37986,25 @@ module.exports = class MediaPipeline {
     if (!normalizedOptions || !stream || !stream.getAudioTracks || stream.getAudioTracks().length === 0) {
       return stream;
     }
+    var generation = (session._aiNSOperationGeneration || 0) + 1;
+    session._aiNSOperationGeneration = generation;
     try {
       if (!session._sessionAiNSEngine) {
         // 还没有引擎时，退化为完整初始化路径，保证行为一致。
         return await this.applyAiNoiseSuppressionOnSdkGumStream(stream, normalizedOptions);
       }
       var processedStream = await session._sessionAiNSEngine.replaceAudioTrack(stream);
+      if (session._aiNSOperationGeneration !== generation) {
+        return stream;
+      }
       this.safeCloseMediaStream(session._aiNSInputStream, 'close previous ai noise suppression input stream failed');
       session._aiNSInputStream = stream;
       return processedStream instanceof MediaStream ? processedStream : stream;
     } catch (error) {
       logger.warn(`${session._id} replace audio track with ai noise suppression failed:`, error);
+      if (session._aiNSOperationGeneration !== generation) {
+        return stream;
+      }
       if (!error || error.__mediaEffectsIssueReported !== true) {
         this.emitMediaEffectsIssue({
           module: 'AiNS',
@@ -37393,7 +38233,8 @@ module.exports = class MediaPipeline {
       var MediaEffectsComposer = getMediaEffectsComposerCtor();
       var composerIssueHandler = this.emitMediaEffectsIssue.bind(this);
       composer = new MediaEffectsComposer([stream], Object.assign({}, composerCtorOptions, {
-        onIssue: composerIssueHandler
+        onIssue: composerIssueHandler,
+        onOutputVideoTrackChanged: change => this.handleComposerOutputVideoTrackChanged(composer, change)
       }));
       var composerOutputStream = await composer.getOutput({
         type: hasSourceAudio ? 'mixed' : 'video'
@@ -37441,6 +38282,48 @@ module.exports = class MediaPipeline {
       session._mediaEffectsComposerInputStream = null;
       return stream;
     }
+  }
+  async handleComposerOutputVideoTrackChanged(composer, change) {
+    var session = this._session;
+    var nextTrack = change && change.track;
+    var previousTrack = change && change.previousTrack;
+    if (!nextTrack || session._mediaEffectsComposer !== composer) {
+      return false;
+    }
+    var localStream = session._localMediaStream;
+    if (localStream && localStream.getVideoTracks && localStream.addTrack) {
+      var existingVideoTracks = localStream.getVideoTracks();
+      existingVideoTracks.forEach(track => {
+        if (previousTrack && track === previousTrack || !previousTrack && track !== nextTrack) {
+          try {
+            localStream.removeTrack(track);
+          } catch (error) {}
+        }
+      });
+      if (localStream.getVideoTracks().indexOf(nextTrack) === -1) {
+        localStream.addTrack(nextTrack);
+      }
+    }
+    var senders = session._connection && typeof session._connection.getSenders === 'function' ? session._connection.getSenders() : [];
+    var videoSender = senders.find(sender => sender && sender.track && sender.track.kind === 'video');
+    if (videoSender && typeof videoSender.replaceTrack === 'function') {
+      await videoSender.replaceTrack(nextTrack);
+    }
+    this.emitMediaEffectsIssue({
+      module: 'MediaEffectsComposer',
+      component: 'MediaPipeline',
+      stage: 'replace-composer-output-track',
+      severity: 'warn',
+      message: `Composer output track replaced after ${change.reason || 'runtime fallback'}`,
+      fallbackApplied: true,
+      degraded: true,
+      details: {
+        reason: change.reason || '',
+        previousTrackId: previousTrack && previousTrack.id ? previousTrack.id : '',
+        nextTrackId: nextTrack.id || ''
+      }
+    });
+    return true;
   }
 
   /**
@@ -37672,7 +38555,7 @@ var DEFAULT_OPTIONS = {
   backgroundSampleIntervalMs: 2000,
   transitionGraceSamples: 2,
   enableDetailedReport: true,
-  enableRawStatsLog: false,
+  enableRawStatsLog: true,
   rawStatsLogIntervalMs: 10000,
   getStatsTimeoutMs: 5000,
   autoStart: true,
@@ -37726,7 +38609,7 @@ module.exports = class RTCStatsMonitor extends EventEmitter {
    * @param {number} [options.backgroundSampleIntervalMs=2000] 页面后台时的采样间隔
    * @param {number} [options.transitionGraceSamples=2] 媒体变化后跳过异常诊断的样本数
    * @param {boolean} [options.enableDetailedReport=true] 是否记录常用诊断摘要并发送 detailed-report 事件
-   * @param {boolean} [options.enableRawStatsLog=false] 是否按限频规则记录原始报告
+   * @param {boolean} [options.enableRawStatsLog=true] 是否按限频规则记录脱敏后的原始报告
    * @param {number} [options.getStatsTimeoutMs=5000] 单次 getStats 超时时间，最小 100ms
    * @param {boolean} [options.autoStart=true] 构造后是否立即开始采样
    * @param {Function} [options.contextProvider] 提供 hold、mute、mode、sharedMid 等会话上下文
@@ -37740,6 +38623,7 @@ module.exports = class RTCStatsMonitor extends EventEmitter {
     this._options.legacyReportIntervalMs = Math.max(this._options.sampleIntervalMs, number(this._options.legacyReportIntervalMs) || DEFAULT_OPTIONS.legacyReportIntervalMs);
     this._options.backgroundSampleIntervalMs = Math.max(this._options.sampleIntervalMs, number(this._options.backgroundSampleIntervalMs) || DEFAULT_OPTIONS.backgroundSampleIntervalMs);
     this._options.getStatsTimeoutMs = Math.max(100, number(this._options.getStatsTimeoutMs) || DEFAULT_OPTIONS.getStatsTimeoutMs);
+    this._options.rawStatsLogIntervalMs = Math.max(1000, number(this._options.rawStatsLogIntervalMs) || DEFAULT_OPTIONS.rawStatsLogIntervalMs);
     var transitionGraceSamples = number(this._options.transitionGraceSamples);
     this._options.transitionGraceSamples = transitionGraceSamples === null ? DEFAULT_OPTIONS.transitionGraceSamples : Math.max(0, Math.floor(transitionGraceSamples));
     this._previous = new Map();
@@ -37852,6 +38736,8 @@ module.exports = class RTCStatsMonitor extends EventEmitter {
     this._lastTopology = null;
     this._transitionReason = null;
     this._transitionSamples = 0;
+    this._consecutiveErrors = 0;
+    this._lastRawLogTimestamp = null;
   }
 
   /**
@@ -37862,13 +38748,13 @@ module.exports = class RTCStatsMonitor extends EventEmitter {
     this._transitionSamples = this._options.transitionGraceSamples;
   }
   getLatestReport() {
-    return this._latestDetailedReport;
+    return cloneSnapshot(this._latestDetailedReport);
   }
   getLatestLegacyReport() {
-    return this._latestLegacyReport;
+    return cloneSnapshot(this._latestLegacyReport);
   }
   getLatestNetworkQuality() {
-    return this._latestNetworkQuality;
+    return cloneSnapshot(this._latestNetworkQuality);
   }
   _canGetStats() {
     return Boolean(this._pc && typeof this._pc.getStats === 'function');
@@ -37877,7 +38763,11 @@ module.exports = class RTCStatsMonitor extends EventEmitter {
     if (!this._started) {
       return;
     }
-    this._timer = setTimeout(() => this._sample(), timeoutMs);
+    this._timer = setTimeout(() => {
+      Promise.resolve(this._sample()).catch(error => {
+        logger.warn(`RTCStatsMonitor sampling task failed: ${error && error.message ? error.message : String(error)}`);
+      });
+    }, timeoutMs);
   }
 
   /**
@@ -37919,8 +38809,12 @@ module.exports = class RTCStatsMonitor extends EventEmitter {
       this._consecutiveErrors = 0;
       this._latestDetailedReport = detailedReport;
       if (this._options.enableDetailedReport) {
-        logger.debug('detailed-report: ', JSON.stringify(this._createDetailedLogReport(detailedReport)));
-        this.emit('detailed-report', this._createDetailedEventReport(detailedReport));
+        try {
+          logger.debug('detailed-report: ', JSON.stringify(this._createDetailedLogReport(detailedReport)));
+        } catch (error) {
+          logger.warn(`detailed-report logging failed: ${error.message || String(error)}`);
+        }
+        this._safeEmit('detailed-report', this._createDetailedEventReport(detailedReport));
       }
       if (this._sampleCount === 1) {
         this._lastLegacyTimestamp = detailedReport.timestamp;
@@ -37930,8 +38824,8 @@ module.exports = class RTCStatsMonitor extends EventEmitter {
         this._lastLegacyTimestamp = detailedReport.timestamp;
         this._latestLegacyReport = legacyReport;
         this._latestNetworkQuality = networkQualityReport;
-        this.emit('report', legacyReport);
-        this.emit('network-quality', networkQualityReport);
+        this._safeEmit('report', legacyReport);
+        this._safeEmit('network-quality', networkQualityReport);
       }
     } catch (error) {
       this._consecutiveErrors++;
@@ -37985,7 +38879,11 @@ module.exports = class RTCStatsMonitor extends EventEmitter {
     }
     if (result && typeof result.then === 'function') {
       this._compatibility.api.promiseGetStats = true;
-      return result;
+      try {
+        return await result;
+      } catch (error) {
+        return this._requestStatsByCallback(error);
+      }
     }
     if (result) {
       return result;
@@ -38003,41 +38901,55 @@ module.exports = class RTCStatsMonitor extends EventEmitter {
    * @returns {Promise<object>}
    * @private
    */
-  _requestStatsByCallback(initialError) {
+  async _requestStatsByCallback(initialError) {
     this._compatibility.api.callbackGetStats = true;
+    var selectorFirst = this._pc.getStats.length >= 3;
+    var attemptTimeoutMs = Math.max(50, Math.min(500, Math.floor(this._options.getStatsTimeoutMs / 2)));
+    try {
+      return await this._callStatsCallback(selectorFirst, attemptTimeoutMs, initialError);
+    } catch (firstError) {
+      return this._callStatsCallback(!selectorFirst, attemptTimeoutMs, firstError || initialError);
+    }
+  }
+  _callStatsCallback(selectorFirst, timeoutMs, initialError) {
     return new Promise((fulfill, reject) => {
       var settled = false;
+      var timeoutId = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          reject(initialError || new Error('getStats callback signature timed out'));
+        }
+      }, timeoutMs);
       var success = result => {
         if (!settled) {
           settled = true;
+          clearTimeout(timeoutId);
           fulfill(result);
         }
       };
       var failure = error => {
         if (!settled) {
           settled = true;
+          clearTimeout(timeoutId);
           reject(error || initialError || new Error('getStats callback failed'));
         }
       };
       try {
-        if (this._pc.getStats.length >= 3) {
+        var callbackResult;
+        if (selectorFirst) {
           // 一部分旧实现使用 getStats(selector, success, failure)。
-          this._pc.getStats(null, success, failure);
+          callbackResult = this._pc.getStats(null, success, failure);
         } else {
           // 旧 Chrome 常见签名为 getStats(success, selector)。
-          this._pc.getStats(success, null);
+          callbackResult = this._pc.getStats(success, null);
         }
-      } catch (firstError) {
-        try {
-          // 函数 length 不可靠时，再尝试另一种历史签名。
-          if (this._pc.getStats.length >= 3) {
-            this._pc.getStats(success, null);
-          } else {
-            this._pc.getStats(null, success, failure);
-          }
-        } catch (secondError) {
-          reject(secondError || firstError || initialError);
+        if (callbackResult && typeof callbackResult.then === 'function') {
+          Promise.resolve(callbackResult).catch(failure);
         }
+      } catch (error) {
+        clearTimeout(timeoutId);
+        settled = true;
+        reject(error || initialError);
       }
     });
   }
@@ -38608,6 +39520,7 @@ module.exports = class RTCStatsMonitor extends EventEmitter {
       downlinkLoss: network.downlinkLoss === null ? 0 : Math.floor(network.downlinkLoss),
       uplinkMediaQuality: mediaQuality(uplinkNetworkQuality, issues, 'uplink'),
       downlinkMediaQuality: mediaQuality(downlinkNetworkQuality, issues, 'downlink'),
+      sampleReady: network.hasData,
       issues,
       context: cleanContext(context)
     };
@@ -38733,8 +39646,21 @@ module.exports = class RTCStatsMonitor extends EventEmitter {
     if (this._lastRawLogTimestamp !== null && timestamp - this._lastRawLogTimestamp < this._options.rawStatsLogIntervalMs) {
       return;
     }
-    this._lastRawLogTimestamp = timestamp;
-    logger.debug(`raw stats: ${JSON.stringify(reports)}`);
+    try {
+      var sanitizedReports = sanitizeRawStats(reports);
+      var serialized = safeJsonStringify(sanitizedReports);
+      this._lastRawLogTimestamp = timestamp;
+      logger.debug(`raw stats: ${serialized}`);
+    } catch (error) {
+      logger.warn(`raw stats logging failed: ${error.message || String(error)}`);
+    }
+  }
+  _safeEmit(eventName, payload) {
+    try {
+      this.emit(eventName, payload);
+    } catch (error) {
+      logger.warn(`${eventName} listener failed: ${error.message || String(error)}`);
+    }
   }
   _emitStatsError(code, error, fatal) {
     var event = {
@@ -38745,9 +39671,58 @@ module.exports = class RTCStatsMonitor extends EventEmitter {
       consecutiveErrors: this._consecutiveErrors
     };
     logger.warn(`${code}: ${event.message}`);
-    this.emit('stats-error', event);
+    this._safeEmit('stats-error', event);
   }
 };
+function cloneSnapshot(value, seen) {
+  if (value === null || value === undefined || typeof value !== 'object') {
+    return value;
+  }
+  seen = seen || new Map();
+  if (seen.has(value)) return seen.get(value);
+  if (value instanceof Array) {
+    var _snapshot = [];
+    seen.set(value, _snapshot);
+    value.forEach(item => _snapshot.push(cloneSnapshot(item, seen)));
+    return _snapshot;
+  }
+  var snapshot = {};
+  seen.set(value, snapshot);
+  Object.keys(value).forEach(key => {
+    snapshot[key] = cloneSnapshot(value[key], seen);
+  });
+  return snapshot;
+}
+function sanitizeRawStats(reports) {
+  var privateFields = {
+    address: true,
+    ip: true,
+    ipaddress: true,
+    port: true,
+    relatedaddress: true,
+    relatedport: true,
+    localaddress: true,
+    localport: true,
+    remoteaddress: true,
+    remoteport: true,
+    url: true,
+    usernamefragment: true
+  };
+  return (reports || []).map(report => Object.keys(report || {}).reduce((sanitized, key) => {
+    sanitized[key] = privateFields[String(key).toLowerCase()] ? '[redacted]' : report[key];
+    return sanitized;
+  }, {}));
+}
+function safeJsonStringify(value) {
+  var seen = new Set();
+  return JSON.stringify(value, (key, item) => {
+    if (Object.prototype.toString.call(item) === '[object BigInt]') return item.toString();
+    if (!item || typeof item !== 'object') return item;
+    if (seen.has(item)) return '[Circular]';
+    seen.add(item);
+    return item;
+  });
+}
 function monotonicNow() {
   if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
     return performance.now();

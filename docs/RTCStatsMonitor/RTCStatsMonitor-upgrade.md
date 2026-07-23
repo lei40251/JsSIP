@@ -62,7 +62,7 @@ new CRTC.getStats(pc, {
   transitionGraceSamples     : 2,
   getStatsTimeoutMs          : 5000,
   enableDetailedReport       : true,
-  enableRawStatsLog          : false
+  enableRawStatsLog          : true
 });
 ~~~
 
@@ -78,7 +78,7 @@ new CRTC.getStats(pc, {
 | transitionGraceSamples | 2 | 媒体变化后暂缓瞬时质量告警的样本数 |
 | getStatsTimeoutMs | 5000 | 单次 getStats() 超时时间，最小 100ms |
 | enableDetailedReport | true | 是否输出完整 `detailed-report:` 日志并发送同轮摘要事件 |
-| enableRawStatsLog | false | 是否额外限频记录浏览器原始 `getStats()` 报告，生产环境建议关闭 |
+| enableRawStatsLog | true | 是否每 10 秒限频记录一份脱敏后的浏览器原始 `getStats()` 报告；可显式设为 `false` 关闭 |
 
 ## 4. 事件兼容与新增事件
 

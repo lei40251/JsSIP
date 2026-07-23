@@ -129,7 +129,7 @@ WSS 地址、SIP 域和 TURN 地址用途不同，不一定使用同一个域名
 | `registrationFailed` | 注册被拒绝、鉴权失败或超时 | 不一定是 WSS 故障 |
 | `disconnected` | WSS 已断开 | 浏览器网络接口是否离线需结合 offline 事件 |
 
-自动注册是 `register: true`，`ua.start()` 连接后自动发送 REGISTER。手动注册是 `register: false`，在 `connected` 后调用 `ua.register()`。两种方式的最终成功标志都相同：`registered`。
+自动注册是 `register: true`，`ua.start()` 连接后自动发送 REGISTER。SDK 也支持配置 `register: false` 后主动调用 `ua.register()`；Base JS Demo 选择运行模式后固定使用自动注册。两种方式的最终成功标志都相同：`registered`。
 
 Demo 不在 `connected` 事件中直接开放呼叫，而是分别记录连接和注册结果。以下代码取自 [`app.js`](../../demo/base-js/js/app.js)：
 
@@ -137,11 +137,6 @@ Demo 不在 `connected` 事件中直接开放呼叫，而是分别记录连接�
 ua.on('connected', function()
 {
   setStatus('信令连接成功');
-
-  if (manualRegister)
-  {
-    setStatus('信令连接成功，请点击“主动注册”');
-  }
 });
 
 ua.on('registered', function(data)

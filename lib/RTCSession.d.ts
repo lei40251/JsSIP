@@ -433,6 +433,8 @@ export interface HoldOptions extends ExtraHeaders {
 
 export interface RenegotiateOptions extends HoldOptions {
   rtcOfferConstraints?: RTCOfferOptions;
+  /** 默认 true；false 时重新协商失败不终止已有通话。 */
+  terminateOnFailure?: boolean;
 }
 
 // events
@@ -664,6 +666,9 @@ export class RTCSession extends EventEmitter {
 
   getMediaEffectsComposer(): MediaEffectsComposerInstance | null;
 
+  /** 原始 composer 输入流；复用轨道前应先 clone，未启用 composer 时返回 null。 */
+  getComposerInputStream(): MediaStream | null;
+
   getAiNoiseSuppression(): AiNoiseSuppressionController | null;
 
   getAiVirtualBackground(): any | null;
@@ -700,7 +705,7 @@ export class RTCSession extends EventEmitter {
 
   unhold(options?: HoldOptions, done?: VoidFunction): boolean;
 
-  renegotiate(options?: RenegotiateOptions, done?: VoidFunction): boolean;
+  renegotiate(options?: RenegotiateOptions, done?: (error?: Error) => void): boolean;
 
   isOnHold(): OnHoldResult;
 
@@ -713,8 +718,6 @@ export class RTCSession extends EventEmitter {
   isMuted(): MediaConstraints;
 
   refer(target: string | URI, options?: ReferOptions): void;
-
-  resetLocalMedia(): void;
 
   on<T extends keyof RTCSessionEventMap>(type: T, listener: RTCSessionEventMap[T]): this;
 }

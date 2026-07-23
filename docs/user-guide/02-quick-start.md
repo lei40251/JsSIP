@@ -65,7 +65,7 @@ const configuration = {
   connection_recovery_max_interval : 3,
   connection_recovery_min_interval : 2,
   register_expires                 : 20,
-  register                         : !manualRegister,
+  register                         : true,
   session_timers                   : false,
   secret_key                       : secretKey
 };

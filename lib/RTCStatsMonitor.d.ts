@@ -61,7 +61,7 @@ declare namespace RTCStatsMonitor {
     transitionGraceSamples?: number
     /** 是否记录常用诊断摘要并发送 detailed-report 事件，默认 true。 */
     enableDetailedReport?: boolean
-    /** 是否限频记录原始 RTCStatsReport，默认 false。 */
+    /** 是否限频记录脱敏后的原始 RTCStatsReport，默认 true。 */
     enableRawStatsLog?: boolean
     /** 原始报告日志最小间隔，默认 10000ms。 */
     rawStatsLogIntervalMs?: number

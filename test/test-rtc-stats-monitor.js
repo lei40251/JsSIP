@@ -342,6 +342,8 @@ async function testDefaultCadenceIsTwoSeconds()
   assert.strictEqual(monitor._options.legacyReportIntervalMs, 2000);
   assert.strictEqual(monitor._options.backgroundSampleIntervalMs, 2000);
   assert.strictEqual(monitor._options.getStatsTimeoutMs, 5000);
+  assert.strictEqual(monitor._options.enableRawStatsLog, true);
+  assert.strictEqual(monitor._options.rawStatsLogIntervalMs, 10000);
 }
 
 async function testEventsAndSamplingCadence()
