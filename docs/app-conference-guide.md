@@ -12,6 +12,15 @@
 
 > 本文针对当前源码版本。`app-conference.js` 是 Demo 层实现，不是 SDK 内置的会议服务器或 MCU/SFU 功能。
 
+### 图中标识
+
+| 标识 | 含义 |
+| --- | --- |
+| 📞 | SIP 信令、UA 或 RTCSession |
+| 🎥 | MediaStream、音视频轨或屏幕轨 |
+| 🎛️ | MediaEffectsComposer、slot 或子混音 |
+| 🛡️ | 失败回滚、fallback 或资源清理 |
+
 ## 1. 一句话理解整体设计
 
 A 页面同时维护 A-B、A-C 两路独立的 SIP/WebRTC 通话，并在浏览器中把 A、B、C 的媒体送入 `MediaEffectsComposer`。合成器输出一条合成视频和按接收方定制的音频子混音，再通过两路 `RTCRtpSender` 分别发给 B、C。
@@ -84,6 +93,30 @@ flowchart LR
 
 这样 B 不会收到自己的声音，C 也不会收到自己的声音。视频没有按接收方排除自身，两边收到的是同一条合成视频轨。
 
+```mermaid
+flowchart LR
+  subgraph MEC["A-B 主 MediaEffectsComposer"]
+    S0["🎛️ slot 0"]
+    S1["🎛️ slot 1"]
+    S2["🎛️ slot 2"]
+    S0 --> V["视频画布：A+B+C"]
+    S1 --> V
+    S2 --> V
+    S0 --> MB["B 音频子混音 [0,2]"]
+    S2 --> MB
+    S0 --> MC["C 音频子混音 [0,1]"]
+    S1 --> MC
+  end
+
+  A["🎥 A 原始音视频"] --> S0
+  B["🎥 B 远端音视频"] --> S1
+  C["🎥 C 远端音视频"] --> S2
+  V --> OB["发给 B 的视频"]
+  V --> OC["发给 C 的视频"]
+  MB --> AB["发给 B：A+C"]
+  MC --> AC["发给 C：A+B"]
+```
+
 ### 3.3 静默 C
 
 静默 C 是 Demo 的观察/旁听模式：
@@ -96,6 +129,22 @@ flowchart LR
 - A-B 主会话保持原始 A-B 媒体，不因静默 C 加入而改变。
 
 静默身份只由 `X-Silent-Join` 判断。即使 SDP 自己包含 `a=recvonly`，没有该头部仍会被当作普通 C。
+
+```mermaid
+flowchart LR
+  A["🎥 A 原始媒体"] --> AB["📞 A-B 会话"]
+  AB -->|"A 原始媒体"| B["B"]
+  B -->|"B 远端媒体"| A
+
+  A --> S0["🎛️ 静默 C composer slot 0"]
+  B --> S1["🎛️ 静默 C composer slot 1"]
+  S0 --> MIX["A+B 合成输出"]
+  S1 --> MIX
+  MIX --> AC["📞 A-C sendonly 会话"]
+  AC --> C["静默 C：只接收"]
+
+  KEEP["A-B 不切换 sender"] -.-> AB
+```
 
 ## 4. 核心状态模型
 
@@ -234,6 +283,40 @@ callConferenceVideo({ role: 'C' })
 
 如果媒体准备或 `ua.call()` 失败，`rollbackNormalCComposerOutput()` 会移除 B source、恢复 B 原始 sender、释放音频子混音，并关闭克隆的降级流。
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor User as 用户
+  participant UI as 页面按钮
+  participant Conf as app-conference.js
+  participant BSession as A-B RTCSession
+  participant Composer as A-B Composer
+  participant UA as CRTC.UA
+  participant CSession as A-C RTCSession
+
+  User->>UI: 点击“添加成员”
+  UI->>Conf: callConferenceVideo({ role: 'C' })
+  Conf->>Conf: 检查 B 已 confirmed
+  Conf->>Conf: 设置 pending，锁住重复点击
+  Conf->>BSession: getMediaEffectsComposer()
+  BSession-->>Conf: composer
+  Conf->>BSession: getComposerInputStream()
+  BSession-->>Conf: A 原始流
+  Conf->>Conf: clone A 流作为 fallback
+  Conf->>Composer: addSource(B 远端流, slot 1)
+  Conf->>Composer: getVideoStream()
+  Conf->>Composer: getAudioStream([0,1]) / ([0,2])
+  Conf->>BSession: audioSender.replaceTrack(A+C 子混音)
+  Conf->>UA: call(C, composer 输出流)
+  UA-->>Conf: newRTCSession(local)
+  Conf->>Conf: 消费 pending，创建 C leg
+  Conf->>CSession: 绑定生命周期与 track 事件
+  CSession-->>Conf: confirmed
+  Conf->>Composer: addSource(C 远端流, slot 2)
+  Composer-->>BSession: 稳定画布更新为 A+B+C
+  Composer-->>CSession: 稳定画布更新为 A+B+C
+```
+
 ### 6.3 静默 C 从另一个页面呼叫 A
 
 静默 C 必须在另一个 Base JS Demo 页面选择“点对点”模式，然后点击“静默呼叫 A”：
@@ -263,6 +346,37 @@ C 端会监听 PeerConnection 的 `track` 和会话 `confirmed`，在 A 的合�
 
 普通 C 接听过程失败时，会回滚已经对 B composer 和 sender 做的修改。静默 C 自动接听失败时也会终止该会话。
 
+```mermaid
+sequenceDiagram
+  autonumber
+  participant C as 远端 C
+  participant UA as A 的 CRTC.UA
+  participant Handler as handleConferenceNewRTCSession
+  participant Host as A-B 主会话
+  actor User as A 端用户
+  participant AC as A-C RTCSession
+
+  C->>UA: INVITE
+  UA->>Handler: newRTCSession(remote)
+  Handler->>Handler: 第二空槽分配为 C
+  Handler->>Handler: 读取 X-Silent-Join
+
+  alt 普通 C
+    Handler-->>User: 显示来电与“接听来电”
+    User->>Handler: answerConferenceLeg(C)
+    Handler->>Host: 准备 A-B composer 输出
+    Host-->>Handler: 合成流 + fallback
+    Handler->>AC: answer(sendrecv, 合成流)
+  else 静默 C
+    Handler->>Handler: 标记 autoAnswer / local sendonly
+    Handler->>AC: answer(sendonly, 独立 composer)
+  end
+
+  AC-->>Handler: accepted
+  AC-->>Handler: confirmed
+  Handler->>Handler: 收集轨道并调度 sync
+```
+
 ## 8. 三方媒体合成核心
 
 ### 8.1 slot 约定
@@ -289,6 +403,26 @@ C 端会监听 PeerConnection 的 `track` 和会话 `confirmed`，在 A 的合�
 1. `setTimeout(..., 0)` 把同一事件循环内的连续变化防抖成一次。
 2. `conferenceSyncQueue.then(syncConferenceComposer)` 保证 composer source 和 sender 修改串行执行。
 3. `getConferenceComposerSyncSignature()` 用两条会话 ID、C 类型以及四条远端轨的 `id/readyState` 构建签名，没有变化则跳过。
+
+```mermaid
+stateDiagram-v2
+  state "等待媒体变化" as Idle
+  state "0ms 防抖" as Debounce
+  state "Promise 队列等待" as Queue
+  state "检查 B/C、composer 与签名" as Check
+  state "更新 source / 子混音 / sender" as Apply
+  state "恢复原始或 fallback 轨" as Fallback
+
+  [*] --> Idle
+  Idle --> Debounce: confirmed / track / ended
+  Debounce --> Queue: scheduleConferenceSync
+  Queue --> Check: 前一轮同步完成
+  Check --> Idle: B/C 未齐或签名未变化
+  Check --> Apply: 需要同步
+  Apply --> Idle: 成功并保存新签名
+  Apply --> Fallback: 抛出异常
+  Fallback --> Idle: 清 source、释放子混音、保留基础通话
+```
 
 ### 8.3 普通 C 同步
 
@@ -421,6 +555,43 @@ startConferenceScreenShare()
 
 如果复用旧 sender 的 `replaceTrack()` 因编码范围不兼容而失败，代码会先把旧 sender 置空，再创建新 transceiver 和新 m-line。单个目标失败不会阻止其他目标继续；只要至少一个成功，共享就保留。
 
+```mermaid
+sequenceDiagram
+  autonumber
+  actor User as A 端用户
+  participant Conf as app-conference.js
+  participant Browser as 浏览器媒体 API
+  participant PC as 目标 PeerConnection
+  participant Session as 目标 RTCSession
+  participant Remote as B/C 点对点页面
+
+  User->>Conf: 选择目标并点击“开始共享”
+  Conf->>Browser: getDisplayMedia()
+  Browser-->>Conf: screenStream / screenTrack
+
+  loop 每个 screenTarget
+    alt 已有可复用 screenSender + MID
+      Conf->>PC: sender.replaceTrack(screenTrack)
+    else 首次共享或复用失败
+      Conf->>PC: addTransceiver(screenTrack, sendonly)
+      Conf->>Session: renegotiate(useUpdate: false)
+      Session-->>Conf: re-INVITE 完成
+      Conf->>PC: 等待 transceiver.mid
+      PC-->>Conf: MID
+    end
+    Conf->>Session: sendInfo(screen-share/start, MID)
+    Session-->>Remote: SIP INFO
+    PC-->>Remote: 共享 video track
+    Note over Remote: INFO 与 track 可任意先后到达<br/>按 MID 缓存并匹配
+    Remote->>Remote: 渲染到 #remoteVideo2
+  end
+
+  User->>Conf: 点击“停止共享”
+  Conf->>Session: sendInfo(screen-share/stop)
+  Conf->>PC: sender.replaceTrack(null)
+  Session-->>Remote: 清除共享画面
+```
+
 ### 11.3 接收端如何识别共享轨
 
 B/C 使用点对点模式的 [`app.js`](../demo/base-js/js/app.js#L500) 接收共享：
@@ -469,6 +640,32 @@ B/C 使用点对点模式的 [`app.js`](../demo/base-js/js/app.js#L500) 接收�
 | B 挂断，C 为普通 C | 保留 A-C；C sender 切回预先克隆的 A 原始音视频 |
 | 普通 C 保留后加入新 B | 新 B 成为 composer 宿主，C sender 切到新 composer，重新形成三方 |
 | 最后一条会话结束 | 停止屏幕共享，清空本地和远端主画面 |
+
+```mermaid
+flowchart TD
+  END["📞 failed / ended"] --> CLEAN["🛡️ cleanupConferenceLeg"]
+  CLEAN --> COMMON["停止共享 sender、音频元素和定时器<br/>从 conferenceLegs 删除"]
+  COMMON --> ROLE{"结束的是谁?"}
+
+  ROLE -->|"C"| KEEP_B{"B 仍存在?"}
+  KEEP_B -->|"是"| RESTORE_B["恢复 B 原始 sender<br/>会议退化为 A-B"]
+  KEEP_B -->|"否"| EMPTY["清空画面和统计"]
+
+  ROLE -->|"B"| HAS_C{"C 仍存在?"}
+  HAS_C -->|"否"| EMPTY
+  HAS_C -->|"静默 C"| STOP_C["终止静默 C"]
+  STOP_C --> EMPTY
+  HAS_C -->|"普通 C"| FALLBACK["C sender 切换到 A 的 fallback 克隆轨"]
+  FALLBACK --> AC["保留 A-C 点对点通话"]
+  AC --> NEW_B{"之后加入新 B?"}
+  NEW_B -->|"是"| REHOST["新 B 成为 composer 宿主<br/>C sender 切到新 composer"]
+  REHOST --> THREE["重新形成 A-B-C"]
+  NEW_B -->|"否"| AC
+
+  RESTORE_B --> UI["刷新预览、统计和按钮"]
+  EMPTY --> UI
+  THREE --> UI
+```
 
 ### 12.3 为什么需要 fallback 克隆流
 
@@ -564,6 +761,25 @@ B 结束后，`restoreConferenceLegOriginalMedia(C, endedBId)` 使用克隆轨�
 - 三方激活时禁用 REFER 和取消 REFER。
 
 `conferencePendingOutgoing` 会在 C 媒体准备开始前立即设置，因此用户快速双击“添加成员”不会创建两路相同 C 会话。
+
+```mermaid
+flowchart LR
+  MODE{"三方模式已启用?"} -->|"否"| DISABLED["会议控件隐藏或禁用"]
+  MODE -->|"是"| MEMBER{"当前成员数"}
+  MEMBER -->|"0"| ADD_B["可添加 B"]
+  MEMBER -->|"1，B 未 confirmed"| WAIT_B["等待 B，不能添加 C"]
+  MEMBER -->|"1，B 已 confirmed"| ADD_C["可添加 C"]
+  MEMBER -->|"2"| FULL["会议已满，隐藏添加按钮"]
+
+  ADD_B --> PENDING["pending：锁住重复点击"]
+  ADD_C --> PENDING
+  PENDING --> SESSION["newRTCSession 消费 pending"]
+
+  SESSION --> TARGET{"已选共享目标且目标 confirmed?"}
+  TARGET -->|"是，未在共享"| START["启用开始共享"]
+  TARGET -->|"否"| NO_START["禁用开始共享"]
+  START --> ACTIVE["共享中：锁定目标并显示停止按钮"]
+```
 
 ## 17. 设计限制与接入注意事项
 
@@ -711,3 +927,294 @@ initializeDemoMode（app.js）
 ```
 
 掌握这条链后，再分别阅读 `callConferenceAsSilentC()` 和屏幕共享函数，即可覆盖该文件绝大多数功能。
+
+## 22. `app-conference.js` 完整方法调用图
+
+本节覆盖当前文件声明的全部 69 个函数。图中：
+
+- 实线箭头表示函数直接调用另一个函数。
+- 虚线箭头表示页面绑定、SDK 事件或异步回调触发。
+- “外部”节点表示定义在 `app.js`、`app.ui-bindings.js`、浏览器或 SDK 中的入口。
+- 为保持可读性，同一个公共函数可能出现在多张图中。
+
+### 22.1 页面、UA 与会议总入口
+
+这张图先说明哪些外部动作会进入会议模块，以及会议模块对外提供了哪些主要入口。
+
+```mermaid
+flowchart TD
+  MODE["外部：initializeDemoMode('conference')"] -.->|"UA newRTCSession"| NEW["handleConferenceNewRTCSession()"]
+
+  ADD["外部：添加成员按钮"] --> NEXT["getConferenceNextRole()"]
+  NEXT --> CALL["callConferenceVideo()"]
+
+  SILENT["外部：静默呼叫 A 按钮"] --> SCALL["callConferenceAsSilentC()"]
+  ANSWER["外部：接听来电按钮"] --> AP["answerPendingConferenceVideo()"]
+  AP --> ALEG["answerConferenceLeg()"]
+  HANGALL["外部：全部挂断按钮"] --> TERMALL["terminateConference()"]
+
+  STARTUI["外部：开始共享按钮"] --> START["startConferenceScreenShare()"]
+  STOPUI["外部：停止共享按钮"] --> STOP["stopConferenceScreenShare()"]
+
+  EFFECTS["外部：媒体效果面板"] --> GETMEC["getConferenceMediaEffectsComposer()"]
+  GETMEC --> BYROLE["getConferenceLegByRole()"]
+
+  NEW --> LEG["createConferenceLeg()"]
+  NEW --> EVENTS["setupConferenceSessionEvents()"]
+  NEW --> UI["updateConferenceUi()"]
+  CALL -.->|"ua.call → newRTCSession"| NEW
+  SCALL -.->|"远端 A 收到 newRTCSession"| NEW
+  ALEG -.->|"session.answer 后触发 accepted / confirmed"| EVENTS
+
+  EVENTS --> SYNC["scheduleConferenceSync()"]
+  SYNC --> MIX["syncConferenceComposer()"]
+  EVENTS -.->|"failed / ended"| CLEAN["cleanupConferenceLeg()"]
+```
+
+### 22.2 呼叫、来电分类与接听调用图
+
+这张图展开 `newRTCSession`、添加 B/C、静默 C 和接听四条路径。
+
+```mermaid
+flowchart TD
+  NEW["handleConferenceNewRTCSession()"] --> RESOLVE["resolveConferenceSessionOptions()"]
+  NEW --> BYROLE["getConferenceLegByRole()"]
+  NEW --> REQHEAD["getConferenceRequestHeader()"]
+  NEW --> REMOTE["getConferenceRemoteNumber()"]
+  NEW --> CREATE["createConferenceLeg()"]
+  NEW --> SETUP["setupConferenceSessionEvents()"]
+  NEW --> UI["updateConferenceUi()"]
+  NEW -.->|"静默 C 自动接听"| ANSWER["answerConferenceLeg()"]
+
+  RESOLVE --> NEXT["getConferenceNextRole()"]
+  RESOLVE --> REQHEAD
+  RESOLVE --> ENABLED["isConferenceHeaderEnabled()"]
+  RESOLVE --> REMOTE
+  NEXT --> BYROLE
+
+  CALL["callConferenceVideo()"] --> NEXT
+  CALL --> BYROLE
+  CALL --> UI
+  CALL --> PREPARE["prepareNormalCComposerOutput()"]
+  CALL --> BUILD_CALL["buildConferenceCallOptions()"]
+  CALL -.->|"准备或 ua.call 失败"| ROLLBACK["rollbackNormalCComposerOutput()"]
+  BUILD_CALL --> EXTRA["buildConferenceExtraFeatures()"]
+  BUILD_CALL -->|"B"| COMPOSER_OPT["buildConferenceComposerOptions()"]
+
+  SILENT["callConferenceAsSilentC()"] --> EXTRA
+  SILENT -.->|"ua.call()"| NEW
+
+  PENDING["answerPendingConferenceVideo()"] --> ANSWER
+  ANSWER --> SELECTED["getConferenceSelectedLeg()"]
+  ANSWER --> BYROLE
+  ANSWER --> PREPARE
+  ANSWER --> BUILD_ANSWER["buildConferenceAnswerOptions()"]
+  ANSWER --> CLEAR["clearConferenceAnswerTimer()"]
+  ANSWER -.->|"接听失败"| ROLLBACK
+  BUILD_ANSWER --> EXTRA
+  BUILD_ANSWER -->|"B 或静默 C"| COMPOSER_OPT
+
+  PREPARE -.->|"内部异常"| ROLLBACK
+  ROLLBACK --> RESTORE_ONE["restoreConferenceLegOriginalMedia()"]
+```
+
+### 22.3 RTCSession 事件、远端轨与预览调用图
+
+`setupConferenceSessionEvents()` 是事件分发中心；图中虚线边表示某个 SDK 事件触发对应处理路径。
+
+```mermaid
+flowchart TD
+  SETUP["setupConferenceSessionEvents()"] --> DISPLAY["getConferenceDisplayRole()"]
+  SETUP --> STATS["bindConferenceStatsEvents()"]
+  SETUP --> ATTACH["attachConferenceTrackListener()"]
+
+  SETUP -.->|"accepted"| CLEAR["clearConferenceAnswerTimer()"]
+  SETUP -.->|"confirmed"| HYDRATE["hydrateConferenceRemoteMainStream()"]
+  SETUP -.->|"confirmed"| REMEMBER["rememberConferenceOriginalSenders()"]
+  SETUP -.->|"confirmed"| LOCAL["renderConferenceLocalVideo()"]
+  SETUP -.->|"confirmed"| MAIN["renderConferenceMainVideo()"]
+  SETUP -.->|"confirmed"| UI["updateConferenceUi()"]
+  SETUP -.->|"confirmed"| SCHEDULE["scheduleConferenceSync()"]
+
+  SETUP -.->|"cameraChanged / localMediastreamUpdate"| LOCAL
+  SETUP -.->|"failed / ended"| CLEAR
+  SETUP -.->|"failed / ended"| CLEAN["cleanupConferenceLeg()"]
+
+  ATTACH -.->|"PeerConnection track"| AUDIO["bindConferenceRemoteAudio()"]
+  ATTACH -.->|"video track"| MAIN
+  ATTACH -.->|"audio/video track"| SCHEDULE
+  ATTACH --> ENDED["addConferenceTrackEndedListener()"]
+  ENDED -.->|"MediaStreamTrack ended"| SCHEDULE
+  ENDED -.->|"video ended"| MAIN
+
+  HYDRATE --> AUDIO
+  MAIN --> BYROLE["getConferenceLegByRole()"]
+  MAIN --> PREVIEW["bindConferencePreviewTrack()"]
+  LOCAL --> BYROLE
+```
+
+### 22.4 composer、子混音、同步与降级调用图
+
+这张图包含普通 C 信令前媒体准备、实际三方同步以及失败恢复，是媒体链路的完整函数级调用图。
+
+```mermaid
+flowchart TD
+  OPT["buildConferenceComposerOptions()"] -.->|"复用 buildCallComposerOptions"| EXTOPT["外部：页面媒体效果配置"]
+  GET["getConferenceMediaEffectsComposer()"] --> BYROLE["getConferenceLegByRole()"]
+
+  ENSURE["ensureConferenceHostComposer()"] --> OPT
+  ENSURE --> LOCAL["renderConferenceLocalVideo()"]
+
+  PREPARE["prepareNormalCComposerOutput()"] --> ENSURE
+  PREPARE --> CLONE["cloneConferenceFallbackLocalStream()"]
+  PREPARE --> HYDRATE["hydrateConferenceRemoteMainStream()"]
+  PREPARE --> SOURCE["updateConferenceComposerSource()"]
+  PREPARE --> REMEMBER["rememberConferenceOriginalSenders()"]
+  PREPARE --> OUTPUT["buildConferenceComposerOutputStream()"]
+  PREPARE -.->|"异常"| ROLLBACK["rollbackNormalCComposerOutput()"]
+
+  ROLLBACK --> RESTORE_ONE["restoreConferenceLegOriginalMedia()"]
+
+  SCHEDULE["scheduleConferenceSync()"] --> SYNC["syncConferenceComposer()"]
+  SCHEDULE -.->|"sync 异常"| RESTORE_ALL["restoreConferenceOriginalMedia()"]
+  SCHEDULE -.->|"sync 异常"| RELEASE["releaseConferenceComposerOutputs()"]
+  SCHEDULE -.->|"sync 异常"| MAIN["renderConferenceMainVideo()"]
+
+  SYNC --> BYROLE
+  SYNC --> HYDRATE
+  SYNC --> SIGN["getConferenceComposerSyncSignature()"]
+  SYNC --> SOURCE
+  SYNC -.->|"composer 宿主切换"| CLONE
+  SYNC --> LOCAL
+  SYNC --> MAIN
+  SYNC --> UI["updateConferenceUi()"]
+
+  RESTORE_ALL --> RESTORE_ONE
+  MAIN --> BYROLE
+  MAIN --> PREVIEW["bindConferencePreviewTrack()"]
+  LOCAL --> BYROLE
+
+  SOURCE -.->|"SDK"| ADDREMOVE["外部：composer.addSource/removeSource"]
+  OUTPUT -.->|"浏览器"| STREAM["外部：new MediaStream()"]
+  RELEASE -.->|"SDK"| SUBMIX["外部：releaseSubmixAudioStream()"]
+```
+
+### 22.5 当前成员、统计面板与公共控制调用图
+
+这张图覆盖统计格式化小函数，也展示成员选择如何改变 `rtcSession`、`statsSession` 和公共控制栏的操作目标。
+
+```mermaid
+flowchart TD
+  UI["updateConferenceUi()"] --> BYROLE["getConferenceLegByRole()"]
+  UI --> DISPLAY["getConferenceDisplayRole()"]
+  UI -.->|"成员按钮 onclick"| SELECT["selectConferenceLeg()"]
+  UI -.->|"成员按钮 onclick"| MAIN["renderConferenceMainVideo()"]
+  UI -.->|"单成员挂断 onclick"| TERM["terminateConferenceLeg()"]
+  UI --> NEXT["getConferenceNextRole()"]
+  UI --> TARGETS["getConferenceScreenTargetLegs()"]
+  UI --> BINDCTRL["bindConferenceSelectedSessionControls()"]
+  UI -.->|"单路 REFER 按钮绑定"| REFER["referConferenceTwoPartyCall()"]
+  UI -.->|"取消 REFER 按钮绑定"| CANCELREF["cancelConferenceTwoPartyRefer()"]
+
+  NEXT --> BYROLE
+  SELECT --> PEERLABEL["renderConferenceStatsPeerLabels()"]
+  SELECT --> REPORT["renderConferenceStatsReport()"]
+  SELECT --> TEXT["setConferenceStatsText()"]
+  PEERLABEL --> DISPLAY
+  PEERLABEL --> TEXT
+
+  BINDSTATS["bindConferenceStatsEvents()"] -.->|"stats:detailed-report"| REPORT
+  BINDSTATS --> SELECT
+  REPORT --> CONNECTION["renderConferenceConnectionStats()"]
+  REPORT --> STREAMS["renderConferenceStatsStreams()"]
+  REPORT --> NUMBER["formatConferenceStatsNumber()"]
+  REPORT --> QUALITY["formatConferenceNetworkQuality()"]
+  REPORT --> TEXT
+
+  CONNECTION --> BITRATE["formatConferenceStatsBitrate()"]
+  CONNECTION --> ROW["appendConferenceStatsRow()"]
+  STREAMS --> NAME["getConferenceStatsStreamName()"]
+  STREAMS --> BITRATE
+  STREAMS --> NUMBER
+  STREAMS --> ROW
+
+  BINDCTRL -.->|"各公共按钮 onclick"| WITH["withConferenceSelectedSession()"]
+  WITH --> CURRENT["getConferenceSelectedLeg()"]
+  REFER --> CURRENT
+  CANCELREF --> CURRENT
+```
+
+### 22.6 定向屏幕共享完整调用图
+
+图中既包含开始/停止共享，也包含 UI 目标筛选、sender 复用和首次 re-INVITE 协商。
+
+```mermaid
+flowchart TD
+  START["startConferenceScreenShare()"] --> CONFIRMED["getConferenceConfirmedLegs()"]
+  START --> TARGETS["getConferenceScreenTargetLegs()"]
+  START --> UI["updateConferenceUi()"]
+  START -.->|"已有共享先停止"| STOP["stopConferenceScreenShare()"]
+  START -.->|"每个目标"| SHARE["shareConferenceScreenToLeg()"]
+
+  TARGETS --> CONFIRMED
+  SHARE -.->|"可复用 sender"| REPLACE["外部：screenSender.replaceTrack()"]
+  SHARE -.->|"首次或复用失败"| RENEGO["renegotiateConferenceScreen()"]
+  SHARE --> WAITMID["waitForConferenceScreenMid()"]
+  SHARE --> INFO["sendConferenceScreenInfo()"]
+  RENEGO -.->|"SDK"| SESSIONRE["外部：session.renegotiate()"]
+  WAITMID -.->|"WebRTC"| MID["外部：screenTransceiver.mid"]
+  INFO -.->|"SDK"| SIPINFO["外部：session.sendInfo()"]
+
+  STOP --> INFO
+  STOP --> UI
+  STOP --> REPLACE
+  CLEAN["cleanupConferenceLeg()"] -.->|"共享无活跃目标或最后成员结束"| STOP
+  UI --> TARGETS
+```
+
+### 22.7 挂断、资源清理与 REFER 调用图
+
+最后一张图展示所有结束入口如何汇入统一清理，以及清理过程会调用哪些恢复和 UI 函数。
+
+```mermaid
+flowchart TD
+  TERMONE["terminateConferenceLeg()"] -.->|"session.terminate → ended"| CLEAN["cleanupConferenceLeg()"]
+  TERMALL["terminateConference()"] -.->|"每个 session.terminate → ended"| CLEAN
+  EVENTS["setupConferenceSessionEvents()"] -.->|"failed / ended"| CLEAN
+
+  CLEAN --> BYROLE["getConferenceLegByRole()"]
+  CLEAN --> CLEAR["clearConferenceAnswerTimer()"]
+  CLEAN --> STOPSCREEN["stopConferenceScreenShare()"]
+  CLEAN --> RESTORE["restoreConferenceOriginalMedia()"]
+  CLEAN --> RELEASE["releaseConferenceComposerOutputs()"]
+  CLEAN --> CURRENT["getConferenceSelectedLeg()"]
+  CLEAN --> SELECT["selectConferenceLeg()"]
+  CLEAN --> TEXT["setConferenceStatsText()"]
+  CLEAN --> LOCAL["renderConferenceLocalVideo()"]
+  CLEAN --> MAIN["renderConferenceMainVideo()"]
+  CLEAN --> UI["updateConferenceUi()"]
+
+  RESTORE --> RESTORE_ONE["restoreConferenceLegOriginalMedia()"]
+  LOCAL --> BYROLE
+  MAIN --> BYROLE
+  MAIN --> PREVIEW["bindConferencePreviewTrack()"]
+
+  UI -.->|"只有一路 confirmed"| REFER["referConferenceTwoPartyCall()"]
+  UI -.->|"只有一路"| CANCEL["cancelConferenceTwoPartyRefer()"]
+  REFER --> CURRENT
+  CANCEL --> CURRENT
+  REFER -.->|"SDK"| SDKREF["外部：session.hold/refer/terminate"]
+  CANCEL -.->|"SDK"| SDKINFO["外部：session.sendInfo(cancel)"]
+```
+
+### 22.8 如何沿调用图定位问题
+
+| 现象 | 先看哪张图 | 建议从哪个函数开始 |
+| --- | --- | --- |
+| 点击添加成员没有发起呼叫 | 22.1、22.2 | `callConferenceVideo()` |
+| 来电被错误分成 B/C 或静默状态 | 22.2 | `resolveConferenceSessionOptions()` |
+| confirmed 后没有远端画面 | 22.3 | `attachConferenceTrackListener()` |
+| 三方声音路由错误或合成失败 | 22.4 | `syncConferenceComposer()` |
+| 统计或控制操作了错误成员 | 22.5 | `selectConferenceLeg()` |
+| 屏幕共享没有第二路视频 | 22.6 | `shareConferenceScreenToLeg()` |
+| 成员挂断后剩余会话没有恢复 | 22.7 | `cleanupConferenceLeg()` |
