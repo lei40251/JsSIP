@@ -328,7 +328,7 @@ async function checkCameraStatus()
 
     await navigator.mediaDevices.getUserMedia({ video: true }).then(async(mediastream) =>
     {
-      mediastream && mediastream.getTracks().forEach((t) => t.stop());
+      CRTC.Utils.closeMediaStream(mediastream);
     });
     haveACamera = true;
 
@@ -431,6 +431,68 @@ function bindMediaStreamIfChanged(mediaEl, stream)
   mediaEl.srcObject = stream || null;
 
   return true;
+}
+
+// =============================================================================
+// 屏幕共享通用浮层
+// =============================================================================
+
+/**
+ * 展示本端或远端屏幕共享。点对点与三方模式共用同一组页面节点。
+ *
+ * @param {'local'|'remote'} mode - 当前展示的共享来源
+ */
+function openScreenShareDialog(mode)
+{
+  const dialog = document.querySelector('#screenShareDialog');
+  const restoreButton = document.querySelector('#screenShareDialogRestore');
+  const localScreen = document.querySelector('#screen');
+  const remoteScreen = document.querySelector('#remoteVideo2');
+  const title = document.querySelector('#screenShareDialogTitle');
+
+  if (!dialog)
+  {
+    return;
+  }
+
+  dialog.dataset.mode = mode;
+  dialog.classList.remove('hide');
+  if (restoreButton) restoreButton.classList.add('hide');
+  if (localScreen) localScreen.classList.toggle('hide', mode !== 'local');
+  if (remoteScreen) remoteScreen.classList.toggle('hide', mode !== 'remote');
+  if (title) title.textContent = mode === 'local' ? '本端屏幕共享' : '远端屏幕共享';
+}
+
+/**
+ * 临时隐藏屏幕共享浮层，保留当前共享来源以便恢复。
+ */
+function minimizeScreenShareDialog()
+{
+  const dialog = document.querySelector('#screenShareDialog');
+  const restoreButton = document.querySelector('#screenShareDialogRestore');
+
+  if (dialog) dialog.classList.add('hide');
+  if (restoreButton) restoreButton.classList.remove('hide');
+}
+
+/**
+ * 关闭屏幕共享浮层。
+ *
+ * @param {'local'|'remote'} [mode] - 仅关闭指定来源；省略时无条件关闭
+ */
+function closeScreenShareDialog(mode)
+{
+  const dialog = document.querySelector('#screenShareDialog');
+  const restoreButton = document.querySelector('#screenShareDialogRestore');
+
+  if (!dialog || (mode && dialog.dataset.mode && dialog.dataset.mode !== mode))
+  {
+    return;
+  }
+
+  dialog.classList.add('hide');
+  dialog.dataset.mode = '';
+  if (restoreButton) restoreButton.classList.add('hide');
 }
 
 /**

@@ -6,9 +6,83 @@
 // 页面级 UI 事件绑定
 // =============================================================================
 
-// 主动注册：适用于 register=manual，也可在主动注销后重新注册。
+// ---- 模式选择 ----
+// 用户点击"点对点"或"三方"按钮后，通过 initializeDemoMode 创建 UA 并启动。
+// 模式一旦选定不可切换（需刷新页面重新选择）。
+
+document.querySelector('#initializePointToPoint').onclick = function()
+{
+  initializeDemoMode('point-to-point');
+};
+
+document.querySelector('#initializeConference').onclick = function()
+{
+  initializeDemoMode('conference');
+};
+
+// ---- 屏幕共享浮层控制 ----
+// 点对点与三方模式共用屏幕共享浮层，页面级按钮统一在此绑定。
+// 关闭按钮调用 minimizeScreenShareDialog（隐藏浮层，保留恢复按钮）。
+// 恢复按钮读取 dialog.dataset.mode 恢复之前的状态。
+
+document.querySelector('#screenShareDialogClose').onclick = minimizeScreenShareDialog;
+document.querySelector('#screenShareDialogRestore').onclick = function()
+{
+  const dialog = document.querySelector('#screenShareDialog');
+
+  if (dialog && dialog.dataset.mode)
+  {
+    openScreenShareDialog(dialog.dataset.mode);
+  }
+};
+
+// ---- 三方会议控制按钮 ----
+// 三方会议静态按钮只负责调用会议模块公开给 Demo 的操作函数。
+// 按钮的禁用/启用状态由 updateConferenceUi() 统一管理。
+
+// "添加成员"：根据当前会议状态自动分配 B 或 C 角色
+document.querySelector('#conferenceCallVideo').onclick = function()
+{
+  const role = getConferenceNextRole();
+
+  callConferenceVideo({ role }).catch((error) => setStatus(`会议呼叫失败：${error.message || error}`));
+};
+
+// "静默呼叫 A"：点对点模式下以静默 C 身份接入
+document.querySelector('#conferenceSilentJoin').onclick = function()
+{
+  callConferenceAsSilentC().catch((error) => setStatus(`静默接入呼叫失败：${error.message || error}`));
+};
+
+// "接听来电"：仅在有待接听的会议来电时可用
+document.querySelector('#conferenceAnswerVideo').onclick = answerPendingConferenceVideo;
+document.querySelector('#conferenceHangupAll').onclick = terminateConference;
+
+document.querySelector('#conferenceStartScreen').onclick = function()
+{
+  startConferenceScreenShare()
+    .then(updateConferenceUi)
+    .catch((error) => setStatus(`会议屏幕共享失败：${error.message || error}`));
+};
+
+document.querySelector('#conferenceStopScreen').onclick = function()
+{
+  stopConferenceScreenShare()
+    .then(updateConferenceUi)
+    .catch((error) => setStatus(`停止会议屏幕共享失败：${error.message || error}`));
+};
+
+updateConferenceUi();
+
+// 主动注册：初始化时会自动注册，该按钮用于主动注销后重新注册。
 document.querySelector('#registerUa').onclick = function()
 {
+  if (!ua)
+  {
+    setStatus('请先选择点对点或三方模式');
+
+    return;
+  }
   if (!ua.isConnected())
   {
     setStatus('信令尚未连接，不能注册');
@@ -24,12 +98,20 @@ document.querySelector('#registerUa').onclick = function()
   }
 
   setStatus('正在主动注册');
+  appRegistrationState = 'registering';
+  updateAppModeUi();
   ua.register();
 };
 
 // 主动注销：注销 SIP 注册但保留 WSS 连接，可再次点击“主动注册”。
 document.querySelector('#unregisterUa').onclick = function()
 {
+  if (!ua)
+  {
+    setStatus('请先选择点对点或三方模式');
+
+    return;
+  }
   if (!ua.isRegistered())
   {
     setStatus('当前账号尚未注册');
@@ -265,7 +347,7 @@ navigator.mediaDevices.addEventListener('devicechange', () =>
 window.onbeforeunload = function()
 {
   handleStop = true;
-  ua.stop();
+  if (ua) ua.stop();
 };
 
 // =============================================================================

@@ -30,6 +30,10 @@ let statsSession;
 let earlyMedia = false;
 // 当前活跃通话的 RTCSession 实例
 let rtcSession;
+// 用户选择模式前不创建 UA，也不会连接或注册。
+let appMode = null;
+let ua = null;
+let appRegistrationState = 'idle';
 
 /**
  * 读取当前通话最近一份统计，不触发新的采样。
@@ -161,8 +165,6 @@ const mbit = handleGetQuery('mbit') || 400;
 const rec = handleGetQuery('rec') || false;
 // 环境标识，用于切换不同的信令服务器/密码等配置
 const env = handleGetQuery('env');
-// 注册模式：默认 automatic；传 register=manual 时由页面按钮主动调用 ua.register()。
-const manualRegister = handleGetQuery('register') === 'manual';
 // 是否移除 REMB/Transport-CC 扩展（VoLTE 互通兼容）
 const noremb = handleGetQuery('noremb') || false;
 // 根据 env 参数选择对应的环境配置，默认使用 env_default
@@ -182,31 +184,30 @@ exts && exts.forEach((ext) => extraFeatures.push(ext));
 
 // SIP 注册用户名（来自 URL 参数 caller）
 const account = handleGetQuery('caller');
-// WebSocket 信令传输实例
-const socket = new CRTC.WebSocketInterface(signalingUrl);
-// UA（User Agent）完整配置，包含信令、鉴权、重连等参数
-const configuration = {
-  // WebSocket 信令实例
-  sockets                          : socket,
-  // SIP URI，格式 sip:账号@域
-  uri                              : `sip:${account}@${sipDomain}`,
-  // 来电显示名称
-  display_name                     : account,
-  // SIP 注册密码（优先使用 env 配置的 password，否则回退 yl_19）
-  password                         : `${password ? password : 'yl_19'}${account}`,
-  // 断线重连最大间隔（秒）
-  connection_recovery_max_interval : 3,
-  // 断线重连最小间隔（秒）
-  connection_recovery_min_interval : 2,
-  // 注册过期时间（秒），UA 会周期性刷新注册
-  register_expires                 : 20,
-  // automatic: ua.start() 连接成功后自动注册；manual: 等待页面按钮调用 ua.register()
-  register                         : !manualRegister,
-  // 禁用 Session Timers（RFC 4028）
-  session_timers                   : false,
-  // 通话加密密钥
-  secret_key                       : secretKey
-};
+
+/**
+ * 构建 UA 配置对象。
+ * 在用户选择点对点或三方模式后才调用，替代之前页面加载时即创建的 const configuration。
+ *
+ * @param {object} transport - WebSocket 信令传输实例
+ * @returns {object} 传给 new CRTC.UA() 的配置
+ */
+function buildUaConfiguration(transport)
+{
+  return {
+    sockets                          : transport,
+    uri                              : `sip:${account}@${sipDomain}`,
+    display_name                     : account,
+    password                         : `${password ? password : 'yl_19'}${account}`,
+    connection_recovery_max_interval : 3,
+    connection_recovery_min_interval : 2,
+    register_expires                 : 20,
+    // 用户选择页面模式后，UA 连接成功即自动发送 REGISTER。
+    register                         : true,
+    session_timers                   : false,
+    secret_key                       : secretKey
+  };
+}
 
 // =============================================================================
 // 媒体约束
@@ -247,178 +248,188 @@ pcConfig['iceCandidatePoolSize'] = 4;
 // BUNDLE 策略设为最大兼容模式，所有媒体流复用同一端口
 pcConfig['bundlePolicy'] = 'max-compat';
 
-// =============================================================================
-// UA 实例化
-// =============================================================================
-
-const ua = new CRTC.UA(configuration);
-
 // ***** UA 事件回调 *****
-// 以下为 UA（User Agent）级别的事件监听，涵盖信令连接、注册、浏览器网络状态等
+// 点对点和三方模式共用同一组 UA 层事件（连接、注册、断网等）。
+// newRTCSession 事件在模式初始化时按模式分别绑定不同的处理函数。
 
 /**
- * browser:navigator:offline — 浏览器离线
- *
- * @fires 浏览器检测到网络断开时触发
- *
- * 处理逻辑：记录断开来源为 BROWSER，显示断网提示 UI。
- * 只有首次断开时才标记来源，避免重复设置。
+ * 绑定 UA 级别的事件回调（连接、注册、断网、浏览器网络状态）。
+ * 点对点和三方模式共用，在 initializeDemoMode 中调用。
  */
-ua.on('browser:navigator:offline', function()
+function bindCommonUaEvents()
 {
-  setStatus('浏览器已离线');
-
-  // 仅首次断开时设置断开来源，后续重复事件忽略
-  if (!disconnectedBy)
+  /**
+   * browser:navigator:offline — 浏览器离线
+   *
+   * @fires 浏览器检测到网络断开时触发
+   *
+   * 处理逻辑：记录断开来源为 BROWSER，显示断网提示 UI。
+   * 只有首次断开时才标记来源，避免重复设置。
+   */
+  ua.on('browser:navigator:offline', function()
   {
-    disconnectedBy = 'BROWSER';
+    setStatus('浏览器已离线');
 
-    // 显示断网提示 UI
-    isShowUI = true;
-  }
-});
+    // 仅首次断开时设置断开来源，后续重复事件忽略
+    if (!disconnectedBy)
+    {
+      disconnectedBy = 'BROWSER';
 
-/**
- * browser:navigator:online — 浏览器恢复在线
- *
- * @fires 浏览器检测到网络恢复时触发
- *
- * 处理逻辑：仅当之前是由浏览器触发的断网时才清除状态。
- * UA 层断网与浏览器断网分开管理，避免互相干扰。
- */
-ua.on('browser:navigator:online', function()
-{
-  setStatus('浏览器在线');
-  // 只有浏览器离线导致的断网才在此恢复
-  if (disconnectedBy === 'BROWSER')
+      // 显示断网提示 UI
+      isShowUI = true;
+    }
+  });
+
+  /**
+   * browser:navigator:online — 浏览器恢复在线
+   *
+   * @fires 浏览器检测到网络恢复时触发
+   *
+   * 处理逻辑：仅当之前是由浏览器触发的断网时才清除状态。
+   * UA 层断网与浏览器断网分开管理，避免互相干扰。
+   */
+  ua.on('browser:navigator:online', function()
   {
+    setStatus('浏览器在线');
+    // 只有浏览器离线导致的断网才在此恢复
+    if (disconnectedBy === 'BROWSER')
+    {
+      disconnectedBy = null;
+
+      // 关闭断网提示 UI
+      isShowUI = false;
+    }
+  });
+
+  /**
+   * connected — 信令 WebSocket 连接成功
+   *
+   * @fires 与信令服务器 WebSocket 连接建立时触发
+   *
+   * 处理逻辑：清除所有断网状态，关闭断网提示。
+   * 此事件表示传输层已就绪，但尚未完成 SIP 注册。
+   */
+  ua.on('connected', function()
+  {
+    // 信令连接成功后清除所有断网标记
     disconnectedBy = null;
 
     // 关闭断网提示 UI
     isShowUI = false;
-  }
-});
 
-/**
- * connected — 信令 WebSocket 连接成功
- *
- * @fires 与信令服务器 WebSocket 连接建立时触发
- *
- * 处理逻辑：清除所有断网状态，关闭断网提示。
- * 此事件表示传输层已就绪，但尚未完成 SIP 注册。
- */
-ua.on('connected', function()
-{
-  // 信令连接成功后清除所有断网标记
-  disconnectedBy = null;
+    // 连接成功后进入注册中状态，更新页面标签
+    appRegistrationState = 'registering';
+    updateAppModeUi();
+    setStatus('信令连接成功');
+  });
 
-  // 关闭断网提示 UI
-  isShowUI = false;
-
-  setStatus('信令连接成功');
-
-  // 手动注册演示：使用 ?caller=7300&register=manual 打开页面，
-  // 连接成功后等待用户点击“主动注册”。
-  if (manualRegister)
+  /**
+   * disconnected — 信令 WebSocket 断开
+   *
+   * @fires 信令 WebSocket 断开时触发
+   *
+   * @type {object}
+   * @property {number} code - 断开状态码
+   * @property {string} reason - 断开原因描述
+   * @property {boolean} error - 是否因错误断开
+   *
+   * 处理逻辑：
+   * - 主动停止（handleStop）时不显示断网提示
+   * - 非主动断开时标记为 UA 断网并显示提示
+   */
+  ua.on('disconnected', function(data)
   {
-    setStatus('信令连接成功，请点击“主动注册”');
-  }
-});
+    setStatus(`信令连接断开: ${data.code} ${data.reason}`);
+    // 信令断开后标记未注册，更新页面标签为"未注册"
+    appRegistrationState = 'unregistered';
+    updateAppModeUi();
 
-/**
- * disconnected — 信令 WebSocket 断开
- *
- * @fires 信令连接主动或被动断开时触发
- *
- * @type {object}
- * @property {number} code - 断开状态码
- * @property {string} reason - 断开原因描述
- * @property {boolean} error - 是否因错误断开
- *
- * 处理逻辑：
- * - 主动停止（handleStop）时不显示断网提示
- * - 非主动断开时标记为 UA 断网并显示提示
- */
-ua.on('disconnected', function(data)
-{
-  setStatus(`信令连接断开: ${data.code} ${data.reason}`);
+    // 页面卸载/主动停止 UA 导致的断开，不触发断网提示
+    if (handleStop)
+    {
+      return;
+    }
 
-  // 页面卸载/主动停止 UA 导致的断开，不触发断网提示
-  if (handleStop)
+    // 首次被动断开时显示断网提示
+    if (!disconnectedBy)
+    {
+      isShowUI = true;
+    }
+    disconnectedBy = 'UA';
+  });
+
+  /**
+   * failed — UA 错误
+   *
+   * @fires UA 内部发生不可恢复的错误时触发
+   *
+   * @type {object}
+   * @property {string} originator - 错误来源模块
+   * @property {string} message - 错误描述
+   * @property {string} cause - 错误根本原因
+   *
+   * 处理逻辑：重置纯视频模式标志，输出详细错误信息。
+   */
+  ua.on('failed', function(data)
   {
-    return;
-  }
+    // 发生错误时重置纯视频模式
+    videoOnly = false;
+    setStatus(`${data.originator} ${data.message} ${data.cause}`);
+  });
 
-  // 首次被动断开时显示断网提示
-  if (!disconnectedBy)
+  /**
+   * registered — SIP 注册成功
+   *
+   * @fires SIP REGISTER 请求收到 200 OK 响应时触发
+   *
+   * @type {object}
+   * @property {object} response - SIP 注册响应实例
+   *
+   * 处理逻辑：输出注册成功信息。后续可在此自动发起呼叫（已注释）。
+   */
+  ua.on('registered', function(data)
   {
-    isShowUI = true;
-  }
-  disconnectedBy = 'UA';
-});
+    setStatus(`注册成功：${data.response.from.uri.toString()}`);
+    // 注册成功后更新状态标签为"已注册"（绿色）
+    appRegistrationState = 'registered';
+    updateAppModeUi();
+    // 注册成功后自动发起呼叫（测试用，已注释）
+    // setTimeout(() =>
+    // {
+    //   call('callnull');
+    // }, 1000);
+  });
 
-/**
- * failed — UA 错误
- *
- * @fires UA 内部发生不可恢复的错误时触发
- *
- * @type {object}
- * @property {string} originator - 错误来源模块
- * @property {string} message - 错误描述
- * @property {string} cause - 错误根本原因
- *
- * 处理逻辑：重置纯视频模式标志，输出详细错误信息。
- */
-ua.on('failed', function(data)
-{
-  // 发生错误时重置纯视频模式
-  videoOnly = false;
-  setStatus(`${data.originator} ${data.message} ${data.cause}`);
-});
+  /**
+   * registrationFailed — SIP 注册失败
+   *
+   * @fires SIP REGISTER 请求失败时触发
+   *
+   * @type {object}
+   * @property {object} response - 失败的响应实例
+   * @property {string} cause - 注册失败原因
+   *
+   * 处理逻辑：输出失败原因供排查。
+   */
+  ua.on('registrationFailed', function(data)
+  {
+    setStatus(`注册失败${data.cause}`);
+    // 注册失败后更新状态标签为"未注册"
+    appRegistrationState = 'unregistered';
+    updateAppModeUi();
+  });
 
-/**
- * registered — SIP 注册成功
- *
- * @fires SIP REGISTER 请求收到 200 OK 响应时触发
- *
- * @type {object}
- * @property {object} response - SIP 注册响应实例
- *
- * 处理逻辑：输出注册成功信息。后续可在此自动发起呼叫（已注释）。
- */
-ua.on('registered', function(data)
-{
-  setStatus(`注册成功：${data.response.from.uri.toString()}`);
-  // 注册成功后自动发起呼叫（测试用，已注释）
-  // setTimeout(() =>
-  // {
-  //   call('callnull');
-  // }, 1000);
-});
-
-/**
- * registrationFailed — SIP 注册失败
- *
- * @fires SIP REGISTER 请求失败时触发
- *
- * @type {object}
- * @property {object} response - 失败的响应实例
- * @property {string} cause - 注册失败原因
- *
- * 处理逻辑：输出失败原因供排查。
- */
-ua.on('registrationFailed', function(data)
-{
-  setStatus(`注册失败${data.cause}`);
-});
-
-/**
- * unregistered — SIP 主动注销或注册失效
- */
-ua.on('unregistered', function(data)
-{
-  setStatus(`已注销${data && data.cause ? `：${data.cause}` : ''}`);
-});
+  /**
+   * unregistered — SIP 主动注销或注册失效
+   */
+  ua.on('unregistered', function(data)
+  {
+    setStatus(`已注销${data && data.cause ? `：${data.cause}` : ''}`);
+    // 注销后更新状态标签为"未注册"
+    appRegistrationState = 'unregistered';
+    updateAppModeUi();
+  });
+}
 
 /**
  * newRTCSession — 新建通话会话
@@ -447,7 +458,15 @@ function handleSessionMediaEffectsIssue(d)
   setStatus(`媒体效果异常[${moduleName}]：${message}`);
 }
 
-ua.on('newRTCSession', function(e)
+/**
+ * 点对点模式下的 newRTCSession 事件处理入口。
+ *
+ * 三方模式下此函数不会被调用（由 handleConferenceNewRTCSession 接管）。
+ * 除常规的呼叫/接听逻辑外，还包括：
+ * - A 端定向屏幕共享的远端视频轨到达处理（通过 SIP INFO MID 匹配）
+ * - 点对点模式下的 stats 面板标签设置
+ */
+function handlePointToPointNewRTCSession(e)
 {
   // 输出完整会话对象用于调试
   console.warn('nsession: ', e);
@@ -474,6 +493,116 @@ ua.on('newRTCSession', function(e)
     // 已有主会话，新会话排队为临时会话（呼叫转接场景）
     tmpSession = e.session;
   }
+
+  // A 的定向屏幕共享通过第二条 video m-line 发送，并用 SIP INFO
+  // 携带 MID 标识共享轨。INFO 和 track 的到达顺序不固定，因此分别缓存。
+  // ---
+  // pointToPointRemoteVideoTracks: Map<mid, MediaStreamTrack> —— 缓存已到达的远端视频轨
+  // pointToPointRemoteScreenMid:  SIP INFO 告知的屏幕共享轨 MID（可能早于或晚于 track 到达）
+  const pointToPointRemoteVideoTracks = new Map();
+  let pointToPointRemoteScreenMid = null;
+
+  // 清除远端屏幕共享：清空 #remoteVideo2 并关闭共享浮层
+  const clearPointToPointRemoteScreen = function()
+  {
+    const remoteSharedVideo = document.querySelector('#remoteVideo2');
+
+    if (remoteSharedVideo)
+    {
+      remoteSharedVideo.srcObject = null;
+      remoteSharedVideo.className = 'screen-share-dialog-video hide';
+    }
+    if (typeof closeScreenShareDialog === 'function') closeScreenShareDialog('remote');
+  };
+
+  // 根据 MID 渲染远端屏幕共享画面。
+  // 优先从缓存取 track；缓存未命中时遍历 transceiver 查找对应 track。
+  // track 未到达或未就绪时静默返回，等待后续 track/unmute 事件再次触发。
+  const renderPointToPointRemoteScreen = function(mid)
+  {
+    if (mid === null || mid === undefined || !e.session.connection)
+    {
+      return;
+    }
+
+    const normalizedMid = String(mid);
+    let track = pointToPointRemoteVideoTracks.get(normalizedMid);
+
+    if (!track)
+    {
+      const transceiver = e.session.connection.getTransceivers().find((item) =>
+        String(item.mid) === normalizedMid);
+
+      track = transceiver && transceiver.receiver && transceiver.receiver.track;
+    }
+
+    if (!track || track.readyState !== 'live')
+    {
+      return;
+    }
+
+    pointToPointRemoteVideoTracks.set(normalizedMid, track);
+    const remoteSharedVideo = document.querySelector('#remoteVideo2');
+
+    if (!remoteSharedVideo)
+    {
+      return;
+    }
+
+    const sharedStream = new MediaStream([ track ]);
+
+    bindMediaStreamIfChanged(remoteSharedVideo, sharedStream);
+    remoteSharedVideo.className = 'screen-share-dialog-video';
+    remoteSharedVideo.play().catch(() => {});
+    if (typeof openScreenShareDialog === 'function') openScreenShareDialog('remote');
+  };
+
+  // 监听 PeerConnection 的 track 事件，收集所有到达的远端视频轨。
+  // 视频轨到达时先按 MID 缓存；若此时 SIP INFO 已告知该 MID 是共享轨则立即渲染。
+  // 轨道 unmute 时再次尝试渲染（覆盖 track 先于 INFO 到达的时序），
+  // 轨道 ended 时从缓存移除并清理 UI。
+  const handlePointToPointRemoteVideoTrack = function(event)
+  {
+    const track = event.track;
+
+    if (!track || track.kind !== 'video' || !e.session.connection)
+    {
+      return;
+    }
+
+    const transceiver = e.session.connection.getTransceivers().find((item) =>
+      item.receiver && item.receiver.track === track);
+    const mid = transceiver && transceiver.mid;
+
+    if (mid === null || mid === undefined)
+    {
+      return;
+    }
+
+    const normalizedMid = String(mid);
+
+    pointToPointRemoteVideoTracks.set(normalizedMid, track);
+
+    const refresh = function()
+    {
+      if (pointToPointRemoteScreenMid === normalizedMid)
+      {
+        renderPointToPointRemoteScreen(normalizedMid);
+      }
+    };
+
+    track.addEventListener('unmute', refresh);
+    track.addEventListener('ended', function()
+    {
+      pointToPointRemoteVideoTracks.delete(normalizedMid);
+      if (pointToPointRemoteScreenMid === normalizedMid)
+      {
+        pointToPointRemoteScreenMid = null;
+        clearPointToPointRemoteScreen();
+      }
+    }, { once: true });
+    refresh();
+  };
 
   // ---- 远端呼入处理 ----
   if (e.originator === 'remote')
@@ -689,6 +818,11 @@ ua.on('newRTCSession', function(e)
   };
 
   statsSession = e.session;
+  // 点对点模式下的统计面板标签：标明 PeerConnection 对象和链路方向。
+  // 三方模式下由 renderConferenceStatsPeerLabels() 覆盖为 A-B/A-C 等。
+  setSessionStatsPanelText('#rtcStatsPeerConnection', '点对点 PeerConnection');
+  setSessionStatsPanelText('#rtcStatsOutboundLabel', '本端 → 远端:');
+  setSessionStatsPanelText('#rtcStatsInboundLabel', '远端 → 本端:');
   resetSessionStatsPanel();
 
   // 推荐从 RTCSession 消费统计事件，不在 Demo 中直接管理 RTCStatsMonitor。
@@ -943,8 +1077,9 @@ ua.on('newRTCSession', function(e)
       tmpTracks.push(d.videoStream.getVideoTracks()[0].clone());
     }
 
-    // 停止旧的克隆流
-    cloneStream && cloneStream.getTracks().forEach((track) => track.stop());
+    // 停止旧的克隆流（用 SDK 提供的 closeMediaStream 统一释放，
+    // 避免手动遍历 track.stop() 遗漏音频轨或已结束的轨）
+    CRTC.Utils.closeMediaStream(cloneStream);
 
     // 创建新的克隆流用于本地预览
     cloneStream = new MediaStream(tmpTracks);
@@ -967,7 +1102,9 @@ ua.on('newRTCSession', function(e)
   e.session.on('remoteShared', function(d)
   {
     document.querySelector('#remoteVideo2').srcObject = d.sharedStream.videoStream;
-    document.querySelector('#remoteVideo2').classList = 'mh-100 mw-100';
+    // 替换为屏幕共享浮层样式，并自动弹出浮层
+    document.querySelector('#remoteVideo2').className = 'screen-share-dialog-video';
+    if (typeof openScreenShareDialog === 'function') openScreenShareDialog('remote');
   });
 
   /**
@@ -975,12 +1112,13 @@ ua.on('newRTCSession', function(e)
    *
    * @fires 远端停止共享时触发
    *
-   * 处理逻辑：清空辅助视频区域并隐藏。
+   * 处理逻辑：清空辅助视频区域并隐藏浮层。
    */
   e.session.on('remoteUnShared', function()
   {
     document.querySelector('#remoteVideo2').srcObject = null;
-    document.querySelector('#remoteVideo2').classList = 'mh-100 mw-100 hide';
+    document.querySelector('#remoteVideo2').className = 'screen-share-dialog-video hide';
+    if (typeof closeScreenShareDialog === 'function') closeScreenShareDialog('remote');
   });
 
   /**
@@ -1093,12 +1231,13 @@ ua.on('newRTCSession', function(e)
     // 停止 iOS OPTIONS 保活定时器
     optionsTimer && clearInterval(optionsTimer);
 
-    // 清理 UI：恢复远端视频区域布局
+    // 清理 UI：恢复远端视频区域布局，关闭共享浮层
     document.querySelector('#remoteVideo').classList = 'h-100';
-    document.querySelector('#remoteVideo2').classList = 'hide';
+    document.querySelector('#remoteVideo2').className = 'screen-share-dialog-video hide';
+    if (typeof closeScreenShareDialog === 'function') closeScreenShareDialog();
 
-    // 清理自定义媒体流
-    cusMediaStream.getTracks().forEach((track) => track.stop());
+    // 清理自定义媒体流（用 SDK closeMediaStream 统一释放，避免轨道泄漏）
+    CRTC.Utils.closeMediaStream(cusMediaStream);
     cusMediaStream = new MediaStream();
 
     // 停止 AiNS 验证器（如果该 demo 版本提供了该函数）
@@ -1187,12 +1326,13 @@ ua.on('newRTCSession', function(e)
     }
     optionsTimer && clearInterval(optionsTimer);
 
-    // 清理 UI
+    // 清理 UI：恢复视频布局并关闭共享浮层
     document.querySelector('#remoteVideo').classList = 'h-100';
-    document.querySelector('#remoteVideo2').classList = 'hide';
+    document.querySelector('#remoteVideo2').className = 'screen-share-dialog-video hide';
+    if (typeof closeScreenShareDialog === 'function') closeScreenShareDialog();
 
-    // 清理自定义媒体流
-    cusMediaStream.getTracks().forEach((track) => track.stop());
+    // 清理自定义媒体流（用 SDK closeMediaStream 统一释放，避免轨道泄漏）
+    CRTC.Utils.closeMediaStream(cusMediaStream);
     cusMediaStream = new MediaStream();
 
     // 停止 AiNS 验证器（如果该 demo 版本提供了该函数）
@@ -1239,7 +1379,20 @@ ua.on('newRTCSession', function(e)
     if (d.originator === 'remote')
     {
       setStatus(`收到新消息：${JSON.stringify(d.info.body)}`);
-      const body = JSON.parse(d.info.body);
+      let body;
+
+      // SDK 可能传入已解析的对象或原始 JSON 字符串，统一兼容。
+      // 解析失败时静默丢弃，不中断其他 INFO 处理逻辑。
+      try
+      {
+        body = typeof d.info.body === 'string' ? JSON.parse(d.info.body) : d.info.body;
+      }
+      catch (error)
+      {
+        console.warn('[base-js] invalid INFO body', error);
+
+        return;
+      }
 
       // 收到 cancel 事件时终止呼转等候室会话
       if (body)
@@ -1247,6 +1400,19 @@ ua.on('newRTCSession', function(e)
         if (body.event === 'cancel')
         {
           isRefer && tmpSession.terminate();
+        }
+        // 远端通过 SIP INFO 告知屏幕共享轨的 MID，用于点对点定向屏幕共享。
+        // start：记录 MID 并尝试渲染（如果 track 已到达）
+        // stop：清除 MID 并清理远端屏幕共享 UI
+        else if (body.event === 'screen-share' && body.action === 'start')
+        {
+          pointToPointRemoteScreenMid = String(body.mid);
+          renderPointToPointRemoteScreen(pointToPointRemoteScreenMid);
+        }
+        else if (body.event === 'screen-share' && body.action === 'stop')
+        {
+          pointToPointRemoteScreenMid = null;
+          clearPointToPointRemoteScreen();
         }
       }
     }
@@ -1446,33 +1612,10 @@ ua.on('newRTCSession', function(e)
     // ---- 渲染本地和远端媒体流 ----
     getStreams(e.session.connection);
 
-    // ---- 监听远端附加视频轨道（如双流共享） ----
-    e.session.connection.ontrack = function(event)
-    {
-      // 只处理视频轨道
-      if (event.track.kind !== 'video')
-      {
-        return;
-      }
-
-      const remoteVideo2 = document.querySelector('#remoteVideo2');
-      const currentSharedStream = remoteVideo2.srcObject;
-      const nextSharedStream = event.streams[0];
-
-      // 如果是活跃的、未静音的视频轨道且与当前辅助视频不同
-      if (event.track.readyState == 'live' && event.track.muted == false && nextSharedStream &&
-        (!currentSharedStream || currentSharedStream.id != nextSharedStream.id))
-      {
-        // 渲染辅助视频流，将主视频缩小到右上角
-        remoteVideo2.srcObject = nextSharedStream;
-        document.querySelector('#remoteVideo').classList = 'w-25 position-absolute top-0 end-0';
-      }
-      else
-      {
-        // 辅助视频不可用时恢复主视频全屏
-        document.querySelector('#remoteVideo').classList = 'h-100';
-      }
-    };
+    // ---- 监听 A 通过重协商新增的屏幕视频轨 ----
+    // 不根据 ontrack 当下的 muted 状态猜测，而是等 SIP INFO 中的 MID
+    // 与 transceiver.mid 匹配后渲染，并在轨道 unmute 时自动刷新。
+    e.session.connection.addEventListener('track', handlePointToPointRemoteVideoTrack);
 
     // ---- 设置视频发送最大码率 ----
     // 根据 URL 参数 mbit 调整视频编码码率
@@ -1952,12 +2095,15 @@ ua.on('newRTCSession', function(e)
       .then((stream) =>
       {
         document.querySelector('#screen').srcObject = stream;
-        document.querySelector('#screen').classList = 'mh-100 mw-100';
+        // 屏幕共享统一使用浮层样式，并弹出共享浮层
+        document.querySelector('#screen').className = 'screen-share-dialog-video';
+        if (typeof openScreenShareDialog === 'function') openScreenShareDialog('local');
 
         // 用户通过浏览器 UI 停止分享时隐藏屏幕预览
         stream.getVideoTracks()[0].onended = () =>
         {
-          document.querySelector('#screen').classList = 'mh-100 mw-100 hide';
+          document.querySelector('#screen').className = 'screen-share-dialog-video hide';
+          if (typeof closeScreenShareDialog === 'function') closeScreenShareDialog('local');
         };
       });
   };
@@ -1985,12 +2131,14 @@ ua.on('newRTCSession', function(e)
       {
         // 渲染屏幕共享预览
         document.querySelector('#screen').srcObject = stream;
-        document.querySelector('#screen').classList = 'mh-100 mw-100';
+        document.querySelector('#screen').className = 'screen-share-dialog-video';
+        if (typeof openScreenShareDialog === 'function') openScreenShareDialog('local');
 
         // 方式一：监听 ended 事件（主流浏览器支持）
         stream.getVideoTracks()[0].addEventListener('ended', () =>
         {
-          document.querySelector('#screen').classList = 'mh-100 mw-100 hide';
+          document.querySelector('#screen').className = 'screen-share-dialog-video hide';
+          if (typeof closeScreenShareDialog === 'function') closeScreenShareDialog('local');
         });
 
         // 方式二：定时轮询兜底（部分被动场景 ended 事件不触发）
@@ -1998,14 +2146,15 @@ ua.on('newRTCSession', function(e)
         {
           if (stream.getVideoTracks()[0].readyState === 'ended')
           {
-            document.querySelector('#screen').classList = 'mh-100 mw-100 hide';
+            document.querySelector('#screen').className = 'screen-share-dialog-video hide';
+            if (typeof closeScreenShareDialog === 'function') closeScreenShareDialog('local');
             clearInterval(timer);
           }
         }, 100);
 
         // 双流模式下清空辅助视频区
         document.querySelector('#remoteVideo2').srcObject = null;
-        document.querySelector('#remoteVideo2').classList = 'mh-100 mw-100 hide';
+        document.querySelector('#remoteVideo2').className = 'screen-share-dialog-video hide';
       })
       .catch((error) =>
       {
@@ -2041,24 +2190,27 @@ ua.on('newRTCSession', function(e)
         .then((stream) =>
         {
           document.querySelector('#screen').srcObject = stream;
-          document.querySelector('#screen').classList = 'mh-100 mw-100';
+          document.querySelector('#screen').className = 'screen-share-dialog-video';
+          if (typeof openScreenShareDialog === 'function') openScreenShareDialog('local');
 
           stream.getVideoTracks()[0].addEventListener('ended', () =>
           {
-            document.querySelector('#screen').classList = 'mh-100 mw-100 hide';
+            document.querySelector('#screen').className = 'screen-share-dialog-video hide';
+            if (typeof closeScreenShareDialog === 'function') closeScreenShareDialog('local');
           });
 
           const timer = setInterval(() =>
           {
             if (stream.getVideoTracks()[0].readyState === 'ended')
             {
-              document.querySelector('#screen').classList = 'mh-100 mw-100 hide';
+              document.querySelector('#screen').className = 'screen-share-dialog-video hide';
+              if (typeof closeScreenShareDialog === 'function') closeScreenShareDialog('local');
               clearInterval(timer);
             }
           }, 100);
 
           document.querySelector('#remoteVideo2').srcObject = null;
-          document.querySelector('#remoteVideo2').classList = 'mh-100 mw-100 hide';
+          document.querySelector('#remoteVideo2').className = 'screen-share-dialog-video hide';
         })
         .catch((err) =>
         {
@@ -2139,6 +2291,10 @@ ua.on('newRTCSession', function(e)
   document.querySelector('#stopShare').onclick = function()
   {
     e.session.unShare();
+    // 手动停止共享后同步清理屏幕预览和浮层
+    document.querySelector('#screen').srcObject = null;
+    document.querySelector('#screen').className = 'screen-share-dialog-video hide';
+    if (typeof closeScreenShareDialog === 'function') closeScreenShareDialog('local');
 
     setTimeout(() =>
     {
@@ -2209,7 +2365,8 @@ ua.on('newRTCSession', function(e)
       capturePanel.classList.add('has-capture');
     }
   };
-});
+
+}
 
 
 /**
@@ -2234,15 +2391,23 @@ ua.on('newRTCSession', function(e)
  */
 async function call(type, direction, mediaStream)
 {
+  // 仅点对点模式可用；三方模式使用 callConferenceVideo 等专用入口。
+  if (appMode !== 'point-to-point')
+  {
+    setStatus(appMode ? '三方模式下请使用会议呼叫按钮' : '请先选择点对点模式');
+
+    return;
+  }
+
   // 重置录音实例
   recorder = undefined;
   // 重置为前置摄像头
   camFlag = true;
 
   // ---- 前置检查：必须已注册 ----
-  if (!ua.isRegistered())
+  if (!ua || !ua.isRegistered())
   {
-    setStatus('请注册成功后呼叫');
+    setStatus(ua ? '请注册成功后呼叫' : '请先选择点对点模式');
 
     return;
   }
@@ -2466,12 +2631,12 @@ async function call(type, direction, mediaStream)
       // 清理黑屏视频资源
       blackVideo && blackVideo.cleanup();
 
-      // 兼容 MCU 等候室：停止克隆流的所有轨道
-      cloneStream && cloneStream.getTracks().forEach((track) =>
+      // 兼容 MCU 等候室：停止克隆流的所有轨道（用 SDK closeMediaStream 统一释放）
+      if (cloneStream)
       {
-        track.stop();
+        CRTC.Utils.closeMediaStream(cloneStream);
         localVideo.srcObject = null;
-      });
+      }
 
       cloneStream = null;
     };
@@ -2499,17 +2664,17 @@ async function call(type, direction, mediaStream)
 }
 
 /**
- * 应用启动初始化
+ * 页面初始化
  *
- * 执行顺序：
+ * 页面加载时只做两件事：
  * 1. 输出 SDK 版本号
- * 2. 更新摄像头/麦克风设备列表
- * 3. 启动 UA（连接信令服务器并注册）
- * 4. 设置 10 秒超时检测网络/注册状态
- * 5. 绑定各项呼叫按钮事件
- * 6. 监听设备变化和页面卸载
+ * 2. 预采集一次媒体权限以填充设备列表
+ * 3. 提示用户选择"点对点"或"三方"模式
+ *
+ * UA 的创建、信令连接和注册在用户点击模式按钮后由 initializeDemoMode() 执行。
+ * 按钮绑定、设备变化监听等在 app.ui-bindings.js 中统一管理。
  */
-function start()
+function initializePage()
 {
   setStatus(`${CRTC.version}`);
 
@@ -2517,7 +2682,7 @@ function start()
     .then(async(mediastream) =>
     {
       await updateDevices();
-      mediastream && mediastream.getTracks().forEach((track) => track.stop());
+      CRTC.Utils.closeMediaStream(mediastream);
     })
     .catch(async(error) =>
     {
@@ -2533,21 +2698,151 @@ function start()
       setStatus(`预采集失败: ${error.name || error.message || 'unknown'}`);
     });
 
-  // 初始化断网提示相关状态
+  setStatus('请选择三方或点对点模式');
+}
+
+/**
+ * 根据当前 appMode 和 appRegistrationState 刷新页面 UI。
+ *
+ * 负责：
+ * - 更新顶部模式/注册状态标签（"点对点 · 已注册" 等）
+ * - 禁用/启用"点对点"/"三方"选择按钮
+ * - 禁用/启用点对点专属按钮（data-mode="point-to-point"、呼叫/接听按钮组）
+ * - 展开/收起会议面板（三方模式首次选择时自动展开）
+ * - 切换会议面板的帮助文字和控件可见性
+ * - 同步调用三方模块的 updateConferenceUi（如果已加载）
+ *
+ * 此函数在注册状态变化和模式切换时被多处调用，是页面状态同步的中心入口。
+ */
+function updateAppModeUi()
+{
+  const modeLabel = document.querySelector('#appModeLabel');
+  const pointButton = document.querySelector('#initializePointToPoint');
+  const conferenceButton = document.querySelector('#initializeConference');
+  const conferencePanel = document.querySelector('#conferencePanel');
+  const conferenceSummary = document.querySelector('#conferenceModeSummary');
+  const pointToPointOnly = document.querySelectorAll(
+    '[data-mode="point-to-point"], #pointToPointCallControls button, #pointToPointAnswerControls button'
+  );
+  const conferenceActiveControls = document.querySelector('#conferenceActiveControls');
+  const conferenceInactiveHelp = document.querySelector('#conferenceInactiveHelp');
+
+  if (modeLabel)
+  {
+    const modeName = appMode === 'conference' ? '三方 A' : '点对点';
+    const stateText = appRegistrationState === 'registered' ? '已注册' :
+      (appRegistrationState === 'registering' ? '注册中' : '未注册');
+
+    modeLabel.textContent = appMode ? `${modeName} · ${stateText}` : '尚未注册';
+    modeLabel.classList.toggle('is-active', appRegistrationState === 'registered');
+    modeLabel.classList.toggle('is-pending', appRegistrationState === 'registering');
+  }
+  if (pointButton) pointButton.disabled = Boolean(appMode);
+  if (conferenceButton) conferenceButton.disabled = Boolean(appMode);
+
+  pointToPointOnly.forEach((element) =>
+  {
+    element.disabled = appMode !== 'point-to-point';
+  });
+
+  if (conferencePanel)
+  {
+    if (appMode === 'conference' && conferencePanel.dataset.autoOpened !== 'true')
+    {
+      conferencePanel.open = true;
+      conferencePanel.dataset.autoOpened = 'true';
+    }
+    else if (appMode !== 'conference')
+    {
+      conferencePanel.open = false;
+      delete conferencePanel.dataset.autoOpened;
+    }
+    conferencePanel.classList.toggle('conference-inactive', appMode !== 'conference');
+  }
+  if (conferenceSummary)
+  {
+    conferenceSummary.textContent = appMode === 'conference' ?
+      '三方会议（A 作为媒体桥接端）' : '三方会议（选择三方模式后启用）';
+  }
+  if (conferenceActiveControls) conferenceActiveControls.classList.toggle('hide', appMode !== 'conference');
+  if (conferenceInactiveHelp) conferenceInactiveHelp.classList.toggle('hide', appMode === 'conference');
+  if (typeof updateConferenceUi === 'function') updateConferenceUi();
+}
+
+/**
+ * 初始化 Demo 模式（点对点或三方）。
+ *
+ * 页面加载后不自动创建 UA。用户点击"点对点"或"三方"按钮后调用此函数，
+ * 创建 UA 实例、绑定事件、连接信令并注册。模式一旦选定不可切换（需刷新页面）。
+ *
+ * @param {'point-to-point'|'conference'} mode - 目标模式
+ *
+ * 执行流程：
+ * 1. 检查是否已选择模式，已选择则提示刷新
+ * 2. 三方模式需确认 handleConferenceNewRTCSession 已加载
+ * 3. 创建 WebSocket 信令传输和 UA 实例
+ * 4. 绑定共用 UA 事件 + 模式对应的 newRTCSession 处理函数
+ * 5. 重置断网状态并调用 ua.start()
+ * 6. 10 秒后检测连接/注册状态，超时则停止 UA
+ */
+function initializeDemoMode(mode)
+{
+  if (appMode)
+  {
+    setStatus('当前页面已经选择模式，切换模式请刷新页面');
+
+    return;
+  }
+  if (mode !== 'point-to-point' && mode !== 'conference')
+  {
+    setStatus('不支持的初始化模式');
+
+    return;
+  }
+  if (mode === 'conference' && typeof handleConferenceNewRTCSession !== 'function')
+  {
+    setStatus('三方模块尚未加载');
+
+    return;
+  }
+
+  appMode = mode;
+  // 创建 UA 后立即进入"注册中"状态，页面标签显示蓝色"注册中"
+  appRegistrationState = 'registering';
+  const socket = new CRTC.WebSocketInterface(signalingUrl);
+  const configuration = buildUaConfiguration(socket);
+
+  ua = new CRTC.UA(configuration);
+  bindCommonUaEvents();
+  // 按模式绑定不同的 newRTCSession 处理函数：点对点 vs 三方
+  ua.on('newRTCSession', mode === 'conference' ?
+    handleConferenceNewRTCSession : handlePointToPointNewRTCSession);
+
+  // 重置断网状态（每次新建 UA 时都从干净状态开始）
   handleStop = false;
   disconnectedBy = null;
   isShowUI = false;
-
-  // 启动 UA：连接 WebSocket 信令并执行 SIP 注册
+  // 刷新页面 UI：禁用模式选择按钮、展开/收起会议面板等
+  updateAppModeUi();
+  setStatus(`正在注册${mode === 'conference' ? '三方' : '点对点'}模式`);
   ua.start();
 
-  // 10 秒后检测网络连接和注册状态
+  // 闭包捕获当前 UA 引用，防止 setTimeout 时 ua 已被重新赋值。
+  const initializedUa = ua;
+
   setTimeout(() =>
   {
-    if (!ua.isConnected() || (!manualRegister && !ua.isRegistered()))
+    // 10 秒后如果 UA 已被重新赋值（虽然当前不支持切换模式），则跳过检测
+    if (initializedUa !== ua)
     {
-      ua.stop();
-      console.log('网络连接异常或未注册成功');
+      return;
+    }
+    if (!initializedUa.isConnected() || !initializedUa.isRegistered())
+    {
+      initializedUa.stop();
+      appRegistrationState = 'unregistered';
+      updateAppModeUi();
+      setStatus('网络连接异常或未注册成功');
     }
   }, 10000);
 }
@@ -2556,7 +2851,8 @@ function start()
 // 应用入口
 // =============================================================================
 
-// 启动主应用
-start();
+// 页面只初始化 UI 和设备列表；UA 必须由用户选择模式后创建。
+initializePage();
+updateAppModeUi();
 // 初始化媒体效果模块（虚拟背景、AI 降噪、水印等）
 initMediaEffects();

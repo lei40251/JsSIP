@@ -71,6 +71,54 @@ body {
   box-shadow: var(--shadow);
 }
 
+/* ==========================================================================
+   模式选择器（点对点/三方）
+   位于本端视频卡片头部右侧。
+   .mode-selector-state 显示当前模式和注册状态，.is-active 已注册（绿色），
+   .is-pending 注册中（蓝色）。
+   ========================================================================== */
+
+.mode-selector {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.mode-selector-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.mode-selector-video .btn {
+  min-height: 1.68rem;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.72rem;
+}
+
+.mode-selector-state {
+  padding: 0.2rem 0.48rem;
+  border: 1px solid #c8d4e2;
+  border-radius: 999px;
+  color: #5e6f84;
+  background: #fff;
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.mode-selector-state.is-active {
+  border-color: #75c996;
+  color: #18723e;
+  background: #eaf9f0;
+}
+
+.mode-selector-state.is-pending {
+  border-color: #7ba7e7;
+  color: #245fae;
+  background: #edf5ff;
+}
+
 :root {
   --video-stage-height: 360px;
 }
@@ -133,6 +181,201 @@ body {
   flex: 1 1 auto;
 }
 
+/* ==========================================================================
+   屏幕共享浮层（模态对话框）
+   点对点和三方模式共用。全屏半透明遮罩，居中显示共享画面。
+   .hide 隐藏浮层，.screen-share-dialog-restore 为最小化后的恢复按钮。
+   ========================================================================== */
+
+.screen-share-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 1080;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(4, 10, 20, 0.72);
+}
+
+.screen-share-dialog.hide {
+  display: none;
+}
+
+.screen-share-dialog-panel {
+  display: flex;
+  flex-direction: column;
+  width: min(92vw, 1280px);
+  height: min(88vh, 820px);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.7rem;
+  background: #111827;
+  box-shadow: 0 1.2rem 3rem rgba(0, 0, 0, 0.45);
+}
+
+.screen-share-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 0.8rem;
+  color: #fff;
+  background: #172033;
+}
+
+.screen-share-dialog-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: #050a12;
+}
+
+.screen-share-dialog-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.screen-share-dialog-restore {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 1070;
+}
+
+.conference-panel {
+  background: #f7fbff;
+}
+
+/* ==========================================================================
+   三方会议控制面板
+   位于控制卡片的 <details> 折叠区域。点对点模式下添加 .conference-inactive
+   类灰显；选择三方模式后自动展开并激活。
+   ========================================================================== */
+
+.conference-controls {
+  padding-top: 0.1rem;
+}
+
+.conference-inactive-help {
+  color: var(--muted);
+  font-size: 0.77rem;
+}
+
+.conference-steps {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.conference-section {
+  padding: 0.55rem;
+  border: 1px solid #dbe5ef;
+  border-radius: var(--radius);
+  background: #fff;
+}
+
+.conference-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem 0.8rem;
+}
+
+.conference-step-title {
+  color: #34465b;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.conference-section-desc,
+.conference-empty {
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.conference-primary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.conference-participants {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.conference-participant-item {
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.conference-participant-select {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.conference-participant-share,
+.conference-participant-hangup {
+  display: grid;
+  place-items: center;
+  min-width: 1.9rem;
+  padding-left: 0.42rem;
+  padding-right: 0.42rem;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left-width: 0;
+}
+
+.conference-participant-share {
+  border-radius: 0;
+}
+
+@media (max-width: 767.98px) {
+  .mode-selector {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .video-card-header {
+    align-items: flex-start !important;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .conference-section-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .conference-primary-actions {
+    width: 100%;
+  }
+
+  .conference-primary-actions .btn {
+    flex: 1 1 auto;
+  }
+
+  .conference-participant-item {
+    display: flex;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .conference-participant-select {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
 .video-stats-overlay {
   position: absolute;
   left: 0.45rem;
@@ -171,6 +414,19 @@ body {
 
 .rtc-stats-section + .rtc-stats-section {
   margin-top: 0.14rem;
+}
+
+/* 统计面板中的 PeerConnection 标识行 —— 底部边线与字体加粗，
+   区分"点对点 PeerConnection""A-B PeerConnection"等当前统计对象。 */
+.rtc-stats-peer-section {
+  margin-bottom: 0.18rem;
+  padding-bottom: 0.18rem;
+  border-bottom: 1px solid rgba(159, 196, 244, 0.3);
+}
+
+#rtcStatsPeerConnection {
+  color: #ffffff;
+  font-weight: 700;
 }
 
 .rtc-stats-section > div:last-child {
@@ -548,7 +804,8 @@ body {
 
 .call-config-watermark-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  /* 水印组包含 7 个同行控件，按容器可用宽度决定并排或上下排列。 */
+  grid-template-columns: repeat(auto-fit, minmax(560px, 1fr));
   gap: 0.5rem;
 }
 
@@ -953,9 +1210,11 @@ body {
     --video-stage-height: 260px;
   }
 
+  /* 移动端视频区改为单列，height:auto 避免纵向空间不足 */
   .video-stage {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: 0.45rem;
+    height: auto;
   }
 
   .video-stats-overlay {

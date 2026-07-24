@@ -28,10 +28,17 @@
         <article class="video-card panel-card">
           <header class="video-card-header d-flex justify-content-between align-items-center">
             <span>本端</span>
+            <!-- 模式选择器：页面加载后显示"尚未注册"，用户点击"点对点"或"三方"按钮创建 UA。 -->
+            <div class="mode-selector mode-selector-video">
+              <span class="mode-selector-state" id="appModeLabel">尚未注册</span>
+              <div class="mode-selector-actions">
+                <button class="btn btn-outline-primary btn-sm" id="initializeConference">三方</button>
+                <button class="btn btn-primary btn-sm" id="initializePointToPoint">点对点</button>
+              </div>
+            </div>
           </header>
           <div class="video-card-body">
             <video playsinline muted autoplay x5-video-player-type="h5" class="media-video" id="localVideo"></video>
-            <video playsinline muted autoplay x5-video-player-type="h5" class="media-video hide" id="screen"></video>
           </div>
         </article>
 
@@ -47,20 +54,47 @@
           <div class="video-card-body remote-wrap">
             <video playsinline muted autoplay x5-video-player-type="h5" class="media-video w-100"
               id="remoteVideo"></video>
+            <!-- 三方模式下 C 端的辅助预览区（B 占主区域时 C 显示在此） -->
             <video playsinline muted autoplay x5-video-player-type="h5" class="media-video hide w-100"
-              id="remoteVideo2"></video>
+              id="conferenceRemoteVideoC"></video>
           </div>
           <audio id="remoteAudio" autoplay class="hide"></audio>
         </article>
+
+        <!-- 屏幕共享浮层（模态对话框）：点对点和三方模式共用。
+             本端共享用 #screen，远端共享用 #remoteVideo2。
+             "最小化"按钮隐藏浮层并显示右下角"打开屏幕共享"恢复按钮。 -->
+        <section class="screen-share-dialog hide" id="screenShareDialog" role="dialog" aria-modal="true"
+          aria-labelledby="screenShareDialogTitle">
+          <div class="screen-share-dialog-panel">
+            <header class="screen-share-dialog-header">
+              <span id="screenShareDialogTitle">屏幕共享</span>
+              <button class="btn btn-sm btn-outline-light" id="screenShareDialogClose" type="button">最小化</button>
+            </header>
+            <div class="screen-share-dialog-stage">
+              <video playsinline muted autoplay x5-video-player-type="h5" class="screen-share-dialog-video hide"
+                id="screen"></video>
+              <video playsinline muted autoplay x5-video-player-type="h5" class="screen-share-dialog-video hide"
+                id="remoteVideo2"></video>
+            </div>
+          </div>
+        </section>
+        <button class="btn btn-primary screen-share-dialog-restore hide" id="screenShareDialogRestore"
+          type="button">打开屏幕共享</button>
         <div class="video-stats-overlay">
           <div class="rtc-stats-main">
             <!-- 统计展示取自 RTCSession 转发的 stats:detailed-report 事件。 -->
+            <!-- 当前统计对象：点对点模式显示"点对点 PeerConnection"；三方模式显示"A-B PeerConnection"等 -->
+            <div class="rtc-stats-section rtc-stats-peer-section">
+              <div class="rtc-stats-label">统计对象:</div>
+              <div id="rtcStatsPeerConnection">等待会话</div>
+            </div>
             <div class="rtc-stats-section">
-              <div class="rtc-stats-label">上行链路:</div>
+              <div class="rtc-stats-label" id="rtcStatsOutboundLabel">本端 → 远端:</div>
               <div id="rtcStatsOutbound">--</div>
             </div>
             <div class="rtc-stats-section">
-              <div class="rtc-stats-label">下行链路:</div>
+              <div class="rtc-stats-label" id="rtcStatsInboundLabel">远端 → 本端:</div>
               <div id="rtcStatsInbound">--</div>
             </div>
             <div class="rtc-stats-section">
@@ -215,7 +249,8 @@
                 </div>
               </div>
               <div class="sub-group-title mt-2">呼叫模式</div>
-              <div class="d-flex flex-wrap gap-2">
+              <!-- 三方模式下此容器内按钮被禁用，呼叫改为走会议面板 -->
+              <div class="d-flex flex-wrap gap-2" id="pointToPointCallControls">
                 <button class="btn btn-primary" id="callVideo"><i class="bi-telephone-outbound me-1"></i>音视频外呼</button>
                 <button class="btn btn-warning" id="call"><i class="bi-soundwave me-1"></i>语音外呼</button>
                 <button class="btn btn-success" id="callVideoSendonly"><i
@@ -227,7 +262,8 @@
               </div>
 
               <div class="sub-group-title mt-2">接听模式</div>
-              <div class="d-flex flex-wrap gap-2">
+              <!-- 三方模式下此容器内按钮被禁用，接听改为走会议面板的"接听来电"按钮 -->
+              <div class="d-flex flex-wrap gap-2" id="pointToPointAnswerControls">
                 <button class="btn btn-primary" id="answerVideo"><i class="bi-telephone-inbound me-1"></i>音视频接听</button>
                 <button class="btn btn-warning" id="answer"><i class="bi-soundwave me-1"></i>语音接听</button>
                 <button class="btn btn-success" id="onlyVideoAudio"><i class="bi-camera-video me-1"></i>单视频接听</button>
@@ -238,11 +274,48 @@
 
               <div class="sub-group-title mt-2">特殊外呼（无特定设备）</div>
               <div class="d-flex flex-wrap gap-2">
-                <button class="btn btn-primary" id="callNull"><i class="bi-slash-circle me-1"></i>音视频外呼(无设备)</button>
-                <button class="btn btn-warning" id="callNullAudio">音视频外呼(无麦克风)</button>
-                <button class="btn btn-success" id="callNullVideo">音视频外呼(无摄像头)</button>
+                <!-- data-mode="point-to-point" 标记这些按钮仅在点对点模式下可用；三方模式下被 updateAppModeUi() 禁用 -->
+                <button class="btn btn-primary" id="callNull" data-mode="point-to-point"><i
+                    class="bi-slash-circle me-1"></i>音视频外呼(无设备)</button>
+                <button class="btn btn-warning" id="callNullAudio" data-mode="point-to-point">音视频外呼(无麦克风)</button>
+                <button class="btn btn-success" id="callNullVideo" data-mode="point-to-point">音视频外呼(无摄像头)</button>
+                <button class="btn btn-outline-secondary" id="conferenceSilentJoin" data-mode="point-to-point">静默呼叫
+                  A</button>
                 <button class="btn btn-danger ms-auto" id="cancel"><i class="bi-telephone-x"></i> 挂机/取消</button>
               </div>
+
+              <!-- 三方会议控制面板：点对点模式下收起且灰显，选择三方模式后自动展开。
+                   包含"添加成员""接听来电""开始/停止共享""全部挂断"按钮和成员列表。 -->
+              <details class="composer-detail conference-panel mt-2" id="conferencePanel">
+                <summary id="conferenceModeSummary">三方会议（选择三方模式后启用）</summary>
+                <div class="conference-controls">
+                  <div class="conference-inactive-help" id="conferenceInactiveHelp">
+                    三方桥接功能仅在选择“三方”后启用；B、C 参与端使用点对点模式。
+                  </div>
+                  <div class="conference-steps" id="conferenceActiveControls">
+                    <section class="conference-section">
+                      <div class="conference-section-header">
+                        <div>
+                          <div class="conference-step-title">会议成员</div>
+                          <div class="conference-section-desc">成员按钮切换当前会话，共享按钮选择定向共享目标</div>
+                        </div>
+                        <div class="conference-primary-actions">
+                          <button class="btn btn-primary btn-sm" id="conferenceCallVideo">添加成员</button>
+                          <button class="btn btn-success btn-sm" id="conferenceAnswerVideo" disabled>接听来电</button>
+                          <button class="btn btn-outline-primary btn-sm" id="conferenceStartScreen"><i
+                              class="bi-display me-1"></i>开始共享</button>
+                          <button class="btn btn-outline-danger btn-sm" id="conferenceStopScreen"><i
+                              class="bi-stop-circle me-1"></i>停止共享</button>
+                          <button class="btn btn-danger btn-sm" id="conferenceHangupAll">全部挂断</button>
+                        </div>
+                      </div>
+                      <div class="conference-participants" id="conferenceParticipants">
+                        <span class="conference-empty">暂无会议成员</span>
+                      </div>
+                    </section>
+                  </div>
+                </div>
+              </details>
             </section>
 
             <section class="panel-card control-card">
@@ -407,6 +480,8 @@
   <script src="./js/app-media-effects.js"></script>
   <script src="./js/app.sdk-helper.js"></script>
   <script src="./js/app.js"></script>
+  <!-- 三方会议模块：在 app.js 之后加载，向全局作用域公开 handleConferenceNewRTCSession 等接口 -->
+  <script src="./js/app-conference.js"></script>
   <script src="./js/app.ui-bindings.js"></script>
 </body>
 

@@ -386,6 +386,79 @@ module.exports = {
     test.done();
   },
 
+  'conference locks the add-member action while C media is being prepared' : function(test)
+  {
+    const context = loadConferenceDemo();
+
+    vm.runInContext(`
+      conferenceLegs.set('host', {
+        role: 'B', confirmed: true, ended: false,
+        session: { id: 'host' }
+      });
+      prepareCalls = 0;
+      preparation = new Promise(function(resolve) { resolvePreparation = resolve; });
+      prepareNormalCComposerOutput = function() {
+        prepareCalls += 1;
+        return preparation;
+      };
+    `, context);
+
+    const firstCall = vm.runInContext("callConferenceVideo({ role: 'C' })", context);
+    const duplicateCall = vm.runInContext("callConferenceVideo({ role: 'C' })", context);
+
+    test.strictEqual(vm.runInContext('prepareCalls', context), 1);
+    test.strictEqual(context.capturedCalls.length, 0);
+    test.ok(context.statuses.some((status) => status.includes('正在创建')));
+
+    vm.runInContext(`
+      resolvePreparation({
+        mediaStream: new MediaStream([
+          { kind: 'audio', id: 'prepared-audio', readyState: 'live' },
+          { kind: 'video', id: 'prepared-video', readyState: 'live' }
+        ]),
+        fallbackLocalStream: new MediaStream(),
+        normalComposerHostId: 'host',
+        conferenceAudioStream: new MediaStream()
+      });
+    `, context);
+
+    Promise.all([ firstCall, duplicateCall ])
+      .then(function()
+      {
+        test.strictEqual(context.capturedCalls.length, 1);
+        test.done();
+      })
+      .catch(function(error)
+      {
+        throw error;
+      });
+  },
+
+  'original sender snapshots are not overwritten after composer replaceTrack' : function(test)
+  {
+    const context = loadConferenceDemo();
+
+    vm.runInContext(`
+      originalAudio = { kind: 'audio', id: 'original-audio', readyState: 'live' };
+      originalVideo = { kind: 'video', id: 'original-video', readyState: 'live' };
+      mixedAudio = { kind: 'audio', id: 'mixed-audio', readyState: 'live' };
+      audioSender = { track: originalAudio };
+      videoSender = { track: originalVideo };
+      senderLeg = {
+        originalAudioSender: null, originalVideoSender: null,
+        originalAudioTrack: null, originalVideoTrack: null,
+        session: { connection: { getSenders: function() { return [ audioSender, videoSender ]; } } }
+      };
+      rememberConferenceOriginalSenders(senderLeg);
+      audioSender.track = mixedAudio;
+      rememberConferenceOriginalSenders(senderLeg);
+    `, context);
+
+    test.strictEqual(vm.runInContext('senderLeg.originalAudioTrack === originalAudio', context), true);
+    test.strictEqual(vm.runInContext('senderLeg.originalVideoTrack === originalVideo', context), true);
+    test.done();
+  },
+
   'conference media controls use the active conference composer' : function(test)
   {
     const context = loadConferenceDemo();

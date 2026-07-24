@@ -277,7 +277,14 @@ function deleteBackup()
 gulp.task('lint', function()
 {
   // 先跑 lint，尽早暴露语法和风格问题，避免进入后续耗时流程。
-  const src = [ 'gulpfile.js', '.eslintrc.js', 'lib/**/*.js', 'test/**/*.js' ];
+  const src = [
+    'gulpfile.js',
+    '.eslintrc.js',
+    'lib/**/*.js',
+    'test/**/*.js',
+    // 只检查 Base JS Demo 自研入口，避免把第三方/min 文件纳入 lint。
+    'demo/base-js/js/app*.js'
+  ];
 
   return gulp.src(src)
     .pipe(plumber())

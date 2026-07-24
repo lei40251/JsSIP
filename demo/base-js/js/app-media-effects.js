@@ -400,10 +400,18 @@ function buildCallComposerOptions()
  */
 function getSessionComposerHandles()
 {
-  /** @type {import('../../lib/RTCSession').MediaEffectsComposerInstance|null} */
-  const sessionComposer = rtcSession && rtcSession.getMediaEffectsComposer ?
-    rtcSession.getMediaEffectsComposer() :
+  // 三方模式下优先使用会议 composer（A-B 主会话的合成器），
+  // 确保媒体特效面板操作的是正确的 composer 实例。
+  const conferenceComposer = typeof getConferenceMediaEffectsComposer === 'function' ?
+    getConferenceMediaEffectsComposer() :
     null;
+
+  /** @type {import('../../lib/RTCSession').MediaEffectsComposerInstance|null} */
+  const sessionComposer = conferenceComposer || (
+    rtcSession && rtcSession.getMediaEffectsComposer ?
+      rtcSession.getMediaEffectsComposer() :
+      null
+  );
 
   return { sessionComposer };
 }
