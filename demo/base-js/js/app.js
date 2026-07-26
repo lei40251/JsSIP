@@ -1961,15 +1961,13 @@ function handlePointToPointNewRTCSession(e)
   /**
    * screenShare — 分享屏幕（简单模式）
    *
-   * 启动屏幕分享，不替换本地视频轨道。
-   * share(type, id, assembly, dual, skip) 参数说明：
-   *   type: 'screen' — 分享屏幕
-   *   id: null       — 屏幕分享不需要 CSS 选择器
-   *   assembly: null — 屏幕分享不需要渲染函数
+   * 启动普通屏幕分享，用屏幕轨临时替换当前发送的摄像头轨。
+   * 推荐使用 share(type, options) 对象参数，屏幕分享不需要额外 options 字段。
+   * 未开启 dual 时沿用原有替换摄像头轨的分享方式。
    */
   document.querySelector('#screenShare').onclick = function()
   {
-    e.session.share('screen', null, null)
+    e.session.share('screen', {})
       .then((stream) =>
       {
         document.querySelector('#screen').srcObject = stream;
@@ -1990,11 +1988,9 @@ function handlePointToPointNewRTCSession(e)
    * screenShareD — 分享屏幕（双流模式）
    *
    * 在双流模式下分享屏幕：额外的视频流作为第二路发送。
-   * share(type, id, assembly, dual, skip) 参数说明：
+   * share(type, options) 参数说明：
    *   type: 'screen' — 分享屏幕
-   *   id: null       — 屏幕分享不需要 CSS 选择器
-   *   assembly: null — 屏幕分享不需要渲染函数
-   *   dual: true     — 双流模式，屏幕画面作为独立第二路视频流，不替换摄像头画面
+   *   dual: true     — BFCP 双流模式，屏幕画面作为独立第二路视频流
    * 包含双重停止检测机制：
    * 1. ended 事件（主流）
    * 2. 定时轮询 readyState（兜底，部分场景 ended 不触发）
@@ -2004,7 +2000,7 @@ function handlePointToPointNewRTCSession(e)
    */
   document.querySelector('#screenShareD').onclick = function()
   {
-    e.session.share('screen', null, null, true)
+    e.session.share('screen', { dual: true })
       .then((stream) =>
       {
         // 渲染屏幕共享预览
@@ -2052,10 +2048,8 @@ function handlePointToPointNewRTCSession(e)
    *
    * 当首次分享因 Safari 缺少 user gesture 而失败（safari_r 被置为 true）时，
    * 用户需手动点击此按钮以提供用户手势上下文，重新发起分享。
-   * share(type, id, assembly, dual, skip) 参数说明：
+   * share(type, options) 参数说明：
    *   type: 'screen' — 分享屏幕
-   *   id: null       — 屏幕分享不需要 CSS 选择器
-   *   assembly: null — 屏幕分享不需要渲染函数
    *   dual: true     — 双流模式
    *   skip: true     — 跳过 BFCP 握手（Safari 兼容），直接发起屏幕分享
    */
@@ -2064,7 +2058,7 @@ function handlePointToPointNewRTCSession(e)
     if (safari_r)
     {
       safari_r = false;
-      e.session.share('screen', null, null, true, true)
+      e.session.share('screen', { dual: true, skip: true })
         .then((stream) =>
         {
           document.querySelector('#screen').srcObject = stream;
@@ -2100,7 +2094,7 @@ function handlePointToPointNewRTCSession(e)
   /**
    * formShare / formShareD — 分享 HTML 元素
    *
-   * share(type, id, assembly, dual, skip) 参数说明：
+   * share(type, options) 参数说明：
    *   type: 'html'        — 分享页面 HTML 元素
    *   id: '#ele'          — 要分享的 DOM 元素 CSS 选择器
    *   assembly: html2canvas — 将 DOM 元素渲染为 Canvas 的函数
@@ -2109,38 +2103,36 @@ function handlePointToPointNewRTCSession(e)
    */
   document.querySelector('#formShare').onclick = function()
   {
-    e.session.share('html', '#ele', html2canvas);
+    e.session.share('html', { id: '#ele', assembly: html2canvas });
   };
   document.querySelector('#formShareD').onclick = function()
   {
-    e.session.share('html', '#ele', html2canvas, true);
+    e.session.share('html', { id: '#ele', assembly: html2canvas, dual: true });
   };
 
   /**
    * picShare / picShareD — 分享图片
    *
-   * share(type, id, assembly, dual, skip) 参数说明：
+   * share(type, options) 参数说明：
    *   type: 'pic'     — 分享图片元素
    *   id: '#pic_s'    — 图片元素的 CSS 选择器
-   *   assembly: null  — 图片分享不需要渲染函数
    *   dual: true/false — 是否双流模式（D 后缀版本传 true）
    */
   document.querySelector('#picShare').onclick = function()
   {
-    e.session.share('pic', '#pic_s', null);
+    e.session.share('pic', { id: '#pic_s' });
   };
   document.querySelector('#picShareD').onclick = function()
   {
-    e.session.share('pic', '#pic_s', null, true);
+    e.session.share('pic', { id: '#pic_s', dual: true });
   };
 
   /**
    * videoShare / videoShareD — 分享视频元素
    *
-   * share(type, id, assembly, dual, skip) 参数说明：
+   * share(type, options) 参数说明：
    *   type: 'video'    — 分享正在播放的 video 元素
    *   id: '#video_s'   — video 元素的 CSS 选择器
-   *   assembly: null   — 视频分享不需要渲染函数，直接 captureStream
    *   dual: true/false — 是否双流模式（D 后缀版本传 true）
    * 需要视频已在播放状态。
    */
@@ -2149,7 +2141,7 @@ function handlePointToPointNewRTCSession(e)
     document.querySelector('#video_s').play()
       .then(() =>
       {
-        e.session.share('video', '#video_s', null);
+        e.session.share('video', { id: '#video_s' });
       });
   };
   document.querySelector('#videoShareD').onclick = function()
@@ -2157,7 +2149,7 @@ function handlePointToPointNewRTCSession(e)
     document.querySelector('#video_s').play()
       .then(() =>
       {
-        e.session.share('video', '#video_s', null, true);
+        e.session.share('video', { id: '#video_s', dual: true });
       });
   };
 

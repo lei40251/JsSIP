@@ -371,33 +371,47 @@ session.switchDevice('camera', 'environment')
 
 默认情况下重新协商失败会结束会话。附加屏幕轨等可降级能力可传入 `{ terminateOnFailure: false }`，并通过完成回调的 `error` 参数回退该能力，同时保留原通话。
 
-### `share(type, id?, assembly?, dualOrOptions?, skip?): Promise`
+### `share(type, options): Promise` / `share(type, id?, assembly?, dual?, skip?): Promise`
 
 | 参数 | 类型/可选值 | 说明 |
 | --- | --- | --- |
 | `type` | `screen` / `html` / `pic` / `video` | 分享源类型 |
-| `id` | CSS selector / `null` | HTML、图片、视频元素；屏幕传 `null` |
+| `options` | `ShareOptions` / `AuxiliaryShareOptions` | 推荐的二参对象；根据分享模式填写对应字段 |
+| `id` | CSS selector / `null` | 兼容位置参数；HTML、图片、视频元素选择器 |
 | `assembly` | function / `null` | DOM 转画布函数，如 `html2canvas` |
-| `dualOrOptions` | `boolean` / object | `true` 使用 BFCP 双流；`{ mode: 'auxiliary' }` 使用独立辅流 |
-| `skip` | `boolean` | BFCP 兼容参数；辅流模式不使用 |
+| `dual` | `boolean` | `true` 使用 BFCP 双流 |
+| `skip` | `boolean` | BFCP 兼容参数 |
 
 ```js
-await session.share('screen', null, null);
-await session.share('html', '#sharedArea', html2canvas);
-await session.share('pic', '#sharedImage', null);
-await session.share('video', '#sharedVideo', null);
+await session.share('screen', {});
+await session.share('html', { id: '#sharedArea', assembly: html2canvas });
+await session.share('pic', { id: '#sharedImage' });
+await session.share('video', { id: '#sharedVideo' });
+await session.share('screen', { dual: true });
 ```
+
+普通分享的 `ShareOptions` 字段如下。字段未传时继续使用历史默认值：
+
+| 普通分享字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `id` | string / `null` | HTML、图片或视频元素的 CSS 选择器；屏幕分享不需要 |
+| `assembly` | function / `null` | HTML 分享的 DOM 转画布函数 |
+| `dual` | `boolean` | 默认 `false`；`true` 使用 BFCP 双流，且需与会话 BFCP 配置一致 |
+| `skip` | `boolean` | 默认 `false`；是否跳过 BFCP FloorRequest，仅用于明确的兼容场景 |
 
 不依赖 BFCP 的辅流模式会新增第二条 video m-line，不替换摄像头。它也可以复用外部屏幕流，适合一份屏幕源发送到多条 RTCSession：
 
 ```js
-await session.share('screen', null, null, {
+await session.share('screen', {
   mode                : 'auxiliary',
   mediaStream         : screenStream,
   stopStreamOnUnShare : false,
   contentHint         : 'detail'
 });
 ```
+
+历史位置参数以及上一版的 `share('screen', null, null, auxiliaryOptions)` 继续兼容，但新代码应统一使用二参对象。
+同一条 RTCSession 同一时间只允许一种共享；开始新共享前应先等待 `unShare()` 完成。
 
 | 辅流字段 | 类型 | 说明 |
 | --- | --- | --- |

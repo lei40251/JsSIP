@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.6-beta.20267261411
+ * CRTC v2.0.6-beta.2026726238
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -4371,7 +4371,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.6-beta.405214522822 (Web)',
+  USER_AGENT: 'UA/2.0.6-beta.405214524616 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17626,7 +17626,7 @@ var debug = require('debug')('CRTC');
 var RTCStatsMonitor = require('./RTCStatsMonitor');
 var MediaEffectsComposer = require('./MediaEffectsComposer/MediaEffectsComposer');
 var MetaHumanClient = require('./MetaHumanClient');
-debug('version %s', '2.0.6-beta.405214522822');
+debug('version %s', '2.0.6-beta.405214524616');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17667,7 +17667,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.6-beta.405214522822';
+    return '2.0.6-beta.405214524616';
   }
 };
 },{"./Constants":30,"./Exceptions":35,"./Grammar":36,"./MediaEffectsComposer/MediaEffectsComposer":47,"./MetaHumanClient":59,"./NameAddrHeader":60,"./RTCStatsMonitor":70,"./UA":78,"./URI":79,"./Utils":80,"./WebSocketInterface":81,"debug":86}],38:[function(require,module,exports){
@@ -30674,6 +30674,9 @@ module.exports = class RTCSession extends EventEmitter {
     this._localShareRTPSender = null;
     this._localShareStream = new MediaStream();
     this._localShareStreamLocallyGenerated = false;
+    // 当前共享模式。一个 RTCSession 同一时间只允许一种共享，避免历史共享与辅流
+    // 同时覆盖 _localShareStream，导致 unShare() 无法判断应该停止哪条媒体链路。
+    this._shareMode = null;
     // 非 BFCP 辅流共享状态。
     //
     // 辅流模式不会替换摄像头 sender，而是为当前 RTCSession 单独协商一条
@@ -32256,27 +32259,103 @@ module.exports = class RTCSession extends EventEmitter {
   /**
    * 分享媒体。
    *
-   * 历史调用仍使用 `(type, id, assembly, dual, skip)`：`dual` 为 boolean 时继续进入
-   * 原有 BFCP/替换摄像头轨流程。为避免破坏公开 API，本次没有新增同名方法，而是允许
-   * 第四个参数传 `{ mode: 'auxiliary' }`，显式进入非 BFCP 独立辅流流程。
+   * 推荐所有分享类型统一使用 `share(type, options)`。普通分享 options 使用
+   * `id/assembly/dual/skip` 字段；独立屏幕辅流使用 `mode: 'auxiliary'`。历史位置参数
+   * `(type, id, assembly, dual, skip)` 和上一版第四参数 auxiliary options 继续兼容。
    *
    * @param {string} type 分享类型；辅流模式当前只支持 `screen`
-   * @param {string|null} id 历史页面元素选择器；辅流模式不使用
+   * @param {string|Object|null} idOrOptions 历史页面元素选择器，或分享参数对象
    * @param {Function|null} assembly 历史 HTML 合成函数；辅流模式不使用
-   * @param {boolean|Object} dual BFCP 开关，或 AuxiliaryShareOptions
+   * @param {boolean|Object} dualOrOptions BFCP 开关，或兼容位置的辅流参数
    * @param {boolean} skip 是否跳过 BFCP FloorRequest；辅流模式不使用
-   * @returns {Promise<MediaStream|void>|void} 屏幕流或历史分享结果
+   * @returns {Promise<MediaStream|void>} 屏幕流或历史分享结果
    */
-  async share(type, id, assembly, dual, skip) {
+  async share(type, idOrOptions, assembly, dualOrOptions, skip) {
     logger.debug(`${this._id} share()`);
-
-    // 必须先判断对象参数，否则对象本身是 truthy，会被后面的历史 BFCP 一致性校验
-    // 错误地当成 dual=true。仅识别明确的 mode，其他历史参数行为保持不变。
-    var shareOptions = dual && typeof dual === 'object' ? dual : null;
-    if (shareOptions && shareOptions.mode === 'auxiliary') {
-      return this._shareAuxiliaryScreen(type, shareOptions);
+    var shareArguments = this._normalizeShareArguments(idOrOptions, assembly, dualOrOptions, skip);
+    if (shareArguments.options) {
+      if (type !== 'screen' || shareArguments.options.mode !== 'auxiliary') {
+        throw new TypeError('Auxiliary share options are only supported for screen sharing.');
+      }
+      return this._shareAuxiliaryScreen(type, shareArguments.options);
     }
+    return this._shareLegacy(type, shareArguments.id, shareArguments.assembly, shareArguments.dual, shareArguments.skip);
+  }
 
+  /**
+   * 将推荐的二参调用和历史位置参数统一成内部结构。
+   *
+   * 推荐普通分享：share(type, { id, assembly, dual, skip })
+   * 推荐独立辅流：share('screen', { mode: 'auxiliary', ... })
+   * 兼容辅流：share('screen', null, null, options)
+   * 历史：share(type, id, assembly, dual, skip)
+   *
+   * @returns {{id: *, assembly: *, dual: boolean, skip: boolean, options: Object|null}}
+   */
+  _normalizeShareArguments(idOrOptions, assembly, dualOrOptions, skip) {
+    var secondArgumentIsOptions = idOrOptions && typeof idOrOptions === 'object' && !Array.isArray(idOrOptions);
+    var fourthArgumentIsOptions = dualOrOptions && typeof dualOrOptions === 'object' && !Array.isArray(dualOrOptions);
+    if (secondArgumentIsOptions && fourthArgumentIsOptions) {
+      throw new TypeError('Share options cannot be provided in both argument positions.');
+    }
+    if (secondArgumentIsOptions) {
+      var auxiliaryOptionKeys = ['mode', 'mediaStream', 'displayMediaConstraints', 'stopStreamOnUnShare', 'contentHint'];
+      var isAuxiliaryOptions = auxiliaryOptionKeys.some(key => Object.prototype.hasOwnProperty.call(idOrOptions, key));
+
+      // auxiliary 参数交给 share() 统一校验 mode 和 type，避免漏写 mode 时静默进入旧流程。
+      if (isAuxiliaryOptions) {
+        return {
+          id: null,
+          assembly: null,
+          dual: false,
+          skip: false,
+          options: idOrOptions
+        };
+      }
+
+      // 普通分享只改变参数表达方式，最终仍调用原有实现，BFCP 和 replaceTrack 时序不变。
+      return {
+        id: idOrOptions.id === undefined ? null : idOrOptions.id,
+        assembly: idOrOptions.assembly === undefined ? null : idOrOptions.assembly,
+        dual: idOrOptions.dual === undefined ? false : idOrOptions.dual,
+        skip: idOrOptions.skip === undefined ? false : idOrOptions.skip,
+        options: null
+      };
+    }
+    return {
+      id: idOrOptions,
+      assembly: assembly,
+      dual: fourthArgumentIsOptions ? false : dualOrOptions,
+      skip: skip,
+      options: fourthArgumentIsOptions ? dualOrOptions : null
+    };
+  }
+
+  /**
+   * 执行历史共享并维护统一共享模式。
+   *
+   * 旧实现保持在 _shareLegacyImpl() 中；包装层只增加并发保护和失败后的模式复位，
+   * 不改变 BFCP、captureStream、sender.replaceTrack 等历史时序。
+   */
+  async _shareLegacy(type, id, assembly, dual, skip) {
+    if (this._shareMode) {
+      throw new Error(`A ${this._shareMode} media share is already active.`);
+    }
+    this._shareMode = 'legacy';
+    try {
+      var result = await this._shareLegacyImpl(type, id, assembly, dual, skip);
+      var tracks = this._localShareStream && this._localShareStream.getTracks ? this._localShareStream.getTracks() : [];
+      var hasLiveTrack = tracks.some(track => track.readyState !== 'ended');
+
+      // 无效类型或缺少 assembly 的历史调用可能正常返回但没有产生共享轨，不能锁住模式。
+      if (!hasLiveTrack) this._shareMode = null;
+      return result;
+    } catch (error) {
+      if (this._shareMode === 'legacy') this._shareMode = null;
+      throw error;
+    }
+  }
+  async _shareLegacyImpl(type, id, assembly, dual, skip) {
     // 双流必须开启BFCP支持
     if (dual && !this._bfcp.enabled || !dual && this._bfcp.enabled) {
       return Promise.reject(new Exceptions.NotSupportedError(`Dual and BFCP settings must be consistent. Dual: ${dual}, BFCP: ${this._bfcp.enabled}`));
@@ -32484,14 +32563,13 @@ module.exports = class RTCSession extends EventEmitter {
   /**
    * 停止分享媒体。
    *
-   * 对接入方仍保持无参数调用。options 只供 SDK 内部的 track-ended/会话关闭流程使用，
-   * 用来决定是否停止底层流或是否发送 INFO。辅流启动未完成时调用本方法也会设置取消
-   * 标记，等待启动流程进入安全回滚点，避免遗留正在发送的 sender。
+   * 对接入方保持无参数调用。track-ended 等内部场景直接调用 _stopAuxiliaryShare(options)，
+   * 不把 SDK 私有控制项暴露到公开 API。辅流启动未完成时调用本方法也会设置取消标记，
+   * 等待启动流程进入安全回滚点，避免遗留正在发送的 sender。
    *
-   * @param {Object} options SDK 内部停止选项
    * @returns {void|Promise<void>} 辅流模式可等待 sender 清理完成；历史模式保持 void
    */
-  unShare(options = {}) {
+  unShare() {
     logger.debug(`${this._id} unShare()`);
 
     // Check Session Status.
@@ -32500,11 +32578,12 @@ module.exports = class RTCSession extends EventEmitter {
     }
 
     // 辅流模式需要异步 replaceTrack(null) 并发送停止通知，不能走历史的单纯 stop track。
-    if (this._auxiliaryShareActive || this._auxiliaryShareStarting) {
-      return this._stopAuxiliaryShare(options);
+    if (this._shareMode === 'auxiliary' || this._auxiliaryShareActive || this._auxiliaryShareStarting || this._auxiliaryShareStopPromise) {
+      return this._stopAuxiliaryShare();
     }
     this._markStatsTransition('share-stop');
     Utils.closeMediaStream(this._localShareStream);
+    if (this._shareMode === 'legacy') this._shareMode = null;
   }
 
   /**
@@ -32539,11 +32618,18 @@ module.exports = class RTCSession extends EventEmitter {
     if (this._auxiliaryShareActive) {
       throw new Error('Auxiliary screen sharing is already active.');
     }
+    if (this._shareMode && !this._auxiliaryShareStopPromise) {
+      throw new Error(`A ${this._shareMode} media share is already active.`);
+    }
 
     // 上一次 stop 尚未结束时先等待，避免旧 stop 的 finally 覆盖本次启动状态。
     if (this._auxiliaryShareStopPromise) {
       await this._auxiliaryShareStopPromise;
     }
+    if (this._shareMode) {
+      throw new Error(`A ${this._shareMode} media share is already active.`);
+    }
+    this._shareMode = 'auxiliary';
     this._auxiliaryShareStarting = true;
     this._auxiliaryShareCancelRequested = false;
     var providedStream = options.mediaStream || null;
@@ -32588,8 +32674,9 @@ module.exports = class RTCSession extends EventEmitter {
 
       // detail 更适合桌面文字和 UI；浏览器不支持或拒绝设置时不影响共享主流程。
       if ('contentHint' in screenTrack) {
+        var contentHint = options.contentHint !== undefined ? options.contentHint : 'detail';
         try {
-          screenTrack.contentHint = options.contentHint || 'detail';
+          screenTrack.contentHint = contentHint;
         } catch (error) {}
       }
       this._localShareStream = stream;
@@ -32597,6 +32684,12 @@ module.exports = class RTCSession extends EventEmitter {
       this._auxiliaryShareOwnsStream = ownsStream;
       this._bindAuxiliaryShareStreamEvents(stream);
       this._markStatsTransition('share-start');
+
+      // 历史 screen 分享会把 _localShareRTPSender 置空；如果之前已经协商过辅流，
+      // 可从保留的 transceiver 恢复 sender，继续复用原 MID 而不是增加新 m-line。
+      if (!this._localShareRTPSender && this._auxiliaryShareTransceiver) {
+        this._localShareRTPSender = this._auxiliaryShareTransceiver.sender;
+      }
 
       // 已经协商过辅流 m-line 时，复用原 sender 不需要再次 re-INVITE，停止后重开更快。
       if (this._localShareRTPSender && this._auxiliaryShareMid) {
@@ -32671,6 +32764,7 @@ module.exports = class RTCSession extends EventEmitter {
       this._auxiliaryShareOwnsStream = false;
       this._localShareStream = null;
       this._localShareStreamLocallyGenerated = false;
+      if (this._shareMode === 'auxiliary') this._shareMode = null;
       if (stream && ownsStream) {
         Utils.closeMediaStream(stream);
       }
@@ -32865,6 +32959,7 @@ module.exports = class RTCSession extends EventEmitter {
     var stream = this._localShareStream;
     var sender = this._localShareRTPSender;
     var wasActive = this._auxiliaryShareActive;
+    var wasStarting = this._auxiliaryShareStarting;
     var stopStream = options.stopStream !== undefined ? Boolean(options.stopStream) : this._auxiliaryShareOwnsStream;
 
     // 先同步更新状态，使正在进行的采集/协商流程在下一检查点立即取消。
@@ -32897,7 +32992,13 @@ module.exports = class RTCSession extends EventEmitter {
       }
       this._localShareStreamLocallyGenerated = false;
       this._auxiliaryShareOwnsStream = false;
-      this._auxiliaryShareStarting = false;
+
+      // getDisplayMedia 无法可靠取消。启动阶段收到 unShare() 时继续保留 starting/mode，
+      // 等待 _shareAuxiliaryScreen() 取得结果后按 cancel 标志完成回滚，期间拒绝新共享。
+      if (!wasStarting) {
+        this._auxiliaryShareStarting = false;
+        if (this._shareMode === 'auxiliary') this._shareMode = null;
+      }
       if (options.resetTransport) {
         try {
           this._auxiliaryShareTransceiver.direction = 'inactive';
@@ -33928,8 +34029,10 @@ module.exports = class RTCSession extends EventEmitter {
       this._auxiliaryShareMid = null;
       this._auxiliaryShareActive = false;
       this._auxiliaryShareStarting = false;
+      this._auxiliaryShareCancelRequested = true;
       this._auxiliaryShareOwnsStream = false;
     }
+    this._shareMode = null;
     if (this._localShareStream && this._localShareStreamLocallyGenerated) {
       logger.debug(`${this._id} close() | closing local share MediaStream`);
       Utils.closeMediaStream(this._localShareStream);
@@ -36158,6 +36261,7 @@ module.exports = class RTCSession extends EventEmitter {
         }
         this._localShareStream = null;
         this._localShareStreamLocallyGenerated = false;
+        if (this._shareMode === 'legacy') this._shareMode = null;
       }
     };
 

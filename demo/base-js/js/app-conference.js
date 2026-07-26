@@ -2305,7 +2305,7 @@ async function startConferenceScreenShare()
           throw new Error('屏幕共享已由用户停止');
         }
 
-        await leg.session.share('screen', null, null, {
+        await leg.session.share('screen', {
           // auxiliary 表示新增独立 video m-line，不替换本会话的摄像头轨，也不使用 BFCP。
           mode                : 'auxiliary',
           // 多条会话复用同一个屏幕源，避免重复采集和重复系统授权。

@@ -441,6 +441,21 @@ export interface RenegotiateOptions extends HoldOptions {
 export type ShareType = 'screen' | 'html' | 'pic' | 'video';
 
 /**
+ * 普通分享参数。对象写法可避免依赖位置参数，并与独立屏幕辅流保持统一调用形式。
+ * 未填写的字段沿用历史默认值，不改变替换摄像头轨或 BFCP 双流行为。
+ */
+export interface ShareOptions {
+  /** HTML、图片或视频元素的 CSS 选择器；screen 不需要填写。 */
+  id?: string | null;
+  /** HTML 分享所需的 DOM 转画布函数，例如 html2canvas。 */
+  assembly?: any;
+  /** 是否使用 BFCP 双流；默认 false，且必须与会话 BFCP 配置保持一致。 */
+  dual?: boolean;
+  /** 是否跳过 BFCP FloorRequest；默认 false，仅用于明确的兼容场景。 */
+  skip?: boolean;
+}
+
+/**
  * 不依赖 BFCP 的独立屏幕辅流参数。
  *
  * 该模式新增一条 sendonly video m-line，不替换摄像头轨。三方会议可将同一份
@@ -745,15 +760,29 @@ export class RTCSession extends EventEmitter {
 
   switchDevice(type: string, deviceId: string): any;
 
+  /** 推荐写法：普通屏幕、HTML、图片和视频分享均使用二参对象。 */
+  share(type: ShareType, options: ShareOptions): Promise<MediaStream | void>;
+
+  /** 推荐写法：使用不替换摄像头的独立屏幕辅流。 */
+  share(type: 'screen', options: AuxiliaryShareOptions): Promise<MediaStream>;
+
   /**
-   * 分享媒体。第四个参数为 boolean 时保持历史 BFCP 行为；传入
-   * AuxiliaryShareOptions 时使用不替换摄像头的独立屏幕辅流。
+   * 兼容上一版的 options 位置。新代码应使用 `share('screen', options)`。
+   * @deprecated 请改用二参写法
    */
+  share(
+    type: 'screen',
+    id: string | null | undefined,
+    assembly: any,
+    options: AuxiliaryShareOptions
+  ): Promise<MediaStream>;
+
+  /** 历史页面元素、替换摄像头轨和 BFCP 共享调用。 */
   share(
     type: ShareType,
     id?: string | null,
     assembly?: any,
-    dualOrOptions?: boolean | AuxiliaryShareOptions,
+    dual?: boolean,
     skip?: boolean
   ): Promise<MediaStream | void>;
 

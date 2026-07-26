@@ -944,22 +944,22 @@ document.querySelector(&#39;#muteCam&#39;).onclick = function()
 </thead>
 <tbody><tr>
 <td>分享屏幕</td>
-<td><code>share(&#39;screen&#39;, null, null)</code></td>
+<td><code>share(&#39;screen&#39;, {})</code></td>
 <td>浏览器弹出屏幕选择</td>
 </tr>
 <tr>
 <td>分享页面元素</td>
-<td><code>share(&#39;html&#39;, &#39;#ele&#39;, html2canvas)</code></td>
+<td><code>share(&#39;html&#39;, { id: &#39;#ele&#39;, assembly: html2canvas })</code></td>
 <td>将 DOM 渲染为共享画面</td>
 </tr>
 <tr>
 <td>分享图片</td>
-<td><code>share(&#39;pic&#39;, &#39;#pic_s&#39;, null)</code></td>
+<td><code>share(&#39;pic&#39;, { id: &#39;#pic_s&#39; })</code></td>
 <td>选择器指向 <code>&lt;img&gt;</code></td>
 </tr>
 <tr>
 <td>分享视频</td>
-<td><code>share(&#39;video&#39;, &#39;#video_s&#39;, null)</code></td>
+<td><code>share(&#39;video&#39;, { id: &#39;#video_s&#39; })</code></td>
 <td>选择器指向正在播放的 <code>&lt;video&gt;</code></td>
 </tr>
 <tr>
@@ -969,14 +969,14 @@ document.querySelector(&#39;#muteCam&#39;).onclick = function()
 </tr>
 <tr>
 <td>带 <code>(D)</code> 的分享</td>
-<td><code>share(type, id, assembly, true)</code></td>
-<td>双流模式，双方和网络侧必须支持</td>
+<td><code>share(type, { id, assembly, dual: true })</code></td>
+<td>BFCP 双流模式，双方和网络侧必须支持</td>
 </tr>
 </tbody></table></div>
 <p>屏幕分享被用户从浏览器原生工具栏停止时，也应结束 SDK 分享状态。普通页面接入应监听屏幕 video track 的 <code>ended</code>。</p>
 <p>远端通过 <code>remoteShared</code> 获得共享流，<code>remoteUnShared</code> 清空共享画面。</p>
 <p>三方模式仍只采集一次屏幕，但会把同一个 <code>MediaStream</code> 传给 B、C 各自的 <code>session.share()</code>：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">await leg.session.share(&#39;screen&#39;, null, null, {
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">await leg.session.share(&#39;screen&#39;, {
   mode                : &#39;auxiliary&#39;,
   mediaStream         : screenStream,
   stopStreamOnUnShare : false
@@ -987,7 +987,7 @@ document.querySelector(&#39;#muteCam&#39;).onclick = function()
 <p>标准屏幕共享会保留 SDK 返回的 stream，并监听浏览器原生停止操作：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">document.querySelector(&#39;#screenShare&#39;).onclick = function()
 {
-  e.session.share(&#39;screen&#39;, null, null)
+  e.session.share(&#39;screen&#39;, {})
     .then((stream) =&gt;
     {
       document.querySelector(&#39;#screen&#39;).srcObject = stream;
@@ -1003,12 +1003,12 @@ document.querySelector(&#39;#muteCam&#39;).onclick = function()
 </div><p>其他标准共享入口和停止逻辑如下：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">document.querySelector(&#39;#formShare&#39;).onclick = function()
 {
-  e.session.share(&#39;html&#39;, &#39;#ele&#39;, html2canvas);
+  e.session.share(&#39;html&#39;, { id: &#39;#ele&#39;, assembly: html2canvas });
 };
 
 document.querySelector(&#39;#picShare&#39;).onclick = function()
 {
-  e.session.share(&#39;pic&#39;, &#39;#pic_s&#39;, null);
+  e.session.share(&#39;pic&#39;, { id: &#39;#pic_s&#39; });
 };
 
 document.querySelector(&#39;#videoShare&#39;).onclick = function()
@@ -1016,7 +1016,7 @@ document.querySelector(&#39;#videoShare&#39;).onclick = function()
   document.querySelector(&#39;#video_s&#39;).play()
     .then(() =&gt;
     {
-      e.session.share(&#39;video&#39;, &#39;#video_s&#39;, null);
+      e.session.share(&#39;video&#39;, { id: &#39;#video_s&#39; });
     });
 };
 

@@ -564,7 +564,7 @@ stateDiagram-v2
 startConferenceScreenShare()
   → getDisplayMedia(video: max 1920x1080 @ 15fps, audio: false)
   → contentHint = 'detail'
-  → 对每个 screenTarget 调用 session.share('screen', ..., options)
+  → 对每个 screenTarget 调用 session.share('screen', options)
     → mode: 'auxiliary'
     → mediaStream: 同一个 screenStream
     → stopStreamOnUnShare: false
@@ -752,7 +752,7 @@ B 结束后，`restoreConferenceLegOriginalMedia(C, endedBId)` 使用克隆轨�
 | `composer.getAudioStream({ slots })` | 创建给 B/C 的定制音频子混音 |
 | `composer.releaseSubmixAudioStream()` | 释放对应 slots 的音频输出资源 |
 | `sender.replaceTrack()` | 切换混音或 fallback 轨；共享 sender 由 SDK 管理 |
-| `session.share('screen', ..., { mode: 'auxiliary' })` | 向一条会话发送独立屏幕辅流 |
+| `session.share('screen', { mode: 'auxiliary' })` | 向一条会话发送独立屏幕辅流 |
 | `session.unShare()` | 停止该会话的共享，保留可复用 m-line |
 | `session.sendInfo()` | Demo 只用它发送取消呼转信息；共享 INFO 由 SDK 内部发送 |
 | `session.mute/unmute/hold/unhold()` | 当前选中成员的通话控制 |

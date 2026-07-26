@@ -109,6 +109,7 @@ function createAuxiliaryShareSession(id)
     _localShareRTPSender             : null,
     _localShareStream                : null,
     _localShareStreamLocallyGenerated : false,
+    _shareMode                       : null,
     _auxiliaryShareTransceiver       : null,
     _auxiliaryShareMid               : null,
     _auxiliaryShareActive            : false,
@@ -1006,8 +1007,8 @@ module.exports = {
     };
 
     Promise.all([
-      firstSession.share('screen', null, null, options),
-      secondSession.share('screen', null, null, options)
+      firstSession.share('screen', options),
+      secondSession.share('screen', options)
     ])
       .then(function(streams)
       {
@@ -1019,6 +1020,7 @@ module.exports = {
         test.strictEqual(firstSession.sentInfos[0].body.action, 'start');
         test.strictEqual(firstSession.sentInfos[0].body.mid, '2');
         test.strictEqual(firstSession.renegotiateOptions.terminateOnFailure, false);
+        test.strictEqual(firstSession._shareMode, 'auxiliary');
 
         return firstSession.unShare();
       })
@@ -1027,6 +1029,7 @@ module.exports = {
         test.strictEqual(screenTrack.stopCount, 0);
         test.strictEqual(secondSession._auxiliaryShareActive, true);
         test.strictEqual(firstSession.sentInfos[1].body.action, 'stop');
+        test.strictEqual(firstSession._shareMode, null);
 
         return secondSession.unShare();
       })
@@ -1045,18 +1048,32 @@ module.exports = {
   'SDK auxiliary share reuses the negotiated sender on the next share' : function(test)
   {
     const session = createAuxiliaryShareSession('aux-reuse');
-    const firstStream = new MockMediaStream([ createMockTrack('video', 'screen-1') ]);
+    const firstTrack = createMockTrack('video', 'screen-1');
+    const firstStream = new MockMediaStream([ firstTrack ]);
     const secondTrack = createMockTrack('video', 'screen-2');
     const secondStream = new MockMediaStream([ secondTrack ]);
 
-    session.share('screen', null, null, { mode: 'auxiliary', mediaStream: firstStream })
+    firstTrack.contentHint = 'motion';
+
+    // 保留上一版第四参数 options 写法的兼容测试，同时验证空 contentHint 不被改成 detail。
+    session.share('screen', null, null, {
+      mode        : 'auxiliary',
+      mediaStream : firstStream,
+      contentHint : ''
+    })
       .then(function()
       {
+        test.strictEqual(firstTrack.contentHint, '');
+
         return session.unShare();
       })
       .then(function()
       {
-        return session.share('screen', null, null, { mode: 'auxiliary', mediaStream: secondStream });
+        // 模拟两次辅流之间执行过历史 screen 分享，它会清空共享 sender 引用；
+        // SDK 应从保留的 transceiver 恢复 sender，仍然复用原 MID。
+        session._localShareRTPSender = null;
+
+        return session.share('screen', { mode: 'auxiliary', mediaStream: secondStream });
       })
       .then(function()
       {
@@ -1102,6 +1119,79 @@ module.exports = {
     test.strictEqual(cameraTrack.stopCount, 1);
     test.strictEqual(screenTrack.stopCount, 0);
     test.done();
+  },
+
+  // 同一会话不能让历史共享和独立辅流同时覆盖共享状态；unShare 后应解除模式锁。
+  'SDK share modes are mutually exclusive and unlock after unShare' : function(test)
+  {
+    const session = createAuxiliaryShareSession('share-mode');
+    const legacyTrack = createMockTrack('video', 'legacy-share');
+    const legacyStream = new MockMediaStream([ legacyTrack ]);
+    const auxiliaryStream = new MockMediaStream([ createMockTrack('video', 'aux-share') ]);
+
+    let legacyArguments;
+
+    session._shareLegacyImpl = function(type, id, assembly, dual, skip)
+    {
+      legacyArguments = { type, id, assembly, dual, skip };
+      this._localShareStream = legacyStream;
+    };
+
+    // Demo 推荐的二参对象必须准确还原成历史实现所需参数，不能改变底层媒体时序。
+    session.share('video', {
+      id       : '#legacy',
+      assembly : 'legacy-assembly',
+      dual     : false,
+      skip     : true
+    })
+      .then(function()
+      {
+        test.deepEqual(legacyArguments, {
+          type     : 'video',
+          id       : '#legacy',
+          assembly : 'legacy-assembly',
+          dual     : false,
+          skip     : true
+        });
+        test.strictEqual(session._shareMode, 'legacy');
+
+        return session.share('screen', {
+          mode        : 'auxiliary',
+          mediaStream : auxiliaryStream
+        });
+      })
+      .then(function()
+      {
+        test.ok(false, 'active legacy share should reject auxiliary share');
+      })
+      .catch(function(error)
+      {
+        test.ok(/legacy media share is already active/.test(error.message));
+        test.strictEqual(session._connection.addTransceiverCalls.length, 0);
+
+        session.unShare();
+        test.strictEqual(session._shareMode, null);
+
+        return session.share('screen', {
+          mode        : 'auxiliary',
+          mediaStream : auxiliaryStream
+        });
+      })
+      .then(function()
+      {
+        test.strictEqual(session._shareMode, 'auxiliary');
+
+        return session.unShare();
+      })
+      .then(function()
+      {
+        test.strictEqual(session._shareMode, null);
+        test.done();
+      })
+      .catch(function(error)
+      {
+        throw error;
+      });
   },
 
   // 浏览器 track 与 SIP INFO 没有固定先后顺序，两种顺序都只能触发一次 remoteShared。
@@ -1219,9 +1309,9 @@ module.exports = {
       {
         test.strictEqual(shareCalls.length, 2);
         test.strictEqual(shareCalls[0][0], 'screen');
-        test.strictEqual(shareCalls[0][3].mode, 'auxiliary');
-        test.strictEqual(shareCalls[0][3].mediaStream, screenStream);
-        test.strictEqual(shareCalls[1][3].mediaStream, screenStream);
+        test.strictEqual(shareCalls[0][1].mode, 'auxiliary');
+        test.strictEqual(shareCalls[0][1].mediaStream, screenStream);
+        test.strictEqual(shareCalls[1][1].mediaStream, screenStream);
 
         return vm.runInContext('stopConferenceScreenShare()', context);
       })

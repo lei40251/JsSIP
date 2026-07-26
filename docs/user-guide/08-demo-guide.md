@@ -690,12 +690,12 @@ document.querySelector('#hold').onclick = function()
 
 | 按钮 | 调用 | 参数说明 |
 | --- | --- | --- |
-| 分享屏幕 | `share('screen', null, null)` | 浏览器弹出屏幕选择 |
-| 分享页面元素 | `share('html', '#ele', html2canvas)` | 将 DOM 渲染为共享画面 |
-| 分享图片 | `share('pic', '#pic_s', null)` | 选择器指向 `<img>` |
-| 分享视频 | `share('video', '#video_s', null)` | 选择器指向正在播放的 `<video>` |
+| 分享屏幕 | `share('screen', {})` | 浏览器弹出屏幕选择 |
+| 分享页面元素 | `share('html', { id: '#ele', assembly: html2canvas })` | 将 DOM 渲染为共享画面 |
+| 分享图片 | `share('pic', { id: '#pic_s' })` | 选择器指向 `<img>` |
+| 分享视频 | `share('video', { id: '#video_s' })` | 选择器指向正在播放的 `<video>` |
 | 停止分享 | `unShare()` | 方法名中的 `S` 大写 |
-| 带 `(D)` 的分享 | `share(type, id, assembly, true)` | 双流模式，双方和网络侧必须支持 |
+| 带 `(D)` 的分享 | `share(type, { id, assembly, dual: true })` | BFCP 双流模式，双方和网络侧必须支持 |
 
 屏幕分享被用户从浏览器原生工具栏停止时，也应结束 SDK 分享状态。普通页面接入应监听屏幕 video track 的 `ended`。
 
@@ -704,7 +704,7 @@ document.querySelector('#hold').onclick = function()
 三方模式仍只采集一次屏幕，但会把同一个 `MediaStream` 传给 B、C 各自的 `session.share()`：
 
 ```js
-await leg.session.share('screen', null, null, {
+await leg.session.share('screen', {
   mode                : 'auxiliary',
   mediaStream         : screenStream,
   stopStreamOnUnShare : false
@@ -720,7 +720,7 @@ Demo 负责目标选择和统一停止 `screenStream`；SDK 负责每条会话�
 ```js
 document.querySelector('#screenShare').onclick = function()
 {
-  e.session.share('screen', null, null)
+  e.session.share('screen', {})
     .then((stream) =>
     {
       document.querySelector('#screen').srcObject = stream;
@@ -739,12 +739,12 @@ document.querySelector('#screenShare').onclick = function()
 ```js
 document.querySelector('#formShare').onclick = function()
 {
-  e.session.share('html', '#ele', html2canvas);
+  e.session.share('html', { id: '#ele', assembly: html2canvas });
 };
 
 document.querySelector('#picShare').onclick = function()
 {
-  e.session.share('pic', '#pic_s', null);
+  e.session.share('pic', { id: '#pic_s' });
 };
 
 document.querySelector('#videoShare').onclick = function()
@@ -752,7 +752,7 @@ document.querySelector('#videoShare').onclick = function()
   document.querySelector('#video_s').play()
     .then(() =>
     {
-      e.session.share('video', '#video_s', null);
+      e.session.share('video', { id: '#video_s' });
     });
 };
 

@@ -110,7 +110,7 @@ options
 | unhold()                                     | 恢复暂停的通话                                                      |
 | refer(options=null)                          | 呼转                                                                |
 | switchDevice('camera', 'deviceId')           | 切换设备; camera ：摄像头，deviceId：设备ID, 通过getCameras接口获取 |
-| share()                                      | 分享媒体；支持图片、视频、屏幕、页面元素及非 BFCP 独立辅流          |
+| share(type, options?)                        | 分享媒体；屏幕、HTML、图片、视频及独立辅流均推荐二参对象写法        |
 | unShare()                                    | 取消分享；辅流模式会同步清理独立共享 sender                         |
 | sendInfo()                                   | 发送INFO消息                                                        |
 | sendDTMF()                                   | 发送DTMF                                                            |
