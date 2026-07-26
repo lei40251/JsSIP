@@ -56,6 +56,9 @@
         <a class="nav-link active" href="08-demo-guide.html">
           8 Base JS Demo 学习与验证
         </a>
+        <a class="nav-link" href="app-conference-guide.html">
+          三方会议 Demo 实现详解
+        </a>
     </section>
   </aside>
   <div class="sidebar-backdrop" hidden></div>
@@ -64,7 +67,7 @@
     <article class="doc-content">
       <h1 id="8-base-js-demo-完整学习与验证">8. Base JS Demo 完整学习与验证<a class="heading-anchor" href="#8-base-js-demo-完整学习与验证" aria-label="链接到本节">#</a></h1>
 <p><a href="07-upgrade-guide.html">← 上一章：旧版功能升级</a> · <a href="index.html">学习目录</a></p>
-<p>Base JS Demo 是一份可运行的 SDK 接入示例，覆盖 UA 创建、自动/主动注册、呼入呼出、媒体设备、音视频模式、共享、AiNS、虚拟背景、镜像、水印、DTMF、SIP INFO、呼转和通话质量统计。</p>
+<p>Base JS Demo 是一份可运行的 SDK 接入示例，覆盖模式初始化、自动注册、主动注销/重新注册、呼入呼出、三方通话、媒体设备、音视频模式、共享、AiNS、虚拟背景、镜像、水印、DTMF、SIP INFO、呼转和通话质量统计。</p>
 <p>本章不仅说明按钮用途，还按“页面入口 → Demo 代码位置 → SDK 调用 → 事件反馈 → 清理与验证”解释主要功能。客户可以先按功能运行，再根据函数名定位源码。</p>
 <h2 id="8-1-使用建议">8.1 使用建议<a class="heading-anchor" href="#8-1-使用建议" aria-label="链接到本节">#</a></h2>
 <p>建议先完成注册、语音通话和音视频通话，再逐项验证设备切换、媒体效果、共享和统计。迁移到业务页面时，以本指南中的公开 SDK 调用为准，不要复制 Demo 的测试账号或环境配置。</p>
@@ -117,9 +120,9 @@ session.on(...) → failed / ended 清理
 </tr>
 </thead>
 <tbody><tr>
-<td>自动/主动注册</td>
-<td>注册控制区、<code>register=manual</code></td>
-<td><code>manualRegister</code>、<code>registerUa</code>、<code>unregisterUa</code></td>
+<td>自动注册、主动注销/重新注册</td>
+<td>顶部初始化区、注册控制区</td>
+<td><code>initializeDemoMode</code>、<code>registerUa</code>、<code>unregisterUa</code></td>
 <td><code>start()</code>、<code>register()</code>、<code>unregister()</code>、注册事件</td>
 </tr>
 <tr>
@@ -133,6 +136,12 @@ session.on(...) → failed / ended 清理
 <td><code>#answer</code>、<code>#answerVideo</code></td>
 <td><code>newRTCSession</code> 中的按钮绑定</td>
 <td><code>session.answer()</code></td>
+</tr>
+<tr>
+<td>三方通话</td>
+<td>三方模式下的会议成员区</td>
+<td><code>app-conference.js</code></td>
+<td><code>ua.call()</code>、<code>session.answer()</code>、<code>getMediaEffectsComposer()</code>、<code>renegotiate()</code></td>
 </tr>
 <tr>
 <td>设备选择</td>
@@ -235,17 +244,12 @@ http://localhost:8080/demo/base-js/index.html?caller=1002
 <td>无</td>
 <td>当前 SIP 账号；运行 Demo 时必须传</td>
 </tr>
-<tr>
-<td><code>register</code></td>
-<td><code>manual</code></td>
-<td>自动注册</td>
-<td><code>manual</code> 时只连接 WSS，等待点击“主动注册”</td>
-</tr>
 </tbody></table></div>
-<p>组合示例：</p>
-<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">http://localhost:8080/demo/base-js/index.html?caller=1001&amp;register=manual
+<p>示例：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">http://localhost:8080/demo/base-js/index.html?caller=1001
 </code></pre>
-</div><h2 id="8-5-demo-的-ua-配置">8.5 Demo 的 UA 配置<a class="heading-anchor" href="#8-5-demo-的-ua-配置" aria-label="链接到本节">#</a></h2>
+</div><p>页面打开后不会创建 UA 或连接信令。选择“初始化点对点”或“初始化三方”后，Demo 创建当前页面唯一的 UA，并自动连接和注册。</p>
+<h2 id="8-5-demo-的-ua-配置">8.5 Demo 的 UA 配置<a class="heading-anchor" href="#8-5-demo-的-ua-配置" aria-label="链接到本节">#</a></h2>
 <p>Demo 会根据已配置的环境和账号创建 <code>CRTC.UA</code>。客户项目应使用服务方提供的 WSS、SIP URI、鉴权凭据、授权码和注册参数，不要迁移 Demo 的测试账号规则。完整 UA 配置见 <a href="06-api-reference.html">SDK API 参考</a>。</p>
 <p>Demo 中的 UA 创建代码位于 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const account = handleGetQuery(&#39;caller&#39;);
@@ -258,7 +262,7 @@ const configuration = {
   connection_recovery_max_interval : 3,
   connection_recovery_min_interval : 2,
   register_expires                 : 20,
-  register                         : !manualRegister,
+  register                         : true,
   session_timers                   : false,
   secret_key                       : secretKey
 };
@@ -277,11 +281,6 @@ const ua = new CRTC.UA(configuration);
   disconnectedBy = null;
   isShowUI = false;
   setStatus(&#39;信令连接成功&#39;);
-
-  if (manualRegister)
-  {
-    setStatus(&#39;信令连接成功，请点击“主动注册”&#39;);
-  }
 });
 
 ua.on(&#39;registered&#39;, function(data)
@@ -290,10 +289,8 @@ ua.on(&#39;registered&#39;, function(data)
 });
 </code></pre>
 </div><p>只看到“信令连接成功”时还不能呼叫，必须继续等待 <code>registered</code>。</p>
-<h3 id="主动注册与注销">主动注册与注销<a class="heading-anchor" href="#主动注册与注销" aria-label="链接到本节">#</a></h3>
-<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">?caller=1001&amp;register=manual
-</code></pre>
-</div><p>该模式配置 <code>register: false</code>。<code>ua.start()</code> 只建立 WSS；收到 <code>connected</code> 后，页面显示“已连接，等待主动注册”，不会立即发送 REGISTER。</p>
+<h3 id="主动注销与重新注册">主动注销与重新注册<a class="heading-anchor" href="#主动注销与重新注册" aria-label="链接到本节">#</a></h3>
+<p>初始化后 Demo 固定自动注册。注册控制区仍保留主动注销和重新注册，用于验证注册生命周期。</p>
 <p>注册控制区对应代码位于 <a href="../../../demo/base-js/js/app.ui-bindings.js"><code>app.ui-bindings.js</code></a>：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">document.querySelector(&#39;#registerUa&#39;).onclick = function()
 {
@@ -313,13 +310,12 @@ document.querySelector(&#39;#unregisterUa&#39;).onclick = function()
 </code></pre>
 </div><p>完整验证顺序：</p>
 <ol>
-<li>等待状态变为“已连接，等待主动注册”。</li>
-<li>点击“主动注册”，最终以 <code>registered</code> 事件和“已注册”状态为准。</li>
+<li>选择点对点或三方模式，等待 <code>registered</code> 事件和“注册成功”状态。</li>
 <li>点击“主动注销”，等待 <code>unregistered</code> 事件和“未注册”状态。</li>
-<li>再次点击“主动注册”，确认可以重新注册并呼叫。</li>
+<li>点击“主动注册”，确认可以重新注册并呼叫。</li>
 <li>未注册时点击外呼，<code>call()</code> 会通过 <code>isRegistered()</code> 阻止呼叫。</li>
 </ol>
-<p>自动模式也可以使用主动注销/重新注册按钮。为避免影响通话验证，建议在没有活动通话时操作。注册状态处理集中在 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a> 的 <code>connected</code>、<code>registered</code>、<code>registrationFailed</code>、<code>unregistered</code> 和 <code>disconnected</code> 事件中。</p>
+<p>为避免影响通话验证，建议在没有活动通话时注销或重新注册。注册状态处理集中在 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a> 的 <code>connected</code>、<code>registered</code>、<code>registrationFailed</code>、<code>unregistered</code> 和 <code>disconnected</code> 事件中。</p>
 <h2 id="8-6-webrtc-网络配置">8.6 WebRTC 网络配置<a class="heading-anchor" href="#8-6-webrtc-网络配置" aria-label="链接到本节">#</a></h2>
 <p>呼叫和接听参数中的 <code>pcConfig</code> 应使用服务方提供的 STUN/TURN 配置。是否强制使用 TURN 以及其他兼容参数必须以部署要求为准，不要照搬测试环境值。</p>
 <p>注册成功但没有媒体时，先检查 ICE/TURN，不要只检查 WSS。强制 <code>relay</code> 时 TURN 地址、凭据、UDP/TCP 端口或防火墙任一异常都会导致媒体失败。</p>
@@ -979,6 +975,14 @@ document.querySelector(&#39;#muteCam&#39;).onclick = function()
 </tbody></table></div>
 <p>屏幕分享被用户从浏览器原生工具栏停止时，也应结束 SDK 分享状态。普通页面接入应监听屏幕 video track 的 <code>ended</code>。</p>
 <p>远端通过 <code>remoteShared</code> 获得共享流，<code>remoteUnShared</code> 清空共享画面。</p>
+<p>三方模式仍只采集一次屏幕，但会把同一个 <code>MediaStream</code> 传给 B、C 各自的 <code>session.share()</code>：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">await leg.session.share(&#39;screen&#39;, null, null, {
+  mode                : &#39;auxiliary&#39;,
+  mediaStream         : screenStream,
+  stopStreamOnUnShare : false
+});
+</code></pre>
+</div><p>Demo 负责目标选择和统一停止 <code>screenStream</code>；SDK 负责每条会话的 sender、re-INVITE、MID 通知以及远端 <code>remoteShared/remoteUnShared</code> 事件。页面代码不应直接操作共享 transceiver。</p>
 <p>代码位置：<code>#screenShare</code>、<code>#formShare</code>、<code>#picShare</code>、<code>#videoShare</code>、<code>#stopShare</code> 以及带 <code>D</code> 的双流入口都在 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>。标准客户接入先参考不带 <code>D</code> 的方法；双流需要双方及网络侧能力支持。</p>
 <p>标准屏幕共享会保留 SDK 返回的 stream，并监听浏览器原生停止操作：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">document.querySelector(&#39;#screenShare&#39;).onclick = function()
@@ -1167,9 +1171,9 @@ e.session.on(&#39;stats:stats-error&#39;, function(error)
 <h3 id="阶段-a-注册">阶段 A：注册<a class="heading-anchor" href="#阶段-a-注册" aria-label="链接到本节">#</a></h3>
 <ol>
 <li>账号 A 使用自动注册，确认 <code>connected → registered</code>。</li>
-<li>账号 B 使用 <code>register=manual</code>，确认连接后保持未注册。</li>
-<li>点击“主动注册”，确认 <code>registered</code>；点击“主动注销”，确认 <code>unregistered</code>。</li>
-<li>再次主动注册，确认可以恢复呼叫。</li>
+<li>账号 B 初始化后确认自动触发 <code>registered</code>。</li>
+<li>点击“主动注销”，确认 <code>unregistered</code>。</li>
+<li>再次点击“主动注册”，确认可以恢复呼叫。</li>
 <li>修改为错误密码，确认 <code>registrationFailed</code> 且呼叫被禁止。</li>
 <li>临时断网，观察 offline/disconnected；恢复后确认 WSS 重连，再按当前注册模式完成注册。</li>
 </ol>
@@ -1228,7 +1232,7 @@ e.session.on(&#39;stats:stats-error&#39;, function(error)
 </tr>
 <tr>
 <td><code>connected</code> 但不能呼叫</td>
-<td>自动模式等待 <code>registered</code>；主动模式点击“主动注册”并检查注册事件</td>
+<td>等待 <code>registered</code>；若注册失败，检查账号鉴权和注册事件</td>
 </tr>
 <tr>
 <td>收到来电但没有声音/画面</td>
@@ -1316,7 +1320,7 @@ e.session.on(&#39;stats:stats-error&#39;, function(error)
 
   setTimeout(() =&gt;
   {
-    if (!ua.isConnected() || (!manualRegister &amp;&amp; !ua.isRegistered()))
+    if (!ua.isConnected() || !ua.isRegistered())
     {
       ua.stop();
       console.log(&#39;网络连接异常或未注册成功&#39;);
@@ -1352,7 +1356,7 @@ initMediaEffects();
 <h2 id="8-20-完成标准">8.20 完成标准<a class="heading-anchor" href="#8-20-完成标准" aria-label="链接到本节">#</a></h2>
 <p>只依赖本学习文档和 Base JS Demo，应能完成：</p>
 <ul>
-<li>自动注册、主动注册、主动注销和重新注册，并正确处理连接/注册失败。</li>
+<li>初始化后自动注册、主动注销和重新注册，并正确处理连接/注册失败。</li>
 <li>音频、视频呼入呼出、取消、拒接和双方挂断。</li>
 <li>远端音视频和共享流播放。</li>
 <li>camera/mic 切换、静音、保持和音视频模式切换。</li>
@@ -1369,7 +1373,7 @@ initMediaEffects();
     
     <nav class="page-toc" aria-label="本页目录">
       <h2>本页目录</h2>
-      <a class="toc-depth-2" href="#8-1-使用建议" title="8.1 使用建议">8.1 使用建议</a><a class="toc-depth-3" href="#8-1-1-源码入口与加载顺序" title="8.1.1 源码入口与加载顺序">8.1.1 源码入口与加载顺序</a><a class="toc-depth-3" href="#8-1-2-核心功能定位总表" title="8.1.2 核心功能定位总表">8.1.2 核心功能定位总表</a><a class="toc-depth-2" href="#8-2-运行条件" title="8.2 运行条件">8.2 运行条件</a><a class="toc-depth-2" href="#8-3-环境配置" title="8.3 环境配置">8.3 环境配置</a><a class="toc-depth-2" href="#8-4-url-参数说明" title="8.4 URL 参数说明">8.4 URL 参数说明</a><a class="toc-depth-2" href="#8-5-demo-的-ua-配置" title="8.5 Demo 的 UA 配置">8.5 Demo 的 UA 配置</a><a class="toc-depth-3" href="#自动注册" title="自动注册">自动注册</a><a class="toc-depth-3" href="#主动注册与注销" title="主动注册与注销">主动注册与注销</a><a class="toc-depth-2" href="#8-6-webrtc-网络配置" title="8.6 WebRTC 网络配置">8.6 WebRTC 网络配置</a><a class="toc-depth-2" href="#8-7-页面顶部配置项" title="8.7 页面顶部配置项">8.7 页面顶部配置项</a><a class="toc-depth-3" href="#呼叫号码" title="呼叫号码">呼叫号码</a><a class="toc-depth-3" href="#摄像头和麦克风" title="摄像头和麦克风">摄像头和麦克风</a><a class="toc-depth-3" href="#更新方式" title="更新方式">更新方式</a><a class="toc-depth-3" href="#画质偏好" title="画质偏好">画质偏好</a><a class="toc-depth-3" href="#输出镜像" title="输出镜像">输出镜像</a><a class="toc-depth-3" href="#虚拟背景" title="虚拟背景">虚拟背景</a><a class="toc-depth-3" href="#ains" title="AiNS">AiNS</a><a class="toc-depth-2" href="#8-8-水印控件" title="8.8 水印控件">8.8 水印控件</a><a class="toc-depth-2" href="#8-9-基础呼叫按钮" title="8.9 基础呼叫按钮">8.9 基础呼叫按钮</a><a class="toc-depth-2" href="#8-10-接听按钮" title="8.10 接听按钮">8.10 接听按钮</a><a class="toc-depth-2" href="#8-11-通话中模式切换" title="8.11 通话中模式切换">8.11 通话中模式切换</a><a class="toc-depth-2" href="#8-12-静音-设备和保持" title="8.12 静音、设备和保持">8.12 静音、设备和保持</a><a class="toc-depth-2" href="#8-13-共享与推流" title="8.13 共享与推流">8.13 共享与推流</a><a class="toc-depth-2" href="#8-14-呼转-sip-info-和-dtmf" title="8.14 呼转、SIP INFO 和 DTMF">8.14 呼转、SIP INFO 和 DTMF</a><a class="toc-depth-3" href="#呼转" title="呼转">呼转</a><a class="toc-depth-3" href="#sip-info" title="SIP INFO">SIP INFO</a><a class="toc-depth-3" href="#dtmf" title="DTMF">DTMF</a><a class="toc-depth-2" href="#8-15-统计浮层" title="8.15 统计浮层">8.15 统计浮层</a><a class="toc-depth-2" href="#8-16-媒体效果资源检查" title="8.16 媒体效果资源检查">8.16 媒体效果资源检查</a><a class="toc-depth-2" href="#8-17-按功能逐步验证" title="8.17 按功能逐步验证">8.17 按功能逐步验证</a><a class="toc-depth-3" href="#阶段-a-注册" title="阶段 A：注册">阶段 A：注册</a><a class="toc-depth-3" href="#阶段-b-基础呼叫" title="阶段 B：基础呼叫">阶段 B：基础呼叫</a><a class="toc-depth-3" href="#阶段-c-设备和模式" title="阶段 C：设备和模式">阶段 C：设备和模式</a><a class="toc-depth-3" href="#阶段-d-媒体效果" title="阶段 D：媒体效果">阶段 D：媒体效果</a><a class="toc-depth-3" href="#阶段-e-共享和辅助功能" title="阶段 E：共享和辅助功能">阶段 E：共享和辅助功能</a><a class="toc-depth-3" href="#阶段-f-统计" title="阶段 F：统计">阶段 F：统计</a><a class="toc-depth-2" href="#8-18-常见问题定位表" title="8.18 常见问题定位表">8.18 常见问题定位表</a><a class="toc-depth-2" href="#8-19-从-demo-迁移到业务页面" title="8.19 从 Demo 迁移到业务页面">8.19 从 Demo 迁移到业务页面</a><a class="toc-depth-2" href="#8-20-完成标准" title="8.20 完成标准">8.20 完成标准</a>
+      <a class="toc-depth-2" href="#8-1-使用建议" title="8.1 使用建议">8.1 使用建议</a><a class="toc-depth-3" href="#8-1-1-源码入口与加载顺序" title="8.1.1 源码入口与加载顺序">8.1.1 源码入口与加载顺序</a><a class="toc-depth-3" href="#8-1-2-核心功能定位总表" title="8.1.2 核心功能定位总表">8.1.2 核心功能定位总表</a><a class="toc-depth-2" href="#8-2-运行条件" title="8.2 运行条件">8.2 运行条件</a><a class="toc-depth-2" href="#8-3-环境配置" title="8.3 环境配置">8.3 环境配置</a><a class="toc-depth-2" href="#8-4-url-参数说明" title="8.4 URL 参数说明">8.4 URL 参数说明</a><a class="toc-depth-2" href="#8-5-demo-的-ua-配置" title="8.5 Demo 的 UA 配置">8.5 Demo 的 UA 配置</a><a class="toc-depth-3" href="#自动注册" title="自动注册">自动注册</a><a class="toc-depth-3" href="#主动注销与重新注册" title="主动注销与重新注册">主动注销与重新注册</a><a class="toc-depth-2" href="#8-6-webrtc-网络配置" title="8.6 WebRTC 网络配置">8.6 WebRTC 网络配置</a><a class="toc-depth-2" href="#8-7-页面顶部配置项" title="8.7 页面顶部配置项">8.7 页面顶部配置项</a><a class="toc-depth-3" href="#呼叫号码" title="呼叫号码">呼叫号码</a><a class="toc-depth-3" href="#摄像头和麦克风" title="摄像头和麦克风">摄像头和麦克风</a><a class="toc-depth-3" href="#更新方式" title="更新方式">更新方式</a><a class="toc-depth-3" href="#画质偏好" title="画质偏好">画质偏好</a><a class="toc-depth-3" href="#输出镜像" title="输出镜像">输出镜像</a><a class="toc-depth-3" href="#虚拟背景" title="虚拟背景">虚拟背景</a><a class="toc-depth-3" href="#ains" title="AiNS">AiNS</a><a class="toc-depth-2" href="#8-8-水印控件" title="8.8 水印控件">8.8 水印控件</a><a class="toc-depth-2" href="#8-9-基础呼叫按钮" title="8.9 基础呼叫按钮">8.9 基础呼叫按钮</a><a class="toc-depth-2" href="#8-10-接听按钮" title="8.10 接听按钮">8.10 接听按钮</a><a class="toc-depth-2" href="#8-11-通话中模式切换" title="8.11 通话中模式切换">8.11 通话中模式切换</a><a class="toc-depth-2" href="#8-12-静音-设备和保持" title="8.12 静音、设备和保持">8.12 静音、设备和保持</a><a class="toc-depth-2" href="#8-13-共享与推流" title="8.13 共享与推流">8.13 共享与推流</a><a class="toc-depth-2" href="#8-14-呼转-sip-info-和-dtmf" title="8.14 呼转、SIP INFO 和 DTMF">8.14 呼转、SIP INFO 和 DTMF</a><a class="toc-depth-3" href="#呼转" title="呼转">呼转</a><a class="toc-depth-3" href="#sip-info" title="SIP INFO">SIP INFO</a><a class="toc-depth-3" href="#dtmf" title="DTMF">DTMF</a><a class="toc-depth-2" href="#8-15-统计浮层" title="8.15 统计浮层">8.15 统计浮层</a><a class="toc-depth-2" href="#8-16-媒体效果资源检查" title="8.16 媒体效果资源检查">8.16 媒体效果资源检查</a><a class="toc-depth-2" href="#8-17-按功能逐步验证" title="8.17 按功能逐步验证">8.17 按功能逐步验证</a><a class="toc-depth-3" href="#阶段-a-注册" title="阶段 A：注册">阶段 A：注册</a><a class="toc-depth-3" href="#阶段-b-基础呼叫" title="阶段 B：基础呼叫">阶段 B：基础呼叫</a><a class="toc-depth-3" href="#阶段-c-设备和模式" title="阶段 C：设备和模式">阶段 C：设备和模式</a><a class="toc-depth-3" href="#阶段-d-媒体效果" title="阶段 D：媒体效果">阶段 D：媒体效果</a><a class="toc-depth-3" href="#阶段-e-共享和辅助功能" title="阶段 E：共享和辅助功能">阶段 E：共享和辅助功能</a><a class="toc-depth-3" href="#阶段-f-统计" title="阶段 F：统计">阶段 F：统计</a><a class="toc-depth-2" href="#8-18-常见问题定位表" title="8.18 常见问题定位表">8.18 常见问题定位表</a><a class="toc-depth-2" href="#8-19-从-demo-迁移到业务页面" title="8.19 从 Demo 迁移到业务页面">8.19 从 Demo 迁移到业务页面</a><a class="toc-depth-2" href="#8-20-完成标准" title="8.20 完成标准">8.20 完成标准</a>
     </nav>
   </main>
   <button type="button" class="back-to-top" aria-label="回到顶部">↑</button>

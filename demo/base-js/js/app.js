@@ -463,7 +463,7 @@ function handleSessionMediaEffectsIssue(d)
  *
  * 三方模式下此函数不会被调用（由 handleConferenceNewRTCSession 接管）。
  * 除常规的呼叫/接听逻辑外，还包括：
- * - A 端定向屏幕共享的远端视频轨到达处理（通过 SIP INFO MID 匹配）
+ * - 通过 SDK remoteShared/remoteUnShared 事件渲染远端共享
  * - 点对点模式下的 stats 面板标签设置
  */
 function handlePointToPointNewRTCSession(e)
@@ -493,116 +493,6 @@ function handlePointToPointNewRTCSession(e)
     // 已有主会话，新会话排队为临时会话（呼叫转接场景）
     tmpSession = e.session;
   }
-
-  // A 的定向屏幕共享通过第二条 video m-line 发送，并用 SIP INFO
-  // 携带 MID 标识共享轨。INFO 和 track 的到达顺序不固定，因此分别缓存。
-  // ---
-  // pointToPointRemoteVideoTracks: Map<mid, MediaStreamTrack> —— 缓存已到达的远端视频轨
-  // pointToPointRemoteScreenMid:  SIP INFO 告知的屏幕共享轨 MID（可能早于或晚于 track 到达）
-  const pointToPointRemoteVideoTracks = new Map();
-  let pointToPointRemoteScreenMid = null;
-
-  // 清除远端屏幕共享：清空 #remoteVideo2 并关闭共享浮层
-  const clearPointToPointRemoteScreen = function()
-  {
-    const remoteSharedVideo = document.querySelector('#remoteVideo2');
-
-    if (remoteSharedVideo)
-    {
-      remoteSharedVideo.srcObject = null;
-      remoteSharedVideo.className = 'screen-share-dialog-video hide';
-    }
-    if (typeof closeScreenShareDialog === 'function') closeScreenShareDialog('remote');
-  };
-
-  // 根据 MID 渲染远端屏幕共享画面。
-  // 优先从缓存取 track；缓存未命中时遍历 transceiver 查找对应 track。
-  // track 未到达或未就绪时静默返回，等待后续 track/unmute 事件再次触发。
-  const renderPointToPointRemoteScreen = function(mid)
-  {
-    if (mid === null || mid === undefined || !e.session.connection)
-    {
-      return;
-    }
-
-    const normalizedMid = String(mid);
-    let track = pointToPointRemoteVideoTracks.get(normalizedMid);
-
-    if (!track)
-    {
-      const transceiver = e.session.connection.getTransceivers().find((item) =>
-        String(item.mid) === normalizedMid);
-
-      track = transceiver && transceiver.receiver && transceiver.receiver.track;
-    }
-
-    if (!track || track.readyState !== 'live')
-    {
-      return;
-    }
-
-    pointToPointRemoteVideoTracks.set(normalizedMid, track);
-    const remoteSharedVideo = document.querySelector('#remoteVideo2');
-
-    if (!remoteSharedVideo)
-    {
-      return;
-    }
-
-    const sharedStream = new MediaStream([ track ]);
-
-    bindMediaStreamIfChanged(remoteSharedVideo, sharedStream);
-    remoteSharedVideo.className = 'screen-share-dialog-video';
-    remoteSharedVideo.play().catch(() => {});
-    if (typeof openScreenShareDialog === 'function') openScreenShareDialog('remote');
-  };
-
-  // 监听 PeerConnection 的 track 事件，收集所有到达的远端视频轨。
-  // 视频轨到达时先按 MID 缓存；若此时 SIP INFO 已告知该 MID 是共享轨则立即渲染。
-  // 轨道 unmute 时再次尝试渲染（覆盖 track 先于 INFO 到达的时序），
-  // 轨道 ended 时从缓存移除并清理 UI。
-  const handlePointToPointRemoteVideoTrack = function(event)
-  {
-    const track = event.track;
-
-    if (!track || track.kind !== 'video' || !e.session.connection)
-    {
-      return;
-    }
-
-    const transceiver = e.session.connection.getTransceivers().find((item) =>
-      item.receiver && item.receiver.track === track);
-    const mid = transceiver && transceiver.mid;
-
-    if (mid === null || mid === undefined)
-    {
-      return;
-    }
-
-    const normalizedMid = String(mid);
-
-    pointToPointRemoteVideoTracks.set(normalizedMid, track);
-
-    const refresh = function()
-    {
-      if (pointToPointRemoteScreenMid === normalizedMid)
-      {
-        renderPointToPointRemoteScreen(normalizedMid);
-      }
-    };
-
-    track.addEventListener('unmute', refresh);
-    track.addEventListener('ended', function()
-    {
-      pointToPointRemoteVideoTracks.delete(normalizedMid);
-      if (pointToPointRemoteScreenMid === normalizedMid)
-      {
-        pointToPointRemoteScreenMid = null;
-        clearPointToPointRemoteScreen();
-      }
-    }, { once: true });
-    refresh();
-  };
 
   // ---- 远端呼入处理 ----
   if (e.originator === 'remote')
@@ -1095,9 +985,14 @@ function handlePointToPointNewRTCSession(e)
   /**
    * remoteShared — 远端开始共享
    *
-   * @fires 远端发起屏幕/元素共享时触发
+   * BFCP 共享和本次新增的非 BFCP 辅流共享都会由 SDK 归一化为该事件。
+   * 对于辅流，SDK 已经在内部完成 SIP INFO MID 与 track 的乱序匹配；Demo
+   * 不需要监听 PeerConnection.track，也不需要解析 screen-share INFO。
    *
-   * 处理逻辑：将共享的视频流渲染到辅助视频区域。
+   * @fires 远端发起屏幕/元素共享且共享视频轨已就绪时触发
+   * @param {Object} d 共享事件数据
+   * @param {MediaStream} d.sharedStream.videoStream 可直接绑定到 video.srcObject 的视频流
+   * @param {string} [d.mid] 非 BFCP 辅流的 m-line MID；普通 UI 无需使用
    */
   e.session.on('remoteShared', function(d)
   {
@@ -1110,9 +1005,10 @@ function handlePointToPointNewRTCSession(e)
   /**
    * remoteUnShared — 远端停止共享
    *
-   * @fires 远端停止共享时触发
+   * stop INFO、远端共享 track ended 或 BFCP FloorRelease 都由 SDK 统一转换为该事件。
+   * 页面只清理展示状态，不直接操作远端 transceiver 或 MediaStreamTrack。
    *
-   * 处理逻辑：清空辅助视频区域并隐藏浮层。
+   * @fires 远端停止共享时触发
    */
   e.session.on('remoteUnShared', function()
   {
@@ -1401,19 +1297,6 @@ function handlePointToPointNewRTCSession(e)
         {
           isRefer && tmpSession.terminate();
         }
-        // 远端通过 SIP INFO 告知屏幕共享轨的 MID，用于点对点定向屏幕共享。
-        // start：记录 MID 并尝试渲染（如果 track 已到达）
-        // stop：清除 MID 并清理远端屏幕共享 UI
-        else if (body.event === 'screen-share' && body.action === 'start')
-        {
-          pointToPointRemoteScreenMid = String(body.mid);
-          renderPointToPointRemoteScreen(pointToPointRemoteScreenMid);
-        }
-        else if (body.event === 'screen-share' && body.action === 'stop')
-        {
-          pointToPointRemoteScreenMid = null;
-          clearPointToPointRemoteScreen();
-        }
       }
     }
     else if (d.originator === 'local')
@@ -1611,11 +1494,6 @@ function handlePointToPointNewRTCSession(e)
 
     // ---- 渲染本地和远端媒体流 ----
     getStreams(e.session.connection);
-
-    // ---- 监听 A 通过重协商新增的屏幕视频轨 ----
-    // 不根据 ontrack 当下的 muted 状态猜测，而是等 SIP INFO 中的 MID
-    // 与 transceiver.mid 匹配后渲染，并在轨道 unmute 时自动刷新。
-    e.session.connection.addEventListener('track', handlePointToPointRemoteVideoTrack);
 
     // ---- 设置视频发送最大码率 ----
     // 根据 URL 参数 mbit 调整视频编码码率

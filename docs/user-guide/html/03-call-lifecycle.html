@@ -56,6 +56,9 @@
         <a class="nav-link" href="08-demo-guide.html">
           8 Base JS Demo 学习与验证
         </a>
+        <a class="nav-link" href="app-conference-guide.html">
+          三方会议 Demo 实现详解
+        </a>
     </section>
   </aside>
   <div class="sidebar-backdrop" hidden></div>
@@ -561,14 +564,14 @@ session.connection.ontrack = function(event)
 </tr>
 <tr>
 <td><code>remoteShared</code></td>
-<td><code>{ sharedStream }</code></td>
-<td>远端开始共享</td>
+<td><code>{ sharedStream, mid?, track? }</code></td>
+<td>远端开始 BFCP 或独立辅流共享</td>
 <td>播放共享视频流</td>
 </tr>
 <tr>
 <td><code>remoteUnShared</code></td>
 <td>无</td>
-<td>远端停止共享</td>
+<td>远端停止共享或共享轨结束</td>
 <td>清空共享区域</td>
 </tr>
 <tr>

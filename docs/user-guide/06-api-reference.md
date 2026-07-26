@@ -371,14 +371,15 @@ session.switchDevice('camera', 'environment')
 
 默认情况下重新协商失败会结束会话。附加屏幕轨等可降级能力可传入 `{ terminateOnFailure: false }`，并通过完成回调的 `error` 参数回退该能力，同时保留原通话。
 
-### `share(type, id?, assembly?, dual?): Promise`
+### `share(type, id?, assembly?, dualOrOptions?, skip?): Promise`
 
 | 参数 | 类型/可选值 | 说明 |
 | --- | --- | --- |
 | `type` | `screen` / `html` / `pic` / `video` | 分享源类型 |
 | `id` | CSS selector / `null` | HTML、图片、视频元素；屏幕传 `null` |
 | `assembly` | function / `null` | DOM 转画布函数，如 `html2canvas` |
-| `dual` | `boolean` | `true` 使用双方支持的双流/BFCP 场景 |
+| `dualOrOptions` | `boolean` / object | `true` 使用 BFCP 双流；`{ mode: 'auxiliary' }` 使用独立辅流 |
+| `skip` | `boolean` | BFCP 兼容参数；辅流模式不使用 |
 
 ```js
 await session.share('screen', null, null);
@@ -387,9 +388,28 @@ await session.share('pic', '#sharedImage', null);
 await session.share('video', '#sharedVideo', null);
 ```
 
-### `unShare(): void`
+不依赖 BFCP 的辅流模式会新增第二条 video m-line，不替换摄像头。它也可以复用外部屏幕流，适合一份屏幕源发送到多条 RTCSession：
 
-停止当前分享。方法名中 `S` 为大写。
+```js
+await session.share('screen', null, null, {
+  mode                : 'auxiliary',
+  mediaStream         : screenStream,
+  stopStreamOnUnShare : false,
+  contentHint         : 'detail'
+});
+```
+
+| 辅流字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `mode` | `'auxiliary'` | 启用非 BFCP 独立辅流 |
+| `mediaStream` | `MediaStream` | 可选；复用已有屏幕流，不传时 SDK 调用 `getDisplayMedia` |
+| `displayMediaConstraints` | object | SDK 获取屏幕时使用的约束 |
+| `stopStreamOnUnShare` | `boolean` | 外部流默认 `false`，SDK 创建的流默认 `true` |
+| `contentHint` | string | 默认 `detail` |
+
+### `unShare(): void | Promise<void>`
+
+停止当前分享。辅流模式会发送停止通知并清空共享 sender，因此调用方可以 `await`；方法名中 `S` 为大写。
 
 ### `downgradeToAudio(options?, done?)`
 
@@ -612,8 +632,8 @@ e.session.on('progress', function(d)
 | `hold` / `unhold` | `{ originator: 'local'|'remote' }` | 本端或远端保持状态变化 |
 | `mode` | `{ mode: 'audio'|'video' }` | 音视频升级/降级完成 |
 | `cameraChanged` | `{ videoStream: MediaStream }` | `switchDevice('camera', ...)` 成功 |
-| `remoteShared` | `{ sharedStream }` | 远端开始共享；视频通常在 `sharedStream.videoStream` |
-| `remoteUnShared` | 无 | 远端停止共享 |
+| `remoteShared` | `{ sharedStream, mid?, track? }` | 远端开始 BFCP 或独立辅流共享；视频在 `sharedStream.videoStream` |
+| `remoteUnShared` | 无 | 远端停止共享或共享轨结束 |
 | `peerconnection:iceConnectionState` | ICE 状态字符串 | PC 的 ICE 连接状态改变 |
 | `mediaerror` | `{ type, mediastream }` | 本地媒体轨道/流出现已知异常 |
 | `mediaEffectsIssue` | `{ module, message }` | AiNS/composer/虚拟背景异常或降级 |

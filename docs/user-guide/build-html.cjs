@@ -81,7 +81,10 @@ for (const name of fs.readdirSync(outputDir)) {
 }
 
 function syncAssets() {
-  const docsCss = fs.readFileSync(path.join(sharedAssetsDir, 'docs.css'), 'utf8');
+  // 共享资源在 Windows 仓库中可能是 CRLF，而下面的模板替换以 LF 作为稳定匹配文本。
+  // 生成前统一换行符，既避免 replaceRequired 因平台差异失败，也避免输出混合行尾文件。
+  const docsCss = fs.readFileSync(path.join(sharedAssetsDir, 'docs.css'), 'utf8')
+    .replace(/\r\n?/g, '\n');
   fs.writeFileSync(path.join(assetsDir, 'docs.css'), docsCss + userGuideCss, 'utf8');
   fs.copyFileSync(
     path.join(sharedAssetsDir, 'mermaid.min.js'),
@@ -93,6 +96,7 @@ function syncAssets() {
   );
 
   let docsJs = fs.readFileSync(path.join(sharedAssetsDir, 'docs.js'), 'utf8')
+    .replace(/\r\n?/g, '\n')
     .replaceAll('trtc-docs-theme', 'crtc-user-guide-theme')
     .replaceAll('__TRTC_DOC_SEARCH__', '__CRTC_USER_GUIDE_SEARCH__');
 
@@ -176,6 +180,10 @@ const markdownFiles = fs.readdirSync(root)
     return aNumber - bNumber || a.localeCompare(b, 'zh-CN', { numeric: true });
   });
 
+// 会议指南源码位于 docs/，不在 user-guide/ 的默认扫描目录。显式加入后，它会和
+// 其他用户指南共用导航、全文搜索、主题切换、Mermaid 渲染及链接完整性校验。
+markdownFiles.push('../app-conference-guide.md');
+
 const navTitles = {
   'README.md': '学习指南首页',
   '01-sip-webrtc-basics.md': '1 SIP 与 WebRTC 基础',
@@ -186,6 +194,7 @@ const navTitles = {
   '06-api-reference.md': '6 SDK API 参考',
   '07-upgrade-guide.md': '7 旧版功能升级指南',
   '08-demo-guide.md': '8 Base JS Demo 学习与验证',
+  '../app-conference-guide.md': '三方会议 Demo 实现详解',
 };
 
 function stripMarkdown(value) {
@@ -243,7 +252,7 @@ function navHtml(activeFile) {
     </section>`;
 }
 
-function transformMarkdownLinks(href) {
+function transformMarkdownLinks(href, markdownName) {
   if (!href || href.startsWith('#') || /^(?:https?:|mailto:|tel:)/i.test(href)) {
     return href;
   }
@@ -257,7 +266,10 @@ function transformMarkdownLinks(href) {
     return `${base === 'README' ? 'index' : base}.html${hash}`;
   }
 
-  return `../${href}`;
+  // 普通用户指南源码位于 docs/user-guide/，生成页只需额外回退一级；会议指南源码
+  // 位于上层 docs/，生成到同一 html/ 目录后需要多回退一级才能继续指向 demo/test。
+  const outputPrefix = markdownName.startsWith('../') ? '../../' : '../';
+  return `${outputPrefix}${href}`;
 }
 
 function formatTocLabel(text, depth) {
@@ -297,7 +309,7 @@ function renderDocument(doc) {
 
   renderer.link = function({ href, title, tokens }) {
     const text = this.parser.parseInline(tokens);
-    const target = transformMarkdownLinks(href);
+    const target = transformMarkdownLinks(href, doc.name);
     const titleAttr = title ? ` title="${escapeHtml(title)}"` : '';
     const external = /^https?:\/\//i.test(target || '');
     return `<a href="${escapeHtml(target || '')}"${titleAttr}${external ? ' target="_blank" rel="noreferrer"' : ''}>${text}</a>`;

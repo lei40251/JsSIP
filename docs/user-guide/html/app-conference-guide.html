@@ -3,30 +3,62 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="app-conference.js 三方会议实现详解">
-  <title>app-conference.js 三方会议实现详解</title>
+  <meta name="description" content="CRTC Web SDK 系统学习文档：app-conference.js 三方会议实现详解">
+  <title>app-conference.js 三方会议实现详解 · CRTC Web SDK 系统学习指南</title>
   <link rel="stylesheet" href="assets/docs.css">
-  <style>
-    .topbar .brand { margin-right: auto; }
-    .sidebar .nav-group h2 { margin-top: 0; }
-    .generated-note { color: var(--muted); font-size: 13px; }
-  </style>
-  <script>try{const t=localStorage.getItem('crtc-conference-guide-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+  <script>try{const t=localStorage.getItem('crtc-user-guide-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+  <script src="assets/search-index.js" defer></script>
   <script src="assets/mermaid.min.js" defer></script>
+  <script src="assets/docs.js" defer></script>
 </head>
-<body>
+<body data-page="app-conference-guide.html">
   <header class="topbar">
     <button type="button" class="icon-button nav-toggle" aria-label="收起左侧目录" aria-expanded="true">☰</button>
-    <a class="brand" href="#">app-conference.js 三方会议详解</a>
-    <a class="source-link" href="../../app-conference-guide.md">查看 Markdown</a>
+    <a class="brand" href="index.html">CRTC Web SDK 系统学习指南</a>
+    <div class="search-shell">
+      <label class="sr-only" for="global-search">搜索全部文档</label>
+      <input id="global-search" type="search" autocomplete="off" placeholder="搜索 API、事件、功能…" aria-controls="search-results">
+      <kbd>/</kbd>
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
     <button type="button" class="icon-button toc-toggle" aria-label="收起右侧目录" aria-expanded="true">◧</button>
     <button type="button" class="icon-button theme-toggle" aria-label="切换明暗主题">◐</button>
   </header>
 
-  <aside class="sidebar" aria-label="章节目录">
+  <aside class="sidebar" aria-label="文档目录">
+    
     <section class="nav-group">
-      <h2>章节目录</h2>
-      <a class="nav-link" href="#1-一句话理解整体设计">1. 一句话理解整体设计</a><a class="nav-link" href="#2-文件位置-加载顺序与模块边界">2. 文件位置、加载顺序与模块边界</a><a class="nav-link" href="#3-角色-容量和两种-c">3. 角色、容量和两种 C</a><a class="nav-link" href="#4-核心状态模型">4. 核心状态模型</a><a class="nav-link" href="#5-从页面初始化到新会话">5. 从页面初始化到新会话</a><a class="nav-link" href="#6-外呼调用逻辑">6. 外呼调用逻辑</a><a class="nav-link" href="#7-呼入与接听逻辑">7. 呼入与接听逻辑</a><a class="nav-link" href="#8-三方媒体合成核心">8. 三方媒体合成核心</a><a class="nav-link" href="#9-rtcsession-事件与媒体轨管理">9. RTCSession 事件与媒体轨管理</a><a class="nav-link" href="#10-选中成员-通话控制和统计">10. 选中成员、通话控制和统计</a><a class="nav-link" href="#11-定向屏幕共享">11. 定向屏幕共享</a><a class="nav-link" href="#12-挂断-清理与失败降级">12. 挂断、清理与失败降级</a><a class="nav-link" href="#13-sip-头和页面内部协议">13. SIP 头和页面内部协议</a><a class="nav-link" href="#14-refer-行为">14. REFER 行为</a><a class="nav-link" href="#15-主要-sdk-浏览器-api-调用表">15. 主要 SDK/浏览器 API 调用表</a><a class="nav-link" href="#16-ui-状态规则">16. UI 状态规则</a><a class="nav-link" href="#17-设计限制与接入注意事项">17. 设计限制与接入注意事项</a><a class="nav-link" href="#18-排查问题的推荐顺序">18. 排查问题的推荐顺序</a><a class="nav-link" href="#19-现有测试覆盖">19. 现有测试覆盖</a><a class="nav-link" href="#20-函数阅读索引">20. 函数阅读索引</a><a class="nav-link" href="#21-最短阅读路线">21. 最短阅读路线</a><a class="nav-link" href="#22-app-conference-js-完整方法调用图">22. app-conference.js 完整方法调用图</a>
+      
+        <a class="nav-link" href="index.html">
+          学习指南首页
+        </a>
+        <a class="nav-link" href="01-sip-webrtc-basics.html">
+          1 SIP 与 WebRTC 基础
+        </a>
+        <a class="nav-link" href="02-quick-start.html">
+          2 快速完成第一通电话
+        </a>
+        <a class="nav-link" href="03-call-lifecycle.html">
+          3 注册、通话与事件时序
+        </a>
+        <a class="nav-link" href="04-media-features.html">
+          4 AiNS、虚拟背景与混流
+        </a>
+        <a class="nav-link" href="05-call-statistics.html">
+          5 通话质量统计
+        </a>
+        <a class="nav-link" href="06-api-reference.html">
+          6 SDK API 参考
+        </a>
+        <a class="nav-link" href="07-upgrade-guide.html">
+          7 旧版功能升级指南
+        </a>
+        <a class="nav-link" href="08-demo-guide.html">
+          8 Base JS Demo 学习与验证
+        </a>
+        <a class="nav-link active" href="app-conference-guide.html">
+          三方会议 Demo 实现详解
+        </a>
     </section>
   </aside>
   <div class="sidebar-backdrop" hidden></div>
@@ -41,7 +73,7 @@
 <li>普通 C 与静默 C 的呼叫、接听和媒体路由有什么区别。</li>
 <li>B、C 分别会听到什么、看到什么，如何避免音频回送。</li>
 <li>来电如何分配 B/C 角色，什么情况下会被拒绝或自动接听。</li>
-<li>定向屏幕共享为什么要单独增加 video m-line，并通过 SIP INFO 传递 MID。</li>
+<li>定向屏幕共享如何通过 SDK <code>RTCSession.share()</code> 为每条会话发送独立辅流。</li>
 <li>成员挂断或 composer 失败后，代码如何恢复为仍可继续的点对点通话。</li>
 </ul>
 <blockquote>
@@ -161,7 +193,7 @@ flowchart TB
 <td>轨道组合、替换和屏幕采集</td>
 </tr>
 </tbody></table></div>
-<p>会议模块并不自行监听 UA。<code>initializeDemoMode(&#39;conference&#39;)</code> 在 <a href="../../../demo/base-js/js/app.js#L2788"><code>app.js</code></a> 中创建唯一的 <code>CRTC.UA</code>，并将其 <code>newRTCSession</code> 事件绑定到 <code>handleConferenceNewRTCSession</code>。因此同一页面只会进入点对点处理器或会议处理器中的一个。</p>
+<p>会议模块并不自行监听 UA。<code>initializeDemoMode(&#39;conference&#39;)</code> 在 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a> 中创建唯一的 <code>CRTC.UA</code>，并将其 <code>newRTCSession</code> 事件绑定到 <code>handleConferenceNewRTCSession</code>。因此同一页面只会进入点对点处理器或会议处理器中的一个。</p>
 <h2 id="3-角色-容量和两种-c">3. 角色、容量和两种 C<a class="heading-anchor" href="#3-角色-容量和两种-c" aria-label="链接到本节">#</a></h2>
 <h3 id="3-1-角色定义">3.1 角色定义<a class="heading-anchor" href="#3-1-角色定义" aria-label="链接到本节">#</a></h3>
 <div class="table-wrap"><table>
@@ -346,8 +378,8 @@ flowchart TB
 </tr>
 <tr>
 <td>屏幕共享</td>
-<td><code>screenTransceiver</code>、<code>screenSender</code>、<code>screenMid</code>、<code>screenActive</code>、<code>screenTarget</code></td>
-<td>每路 PeerConnection 的共享 m-line 状态</td>
+<td><code>screenActive</code>、<code>screenTarget</code></td>
+<td>页面记录的共享目标和活跃状态；sender/MID 由 SDK 管理</td>
 </tr>
 <tr>
 <td>UI/统计</td>
@@ -741,33 +773,32 @@ flowchart TB
 <p>非当前选中 leg 的统计只缓存到 <code>latestStatsReport</code>，切换成员后立即渲染，不需要等待下一次统计事件。</p>
 <h2 id="11-定向屏幕共享">11. 定向屏幕共享<a class="heading-anchor" href="#11-定向屏幕共享" aria-label="链接到本节">#</a></h2>
 <h3 id="11-1-为什么不用-bfcp">11.1 为什么不用 BFCP<a class="heading-anchor" href="#11-1-为什么不用-bfcp" aria-label="链接到本节">#</a></h3>
-<p>三方共享为每条目标 PeerConnection 自己增加第二条 video m-line，并通过 re-INVITE 协商，因此 <code>buildConferenceExtraFeatures()</code> 会从 <code>extraFeatures</code> 中移除 BFCP，避免 SDK 再插入无用的 BFCP 占位轨。</p>
+<p>三方模式同时维护 A-B、A-C 两条独立 PeerConnection。每条会话都通过 <code>RTCSession.share()</code> 的 <code>auxiliary</code> 模式增加自己的第二条 video m-line，不需要 BFCP floor 控制，因此 <code>buildConferenceExtraFeatures()</code> 会从 <code>extraFeatures</code> 中移除 BFCP，避免同时启用两套共享机制。</p>
 <h3 id="11-2-发起流程">11.2 发起流程<a class="heading-anchor" href="#11-2-发起流程" aria-label="链接到本节">#</a></h3>
 <p>用户先在成员列表选择一个或两个共享目标，再点击“开始共享”：</p>
 <div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">startConferenceScreenShare()
   → getDisplayMedia(video: max 1920x1080 @ 15fps, audio: false)
   → contentHint = &#39;detail&#39;
-  → 对每个 screenTarget 顺序执行 shareConferenceScreenToLeg()
-    → 有可复用 screenSender + screenMid：replaceTrack(screenTrack)
-    → 否则 connection.addTransceiver(screenTrack, sendonly)
-    → session.renegotiate({ useUpdate: false, terminateOnFailure: false })
-    → 等待 transceiver.mid
-    → SIP INFO: { event: &#39;screen-share&#39;, action: &#39;start&#39;, mid }
+  → 对每个 screenTarget 调用 session.share(&#39;screen&#39;, ..., options)
+    → mode: &#39;auxiliary&#39;
+    → mediaStream: 同一个 screenStream
+    → stopStreamOnUnShare: false
 </code></pre>
-</div><p><code>renegotiateConferenceScreen()</code> 有两段超时：</p>
+</div><p>Demo 只负责选择目标、复用屏幕流、本地预览和部分失败提示。以下细节由 SDK 处理：</p>
 <ul>
-<li>最长 10 秒等待会话可发起 re-INVITE，每 100ms 重试。</li>
-<li>re-INVITE 发起后最长 15 秒等待回调。</li>
+<li>复用已有 sender/MID，或创建 <code>sendonly</code> transceiver。</li>
+<li>发起 <code>terminateOnFailure:false</code> 的 re-INVITE。</li>
+<li>等待 MID 并发送 <code>screen-share/start</code> INFO。</li>
+<li>复用失败时回退到新 transceiver。</li>
+<li>重协商失败时仅回滚共享，不终止原通话。</li>
 </ul>
-<p>协商完成后再最多等待 3 秒取得 MID。</p>
-<p>如果复用旧 sender 的 <code>replaceTrack()</code> 因编码范围不兼容而失败，代码会先把旧 sender 置空，再创建新 transceiver 和新 m-line。单个目标失败不会阻止其他目标继续；只要至少一个成功，共享就保留。</p>
+<p>单个目标失败不会阻止其他目标继续；只要至少一个 <code>session.share()</code> 成功，共享就保留。外部传入的 <code>screenStream</code> 不归任何单条 RTCSession 所有，避免 B 挂断时误停仍发送给 C 的屏幕源。</p>
 <div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">sequenceDiagram
   autonumber
   actor User as A 端用户
   participant Conf as 会议逻辑
   participant Browser as 媒体 API
-  participant PC as 目标 PC
-  participant Session as 目标会话
+  participant Session as RTCSession
   participant Remote as B/C 页面
 
   User-&gt;&gt;Conf: 选择目标并点击“开始共享”
@@ -775,43 +806,33 @@ flowchart TB
   Browser--&gt;&gt;Conf: screenStream / screenTrack
 
   loop 每个 screenTarget
-    alt 已有可复用 screenSender + MID
-      Conf-&gt;&gt;PC: sender.replaceTrack(screenTrack)
-    else 首次共享或复用失败
-        Conf-&gt;&gt;PC: addTransceiver&lt;br/&gt;(screenTrack, sendonly)
-        Conf-&gt;&gt;Session: renegotiate&lt;br/&gt;(useUpdate: false)
-      Session--&gt;&gt;Conf: re-INVITE 完成
-      Conf-&gt;&gt;PC: 等待 transceiver.mid
-      PC--&gt;&gt;Conf: MID
-    end
-    Conf-&gt;&gt;Session: sendInfo(screen-share/start, MID)
-    Session--&gt;&gt;Remote: SIP INFO
-    PC--&gt;&gt;Remote: 共享 video track
-    Note over Remote: INFO 与 track 可任意先后到达&lt;br/&gt;按 MID 缓存并匹配
-    Remote-&gt;&gt;Remote: 渲染到 #remoteVideo2
+    Conf-&gt;&gt;Session: share(screen, auxiliary, screenStream)
+    Note over Session: SDK 创建/复用 sender&lt;br/&gt;重协商并通知 MID
+    Session--&gt;&gt;Conf: Promise resolve / reject
+    Session--&gt;&gt;Remote: 共享轨 + screen-share INFO
+    Remote-&gt;&gt;Remote: SDK 匹配 MID 后触发 remoteShared
   end
 
   User-&gt;&gt;Conf: 点击“停止共享”
-  Conf-&gt;&gt;Session: sendInfo(screen-share/stop)
-  Conf-&gt;&gt;PC: sender.replaceTrack(null)
-  Session--&gt;&gt;Remote: 清除共享画面</pre></div>
+  Conf-&gt;&gt;Session: 对活跃目标调用 unShare()
+  Session--&gt;&gt;Remote: remoteUnShared
+  Conf-&gt;&gt;Browser: 统一停止 screenStream</pre></div>
 <h3 id="11-3-接收端如何识别共享轨">11.3 接收端如何识别共享轨<a class="heading-anchor" href="#11-3-接收端如何识别共享轨" aria-label="链接到本节">#</a></h3>
-<p>B/C 使用点对点模式的 <a href="../../../demo/base-js/js/app.js#L500"><code>app.js</code></a> 接收共享：</p>
+<p>B/C 的 <code>RTCSession</code> 内部同时监听 INFO 和 PeerConnection <code>track</code>：</p>
 <ol>
 <li><code>track</code> 事件按 transceiver MID 缓存所有远端视频轨。</li>
 <li><code>newInfo</code> 收到 <code>screen-share/start</code> 后记录共享 MID。</li>
 <li>若 INFO 先到，等待轨到达；若轨先到，等待 INFO 到达。</li>
-<li>MID 与轨匹配后，将该轨渲染到 <code>#remoteVideo2</code> 并打开共享浮层。</li>
-<li><code>screen-share/stop</code> 或轨 <code>ended</code> 时清空共享画面。</li>
+<li>MID 与轨匹配后触发 <code>remoteShared</code>。</li>
+<li><code>screen-share/stop</code> 或轨 <code>ended</code> 时触发 <code>remoteUnShared</code>。</li>
 </ol>
-<p>这套双向缓存解决了 SIP INFO 与 WebRTC track 到达顺序不固定的问题。</p>
+<p><a href="../../../demo/base-js/js/app.js"><code>app.js</code></a> 只监听这两个 SDK 事件更新 <code>#remoteVideo2</code>，不再读取 MID 或直接监听共享 track。</p>
 <h3 id="11-4-停止流程">11.4 停止流程<a class="heading-anchor" href="#11-4-停止流程" aria-label="链接到本节">#</a></h3>
 <p><code>stopConferenceScreenShare()</code> 对所有 <code>screenActive</code> leg：</p>
 <ol>
-<li>发送 <code>screen-share/stop</code> INFO。</li>
-<li><code>screenSender.replaceTrack(null)</code> 停止发送，但保留 m-line 供下次复用。</li>
+<li>调用对应 <code>session.unShare()</code>，SDK 负责 INFO 和 sender 清理。</li>
 <li>清空本地共享预览和弹窗。</li>
-<li>如果不是由系统共享按钮触发的 track <code>ended</code>，主动停止采集流中的轨。</li>
+<li>如果不是由系统共享按钮触发的 track <code>ended</code>，统一停止共享流。</li>
 </ol>
 <p>共享过程中不能改变目标；UI 会禁用成员的共享目标按钮。</p>
 <h2 id="12-挂断-清理与失败降级">12. 挂断、清理与失败降级<a class="heading-anchor" href="#12-挂断-清理与失败降级" aria-label="链接到本节">#</a></h2>
@@ -921,7 +942,7 @@ flowchart TB
 </tbody></table></div>
 <p><code>isConferenceHeaderEnabled()</code> 接受 <code>true</code>、<code>1</code>、<code>yes</code>，忽略大小写和分号后的参数。</p>
 <h3 id="13-2-屏幕共享-info">13.2 屏幕共享 INFO<a class="heading-anchor" href="#13-2-屏幕共享-info" aria-label="链接到本节">#</a></h3>
-<p>内容类型为 <code>application/json</code>：</p>
+<p>该协议由 <code>RTCSession.share()</code> 内部发送和消费，Demo 不直接构造。内容类型为 <code>application/json</code>：</p>
 <div class="code-block"><div class="code-toolbar"><span>json</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-json">{
   &quot;event&quot;: &quot;screen-share&quot;,
   &quot;action&quot;: &quot;start&quot;,
@@ -987,19 +1008,19 @@ flowchart TB
 </tr>
 <tr>
 <td><code>sender.replaceTrack()</code></td>
-<td>切换混音、fallback 或屏幕共享轨</td>
+<td>切换混音或 fallback 轨；共享 sender 由 SDK 管理</td>
 </tr>
 <tr>
-<td><code>connection.addTransceiver()</code></td>
-<td>为定向屏幕共享新增 sendonly video m-line</td>
+<td><code>session.share(&#39;screen&#39;, ..., { mode: &#39;auxiliary&#39; })</code></td>
+<td>向一条会话发送独立屏幕辅流</td>
 </tr>
 <tr>
-<td><code>session.renegotiate()</code></td>
-<td>通过完整 re-INVITE 协商屏幕 m-line</td>
+<td><code>session.unShare()</code></td>
+<td>停止该会话的共享，保留可复用 m-line</td>
 </tr>
 <tr>
 <td><code>session.sendInfo()</code></td>
-<td>发送共享 start/stop 和取消呼转信息</td>
+<td>Demo 只用它发送取消呼转信息；共享 INFO 由 SDK 内部发送</td>
 </tr>
 <tr>
 <td><code>session.mute/unmute/hold/unhold()</code></td>
@@ -1088,11 +1109,10 @@ flowchart TB
 <h3 id="18-3-屏幕共享不显示">18.3 屏幕共享不显示<a class="heading-anchor" href="#18-3-屏幕共享不显示" aria-label="链接到本节">#</a></h3>
 <ol>
 <li>A 端确认目标 leg 已 <code>confirmed</code> 且 <code>screenTarget=true</code>。</li>
-<li>检查 <code>addTransceiver()</code> 和 re-INVITE 是否成功。</li>
-<li>检查 <code>screenTransceiver.mid</code> 是否在 3 秒内产生。</li>
-<li>检查 SIP INFO 是否携带相同 MID。</li>
-<li>B/C 端检查 <code>newInfo</code> 与 <code>track</code> 两条路径是否都触发。</li>
-<li>检查 MID 对应 receiver track 是否 <code>live</code>，以及 <code>#remoteVideo2</code> 是否绑定成功。</li>
+<li>检查 <code>session.share()</code> Promise 是否成功以及 SDK 日志中的重协商错误。</li>
+<li>检查共享 video sender 是否存在 MID、轨道是否为 <code>live</code>。</li>
+<li>B/C 端检查是否触发 <code>remoteShared</code>，停止时是否触发 <code>remoteUnShared</code>。</li>
+<li>检查 <code>#remoteVideo2</code> 是否绑定了 <code>sharedStream.videoStream</code>。</li>
 </ol>
 <h3 id="18-4-b-挂断后-c-也没有媒体">18.4 B 挂断后 C 也没有媒体<a class="heading-anchor" href="#18-4-b-挂断后-c-也没有媒体" aria-label="链接到本节">#</a></h3>
 <ol>
@@ -1258,23 +1278,15 @@ flowchart TB
 </thead>
 <tbody><tr>
 <td><code>startConferenceScreenShare</code></td>
-<td>获取屏幕并向选中成员发送</td>
+<td>获取一次屏幕流，并对选中成员调用 SDK <code>share()</code></td>
 </tr>
 <tr>
-<td><code>shareConferenceScreenToLeg</code></td>
-<td>为单个 leg 复用/新建屏幕 sender</td>
-</tr>
-<tr>
-<td><code>renegotiateConferenceScreen</code></td>
-<td>发起并等待共享 re-INVITE</td>
-</tr>
-<tr>
-<td><code>sendConferenceScreenInfo</code></td>
-<td>通过 INFO 通知共享 MID 和动作</td>
+<td><code>getConferenceScreenTargetLegs</code></td>
+<td>取得已确认且被选为共享目标的 leg</td>
 </tr>
 <tr>
 <td><code>stopConferenceScreenShare</code></td>
-<td>停止所有目标的屏幕发送</td>
+<td>对活跃目标调用 SDK <code>unShare()</code> 并统一停止屏幕流</td>
 </tr>
 <tr>
 <td><code>cleanupConferenceLeg</code></td>
@@ -1509,7 +1521,7 @@ flowchart TB
   REFER --&gt; CURRENT
   CANCELREF --&gt; CURRENT</pre></div>
 <h3 id="22-6-定向屏幕共享完整调用图">22.6 定向屏幕共享完整调用图<a class="heading-anchor" href="#22-6-定向屏幕共享完整调用图" aria-label="链接到本节">#</a></h3>
-<p>图中既包含开始/停止共享，也包含 UI 目标筛选、sender 复用和首次 re-INVITE 协商。为避免开始、发送和停止三条路径互相穿插，同名函数节点可能在不同调用分支就近重复显示。</p>
+<p>图中展示 Demo 的多会话编排边界；sender 复用、re-INVITE、MID 和共享 INFO 均封装在 SDK <code>share/unShare</code> 内。</p>
 <div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">flowchart TB
   subgraph START_FLOW[&quot;1. 开始共享与目标筛选&quot;]
     direction LR
@@ -1518,27 +1530,26 @@ flowchart TB
     TARGETS --&gt; CONFIRMED_TARGETS[&quot;getConferenceConfirmedLegs()&quot;]
     START --&gt; UI_START[&quot;updateConferenceUi()&quot;]
     START -.-&gt;|&quot;已有共享&quot;| STOP_ENTRY[&quot;先调用 stopConferenceScreenShare()&quot;]
-    START -.-&gt;|&quot;每个目标&quot;| SHARE_ENTRY[&quot;调用 shareConferenceScreenToLeg()&quot;]
+    START --&gt; GDM[&quot;外部：getDisplayMedia()&quot;]
+    START -.-&gt;|&quot;每个目标&quot;| SHARE_ENTRY[&quot;session.share(screen, auxiliary)&quot;]
   end
 
-  subgraph SHARE_FLOW[&quot;2. 向单个目标发送共享&quot;]
+  subgraph SHARE_FLOW[&quot;2. SDK 负责单会话辅流&quot;]
     direction LR
-    SHARE[&quot;shareConferenceScreenToLeg()&quot;] -.-&gt;|&quot;可复用 sender&quot;| REPLACE[&quot;外部：screenSender.replaceTrack()&quot;]
-    SHARE -.-&gt;|&quot;首次或复用失败&quot;| RENEGO[&quot;renegotiateConferenceScreen()&quot;]
-    SHARE --&gt; WAITMID[&quot;waitForConferenceScreenMid()&quot;]
-    SHARE --&gt; INFO[&quot;sendConferenceScreenInfo()&quot;]
-    RENEGO -.-&gt;|&quot;SDK&quot;| SESSIONRE[&quot;外部：session.renegotiate()&quot;]
-    WAITMID -.-&gt;|&quot;WebRTC&quot;| MID[&quot;外部：screenTransceiver.mid&quot;]
-    INFO -.-&gt;|&quot;SDK&quot;| SIPINFO[&quot;外部：session.sendInfo()&quot;]
+    SHARE_ENTRY --&gt; SDK_SHARE[&quot;RTCSession._shareAuxiliaryScreen()&quot;]
+    SDK_SHARE --&gt; SENDER[&quot;复用/创建 sendonly sender&quot;]
+    SDK_SHARE --&gt; RENEGO[&quot;等待并发起 re-INVITE&quot;]
+    SDK_SHARE --&gt; MID[&quot;等待 transceiver.mid&quot;]
+    SDK_SHARE --&gt; INFO[&quot;发送 screen-share/start INFO&quot;]
   end
 
   subgraph STOP_FLOW[&quot;3. 停止共享与成员清理&quot;]
     direction LR
     CLEAN[&quot;cleanupConferenceLeg()&quot;] -.-&gt;|&quot;共享无活跃目标或最后成员结束&quot;| STOP[&quot;stopConferenceScreenShare()&quot;]
-    STOP --&gt; INFO_STOP[&quot;sendConferenceScreenInfo()&quot;]
+    STOP --&gt; UNSHARE[&quot;session.unShare()&quot;]
     STOP --&gt; UI_STOP[&quot;updateConferenceUi()&quot;]
-    STOP --&gt; REPLACE_STOP[&quot;外部：screenSender.replaceTrack()&quot;]
-    INFO_STOP -.-&gt;|&quot;SDK&quot;| SIPINFO_STOP[&quot;外部：session.sendInfo()&quot;]
+    UNSHARE --&gt; SDK_STOP[&quot;SDK 发送 stop INFO 并清空 sender&quot;]
+    STOP --&gt; CLOSE_STREAM[&quot;统一 closeMediaStream()&quot;]
     UI_STOP --&gt; TARGETS_STOP[&quot;getConferenceScreenTargetLegs()&quot;]
     TARGETS_STOP --&gt; CONFIRMED_STOP[&quot;getConferenceConfirmedLegs()&quot;]
   end
@@ -1612,7 +1623,7 @@ flowchart TB
 <tr>
 <td>屏幕共享没有第二路视频</td>
 <td>22.6</td>
-<td><code>shareConferenceScreenToLeg()</code></td>
+<td><code>startConferenceScreenShare()</code> 与 SDK <code>share()</code> 日志</td>
 </tr>
 <tr>
 <td>成员挂断后剩余会话没有恢复</td>
@@ -1621,125 +1632,13 @@ flowchart TB
 </tr>
 </tbody></table></div>
 
-      <p class="generated-note">本页由 <code>docs/app-conference-guide.md</code> 生成。</p>
     </article>
+    
     <nav class="page-toc" aria-label="本页目录">
       <h2>本页目录</h2>
       <a class="toc-depth-3" href="#图中标识" title="图中标识">图中标识</a><a class="toc-depth-2" href="#1-一句话理解整体设计" title="1. 一句话理解整体设计">1. 一句话理解整体设计</a><a class="toc-depth-2" href="#2-文件位置-加载顺序与模块边界" title="2. 文件位置、加载顺序与模块边界">2. 文件位置、加载顺序与模块边界</a><a class="toc-depth-2" href="#3-角色-容量和两种-c" title="3. 角色、容量和两种 C">3. 角色、容量和两种 C</a><a class="toc-depth-3" href="#3-1-角色定义" title="3.1 角色定义">3.1 角色定义</a><a class="toc-depth-3" href="#3-2-普通-c" title="3.2 普通 C">3.2 普通 C</a><a class="toc-depth-3" href="#3-3-静默-c" title="3.3 静默 C">3.3 静默 C</a><a class="toc-depth-2" href="#4-核心状态模型" title="4. 核心状态模型">4. 核心状态模型</a><a class="toc-depth-3" href="#4-1-页面级会议状态" title="4.1 页面级会议状态">4.1 页面级会议状态</a><a class="toc-depth-3" href="#4-2-每个成员的-leg" title="4.2 每个成员的 leg">4.2 每个成员的 leg</a><a class="toc-depth-2" href="#5-从页面初始化到新会话" title="5. 从页面初始化到新会话">5. 从页面初始化到新会话</a><a class="toc-depth-3" href="#5-1-选择三方模式" title="5.1 选择三方模式">5.1 选择三方模式</a><a class="toc-depth-3" href="#5-2-newrtcsession-准入逻辑" title="5.2 newRTCSession 准入逻辑">5.2 newRTCSession 准入逻辑</a><a class="toc-depth-2" href="#6-外呼调用逻辑" title="6. 外呼调用逻辑">6. 外呼调用逻辑</a><a class="toc-depth-3" href="#6-1-添加-b" title="6.1 添加 B">6.1 添加 B</a><a class="toc-depth-3" href="#6-2-添加普通-c" title="6.2 添加普通 C">6.2 添加普通 C</a><a class="toc-depth-3" href="#6-3-静默-c-从另一个页面呼叫-a" title="6.3 静默 C 从另一个页面呼叫 A">6.3 静默 C 从另一个页面呼叫 A</a><a class="toc-depth-2" href="#7-呼入与接听逻辑" title="7. 呼入与接听逻辑">7. 呼入与接听逻辑</a><a class="toc-depth-2" href="#8-三方媒体合成核心" title="8. 三方媒体合成核心">8. 三方媒体合成核心</a><a class="toc-depth-3" href="#8-1-slot-约定" title="8.1 slot 约定">8.1 slot 约定</a><a class="toc-depth-3" href="#8-2-合成触发和串行化" title="8.2 合成触发和串行化">8.2 合成触发和串行化</a><a class="toc-depth-3" href="#8-3-普通-c-同步" title="8.3 普通 C 同步">8.3 普通 C 同步</a><a class="toc-depth-3" href="#8-4-静默-c-同步" title="8.4 静默 C 同步">8.4 静默 C 同步</a><a class="toc-depth-3" href="#8-5-composer-与页面媒体效果" title="8.5 composer 与页面媒体效果">8.5 composer 与页面媒体效果</a><a class="toc-depth-2" href="#9-rtcsession-事件与媒体轨管理" title="9. RTCSession 事件与媒体轨管理">9. RTCSession 事件与媒体轨管理</a><a class="toc-depth-3" href="#9-1-会话事件" title="9.1 会话事件">9.1 会话事件</a><a class="toc-depth-3" href="#9-2-远端轨收集" title="9.2 远端轨收集">9.2 远端轨收集</a><a class="toc-depth-3" href="#9-3-页面预览" title="9.3 页面预览">9.3 页面预览</a><a class="toc-depth-2" href="#10-选中成员-通话控制和统计" title="10. 选中成员、通话控制和统计">10. 选中成员、通话控制和统计</a><a class="toc-depth-2" href="#11-定向屏幕共享" title="11. 定向屏幕共享">11. 定向屏幕共享</a><a class="toc-depth-3" href="#11-1-为什么不用-bfcp" title="11.1 为什么不用 BFCP">11.1 为什么不用 BFCP</a><a class="toc-depth-3" href="#11-2-发起流程" title="11.2 发起流程">11.2 发起流程</a><a class="toc-depth-3" href="#11-3-接收端如何识别共享轨" title="11.3 接收端如何识别共享轨">11.3 接收端如何识别共享轨</a><a class="toc-depth-3" href="#11-4-停止流程" title="11.4 停止流程">11.4 停止流程</a><a class="toc-depth-2" href="#12-挂断-清理与失败降级" title="12. 挂断、清理与失败降级">12. 挂断、清理与失败降级</a><a class="toc-depth-3" href="#12-1-单-leg-清理" title="12.1 单 leg 清理">12.1 单 leg 清理</a><a class="toc-depth-3" href="#12-2-不同挂断场景" title="12.2 不同挂断场景">12.2 不同挂断场景</a><a class="toc-depth-3" href="#12-3-为什么需要-fallback-克隆流" title="12.3 为什么需要 fallback 克隆流">12.3 为什么需要 fallback 克隆流</a><a class="toc-depth-3" href="#12-4-composer-同步失败" title="12.4 composer 同步失败">12.4 composer 同步失败</a><a class="toc-depth-2" href="#13-sip-头和页面内部协议" title="13. SIP 头和页面内部协议">13. SIP 头和页面内部协议</a><a class="toc-depth-3" href="#13-1-呼叫-接听头部" title="13.1 呼叫/接听头部">13.1 呼叫/接听头部</a><a class="toc-depth-3" href="#13-2-屏幕共享-info" title="13.2 屏幕共享 INFO">13.2 屏幕共享 INFO</a><a class="toc-depth-2" href="#14-refer-行为" title="14. REFER 行为">14. REFER 行为</a><a class="toc-depth-2" href="#15-主要-sdk-浏览器-api-调用表" title="15. 主要 SDK/浏览器 API 调用表">15. 主要 SDK/浏览器 API 调用表</a><a class="toc-depth-2" href="#16-ui-状态规则" title="16. UI 状态规则">16. UI 状态规则</a><a class="toc-depth-2" href="#17-设计限制与接入注意事项" title="17. 设计限制与接入注意事项">17. 设计限制与接入注意事项</a><a class="toc-depth-2" href="#18-排查问题的推荐顺序" title="18. 排查问题的推荐顺序">18. 排查问题的推荐顺序</a><a class="toc-depth-3" href="#18-1-c-无法加入" title="18.1 C 无法加入">18.1 C 无法加入</a><a class="toc-depth-3" href="#18-2-b-c-没有声音" title="18.2 B/C 没有声音">18.2 B/C 没有声音</a><a class="toc-depth-3" href="#18-3-屏幕共享不显示" title="18.3 屏幕共享不显示">18.3 屏幕共享不显示</a><a class="toc-depth-3" href="#18-4-b-挂断后-c-也没有媒体" title="18.4 B 挂断后 C 也没有媒体">18.4 B 挂断后 C 也没有媒体</a><a class="toc-depth-2" href="#19-现有测试覆盖" title="19. 现有测试覆盖">19. 现有测试覆盖</a><a class="toc-depth-2" href="#20-函数阅读索引" title="20. 函数阅读索引">20. 函数阅读索引</a><a class="toc-depth-3" href="#20-1-入口与会话" title="20.1 入口与会话">20.1 入口与会话</a><a class="toc-depth-3" href="#20-2-composer-与媒体" title="20.2 composer 与媒体">20.2 composer 与媒体</a><a class="toc-depth-3" href="#20-3-远端轨-预览和统计" title="20.3 远端轨、预览和统计">20.3 远端轨、预览和统计</a><a class="toc-depth-3" href="#20-4-屏幕-控制和清理" title="20.4 屏幕、控制和清理">20.4 屏幕、控制和清理</a><a class="toc-depth-2" href="#21-最短阅读路线" title="21. 最短阅读路线">21. 最短阅读路线</a><a class="toc-depth-2" href="#22-app-conference-js-完整方法调用图" title="22. app-conference.js 完整方法调用图">22. app-conference.js 完整方法调用图</a><a class="toc-depth-3" href="#22-1-页面-ua-与会议总入口" title="22.1 页面、UA 与会议总入口">22.1 页面、UA 与会议总入口</a><a class="toc-depth-3" href="#22-2-呼叫-来电分类与接听调用图" title="22.2 呼叫、来电分类与接听调用图">22.2 呼叫、来电分类与接听调用图</a><a class="toc-depth-3" href="#22-3-rtcsession-事件-远端轨与预览调用图" title="22.3 RTCSession 事件、远端轨与预览调用图">22.3 RTCSession 事件、远端轨与预览调用图</a><a class="toc-depth-3" href="#22-4-composer-子混音-同步与降级调用图" title="22.4 composer、子混音、同步与降级调用图">22.4 composer、子混音、同步与降级调用图</a><a class="toc-depth-3" href="#22-5-当前成员-统计面板与公共控制调用图" title="22.5 当前成员、统计面板与公共控制调用图">22.5 当前成员、统计面板与公共控制调用图</a><a class="toc-depth-3" href="#22-6-定向屏幕共享完整调用图" title="22.6 定向屏幕共享完整调用图">22.6 定向屏幕共享完整调用图</a><a class="toc-depth-3" href="#22-7-挂断-资源清理与-refer-调用图" title="22.7 挂断、资源清理与 REFER 调用图">22.7 挂断、资源清理与 REFER 调用图</a><a class="toc-depth-3" href="#22-8-如何沿调用图定位问题" title="22.8 如何沿调用图定位问题">22.8 如何沿调用图定位问题</a>
     </nav>
   </main>
   <button type="button" class="back-to-top" aria-label="回到顶部">↑</button>
-
-  <script>
-  addEventListener('DOMContentLoaded', () => {
-    const root = document.documentElement;
-    const navButton = document.querySelector('.nav-toggle');
-    const tocButton = document.querySelector('.toc-toggle');
-    const sidebar = document.querySelector('.sidebar');
-    const backdrop = document.querySelector('.sidebar-backdrop');
-    const topButton = document.querySelector('.back-to-top');
-    const desktopNav = matchMedia('(min-width: 861px)');
-
-    const currentTheme = () => root.dataset.theme ||
-      (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-
-    document.querySelector('.theme-toggle')?.addEventListener('click', () => {
-      root.dataset.theme = currentTheme() === 'dark' ? 'light' : 'dark';
-      try { localStorage.setItem('crtc-conference-guide-theme', root.dataset.theme); } catch (_) {}
-      if (document.querySelector('.mermaid[data-processed="true"]')) location.reload();
-    });
-
-    function setMobileNav(open) {
-      sidebar?.classList.toggle('open', open);
-      if (backdrop) backdrop.hidden = !open;
-      navButton?.setAttribute('aria-expanded', String(open));
-    }
-
-    function syncNavMode() {
-      if (desktopNav.matches) {
-        sidebar?.classList.remove('open');
-        if (backdrop) backdrop.hidden = true;
-        navButton?.setAttribute('aria-expanded', String(!document.body.classList.contains('sidebar-collapsed')));
-      } else {
-        document.body.classList.remove('sidebar-collapsed');
-        setMobileNav(false);
-      }
-    }
-
-    navButton?.addEventListener('click', () => {
-      if (desktopNav.matches) document.body.classList.toggle('sidebar-collapsed');
-      else setMobileNav(!sidebar?.classList.contains('open'));
-      syncNavMode();
-    });
-    backdrop?.addEventListener('click', () => setMobileNav(false));
-    sidebar?.addEventListener('click', () => { if (!desktopNav.matches) setMobileNav(false); });
-    desktopNav.addEventListener?.('change', syncNavMode);
-    syncNavMode();
-
-    tocButton?.addEventListener('click', () => {
-      const collapsed = document.body.classList.toggle('toc-collapsed');
-      tocButton.setAttribute('aria-expanded', String(!collapsed));
-    });
-
-    document.querySelectorAll('.copy-code').forEach((button) => {
-      button.addEventListener('click', async () => {
-        const code = button.closest('.code-block')?.querySelector('code')?.textContent || '';
-        try {
-          await navigator.clipboard.writeText(code);
-          button.textContent = '已复制';
-          setTimeout(() => { button.textContent = '复制'; }, 1200);
-        } catch (_) { button.textContent = '复制失败'; }
-      });
-    });
-
-    document.querySelectorAll('.expand-diagram').forEach((button) => {
-      button.addEventListener('click', () => {
-        const block = button.closest('.diagram-block');
-        const expanded = !block.classList.contains('expanded');
-        document.querySelectorAll('.diagram-block.expanded').forEach((item) => item.classList.remove('expanded'));
-        block.classList.toggle('expanded', expanded);
-        button.textContent = expanded ? '关闭放大' : '放大查看';
-        button.setAttribute('aria-expanded', String(expanded));
-        document.body.classList.toggle('diagram-open', expanded);
-      });
-    });
-
-    document.addEventListener('keydown', (event) => {
-      if (event.key !== 'Escape') return;
-      const block = document.querySelector('.diagram-block.expanded');
-      if (!block) return;
-      block.classList.remove('expanded');
-      block.querySelector('.expand-diagram').textContent = '放大查看';
-      document.body.classList.remove('diagram-open');
-    });
-
-    addEventListener('scroll', () => topButton?.classList.toggle('visible', scrollY > 600), { passive: true });
-    topButton?.addEventListener('click', () => scrollTo({ top: 0, behavior: 'smooth' }));
-
-    if (window.mermaid) {
-      window.mermaid.initialize({
-        startOnLoad: true,
-        securityLevel: 'strict',
-        theme: currentTheme() === 'dark' ? 'dark' : 'default',
-        flowchart: {
-          htmlLabels: true,
-          useMaxWidth: true,
-          curve: 'basis',
-          subGraphTitleMargin: { top: 0, bottom: 20 },
-          nodeSpacing: 30,
-          rankSpacing: 82
-        },
-        sequence: {
-          useMaxWidth: true,
-          wrap: true,
-          diagramMarginX: 8,
-          actorMargin: 24,
-          width: 110,
-          messageMargin: 42
-        }
-      });
-    }
-  });
-  </script>
 </body>
 </html>

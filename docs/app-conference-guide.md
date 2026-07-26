@@ -7,7 +7,7 @@
 - 普通 C 与静默 C 的呼叫、接听和媒体路由有什么区别。
 - B、C 分别会听到什么、看到什么，如何避免音频回送。
 - 来电如何分配 B/C 角色，什么情况下会被拒绝或自动接听。
-- 定向屏幕共享为什么要单独增加 video m-line，并通过 SIP INFO 传递 MID。
+- 定向屏幕共享如何通过 SDK `RTCSession.share()` 为每条会话发送独立辅流。
 - 成员挂断或 composer 失败后，代码如何恢复为仍可继续的点对点通话。
 
 > 本文针对当前源码版本。`app-conference.js` 是 Demo 层实现，不是 SDK 内置的会议服务器或 MCU/SFU 功能。
@@ -84,7 +84,7 @@ flowchart TB
 | CRTC SDK | `CRTC.UA`、`RTCSession`、`CRTC.Utils.getStreams()`、`closeMediaStream()` | SIP 会话、WebRTC 和资源释放 |
 | 浏览器 API | `MediaStream`、`RTCPeerConnection`、`RTCRtpSender`、`getDisplayMedia()` | 轨道组合、替换和屏幕采集 |
 
-会议模块并不自行监听 UA。`initializeDemoMode('conference')` 在 [`app.js`](../demo/base-js/js/app.js#L2788) 中创建唯一的 `CRTC.UA`，并将其 `newRTCSession` 事件绑定到 `handleConferenceNewRTCSession`。因此同一页面只会进入点对点处理器或会议处理器中的一个。
+会议模块并不自行监听 UA。`initializeDemoMode('conference')` 在 [`app.js`](../demo/base-js/js/app.js) 中创建唯一的 `CRTC.UA`，并将其 `newRTCSession` 事件绑定到 `handleConferenceNewRTCSession`。因此同一页面只会进入点对点处理器或会议处理器中的一个。
 
 ## 3. 角色、容量和两种 C
 
@@ -201,7 +201,7 @@ flowchart TB
 | 方向/生命周期 | `localDirection`、`silent`、`confirmed`、`answering`、`answerTimer`、`signalingStage`、`autoAnswer`、`ended` | 媒体方向、静默标志和会话阶段 |
 | 远端媒体 | `remoteMainStream`、`remoteMainAudioTrack`、`remoteMainVideoTrack`、`audioElement` | 收集并播放远端主音视频 |
 | composer/降级 | `original*Sender`、`original*Track`、`fallbackLocalStream`、`normalComposerHostId`、`composerSourceStream`、`conferenceAudioStream` | 合成、sender 替换和失败恢复 |
-| 屏幕共享 | `screenTransceiver`、`screenSender`、`screenMid`、`screenActive`、`screenTarget` | 每路 PeerConnection 的共享 m-line 状态 |
+| 屏幕共享 | `screenActive`、`screenTarget` | 页面记录的共享目标和活跃状态；sender/MID 由 SDK 管理 |
 | UI/统计 | `trackListenerAttached`、`latestStatsReport` | 防重复监听和保存最新统计报告 |
 
 `originalAudioTrack`/`originalVideoTrack` 只在第一次发现 sender 时保存。后续即使 sender 已被 `replaceTrack()` 替换成混音轨，也不会覆盖原始快照，否则失败时无法恢复。
@@ -554,7 +554,7 @@ stateDiagram-v2
 
 ### 11.1 为什么不用 BFCP
 
-三方共享为每条目标 PeerConnection 自己增加第二条 video m-line，并通过 re-INVITE 协商，因此 `buildConferenceExtraFeatures()` 会从 `extraFeatures` 中移除 BFCP，避免 SDK 再插入无用的 BFCP 占位轨。
+三方模式同时维护 A-B、A-C 两条独立 PeerConnection。每条会话都通过 `RTCSession.share()` 的 `auxiliary` 模式增加自己的第二条 video m-line，不需要 BFCP floor 控制，因此 `buildConferenceExtraFeatures()` 会从 `extraFeatures` 中移除 BFCP，避免同时启用两套共享机制。
 
 ### 11.2 发起流程
 
@@ -564,22 +564,21 @@ stateDiagram-v2
 startConferenceScreenShare()
   → getDisplayMedia(video: max 1920x1080 @ 15fps, audio: false)
   → contentHint = 'detail'
-  → 对每个 screenTarget 顺序执行 shareConferenceScreenToLeg()
-    → 有可复用 screenSender + screenMid：replaceTrack(screenTrack)
-    → 否则 connection.addTransceiver(screenTrack, sendonly)
-    → session.renegotiate({ useUpdate: false, terminateOnFailure: false })
-    → 等待 transceiver.mid
-    → SIP INFO: { event: 'screen-share', action: 'start', mid }
+  → 对每个 screenTarget 调用 session.share('screen', ..., options)
+    → mode: 'auxiliary'
+    → mediaStream: 同一个 screenStream
+    → stopStreamOnUnShare: false
 ```
 
-`renegotiateConferenceScreen()` 有两段超时：
+Demo 只负责选择目标、复用屏幕流、本地预览和部分失败提示。以下细节由 SDK 处理：
 
-- 最长 10 秒等待会话可发起 re-INVITE，每 100ms 重试。
-- re-INVITE 发起后最长 15 秒等待回调。
+- 复用已有 sender/MID，或创建 `sendonly` transceiver。
+- 发起 `terminateOnFailure:false` 的 re-INVITE。
+- 等待 MID 并发送 `screen-share/start` INFO。
+- 复用失败时回退到新 transceiver。
+- 重协商失败时仅回滚共享，不终止原通话。
 
-协商完成后再最多等待 3 秒取得 MID。
-
-如果复用旧 sender 的 `replaceTrack()` 因编码范围不兼容而失败，代码会先把旧 sender 置空，再创建新 transceiver 和新 m-line。单个目标失败不会阻止其他目标继续；只要至少一个成功，共享就保留。
+单个目标失败不会阻止其他目标继续；只要至少一个 `session.share()` 成功，共享就保留。外部传入的 `screenStream` 不归任何单条 RTCSession 所有，避免 B 挂断时误停仍发送给 C 的屏幕源。
 
 ```mermaid
 sequenceDiagram
@@ -587,8 +586,7 @@ sequenceDiagram
   actor User as A 端用户
   participant Conf as 会议逻辑
   participant Browser as 媒体 API
-  participant PC as 目标 PC
-  participant Session as 目标会话
+  participant Session as RTCSession
   participant Remote as B/C 页面
 
   User->>Conf: 选择目标并点击“开始共享”
@@ -596,48 +594,38 @@ sequenceDiagram
   Browser-->>Conf: screenStream / screenTrack
 
   loop 每个 screenTarget
-    alt 已有可复用 screenSender + MID
-      Conf->>PC: sender.replaceTrack(screenTrack)
-    else 首次共享或复用失败
-        Conf->>PC: addTransceiver<br/>(screenTrack, sendonly)
-        Conf->>Session: renegotiate<br/>(useUpdate: false)
-      Session-->>Conf: re-INVITE 完成
-      Conf->>PC: 等待 transceiver.mid
-      PC-->>Conf: MID
-    end
-    Conf->>Session: sendInfo(screen-share/start, MID)
-    Session-->>Remote: SIP INFO
-    PC-->>Remote: 共享 video track
-    Note over Remote: INFO 与 track 可任意先后到达<br/>按 MID 缓存并匹配
-    Remote->>Remote: 渲染到 #remoteVideo2
+    Conf->>Session: share(screen, auxiliary, screenStream)
+    Note over Session: SDK 创建/复用 sender<br/>重协商并通知 MID
+    Session-->>Conf: Promise resolve / reject
+    Session-->>Remote: 共享轨 + screen-share INFO
+    Remote->>Remote: SDK 匹配 MID 后触发 remoteShared
   end
 
   User->>Conf: 点击“停止共享”
-  Conf->>Session: sendInfo(screen-share/stop)
-  Conf->>PC: sender.replaceTrack(null)
-  Session-->>Remote: 清除共享画面
+  Conf->>Session: 对活跃目标调用 unShare()
+  Session-->>Remote: remoteUnShared
+  Conf->>Browser: 统一停止 screenStream
 ```
 
 ### 11.3 接收端如何识别共享轨
 
-B/C 使用点对点模式的 [`app.js`](../demo/base-js/js/app.js#L500) 接收共享：
+B/C 的 `RTCSession` 内部同时监听 INFO 和 PeerConnection `track`：
 
 1. `track` 事件按 transceiver MID 缓存所有远端视频轨。
 2. `newInfo` 收到 `screen-share/start` 后记录共享 MID。
 3. 若 INFO 先到，等待轨到达；若轨先到，等待 INFO 到达。
-4. MID 与轨匹配后，将该轨渲染到 `#remoteVideo2` 并打开共享浮层。
-5. `screen-share/stop` 或轨 `ended` 时清空共享画面。
+4. MID 与轨匹配后触发 `remoteShared`。
+5. `screen-share/stop` 或轨 `ended` 时触发 `remoteUnShared`。
 
-这套双向缓存解决了 SIP INFO 与 WebRTC track 到达顺序不固定的问题。
+[`app.js`](../demo/base-js/js/app.js) 只监听这两个 SDK 事件更新 `#remoteVideo2`，不再读取 MID 或直接监听共享 track。
 
 ### 11.4 停止流程
 
 `stopConferenceScreenShare()` 对所有 `screenActive` leg：
 
-1. 发送 `screen-share/stop` INFO。
-2. `screenSender.replaceTrack(null)` 停止发送，但保留 m-line 供下次复用。
-3. 清空本地共享预览和弹窗。
-4. 如果不是由系统共享按钮触发的 track `ended`，主动停止采集流中的轨。
+1. 调用对应 `session.unShare()`，SDK 负责 INFO 和 sender 清理。
+2. 清空本地共享预览和弹窗。
+3. 如果不是由系统共享按钮触发的 track `ended`，统一停止共享流。
 
 共享过程中不能改变目标；UI 会禁用成员的共享目标按钮。
 
@@ -726,7 +714,7 @@ B 结束后，`restoreConferenceLegOriginalMedia(C, endedBId)` 使用克隆轨�
 
 ### 13.2 屏幕共享 INFO
 
-内容类型为 `application/json`：
+该协议由 `RTCSession.share()` 内部发送和消费，Demo 不直接构造。内容类型为 `application/json`：
 
 ```json
 {
@@ -763,10 +751,10 @@ B 结束后，`restoreConferenceLegOriginalMedia(C, endedBId)` 使用克隆轨�
 | `composer.getVideoStream()` | 取得稳定的合成视频轨 |
 | `composer.getAudioStream({ slots })` | 创建给 B/C 的定制音频子混音 |
 | `composer.releaseSubmixAudioStream()` | 释放对应 slots 的音频输出资源 |
-| `sender.replaceTrack()` | 切换混音、fallback 或屏幕共享轨 |
-| `connection.addTransceiver()` | 为定向屏幕共享新增 sendonly video m-line |
-| `session.renegotiate()` | 通过完整 re-INVITE 协商屏幕 m-line |
-| `session.sendInfo()` | 发送共享 start/stop 和取消呼转信息 |
+| `sender.replaceTrack()` | 切换混音或 fallback 轨；共享 sender 由 SDK 管理 |
+| `session.share('screen', ..., { mode: 'auxiliary' })` | 向一条会话发送独立屏幕辅流 |
+| `session.unShare()` | 停止该会话的共享，保留可复用 m-line |
+| `session.sendInfo()` | Demo 只用它发送取消呼转信息；共享 INFO 由 SDK 内部发送 |
 | `session.mute/unmute/hold/unhold()` | 当前选中成员的通话控制 |
 | `session.sendDTMF()` | 发送 RFC2833 DTMF |
 | `navigator.mediaDevices.getDisplayMedia()` | 获取 A 的屏幕轨 |
@@ -845,11 +833,10 @@ flowchart TB
 ### 18.3 屏幕共享不显示
 
 1. A 端确认目标 leg 已 `confirmed` 且 `screenTarget=true`。
-2. 检查 `addTransceiver()` 和 re-INVITE 是否成功。
-3. 检查 `screenTransceiver.mid` 是否在 3 秒内产生。
-4. 检查 SIP INFO 是否携带相同 MID。
-5. B/C 端检查 `newInfo` 与 `track` 两条路径是否都触发。
-6. 检查 MID 对应 receiver track 是否 `live`，以及 `#remoteVideo2` 是否绑定成功。
+2. 检查 `session.share()` Promise 是否成功以及 SDK 日志中的重协商错误。
+3. 检查共享 video sender 是否存在 MID、轨道是否为 `live`。
+4. B/C 端检查是否触发 `remoteShared`，停止时是否触发 `remoteUnShared`。
+5. 检查 `#remoteVideo2` 是否绑定了 `sharedStream.videoStream`。
 
 ### 18.4 B 挂断后 C 也没有媒体
 
@@ -925,11 +912,9 @@ flowchart TB
 
 | 函数 | 作用 |
 | --- | --- |
-| `startConferenceScreenShare` | 获取屏幕并向选中成员发送 |
-| `shareConferenceScreenToLeg` | 为单个 leg 复用/新建屏幕 sender |
-| `renegotiateConferenceScreen` | 发起并等待共享 re-INVITE |
-| `sendConferenceScreenInfo` | 通过 INFO 通知共享 MID 和动作 |
-| `stopConferenceScreenShare` | 停止所有目标的屏幕发送 |
+| `startConferenceScreenShare` | 获取一次屏幕流，并对选中成员调用 SDK `share()` |
+| `getConferenceScreenTargetLegs` | 取得已确认且被选为共享目标的 leg |
+| `stopConferenceScreenShare` | 对活跃目标调用 SDK `unShare()` 并统一停止屏幕流 |
 | `cleanupConferenceLeg` | 单 leg 完整资源清理和降级 |
 | `terminateConferenceLeg` | 挂断指定成员 |
 | `terminateConference` | 挂断全部成员并取消 pending |
@@ -1180,7 +1165,7 @@ flowchart TD
 
 ### 22.6 定向屏幕共享完整调用图
 
-图中既包含开始/停止共享，也包含 UI 目标筛选、sender 复用和首次 re-INVITE 协商。为避免开始、发送和停止三条路径互相穿插，同名函数节点可能在不同调用分支就近重复显示。
+图中展示 Demo 的多会话编排边界；sender 复用、re-INVITE、MID 和共享 INFO 均封装在 SDK `share/unShare` 内。
 
 ```mermaid
 flowchart TB
@@ -1191,27 +1176,26 @@ flowchart TB
     TARGETS --> CONFIRMED_TARGETS["getConferenceConfirmedLegs()"]
     START --> UI_START["updateConferenceUi()"]
     START -.->|"已有共享"| STOP_ENTRY["先调用 stopConferenceScreenShare()"]
-    START -.->|"每个目标"| SHARE_ENTRY["调用 shareConferenceScreenToLeg()"]
+    START --> GDM["外部：getDisplayMedia()"]
+    START -.->|"每个目标"| SHARE_ENTRY["session.share(screen, auxiliary)"]
   end
 
-  subgraph SHARE_FLOW["2. 向单个目标发送共享"]
+  subgraph SHARE_FLOW["2. SDK 负责单会话辅流"]
     direction LR
-    SHARE["shareConferenceScreenToLeg()"] -.->|"可复用 sender"| REPLACE["外部：screenSender.replaceTrack()"]
-    SHARE -.->|"首次或复用失败"| RENEGO["renegotiateConferenceScreen()"]
-    SHARE --> WAITMID["waitForConferenceScreenMid()"]
-    SHARE --> INFO["sendConferenceScreenInfo()"]
-    RENEGO -.->|"SDK"| SESSIONRE["外部：session.renegotiate()"]
-    WAITMID -.->|"WebRTC"| MID["外部：screenTransceiver.mid"]
-    INFO -.->|"SDK"| SIPINFO["外部：session.sendInfo()"]
+    SHARE_ENTRY --> SDK_SHARE["RTCSession._shareAuxiliaryScreen()"]
+    SDK_SHARE --> SENDER["复用/创建 sendonly sender"]
+    SDK_SHARE --> RENEGO["等待并发起 re-INVITE"]
+    SDK_SHARE --> MID["等待 transceiver.mid"]
+    SDK_SHARE --> INFO["发送 screen-share/start INFO"]
   end
 
   subgraph STOP_FLOW["3. 停止共享与成员清理"]
     direction LR
     CLEAN["cleanupConferenceLeg()"] -.->|"共享无活跃目标或最后成员结束"| STOP["stopConferenceScreenShare()"]
-    STOP --> INFO_STOP["sendConferenceScreenInfo()"]
+    STOP --> UNSHARE["session.unShare()"]
     STOP --> UI_STOP["updateConferenceUi()"]
-    STOP --> REPLACE_STOP["外部：screenSender.replaceTrack()"]
-    INFO_STOP -.->|"SDK"| SIPINFO_STOP["外部：session.sendInfo()"]
+    UNSHARE --> SDK_STOP["SDK 发送 stop INFO 并清空 sender"]
+    STOP --> CLOSE_STREAM["统一 closeMediaStream()"]
     UI_STOP --> TARGETS_STOP["getConferenceScreenTargetLegs()"]
     TARGETS_STOP --> CONFIRMED_STOP["getConferenceConfirmedLegs()"]
   end
@@ -1264,5 +1248,5 @@ flowchart TD
 | confirmed 后没有远端画面 | 22.3 | `attachConferenceTrackListener()` |
 | 三方声音路由错误或合成失败 | 22.4 | `syncConferenceComposer()` |
 | 统计或控制操作了错误成员 | 22.5 | `selectConferenceLeg()` |
-| 屏幕共享没有第二路视频 | 22.6 | `shareConferenceScreenToLeg()` |
+| 屏幕共享没有第二路视频 | 22.6 | `startConferenceScreenShare()` 与 SDK `share()` 日志 |
 | 成员挂断后剩余会话没有恢复 | 22.7 | `cleanupConferenceLeg()` |

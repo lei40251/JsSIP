@@ -422,8 +422,8 @@ if (currentSession && currentSession !== data.session)
 | `mode` | `{ mode: 'audio' \| 'video' }` | 通话模式升级或降级完成 | 更新媒体模式 UI |
 | `cameraChanged` | `{ videoStream }` | 摄像头切换完成 | 更新本地预览 |
 | `peerconnection:iceConnectionState` | ICE 状态字符串 | ICE 状态改变 | 显示连接恢复/失败信息 |
-| `remoteShared` | `{ sharedStream }` | 远端开始共享 | 播放共享视频流 |
-| `remoteUnShared` | 无 | 远端停止共享 | 清空共享区域 |
+| `remoteShared` | `{ sharedStream, mid?, track? }` | 远端开始 BFCP 或独立辅流共享 | 播放共享视频流 |
+| `remoteUnShared` | 无 | 远端停止共享或共享轨结束 | 清空共享区域 |
 | `mediaerror` | `{ type, mediastream }` | 轨道或流异常 | 提示设备/媒体问题 |
 | `mediaEffectsIssue` | `{ module, message, ... }` | AiNS、虚拟背景或混流异常/降级 | 保持通话，提示效果不可用 |
 | `stats:*` | 见第 5 章 | PC 建立后周期采样 | 更新质量面板 |

@@ -701,6 +701,18 @@ document.querySelector('#hold').onclick = function()
 
 远端通过 `remoteShared` 获得共享流，`remoteUnShared` 清空共享画面。
 
+三方模式仍只采集一次屏幕，但会把同一个 `MediaStream` 传给 B、C 各自的 `session.share()`：
+
+```js
+await leg.session.share('screen', null, null, {
+  mode                : 'auxiliary',
+  mediaStream         : screenStream,
+  stopStreamOnUnShare : false
+});
+```
+
+Demo 负责目标选择和统一停止 `screenStream`；SDK 负责每条会话的 sender、re-INVITE、MID 通知以及远端 `remoteShared/remoteUnShared` 事件。页面代码不应直接操作共享 transceiver。
+
 代码位置：`#screenShare`、`#formShare`、`#picShare`、`#videoShare`、`#stopShare` 以及带 `D` 的双流入口都在 [`app.js`](../../demo/base-js/js/app.js)。标准客户接入先参考不带 `D` 的方法；双流需要双方及网络侧能力支持。
 
 标准屏幕共享会保留 SDK 返回的 stream，并监听浏览器原生停止操作：

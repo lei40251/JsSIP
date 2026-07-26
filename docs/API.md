@@ -110,8 +110,8 @@ options
 | unhold()                                     | 恢复暂停的通话                                                      |
 | refer(options=null)                          | 呼转                                                                |
 | switchDevice('camera', 'deviceId')           | 切换设备; camera ：摄像头，deviceId：设备ID, 通过getCameras接口获取 |
-| share()                                      | 分享媒体（图片，视频，屏幕，页面元素）                              |
-| unshare()                                    | 取消分享                                                            |
+| share()                                      | 分享媒体；支持图片、视频、屏幕、页面元素及非 BFCP 独立辅流          |
+| unShare()                                    | 取消分享；辅流模式会同步清理独立共享 sender                         |
 | sendInfo()                                   | 发送INFO消息                                                        |
 | sendDTMF()                                   | 发送DTMF                                                            |
 | demoteToAudio(options = {}, done = ()=>{})<sup>4</sup>                              | 通话降级为音频模式                                                  |
@@ -177,8 +177,8 @@ options：
 | mode                                      | 通话模式变化，如：音频模式切换到视频模式或视频模式切换到音频模式                                                                    |
 | cameraChanged                             | 摄像头切换完成后触发                                                                                                                |
 | videoTrackState<sup>3</sup>               | 本端video状态变化事件，当video状态变化时触发                                                                                        |
-| remoteShared<sup>4</sup>               | 远端分享后触发                                                                                        |
-| remoteUnShared               | 远端停止分享后触发                                                                                        |
+| remoteShared<sup>4</sup>               | 远端 BFCP 或独立辅流分享后触发                                                                         |
+| remoteUnShared               | 远端停止分享或共享轨结束后触发                                                                          |
 
 标注 1：
 data 字段

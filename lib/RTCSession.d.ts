@@ -437,6 +437,54 @@ export interface RenegotiateOptions extends HoldOptions {
   terminateOnFailure?: boolean;
 }
 
+/** share() 支持的媒体类型；auxiliary 模式当前仅接受 screen。 */
+export type ShareType = 'screen' | 'html' | 'pic' | 'video';
+
+/**
+ * 不依赖 BFCP 的独立屏幕辅流参数。
+ *
+ * 该模式新增一条 sendonly video m-line，不替换摄像头轨。三方会议可将同一份
+ * MediaStream 传给多条 RTCSession，每条会话独立完成协商和远端状态通知。
+ */
+export interface AuxiliaryShareOptions {
+  /** 固定值；用于和历史 boolean dual 参数区分。 */
+  mode: 'auxiliary';
+  /**
+   * 复用已有屏幕流。适合多条 RTCSession 共用一次 getDisplayMedia 的结果；
+   * 传入后默认由调用方负责停止，单条会话 unShare() 不会影响其他会话。
+   */
+  mediaStream?: MediaStream;
+  /** 未传 mediaStream 时由 SDK 调用 getDisplayMedia 所使用的约束。 */
+  displayMediaConstraints?: {
+    video?: boolean | MediaTrackConstraints;
+    audio?: boolean | MediaTrackConstraints;
+  };
+  /**
+   * 是否在 unShare()/session close 时停止 MediaStream。
+   * 默认遵循“谁采集谁释放”：SDK 采集为 true，外部传入为 false。
+   */
+  stopStreamOnUnShare?: boolean;
+  /** 屏幕视频轨的 contentHint；默认 detail，优先保证桌面文字和 UI 清晰。 */
+  contentHint?: 'detail' | 'text' | 'motion' | '';
+}
+
+/** 与 BFCP remoteShared 保持一致的共享流结构。 */
+export interface SharedStreamSet {
+  /** 只包含共享视频轨，可直接绑定到 HTMLVideoElement.srcObject。 */
+  videoStream: MediaStream;
+  /** 完整共享媒体流；当前 auxiliary 模式与 videoStream 包含同一视频轨。 */
+  mediaStream: MediaStream;
+}
+
+/** 远端共享开始事件；BFCP 和 auxiliary 模式共用该类型。 */
+export interface RemoteSharedEvent {
+  sharedStream: SharedStreamSet;
+  /** auxiliary 模式的共享 m-line MID；普通渲染代码通常不需要读取。 */
+  mid?: string;
+  /** auxiliary 模式匹配到的原始远端视频轨。 */
+  track?: MediaStreamTrack;
+}
+
 // events
 export interface DTMF extends EventEmitter {
   tone: string;
@@ -605,6 +653,12 @@ export interface RTCSessionEventMap {
   'mode': ModeListener,
   'upgradeToVideo': AnyListener,
   'getusermediafailed': AnyListener;
+  /** SDK 调用 getDisplayMedia 失败或浏览器不支持屏幕采集。 */
+  'getdisplaymediafailed': AnyListener;
+  /** 远端 BFCP/auxiliary 共享轨已就绪，可开始渲染。 */
+  'remoteShared': (event: RemoteSharedEvent) => void;
+  /** 远端主动停止、共享轨 ended 或 BFCP 释放后触发。 */
+  'remoteUnShared': VoidFunction;
   'mediaEffectsIssue': (event: MediaEffectsIssueEvent) => void;
   /** RTCStatsMonitor 的兼容 report，由会话增加 stats: 前缀后转发。 */
   'stats:report': (report: RTCStatsMonitor.LegacyReport) => void;
@@ -691,9 +745,20 @@ export class RTCSession extends EventEmitter {
 
   switchDevice(type: string, deviceId: string): any;
 
-  share(type: string, id?: string, assembly?: any): void;
+  /**
+   * 分享媒体。第四个参数为 boolean 时保持历史 BFCP 行为；传入
+   * AuxiliaryShareOptions 时使用不替换摄像头的独立屏幕辅流。
+   */
+  share(
+    type: ShareType,
+    id?: string | null,
+    assembly?: any,
+    dualOrOptions?: boolean | AuxiliaryShareOptions,
+    skip?: boolean
+  ): Promise<MediaStream | void>;
 
-  unShare(): void;
+  /** 停止当前分享；auxiliary 模式可 await sender 和通知清理完成。 */
+  unShare(): void | Promise<void>;
 
   terminate(options?: TerminateOptions): void;
 

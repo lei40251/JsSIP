@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.5.20267232142
+ * CRTC v2.0.6-beta.20267261411
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -4371,7 +4371,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.5.405214464284 (Web)',
+  USER_AGENT: 'UA/2.0.6-beta.405214522822 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17626,7 +17626,7 @@ var debug = require('debug')('CRTC');
 var RTCStatsMonitor = require('./RTCStatsMonitor');
 var MediaEffectsComposer = require('./MediaEffectsComposer/MediaEffectsComposer');
 var MetaHumanClient = require('./MetaHumanClient');
-debug('version %s', '2.0.5.405214464284');
+debug('version %s', '2.0.6-beta.405214522822');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17667,7 +17667,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.5.405214464284';
+    return '2.0.6-beta.405214522822';
   }
 };
 },{"./Constants":30,"./Exceptions":35,"./Grammar":36,"./MediaEffectsComposer/MediaEffectsComposer":47,"./MetaHumanClient":59,"./NameAddrHeader":60,"./RTCStatsMonitor":70,"./UA":78,"./URI":79,"./Utils":80,"./WebSocketInterface":81,"debug":86}],38:[function(require,module,exports){
@@ -30674,6 +30674,41 @@ module.exports = class RTCSession extends EventEmitter {
     this._localShareRTPSender = null;
     this._localShareStream = new MediaStream();
     this._localShareStreamLocallyGenerated = false;
+    // 非 BFCP 辅流共享状态。
+    //
+    // 辅流模式不会替换摄像头 sender，而是为当前 RTCSession 单独协商一条
+    // sendonly video m-line。三方会议中每个成员对应一条 RTCSession，页面可将
+    // 同一个屏幕 MediaStream 交给多条会话发送，SDK 分别维护各自的 sender 和 MID。
+    // 停止共享时保留 transceiver/MID，下一次共享优先 replaceTrack 复用已有 m-line，
+    // 只有复用失败时才重新创建 transceiver，避免反复增加 SDP m-section。
+    this._auxiliaryShareTransceiver = null;
+    this._auxiliaryShareMid = null;
+    // active 表示已完成协商且已发送 start INFO；starting 表示仍在采集或协商中。
+    this._auxiliaryShareActive = false;
+    this._auxiliaryShareStarting = false;
+    // unShare() 可能发生在 getDisplayMedia/renegotiate 尚未完成时，用此标志让启动流程回滚。
+    this._auxiliaryShareCancelRequested = false;
+    // 标记 MediaStream 所有权：SDK 采集的流默认由 SDK 停止，外部传入的流默认不停止。
+    this._auxiliaryShareOwnsStream = false;
+    // 合并并发停止请求，避免重复发送 stop INFO 或重复 replaceTrack(null)。
+    this._auxiliaryShareStopPromise = null;
+    // 某些浏览器不会稳定触发 ended/inactive，因此事件监听之外再保留一个轮询兜底。
+    this._auxiliaryShareEndTimer = null;
+    this._auxiliaryShareBoundTrack = null;
+    this._auxiliaryShareTrackEndedHandler = null;
+    this._auxiliaryShareStreamInactiveHandler = null;
+
+    // 非 BFCP 远端辅流状态。
+    //
+    // SIP INFO 负责说明“哪个 MID 是屏幕共享”，RTCPeerConnection track 事件负责
+    // 提供真正的 MediaStreamTrack。二者到达顺序不固定，因此必须按 MID 分别缓存，
+    // 只有 MID 和 live track 都具备时才向接入方触发 remoteShared。
+    this._remoteAuxiliaryShareMid = null;
+    this._remoteAuxiliaryShareTracks = new Map();
+    // 防止同一个 track 因多次 track/unmute 处理而重复绑定 ended 监听器。
+    this._remoteAuxiliaryShareBoundTracks = new Set();
+    // 用于抑制同一条共享轨重复触发 remoteShared。
+    this._remoteAuxiliaryShareActiveTrack = null;
 
     // 本地摄像头
     this._localCameras = [];
@@ -31985,6 +32020,9 @@ module.exports = class RTCSession extends EventEmitter {
         var next = false;
         this._connection.getSenders().find(s => {
           logger.debug(`${this._id} kind: ${s.track && s.track.kind}`);
+          // 辅流 sender 发送的是屏幕轨。切换摄像头只能处理主视频 sender，
+          // 否则会先 stop 屏幕轨，导致系统共享和其他复用该流的会话一起结束。
+          if (s === this._localShareRTPSender) return false;
           if (s.track && s.track.kind == 'video') {
             // 只要检测到“会话中存在视频 sender”即可继续流程。
             // 注意：在 composer 分支里 sender.track 可能是 composer 输出轨，不能提前 stop。
@@ -32020,6 +32058,8 @@ module.exports = class RTCSession extends EventEmitter {
       }) => {
         logger.debug(`${this._id} videoConstraints`, JSON.stringify(videoConstraints));
         var sender = this._connection.getSenders().find(s => {
+          // 新摄像头轨最终也必须替换到主视频 sender，不能覆盖独立屏幕辅流。
+          if (s === this._localShareRTPSender) return false;
           if (this._bfcp.enabled) {
             // 启用了BFCP，区分一下BFCP控制的视频轨道
             return s.track && s.track.kind == 'video' && s.track != this._bfcp.videoTrack && s.track != (this._localShareStream && this._localShareStream.getVideoTracks()[0]);
@@ -32214,10 +32254,28 @@ module.exports = class RTCSession extends EventEmitter {
   }
 
   /**
-   * 分享媒体
+   * 分享媒体。
+   *
+   * 历史调用仍使用 `(type, id, assembly, dual, skip)`：`dual` 为 boolean 时继续进入
+   * 原有 BFCP/替换摄像头轨流程。为避免破坏公开 API，本次没有新增同名方法，而是允许
+   * 第四个参数传 `{ mode: 'auxiliary' }`，显式进入非 BFCP 独立辅流流程。
+   *
+   * @param {string} type 分享类型；辅流模式当前只支持 `screen`
+   * @param {string|null} id 历史页面元素选择器；辅流模式不使用
+   * @param {Function|null} assembly 历史 HTML 合成函数；辅流模式不使用
+   * @param {boolean|Object} dual BFCP 开关，或 AuxiliaryShareOptions
+   * @param {boolean} skip 是否跳过 BFCP FloorRequest；辅流模式不使用
+   * @returns {Promise<MediaStream|void>|void} 屏幕流或历史分享结果
    */
   async share(type, id, assembly, dual, skip) {
     logger.debug(`${this._id} share()`);
+
+    // 必须先判断对象参数，否则对象本身是 truthy，会被后面的历史 BFCP 一致性校验
+    // 错误地当成 dual=true。仅识别明确的 mode，其他历史参数行为保持不变。
+    var shareOptions = dual && typeof dual === 'object' ? dual : null;
+    if (shareOptions && shareOptions.mode === 'auxiliary') {
+      return this._shareAuxiliaryScreen(type, shareOptions);
+    }
 
     // 双流必须开启BFCP支持
     if (dual && !this._bfcp.enabled || !dual && this._bfcp.enabled) {
@@ -32424,17 +32482,437 @@ module.exports = class RTCSession extends EventEmitter {
   }
 
   /**
-   * 停止分享媒体
+   * 停止分享媒体。
+   *
+   * 对接入方仍保持无参数调用。options 只供 SDK 内部的 track-ended/会话关闭流程使用，
+   * 用来决定是否停止底层流或是否发送 INFO。辅流启动未完成时调用本方法也会设置取消
+   * 标记，等待启动流程进入安全回滚点，避免遗留正在发送的 sender。
+   *
+   * @param {Object} options SDK 内部停止选项
+   * @returns {void|Promise<void>} 辅流模式可等待 sender 清理完成；历史模式保持 void
    */
-  unShare() {
+  unShare(options = {}) {
     logger.debug(`${this._id} unShare()`);
 
     // Check Session Status.
     if (this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED) {
       throw new Exceptions.InvalidStateError(this._status);
     }
+
+    // 辅流模式需要异步 replaceTrack(null) 并发送停止通知，不能走历史的单纯 stop track。
+    if (this._auxiliaryShareActive || this._auxiliaryShareStarting) {
+      return this._stopAuxiliaryShare(options);
+    }
     this._markStatsTransition('share-stop');
     Utils.closeMediaStream(this._localShareStream);
+  }
+
+  /**
+   * 使用独立 video m-line 发送屏幕辅流，不依赖 BFCP，也不替换摄像头轨道。
+   *
+   * 执行顺序：
+   * 1. 校验会话状态并确定 MediaStream 所有权；
+   * 2. 使用外部 mediaStream，或由 SDK 调用 getDisplayMedia；
+   * 3. 优先 replaceTrack 复用已协商的 sender/MID；
+   * 4. 无法复用时创建 sendonly transceiver，并通过 re-INVITE 协商；
+   * 5. 取得 MID 后发送 screen-share/start INFO，接收端据此识别共享轨；
+   * 6. 任一步失败都清空 sender、监听器和 SDK 自有流，不影响已经建立的主通话。
+   *
+   * 外部传入的 MediaStream 默认由调用方管理，便于多条 RTCSession 复用同一屏幕源；
+   * SDK 自己采集的 MediaStream 默认在 unShare/session close 时停止。
+   *
+   * @param {string} type 分享类型，当前仅支持 screen
+   * @param {Object} options AuxiliaryShareOptions
+   * @returns {Promise<MediaStream>} 实际发送的屏幕流
+   * @throws {InvalidStateError|NotSupportedError|Error} 状态、能力、采集或协商失败
+   */
+  async _shareAuxiliaryScreen(type, options = {}) {
+    if (type !== 'screen') {
+      throw new Exceptions.NotSupportedError('Auxiliary share currently supports screen only.');
+    }
+    if (this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK) {
+      throw new Exceptions.InvalidStateError(this._status);
+    }
+    if (this._auxiliaryShareStarting) {
+      throw new Error('Auxiliary screen sharing is already starting.');
+    }
+    if (this._auxiliaryShareActive) {
+      throw new Error('Auxiliary screen sharing is already active.');
+    }
+
+    // 上一次 stop 尚未结束时先等待，避免旧 stop 的 finally 覆盖本次启动状态。
+    if (this._auxiliaryShareStopPromise) {
+      await this._auxiliaryShareStopPromise;
+    }
+    this._auxiliaryShareStarting = true;
+    this._auxiliaryShareCancelRequested = false;
+    var providedStream = options.mediaStream || null;
+    // 未显式配置时采用“谁采集谁释放”：外部流不归 SDK 所有，SDK 采集流归 SDK 所有。
+    var ownsStream = options.stopStreamOnUnShare !== undefined ? Boolean(options.stopStreamOnUnShare) : !providedStream;
+    var stream = providedStream;
+    var createdTransceiver = false;
+    try {
+      // Demo 可传入一次 getDisplayMedia 得到的流供多条会话复用；普通接入方也可让
+      // 单条 RTCSession 直接完成屏幕采集。
+      if (!stream) {
+        if (!(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices)) {
+          var error = new Exceptions.NotSupportedError('getDisplayMedia is not supported.');
+          logger.warn(`${this._id} getDisplayMedia is not supported`);
+          this.emit('getdisplaymediafailed', error);
+          throw error;
+        }
+        var constraints = options.displayMediaConstraints || {
+          video: {
+            width: {
+              max: 1920
+            },
+            height: {
+              max: 1080
+            },
+            frameRate: 15
+          },
+          audio: false
+        };
+        try {
+          stream = await navigator.mediaDevices.getDisplayMedia(constraints);
+        } catch (error) {
+          this._logEventError('warn', 'getdisplaymediafailed', error);
+          this.emit('getdisplaymediafailed', error);
+          throw error;
+        }
+      }
+      var screenTrack = stream && stream.getVideoTracks && stream.getVideoTracks()[0];
+      if (!screenTrack || screenTrack.readyState === 'ended') {
+        throw new Error('Auxiliary screen share requires a live video track.');
+      }
+
+      // detail 更适合桌面文字和 UI；浏览器不支持或拒绝设置时不影响共享主流程。
+      if ('contentHint' in screenTrack) {
+        try {
+          screenTrack.contentHint = options.contentHint || 'detail';
+        } catch (error) {}
+      }
+      this._localShareStream = stream;
+      this._localShareStreamLocallyGenerated = ownsStream;
+      this._auxiliaryShareOwnsStream = ownsStream;
+      this._bindAuxiliaryShareStreamEvents(stream);
+      this._markStatsTransition('share-start');
+
+      // 已经协商过辅流 m-line 时，复用原 sender 不需要再次 re-INVITE，停止后重开更快。
+      if (this._localShareRTPSender && this._auxiliaryShareMid) {
+        try {
+          await this._localShareRTPSender.replaceTrack(screenTrack);
+        } catch (error) {
+          // 某些浏览器在编码能力变化后可能拒绝 replaceTrack。此时废弃旧传输引用，
+          // 继续走下方“新建 transceiver + 重新协商”的兼容分支。
+          logger.warn(`${this._id} reuse auxiliary share sender failed`, error);
+          try {
+            await this._localShareRTPSender.replaceTrack(null);
+          } catch (replaceError) {}
+          try {
+            this._auxiliaryShareTransceiver.direction = 'inactive';
+          } catch (directionError) {}
+          this._localShareRTPSender = null;
+          this._auxiliaryShareTransceiver = null;
+          this._auxiliaryShareMid = null;
+        }
+        if (this._localShareRTPSender) {
+          if (this._auxiliaryShareCancelRequested) {
+            throw new Error('Auxiliary screen sharing was cancelled.');
+          }
+          this._auxiliaryShareActive = true;
+          this._sendAuxiliaryShareInfo('start');
+          return stream;
+        }
+      }
+      if (!this._connection || typeof this._connection.addTransceiver !== 'function') {
+        throw new Exceptions.NotSupportedError('RTCPeerConnection.addTransceiver is not supported.');
+      }
+
+      // 独立 sendonly m-line 保证摄像头 sender 不被屏幕轨替换；streams 参数让远端
+      // track 事件保留正确的 MediaStream 关联信息。
+      var transceiver = this._connection.addTransceiver(screenTrack, {
+        direction: 'sendonly',
+        streams: [stream]
+      });
+      createdTransceiver = true;
+      this._auxiliaryShareTransceiver = transceiver;
+      this._localShareRTPSender = transceiver.sender;
+
+      // addTransceiver 只改变本地 PeerConnection，必须通过 re-INVITE 让远端协商该 m-line。
+      await this._renegotiateAuxiliaryShare();
+      if (this._auxiliaryShareCancelRequested) {
+        throw new Error('Auxiliary screen sharing was cancelled.');
+      }
+
+      // MID 在 setRemoteDescription 完成后才稳定可用，不能直接读取 addTransceiver 返回值。
+      this._auxiliaryShareMid = await this._waitForAuxiliaryShareMid();
+      this._auxiliaryShareActive = true;
+      this._sendAuxiliaryShareInfo('start');
+      return stream;
+    } catch (error) {
+      // 辅流属于可选能力，失败时只回滚共享资源，不能终止已经建立的音视频通话。
+      var sender = this._localShareRTPSender;
+      if (sender) {
+        try {
+          await sender.replaceTrack(null);
+        } catch (replaceError) {}
+      }
+      if (createdTransceiver) {
+        try {
+          this._auxiliaryShareTransceiver.direction = 'inactive';
+        } catch (directionError) {}
+        this._localShareRTPSender = null;
+        this._auxiliaryShareTransceiver = null;
+        this._auxiliaryShareMid = null;
+      }
+      this._clearAuxiliaryShareStreamEvents();
+      this._auxiliaryShareActive = false;
+      this._auxiliaryShareOwnsStream = false;
+      this._localShareStream = null;
+      this._localShareStreamLocallyGenerated = false;
+      if (stream && ownsStream) {
+        Utils.closeMediaStream(stream);
+      }
+      throw error;
+    } finally {
+      this._auxiliaryShareStarting = false;
+    }
+  }
+
+  /**
+   * 为新建的辅流 transceiver 发起一次完整 re-INVITE。
+   *
+   * renegotiate() 在 SIP/SDP 正忙时会返回 false，所以这里最多等待 10 秒重试；
+   * 真正发出 re-INVITE 后再等待最多 15 秒响应。`terminateOnFailure:false` 非常重要：
+   * 屏幕共享协商失败只能让 share() reject，不能把原有通话一起挂断。
+   *
+   * @returns {Promise<void>} 协商成功时完成，超时、取消或失败时拒绝
+   */
+  _renegotiateAuxiliaryShare() {
+    return new Promise((resolve, reject) => {
+      var readyDeadline = Date.now() + 10000;
+      var completed = false;
+      var responseTimer = null;
+
+      // SIP 回调、取消检查和超时可能竞争，只允许第一个结果结束 Promise。
+      var finish = error => {
+        if (completed) return;
+        completed = true;
+        if (responseTimer) clearTimeout(responseTimer);
+        if (error) reject(error);else resolve();
+      };
+      var attempt = () => {
+        if (this.isEnded() || this._auxiliaryShareCancelRequested) {
+          finish(new Error(this.isEnded() ? 'Session ended.' : 'Auxiliary screen sharing was cancelled.'));
+          return;
+        }
+        var started;
+        try {
+          started = this.renegotiate({
+            useUpdate: false,
+            terminateOnFailure: false
+          }, finish);
+        } catch (error) {
+          finish(error);
+          return;
+        }
+        if (started) {
+          // renegotiate 回调可能在测试或异常实现中同步执行，因此只在尚未完成时挂超时器。
+          if (!completed) {
+            responseTimer = setTimeout(() => {
+              finish(new Error('Auxiliary screen share renegotiation timed out.'));
+            }, 15000);
+          }
+          return;
+        }
+        if (Date.now() >= readyDeadline) {
+          finish(new Error('Timed out waiting to start auxiliary screen share renegotiation.'));
+          return;
+        }
+
+        // 当前可能正处于 hold/re-INVITE 等协商阶段，短暂等待后再次检查可协商状态。
+        setTimeout(attempt, 100);
+      };
+      attempt();
+    });
+  }
+
+  /**
+   * 等待浏览器为辅流 transceiver 分配稳定 MID。
+   *
+   * MID 是发送给远端的共享轨标识。re-INVITE 成功回调与 transceiver.mid 更新之间
+   * 可能存在很短的时序差，因此采用有限轮询，而不是发送空 MID 或无限等待。
+   *
+   * @param {number} timeout 最大等待毫秒数
+   * @returns {Promise<string>} 字符串形式的 MID
+   */
+  _waitForAuxiliaryShareMid(timeout = 3000) {
+    return new Promise((resolve, reject) => {
+      var startedAt = Date.now();
+      var check = () => {
+        var mid = this._auxiliaryShareTransceiver && this._auxiliaryShareTransceiver.mid;
+        if (mid !== null && mid !== undefined) {
+          resolve(String(mid));
+        } else if (this._auxiliaryShareCancelRequested) {
+          reject(new Error('Auxiliary screen sharing was cancelled.'));
+        } else if (Date.now() - startedAt >= timeout) {
+          reject(new Error('Auxiliary screen share negotiated without a MID.'));
+        } else {
+          setTimeout(check, 50);
+        }
+      };
+      check();
+    });
+  }
+
+  /**
+   * 通过会话内 SIP INFO 通知远端共享状态和对应 MID。
+   *
+   * SDP 只说明新增了一条视频 m-line，不能表达它是摄像头还是屏幕。远端 SDK 收到
+   * 本协议后把 MID 与 track 事件匹配，再统一触发 remoteShared/remoteUnShared。
+   * INFO 仅为 SDK 内部协议，Demo 和接入方不需要解析。
+   *
+   * @param {'start'|'stop'} action 共享开始或停止
+   * @returns {void}
+   */
+  _sendAuxiliaryShareInfo(action) {
+    if (!this._auxiliaryShareMid) return;
+    this.sendInfo('application/json', JSON.stringify({
+      event: 'screen-share',
+      action,
+      mid: this._auxiliaryShareMid
+    }));
+  }
+
+  /**
+   * 监听系统共享选择器或浏览器导致的屏幕轨结束。
+   *
+   * Chrome/Edge 通常触发 track ended，部分 Safari/WebView 只触发 stream inactive，
+   * 还有环境两者都不稳定，所以同时监听两个事件并以 200ms 轮询 readyState 兜底。
+   * handled 保证多个信号同时出现时只执行一次停止流程。
+   *
+   * @param {MediaStream} stream 当前辅流屏幕流
+   * @returns {void}
+   */
+  _bindAuxiliaryShareStreamEvents(stream) {
+    this._clearAuxiliaryShareStreamEvents();
+    var track = stream && stream.getVideoTracks && stream.getVideoTracks()[0];
+    if (!track) return;
+    var handled = false;
+    var handleEnded = () => {
+      if (handled) return;
+      handled = true;
+      // 外部复用流通常已经 ended，无需也不应由某一条 RTCSession 额外 stop；
+      // SDK 自有流则按所有权规则完成释放。
+      this._stopAuxiliaryShare({
+        fromTrackEnded: true,
+        stopStream: this._auxiliaryShareOwnsStream
+      }).catch(error => {
+        this._logOperationError('warn', 'stop auxiliary share after track ended failed', error);
+      });
+    };
+    this._auxiliaryShareBoundTrack = track;
+    this._auxiliaryShareTrackEndedHandler = handleEnded;
+    this._auxiliaryShareStreamInactiveHandler = handleEnded;
+    track.addEventListener && track.addEventListener('ended', handleEnded);
+    stream.addEventListener && stream.addEventListener('inactive', handleEnded);
+    this._auxiliaryShareEndTimer = setInterval(() => {
+      if (track.readyState === 'ended') handleEnded();
+    }, 200);
+  }
+
+  /**
+   * 移除当前辅流的事件监听和轮询定时器。
+   *
+   * 每次绑定新流、停止共享和关闭会话都会调用，防止旧流结束后误停止下一次共享，
+   * 也避免定时器或监听器长期持有 RTCSession 引用。
+   *
+   * @returns {void}
+   */
+  _clearAuxiliaryShareStreamEvents() {
+    if (this._auxiliaryShareEndTimer) {
+      clearInterval(this._auxiliaryShareEndTimer);
+      this._auxiliaryShareEndTimer = null;
+    }
+    if (this._auxiliaryShareBoundTrack && this._auxiliaryShareTrackEndedHandler && this._auxiliaryShareBoundTrack.removeEventListener) {
+      this._auxiliaryShareBoundTrack.removeEventListener('ended', this._auxiliaryShareTrackEndedHandler);
+    }
+    if (this._localShareStream && this._auxiliaryShareStreamInactiveHandler && this._localShareStream.removeEventListener) {
+      this._localShareStream.removeEventListener('inactive', this._auxiliaryShareStreamInactiveHandler);
+    }
+    this._auxiliaryShareBoundTrack = null;
+    this._auxiliaryShareTrackEndedHandler = null;
+    this._auxiliaryShareStreamInactiveHandler = null;
+  }
+
+  /**
+   * 停止非 BFCP 辅流并按所有权释放资源。
+   *
+   * 停止顺序是：先发送 stop INFO，让远端尽快清 UI；再 replaceTrack(null) 停止发送；
+   * 随后解除监听并按所有权决定是否 stop MediaStream。默认保留 transceiver/MID，便于
+   * 下一次共享直接复用；只有内部明确传 resetTransport 时才彻底丢弃传输引用。
+   *
+   * @param {Object} options SDK 内部停止参数
+   * @param {boolean} [options.sendInfo=true] 是否通知远端
+   * @param {boolean} [options.stopStream] 是否覆盖默认 MediaStream 所有权规则
+   * @param {boolean} [options.resetTransport=false] 是否同时废弃 transceiver/MID
+   * @returns {Promise<void>} sender 与资源清理完成后结束
+   */
+  _stopAuxiliaryShare(options = {}) {
+    // track ended、stream inactive、轮询和页面 unShare 可能同时进入，复用同一个 Promise。
+    if (this._auxiliaryShareStopPromise) return this._auxiliaryShareStopPromise;
+    var stream = this._localShareStream;
+    var sender = this._localShareRTPSender;
+    var wasActive = this._auxiliaryShareActive;
+    var stopStream = options.stopStream !== undefined ? Boolean(options.stopStream) : this._auxiliaryShareOwnsStream;
+
+    // 先同步更新状态，使正在进行的采集/协商流程在下一检查点立即取消。
+    this._auxiliaryShareCancelRequested = true;
+    this._auxiliaryShareActive = false;
+    this._auxiliaryShareStopPromise = (async () => {
+      if (wasActive && options.sendInfo !== false) {
+        try {
+          this._sendAuxiliaryShareInfo('stop');
+        } catch (error) {
+          this._logOperationError('warn', 'send auxiliary share stop INFO failed', error);
+        }
+      }
+      if (sender) {
+        // 不 removeTrack/removeTransceiver，保留已协商的 m-line 供下一次共享复用。
+        try {
+          await sender.replaceTrack(null);
+        } catch (error) {
+          this._logOperationError('warn', 'stop auxiliary share sender failed', error);
+        }
+      }
+      this._clearAuxiliaryShareStreamEvents();
+
+      // 多条会话可能共享同一外部 MediaStream，只有拥有所有权的会话才可停止轨道。
+      if (stream && stopStream) {
+        Utils.closeMediaStream(stream);
+      }
+      if (this._localShareStream === stream) {
+        this._localShareStream = null;
+      }
+      this._localShareStreamLocallyGenerated = false;
+      this._auxiliaryShareOwnsStream = false;
+      this._auxiliaryShareStarting = false;
+      if (options.resetTransport) {
+        try {
+          this._auxiliaryShareTransceiver.direction = 'inactive';
+        } catch (error) {}
+        this._localShareRTPSender = null;
+        this._auxiliaryShareTransceiver = null;
+        this._auxiliaryShareMid = null;
+      }
+      if (wasActive) {
+        this._markStatsTransition('share-stop');
+      }
+    })().finally(() => {
+      this._auxiliaryShareStopPromise = null;
+    });
+    return this._auxiliaryShareStopPromise;
   }
 
   /**
@@ -32773,7 +33251,10 @@ module.exports = class RTCSession extends EventEmitter {
         logger.debug(`track.contentHint = ${hint}`);
       }
       _this.connection.getSenders().forEach(sender => {
-        if (sender.track && sender.track.kind === 'video') {
+        // shared=true 时只更新当前屏幕轨；shared=false 时排除辅流 sender，避免给
+        // 屏幕共享错误套用摄像头的 degradationPreference 和编码参数。
+        var isTargetSender = shared ? sender.track === track : sender !== _this._localShareRTPSender;
+        if (isTargetSender && sender.track && sender.track.kind === 'video') {
           var parameters = sender.getParameters();
           var degradationPreference = hint !== 'motion' ? 'balanced' : 'maintain-resolution';
 
@@ -33262,7 +33743,134 @@ module.exports = class RTCSession extends EventEmitter {
   // Called from Info handler.
   newInfo(data) {
     logger.debug(`${this._id} newInfo()`);
+
+    // SDK 内部协议必须先更新共享状态，再把原始 newInfo 继续透传给接入方；
+    // 这样既保留历史 newInfo 行为，又让 remoteShared 事件在同一消息周期内可用。
+    this._handleAuxiliaryShareInfo(data);
     this.emit('newInfo', data);
+  }
+
+  /**
+   * 解析远端辅流的 SDK 内部 INFO 协议。
+   *
+   * start 只记录目标 MID，并尝试和已缓存的 track 匹配；如果 track 尚未到达则等待
+   * _handleAuxiliaryShareTrack()。stop 会清空当前匹配并触发 remoteUnShared。
+   * 非 JSON、非远端消息或其他业务 INFO 均原样留给 newInfo 事件，不在这里报错。
+   *
+   * @param {Object} data RTCSession_Info 交付的数据
+   * @returns {void}
+   */
+  _handleAuxiliaryShareInfo(data) {
+    if (!data || data.originator !== 'remote' || !data.info) return;
+    var body = data.info.body;
+    if (typeof body === 'string') {
+      try {
+        body = JSON.parse(body);
+      } catch (error) {
+        return;
+      }
+    }
+    if (!body || body.event !== 'screen-share') return;
+    if (body.action === 'start' && body.mid !== null && body.mid !== undefined) {
+      var mid = String(body.mid);
+
+      // 远端可能因无法复用 sender 而改用新 MID。先结束旧共享，避免页面同时保留两路画面。
+      if (this._remoteAuxiliaryShareMid !== mid && this._remoteAuxiliaryShareActiveTrack) {
+        this._remoteAuxiliaryShareActiveTrack = null;
+        this.emit('remoteUnShared');
+      }
+      this._remoteAuxiliaryShareMid = mid;
+      this._emitRemoteAuxiliaryShared(mid);
+    } else if (body.action === 'stop') {
+      // 只在确实记录过共享时发停止事件，避免重复 stop INFO 导致 UI 重复关闭。
+      var hadRemoteShare = this._remoteAuxiliaryShareMid !== null || Boolean(this._remoteAuxiliaryShareActiveTrack);
+      this._remoteAuxiliaryShareMid = null;
+      this._remoteAuxiliaryShareActiveTrack = null;
+      if (hadRemoteShare) this.emit('remoteUnShared');
+    }
+  }
+
+  /**
+   * 缓存 PeerConnection 新到达的远端视频轨，并按 transceiver.mid 与 INFO 匹配。
+   *
+   * 所有视频轨都会经过这里，但没有 screen-share/start INFO 指向其 MID 时不会触发
+   * remoteShared，因此摄像头轨不会被误判为屏幕。track 先到或 INFO 先到都可处理。
+   *
+   * @param {RTCTrackEvent} event RTCPeerConnection 的 track 事件
+   * @returns {void}
+   */
+  _handleAuxiliaryShareTrack(event) {
+    var track = event && event.track;
+    if (!track || track.kind !== 'video' || !this._connection) return;
+    var transceiver = event.transceiver || this._connection.getTransceivers().find(item => item.receiver && item.receiver.track === track);
+    var mid = transceiver && transceiver.mid;
+    if (mid === null || mid === undefined) return;
+    var normalizedMid = String(mid);
+
+    // 即使当前还没有 INFO，也先缓存；后续 start INFO 可立即命中这条轨道。
+    this._remoteAuxiliaryShareTracks.set(normalizedMid, track);
+    if (!this._remoteAuxiliaryShareBoundTracks.has(track)) {
+      this._remoteAuxiliaryShareBoundTracks.add(track);
+
+      // 某些浏览器 track 事件触发时轨道仍 muted，unmute 后再尝试发 remoteShared。
+      var refresh = () => {
+        if (this._remoteAuxiliaryShareMid === normalizedMid) {
+          this._emitRemoteAuxiliaryShared(normalizedMid);
+        }
+      };
+      track.addEventListener && track.addEventListener('unmute', refresh);
+      track.addEventListener && track.addEventListener('ended', () => {
+        // 远端异常停止或 PeerConnection 关闭时，ended 是 stop INFO 之外的兜底清理路径。
+        this._remoteAuxiliaryShareTracks.delete(normalizedMid);
+        this._remoteAuxiliaryShareBoundTracks.delete(track);
+        if (this._remoteAuxiliaryShareMid === normalizedMid) {
+          this._remoteAuxiliaryShareMid = null;
+          this._remoteAuxiliaryShareActiveTrack = null;
+          this.emit('remoteUnShared');
+        }
+      }, {
+        once: true
+      });
+    }
+    if (this._remoteAuxiliaryShareMid === normalizedMid) {
+      this._emitRemoteAuxiliaryShared(normalizedMid);
+    }
+  }
+
+  /**
+   * 在 MID 和 live track 都具备时统一触发 remoteShared。
+   *
+   * 优先读取 track 缓存；若 track 事件未带 transceiver，则从 PeerConnection 再查一次。
+   * 返回的 sharedStream 结构与 BFCP remoteShared 保持兼容，Demo 可以复用同一监听代码。
+   * activeTrack 用于保证同一条轨道只通知一次。
+   *
+   * @param {string} mid 屏幕共享 m-line 的 MID
+   * @returns {void}
+   */
+  _emitRemoteAuxiliaryShared(mid) {
+    var track = this._remoteAuxiliaryShareTracks.get(String(mid));
+    if (!track && this._connection) {
+      var transceiver = this._connection.getTransceivers().find(item => String(item.mid) === String(mid));
+      track = transceiver && transceiver.receiver && transceiver.receiver.track;
+      if (track) this._remoteAuxiliaryShareTracks.set(String(mid), track);
+    }
+    if (!track || track.readyState !== 'live' || this._remoteAuxiliaryShareActiveTrack === track) {
+      return;
+    }
+
+    // BFCP 的 sharedStream 同时暴露 videoStream/mediaStream；辅流保持相同字段，
+    // 避免接入方为了不同共享模式维护两套 UI 代码。
+    var videoStream = new MediaStream([track]);
+    var mediaStream = new MediaStream([track]);
+    this._remoteAuxiliaryShareActiveTrack = track;
+    this.emit('remoteShared', {
+      mid,
+      track,
+      sharedStream: {
+        videoStream,
+        mediaStream
+      }
+    });
   }
 
   // for 3pcc, Called from Notify handler.
@@ -33304,10 +33912,34 @@ module.exports = class RTCSession extends EventEmitter {
 
     // 销毁BFCP相关媒体（委托给 BFCPChannel 统一清理）
     this._bfcp.close();
-    if (this._localShareStream) {
+
+    // 会话关闭不需要再发 stop INFO（对端会随会话结束清理），这里只解除监听并按
+    // MediaStream 所有权释放本地资源。外部复用流必须保留给其他 RTCSession 使用。
+    if (this._auxiliaryShareActive || this._auxiliaryShareStarting || this._auxiliaryShareTransceiver) {
+      this._clearAuxiliaryShareStreamEvents();
+      if (this._localShareStream && this._auxiliaryShareOwnsStream) {
+        logger.debug(`${this._id} close() | closing owned auxiliary share MediaStream`);
+        Utils.closeMediaStream(this._localShareStream);
+      }
+      this._localShareStream = null;
+      this._localShareRTPSender = null;
+      this._localShareStreamLocallyGenerated = false;
+      this._auxiliaryShareTransceiver = null;
+      this._auxiliaryShareMid = null;
+      this._auxiliaryShareActive = false;
+      this._auxiliaryShareStarting = false;
+      this._auxiliaryShareOwnsStream = false;
+    }
+    if (this._localShareStream && this._localShareStreamLocallyGenerated) {
       logger.debug(`${this._id} close() | closing local share MediaStream`);
       Utils.closeMediaStream(this._localShareStream);
     }
+
+    // PeerConnection 即将关闭，清空远端匹配缓存，避免轨道对象继续被会话引用。
+    this._remoteAuxiliaryShareMid = null;
+    this._remoteAuxiliaryShareTracks.clear();
+    this._remoteAuxiliaryShareBoundTracks.clear();
+    this._remoteAuxiliaryShareActiveTrack = null;
 
     /**
      * 释放媒体管线资源。
@@ -33426,6 +34058,11 @@ module.exports = class RTCSession extends EventEmitter {
     var successfullyConnected = false;
     this._connection = new RTCPeerConnection(pcConfig, rtcConstraints);
     this._startStatsMonitor(this._connection);
+    // 在 SDK 层统一监听所有远端 track。是否为屏幕轨由后续 MID + INFO 匹配决定，
+    // Demo 无需直接访问 RTCPeerConnection 或处理 track/INFO 到达顺序。
+    this._connection.addEventListener('track', event => {
+      this._handleAuxiliaryShareTrack(event);
+    });
     this._connection.onconnectionstatechange = () => {
       switch (this._connection.connectionState) {
         case 'connecting':
@@ -33530,11 +34167,15 @@ module.exports = class RTCSession extends EventEmitter {
     var monitor = new RTCStatsMonitor(pc, {
       autoStart: false,
       contextProvider: () => {
-        var sharedMid = null;
+        // 统计模块优先使用本次新增的非 BFCP 辅流 MID；未启用辅流时再读取历史
+        // BFCP sessionStorage 标记，从而保持两种共享模式的统计分类一致。
+        var sharedMid = this._auxiliaryShareActive ? this._auxiliaryShareMid : null;
 
         // 隐私模式或受限 WebView 可能暴露 sessionStorage 但禁止读取，统计不能影响通话。
         try {
-          sharedMid = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(CRTC_C.BFCP_SHARED_STREAM_INDEX) : null;
+          if (sharedMid === null) {
+            sharedMid = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(CRTC_C.BFCP_SHARED_STREAM_INDEX) : null;
+          }
         } catch (error) {}
         return {
           sessionStatus: this._status,
@@ -35479,9 +36120,14 @@ module.exports = class RTCSession extends EventEmitter {
         track.stop();
         this._localMediaStream.removeTrack(track);
       });
-      this._localShareStream && this._localShareStream.getVideoTracks().forEach(track => {
-        track.stop();
-      });
+
+      // 切换为音频通话仍应允许用户继续共享屏幕。这里只停止历史“替换摄像头”
+      // 共享轨；独立辅流由 unShare() 或系统停止共享事件单独管理。
+      if (!this._auxiliaryShareActive && !this._auxiliaryShareStarting) {
+        this._localShareStream && this._localShareStream.getVideoTracks().forEach(track => {
+          track.stop();
+        });
+      }
     }
   }
   _streamInactiveHandle(dual) {
@@ -35624,6 +36270,9 @@ module.exports = class RTCSession extends EventEmitter {
   }
   _toggleMuteVideo(mute) {
     var senders = this._connection.getSenders().filter(sender => {
+      // video mute 代表关闭摄像头画面，不代表停止屏幕共享。辅流必须保持 enabled，
+      // 否则远端会看到冻结画面但收不到 remoteUnShared，造成媒体状态不一致。
+      if (sender === this._localShareRTPSender) return false;
       if (this._bfcp.enabled) {
         // 检查是否存在视频轨道
         if (!sender.track || sender.track.kind !== 'video') {

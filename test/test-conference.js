@@ -12,6 +12,7 @@ class MockMediaStream
   constructor(tracks)
   {
     this._tracks = (tracks || []).slice();
+    this._listeners = new Map();
     this.id = `stream-${Math.random()}`;
   }
 
@@ -20,6 +21,139 @@ class MockMediaStream
   getVideoTracks() { return this._tracks.filter((track) => track.kind === 'video'); }
   addTrack(track) { if (!this._tracks.includes(track)) this._tracks.push(track); }
   removeTrack(track) { this._tracks = this._tracks.filter((item) => item !== track); }
+  // 辅流实现会监听 MediaStream.inactive；Mock 保留最小 EventTarget 行为，
+  // 让测试可以覆盖监听绑定/解除，而不依赖 Node 环境不存在的原生 MediaStream。
+  addEventListener(type, listener)
+  {
+    if (!this._listeners.has(type)) this._listeners.set(type, new Set());
+    this._listeners.get(type).add(listener);
+  }
+  removeEventListener(type, listener)
+  {
+    if (this._listeners.has(type)) this._listeners.get(type).delete(listener);
+  }
+  dispatchEvent(event)
+  {
+    const listeners = this._listeners.get(event.type) || [];
+
+    listeners.forEach((listener) => listener(event));
+  }
+}
+
+/**
+ * 创建可记录 stop 次数、enabled 状态和 ended/unmute 事件的最小媒体轨。
+ * stopCount 用于判断某条 RTCSession 是否错误停止了多会话复用的共享源。
+ */
+function createMockTrack(kind, id)
+{
+  const listeners = new Map();
+
+  return {
+    kind,
+    id,
+    label       : id,
+    readyState  : 'live',
+    enabled     : true,
+    contentHint : '',
+    stopCount   : 0,
+    addEventListener : function(type, listener)
+    {
+      if (!listeners.has(type)) listeners.set(type, new Set());
+      listeners.get(type).add(listener);
+    },
+    removeEventListener : function(type, listener)
+    {
+      if (listeners.has(type)) listeners.get(type).delete(listener);
+    },
+    dispatch : function(type)
+    {
+      const handlers = listeners.get(type) || [];
+
+      handlers.forEach((listener) => listener({ type, track: this }));
+    },
+    stop : function()
+    {
+      this.stopCount++;
+      this.readyState = 'ended';
+      this.dispatch('ended');
+    }
+  };
+}
+
+/**
+ * 创建只包含 auxiliary share 所需依赖的 RTCSession 测试替身。
+ *
+ * renegotiate 同步成功并为 transceiver 提供固定 MID=2；sender.replaceTrack 会记录
+ * 每次替换，使测试能够区分“首次新增 m-line”和“再次共享复用旧 sender”。
+ */
+function createAuxiliaryShareSession(id)
+{
+  const session = Object.create(RTCSession.prototype);
+  const sender = {
+    track        : null,
+    replacements : [],
+    replaceTrack : function(track)
+    {
+      this.track = track;
+      this.replacements.push(track);
+
+      return Promise.resolve();
+    }
+  };
+  const transceiver = { sender, mid: '2', direction: 'sendonly' };
+
+  Object.assign(session, {
+    _id                              : id,
+    _status                          : RTCSession.C.STATUS_CONFIRMED,
+    _bfcp                            : { enabled: false },
+    _localShareRTPSender             : null,
+    _localShareStream                : null,
+    _localShareStreamLocallyGenerated : false,
+    _auxiliaryShareTransceiver       : null,
+    _auxiliaryShareMid               : null,
+    _auxiliaryShareActive            : false,
+    _auxiliaryShareStarting          : false,
+    _auxiliaryShareCancelRequested   : false,
+    _auxiliaryShareOwnsStream        : false,
+    _auxiliaryShareStopPromise       : null,
+    _auxiliaryShareEndTimer          : null,
+    _auxiliaryShareBoundTrack        : null,
+    _auxiliaryShareTrackEndedHandler : null,
+    _auxiliaryShareStreamInactiveHandler : null,
+    _remoteAuxiliaryShareMid         : null,
+    _remoteAuxiliaryShareTracks      : new Map(),
+    _remoteAuxiliaryShareBoundTracks : new Set(),
+    _remoteAuxiliaryShareActiveTrack : null,
+    _markStatsTransition             : function() {},
+    _logOperationError               : function() {},
+    isEnded                          : function() { return false; },
+    renegotiate                      : function(options, done)
+    {
+      this.renegotiateOptions = options;
+      done();
+
+      return true;
+    },
+    sendInfo : function(contentType, body)
+    {
+      this.sentInfos.push({ contentType, body: JSON.parse(body) });
+    },
+    sentInfos : [],
+    _connection : {
+      addTransceiverCalls : [],
+      addTransceiver      : function(track, options)
+      {
+        this.addTransceiverCalls.push({ track, options });
+
+        return transceiver;
+      }
+    }
+  });
+
+  session.testSender = sender;
+  session.testTransceiver = transceiver;
+
+  return session;
 }
 
 function createElement()
@@ -855,6 +989,252 @@ module.exports = {
       test.strictEqual(session.failedCause, 'WebRTC Error');
       test.done();
     });
+  },
+
+  // 三方会议最关键的所有权用例：B 停止共享不能 stop B/C 共用的屏幕轨，
+  // 两条会话都停止后仍由 Demo 统一释放外部流。
+  'SDK auxiliary share reuses an external screen stream without taking ownership' : function(test)
+  {
+    const screenTrack = createMockTrack('video', 'shared-screen');
+    const screenStream = new MockMediaStream([ screenTrack ]);
+    const firstSession = createAuxiliaryShareSession('aux-b');
+    const secondSession = createAuxiliaryShareSession('aux-c');
+    const options = {
+      mode                : 'auxiliary',
+      mediaStream         : screenStream,
+      stopStreamOnUnShare : false
+    };
+
+    Promise.all([
+      firstSession.share('screen', null, null, options),
+      secondSession.share('screen', null, null, options)
+    ])
+      .then(function(streams)
+      {
+        test.strictEqual(streams[0], screenStream);
+        test.strictEqual(streams[1], screenStream);
+        test.strictEqual(firstSession._connection.addTransceiverCalls.length, 1);
+        test.strictEqual(secondSession._connection.addTransceiverCalls.length, 1);
+        test.strictEqual(firstSession._connection.addTransceiverCalls[0].options.direction, 'sendonly');
+        test.strictEqual(firstSession.sentInfos[0].body.action, 'start');
+        test.strictEqual(firstSession.sentInfos[0].body.mid, '2');
+        test.strictEqual(firstSession.renegotiateOptions.terminateOnFailure, false);
+
+        return firstSession.unShare();
+      })
+      .then(function()
+      {
+        test.strictEqual(screenTrack.stopCount, 0);
+        test.strictEqual(secondSession._auxiliaryShareActive, true);
+        test.strictEqual(firstSession.sentInfos[1].body.action, 'stop');
+
+        return secondSession.unShare();
+      })
+      .then(function()
+      {
+        test.strictEqual(screenTrack.stopCount, 0);
+        test.done();
+      })
+      .catch(function(error)
+      {
+        throw error;
+      });
+  },
+
+  // 停止后保留 transceiver/MID；第二次共享应只 replaceTrack，不新增 SDP m-section。
+  'SDK auxiliary share reuses the negotiated sender on the next share' : function(test)
+  {
+    const session = createAuxiliaryShareSession('aux-reuse');
+    const firstStream = new MockMediaStream([ createMockTrack('video', 'screen-1') ]);
+    const secondTrack = createMockTrack('video', 'screen-2');
+    const secondStream = new MockMediaStream([ secondTrack ]);
+
+    session.share('screen', null, null, { mode: 'auxiliary', mediaStream: firstStream })
+      .then(function()
+      {
+        return session.unShare();
+      })
+      .then(function()
+      {
+        return session.share('screen', null, null, { mode: 'auxiliary', mediaStream: secondStream });
+      })
+      .then(function()
+      {
+        test.strictEqual(session._connection.addTransceiverCalls.length, 1);
+        test.strictEqual(session.testSender.track, secondTrack);
+        test.strictEqual(session.sentInfos.filter((info) => info.body.action === 'start').length, 2);
+
+        return session.unShare();
+      })
+      .then(function()
+      {
+        test.done();
+      })
+      .catch(function(error)
+      {
+        throw error;
+      });
+  },
+
+  // 摄像头控制和屏幕辅流必须相互独立：mute/音频模式只影响主视频轨。
+  'camera mute and audio mode do not stop an active auxiliary share' : function(test)
+  {
+    const session = createAuxiliaryShareSession('aux-media-state');
+    const cameraTrack = createMockTrack('video', 'camera');
+    const screenTrack = createMockTrack('video', 'screen');
+    const cameraSender = { track: cameraTrack };
+
+    session._localShareRTPSender = session.testSender;
+    session.testSender.track = screenTrack;
+    session._connection.getSenders = function() { return [ cameraSender, session.testSender ]; };
+    session._videoOnlyMute = false;
+    session._toggleMuteVideo(true);
+
+    test.strictEqual(cameraTrack.enabled, false);
+    test.strictEqual(screenTrack.enabled, true);
+
+    session._localMediaStream = new MockMediaStream([ cameraTrack ]);
+    session._localShareStream = new MockMediaStream([ screenTrack ]);
+    session._customMediaStream = false;
+    session._auxiliaryShareActive = true;
+    session._setLocalMedia('audio');
+
+    test.strictEqual(cameraTrack.stopCount, 1);
+    test.strictEqual(screenTrack.stopCount, 0);
+    test.done();
+  },
+
+  // 浏览器 track 与 SIP INFO 没有固定先后顺序，两种顺序都只能触发一次 remoteShared。
+  'SDK matches auxiliary share INFO and track in either arrival order' : function(test)
+  {
+    const OriginalMediaStream = global.MediaStream;
+    const track = createMockTrack('video', 'remote-screen');
+    const session = createAuxiliaryShareSession('aux-remote');
+    const emitted = [];
+
+    global.MediaStream = MockMediaStream;
+    session.emit = function(name, payload) { emitted.push({ name, payload }); };
+    session._connection.getTransceivers = function()
+    {
+      return [ { mid: '7', receiver: { track } } ];
+    };
+
+    session._handleAuxiliaryShareTrack({ track, transceiver: session._connection.getTransceivers()[0] });
+    test.strictEqual(emitted.filter((event) => event.name === 'remoteShared').length, 0);
+
+    session.newInfo({
+      originator : 'remote',
+      info       : { body: JSON.stringify({ event: 'screen-share', action: 'start', mid: '7' }) }
+    });
+
+    const sharedEvent = emitted.find((event) => event.name === 'remoteShared');
+
+    test.ok(sharedEvent);
+    test.strictEqual(sharedEvent.payload.sharedStream.videoStream.getVideoTracks()[0], track);
+
+    session.newInfo({
+      originator : 'remote',
+      info       : { body: JSON.stringify({ event: 'screen-share', action: 'stop', mid: '7' }) }
+    });
+    test.strictEqual(emitted.filter((event) => event.name === 'remoteUnShared').length, 1);
+
+    const infoFirstSession = createAuxiliaryShareSession('aux-remote-info-first');
+    const infoFirstEvents = [];
+
+    infoFirstSession.emit = function(name, payload) { infoFirstEvents.push({ name, payload }); };
+    infoFirstSession._connection.getTransceivers = function() { return []; };
+    infoFirstSession.newInfo({
+      originator : 'remote',
+      info       : { body: JSON.stringify({ event: 'screen-share', action: 'start', mid: '8' }) }
+    });
+    infoFirstSession._handleAuxiliaryShareTrack({
+      track,
+      transceiver : { mid: '8', receiver: { track } }
+    });
+    test.strictEqual(infoFirstEvents.filter((event) => event.name === 'remoteShared').length, 1);
+    global.MediaStream = OriginalMediaStream;
+    test.done();
+  },
+
+  // Demo 边界测试：页面可以采集/编排，但不得再直接调用 addTransceiver、renegotiate
+  // 或发送 screen-share INFO，所有目标都必须委托 RTCSession.share()/unShare()。
+  'conference screen sharing delegates each target to RTCSession share and unShare' : function(test)
+  {
+    const context = loadConferenceDemo();
+    const screenTrack = createMockTrack('video', 'conference-screen');
+    const screenStream = new MockMediaStream([ screenTrack ]);
+    const shareCalls = [];
+    const stopCalls = [];
+
+    context.navigator.mediaDevices.getDisplayMedia = function() { return Promise.resolve(screenStream); };
+    context.updateConferenceUi = function() {};
+    context.openScreenShareDialog = function() {};
+    context.closeScreenShareDialog = function() {};
+    context.testSessionB = {
+      id        : 'share-b',
+      isEnded   : function() { return false; },
+      share     : function()
+      {
+        shareCalls.push(Array.prototype.slice.call(arguments));
+
+        return Promise.resolve(screenStream);
+      },
+      unShare   : function()
+      {
+        stopCalls.push('B');
+
+        return Promise.resolve();
+      }
+    };
+    context.testSessionC = {
+      id        : 'share-c',
+      isEnded   : function() { return false; },
+      share     : function()
+      {
+        shareCalls.push(Array.prototype.slice.call(arguments));
+
+        return Promise.resolve(screenStream);
+      },
+      unShare   : function()
+      {
+        stopCalls.push('C');
+
+        return Promise.resolve();
+      }
+    };
+
+    vm.runInContext(`
+      conferenceLegs.set('share-b', {
+        role: 'B', confirmed: true, ended: false, screenTarget: true, screenActive: false,
+        session: testSessionB
+      });
+      conferenceLegs.set('share-c', {
+        role: 'C', confirmed: true, ended: false, screenTarget: true, screenActive: false,
+        session: testSessionC
+      });
+    `, context);
+
+    vm.runInContext('startConferenceScreenShare()', context)
+      .then(function()
+      {
+        test.strictEqual(shareCalls.length, 2);
+        test.strictEqual(shareCalls[0][0], 'screen');
+        test.strictEqual(shareCalls[0][3].mode, 'auxiliary');
+        test.strictEqual(shareCalls[0][3].mediaStream, screenStream);
+        test.strictEqual(shareCalls[1][3].mediaStream, screenStream);
+
+        return vm.runInContext('stopConferenceScreenShare()', context);
+      })
+      .then(function()
+      {
+        test.deepEqual(stopCalls.sort(), [ 'B', 'C' ]);
+        test.strictEqual(screenTrack.stopCount, 1);
+        test.done();
+      })
+      .catch(function(error)
+      {
+        throw error;
+      });
   },
 
   'optional screen renegotiation failure preserves established call' : function(test)

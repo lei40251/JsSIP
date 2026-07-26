@@ -174,13 +174,15 @@ function getConferenceMediaEffectsComposer()
 /**
  * 构建三方模式下的 extraFeatures 列表。
  *
- * 三方屏幕共享通过 addTransceiver + renegotiate 自行协商第二条 video m-line，
- * 不使用 BFCP 占位轨，因此需要从 extraFeatures 中移除 BFCP，
- * 避免 SDK 为每一路会话都插入无用的 BFCP 扩展。
+ * 三方屏幕共享使用 RTCSession.share() 的非 BFCP 辅流模式，
+ * 因此需要从 extraFeatures 中移除 BFCP，避免 SDK 同时创建 BFCP 占位轨并执行
+ * FloorRequest。音视频通话、媒体特效等其他 extraFeatures 保持页面原配置。
+ *
+ * @returns {Array} 适用于每条会议 RTCSession 的功能列表
  */
 function buildConferenceExtraFeatures()
 {
-  // 三方屏幕共享自行协商第二条 video m-line，不使用 BFCP 占位轨。
+  // 三方共享由 SDK 辅流模式协商第二条 video m-line，不使用 BFCP 占位轨。
   return extraFeatures.filter((feature) => String(feature).toUpperCase() !== 'BFCP');
 }
 
@@ -499,7 +501,8 @@ function buildConferenceAnswerOptions(leg, normalCOutput)
  * - remoteMainStream/remoteMainAudioTrack/remoteMainVideoTrack：远端媒体轨
  * - originalAudioSender/originalVideoSender/originalAudioTrack/originalVideoTrack：
  *   原始 sender 和 track 快照，用于 composer 降级恢复
- * - screenTransceiver/screenSender/screenMid/screenActive/screenTarget：屏幕共享状态
+ * - screenActive：该会话是否已经由 session.share() 成功发送屏幕辅流
+ * - screenTarget：用户是否选择把下一次屏幕共享发送给该成员
  *
  * 创建 leg 时自动将其注册到 conferenceLegs，并根据可见性设置默认选中。
  */
@@ -530,9 +533,6 @@ function createConferenceLeg(session, sessionOptions)
     composerSourceStream  : null,
     conferenceAudioStream : sessionOptions.conferenceAudioStream || null,
     audioElement          : null,
-    screenTransceiver     : null,
-    screenSender          : null,
-    screenMid             : null,
     screenActive          : false,
     screenTarget          : false,
     trackListenerAttached : false,
@@ -2058,7 +2058,7 @@ function releaseConferenceComposerOutputs()
  * 清理单个会议成员的所有资源。
  *
  * 执行步骤：
- * 1. 停止屏幕共享 sender
+ * 1. 清理屏幕共享页面状态（底层 sender 由 RTCSession 关闭）
  * 2. 移除远端音频播放元素
  * 3. 释放降级流
  * 4. 从 conferenceLegs 中删除
@@ -2079,11 +2079,9 @@ async function cleanupConferenceLeg(leg)
   leg.ended = true;
   clearConferenceAnswerTimer(leg);
 
-  if (leg.screenSender)
-  {
-    await leg.screenSender.replaceTrack(null).catch(() => {});
-    leg.screenActive = false;
-  }
+  // RTCSession 的 ended/failed 关闭流程会释放本会话的辅流 sender；这里仅清理
+  // Demo 的选择/展示状态，不能 stop 全局屏幕流，否则仍在通话的其他 leg 也会中断。
+  leg.screenActive = false;
 
   if (leg.audioElement)
   {
@@ -2204,188 +2202,11 @@ function terminateConference()
 // =============================================================================
 // 定向屏幕共享
 //
-// 三方模式下 A 可以通过 addTransceiver + renegotiate 向指定成员（B 或 C）
-// 发送屏幕共享轨。共享信息通过 SIP INFO（event: screen-share）传递 MID，
-// 接收端根据 MID 找到对应的 transceiver 并渲染。
-//
-// 编码不兼容时自动降级：移除旧 m-line 的 track，新建 transceiver 重新协商。
+// 三方模式下 A 调用每条 RTCSession 的 share() 辅流模式，向指定成员（B 或 C）
+// 发送同一个屏幕流。transceiver、重协商、MID 通知和失败回滚均由 SDK 负责。
+// Demo 只保留“选择目标、采集一次屏幕、调用 SDK、维护页面预览”四项教学逻辑，
+// 不直接访问 session.connection，也不自行发送 screen-share INFO。
 // =============================================================================
-
-/**
- * 发起屏幕共享的 renegotiate。
- *
- * 使用 renegotiate({ useUpdate: false }) 发起完整 re-INVITE，
- * 10 秒内如果没有其他 renegotiate 阻塞则开始。失败自动终止。
- */
-function renegotiateConferenceScreen(leg)
-{
-  return new Promise((resolve, reject) =>
-  {
-    const readyDeadline = Date.now() + 10000;
-    let completed = false;
-    let responseTimer = null;
-
-    const finish = (error) =>
-    {
-      if (completed)
-      {
-        return;
-      }
-
-      completed = true;
-      if (responseTimer) clearTimeout(responseTimer);
-      if (error) reject(error);
-      else resolve();
-    };
-
-    const attempt = () =>
-    {
-      if (leg.session.isEnded())
-      {
-        finish(new Error('会话已结束'));
-
-        return;
-      }
-
-      let started;
-
-      try
-      {
-        started = leg.session.renegotiate({ useUpdate: false, terminateOnFailure: false }, (error) => finish(error));
-      }
-      catch (error)
-      {
-        finish(error);
-
-        return;
-      }
-
-      if (started)
-      {
-        if (!completed)
-        {
-          responseTimer = setTimeout(() =>
-          {
-            finish(new Error('屏幕共享重新协商响应超时'));
-          }, 15000);
-        }
-
-        return;
-      }
-
-      if (Date.now() >= readyDeadline)
-      {
-        finish(new Error('等待可发起屏幕共享 re-INVITE 超时'));
-
-        return;
-      }
-
-      setTimeout(attempt, 100);
-    };
-
-    attempt();
-  });
-}
-
-function waitForConferenceScreenMid(leg, timeout)
-{
-  timeout = timeout || 3000;
-
-  return new Promise((resolve, reject) =>
-  {
-    const startedAt = Date.now();
-    const check = () =>
-    {
-      const mid = leg.screenTransceiver && leg.screenTransceiver.mid;
-
-      if (mid !== null && mid !== undefined)
-      {
-        leg.screenMid = String(mid);
-        resolve(leg.screenMid);
-      }
-      else if (Date.now() - startedAt >= timeout)
-      {
-        reject(new Error('屏幕共享协商完成但没有取得 MID'));
-      }
-      else
-      {
-        setTimeout(check, 50);
-      }
-    };
-
-    check();
-  });
-}
-
-function sendConferenceScreenInfo(leg, action)
-{
-  const body = JSON.stringify({
-    event : 'screen-share',
-    action,
-    mid   : leg.screenMid
-  });
-
-  leg.session.sendInfo('application/json', body);
-}
-
-/**
- * 向指定成员发送屏幕共享。
- *
- * 如果该 leg 已有 screenSender（上次共享留下的 m-line），先尝试
- * replaceTrack 复用；编码不兼容时降级为新建 transceiver + 重新协商。
- */
-async function shareConferenceScreenToLeg(leg, screenTrack, screenStream)
-{
-  if (!leg || !leg.confirmed)
-  {
-    throw new Error('目标会议成员尚未确认');
-  }
-
-  if (leg.screenSender && leg.screenMid)
-  {
-    try
-    {
-      await leg.screenSender.replaceTrack(screenTrack);
-      leg.screenActive = true;
-      sendConferenceScreenInfo(leg, 'start');
-
-      return;
-    }
-    catch (error)
-    {
-      // 编码能力范围不兼容时，保留旧 m-line，并新增一条 transceiver 重新协商。
-      console.warn(`[conference] reuse screen sender for ${leg.role} failed`, error);
-      await leg.screenSender.replaceTrack(null).catch(() => {});
-    }
-  }
-
-  const transceiver = leg.session.connection.addTransceiver(screenTrack, {
-    direction : 'sendonly',
-    streams   : [ screenStream ]
-  });
-
-  leg.screenTransceiver = transceiver;
-  leg.screenSender = transceiver.sender;
-
-  try
-  {
-    await renegotiateConferenceScreen(leg);
-    await waitForConferenceScreenMid(leg);
-  }
-  catch (error)
-  {
-    await leg.screenSender.replaceTrack(null).catch(() => {});
-    try { leg.screenTransceiver.direction = 'inactive'; }
-    catch (directionError) {}
-    leg.screenMid = null;
-    leg.screenActive = false;
-
-    throw error;
-  }
-
-  leg.screenActive = true;
-  sendConferenceScreenInfo(leg, 'start');
-}
 
 function getConferenceScreenTargetLegs()
 {
@@ -2395,8 +2216,16 @@ function getConferenceScreenTargetLegs()
 /**
  * 启动会议屏幕共享。
  *
- * 调用 getDisplayMedia 获取屏幕流，逐一发送给所有选中 screenTarget 的成员。
- * 用户通过浏览器停止共享或 track ended 时自动停止。
+ * 为什么仍由 Demo 采集一次屏幕：三方会议有两条独立 RTCSession，如果分别让每条
+ * session.share() 调用 getDisplayMedia，浏览器会弹出两次系统共享选择器。这里获取
+ * 一份 MediaStream，再通过 SDK 的 mediaStream 参数交给所有目标会话复用。
+ *
+ * 页面职责：校验目标、采集/预览、逐路调用 SDK、展示每路成功或失败状态。
+ * SDK 职责：sender/transceiver、re-INVITE、MID INFO、track-ended 和失败回滚。
+ * 单路失败不会撤销已经成功的其他会话；全部失败时才统一关闭本地预览和屏幕流。
+ *
+ * @returns {Promise<void>} 所有目标会话均完成尝试后结束
+ * @throws {Error} 屏幕采集失败时由调用方展示错误；单路发送失败只更新状态提示
  */
 async function startConferenceScreenShare()
 {
@@ -2434,6 +2263,8 @@ async function startConferenceScreenShare()
       await stopConferenceScreenShare();
     }
 
+    // 只采集一次，避免向 B/C 分别弹出系统选择器；当前三方示例只共享视频，
+    // 不发送系统音频，防止与会议音频混合链路产生回声或重复声音。
     const screenStream = await navigator.mediaDevices.getDisplayMedia({
       video : { width: { max: 1920 }, height: { max: 1080 }, frameRate: 15 },
       audio : false
@@ -2448,6 +2279,8 @@ async function startConferenceScreenShare()
 
     conferenceScreenStream = screenStream;
     screenTrack.contentHint = 'detail';
+    // 用户点击浏览器原生“停止共享”时走同一个停止入口，确保每条已发送会话
+    // 都会调用 session.unShare()，而不是仅关闭本地预览。
     screenTrack.addEventListener('ended', () =>
     {
       stopConferenceScreenShare(true).catch((error) => console.warn('[conference] stop screen failed', error));
@@ -2459,6 +2292,8 @@ async function startConferenceScreenShare()
       .catch(() => {});
     openScreenShareDialog('local');
 
+    // 逐路等待便于在页面明确提示 B/C 中哪一路失败，也避免同一时间并发发起多次
+    // re-INVITE 让调试日志难以定位。不同 RTCSession 之间的成功状态互不回滚。
     for (let index = 0; index < targets.length; index++)
     {
       const leg = targets[index];
@@ -2470,7 +2305,26 @@ async function startConferenceScreenShare()
           throw new Error('屏幕共享已由用户停止');
         }
 
-        await shareConferenceScreenToLeg(leg, screenTrack, screenStream);
+        await leg.session.share('screen', null, null, {
+          // auxiliary 表示新增独立 video m-line，不替换本会话的摄像头轨，也不使用 BFCP。
+          mode                : 'auxiliary',
+          // 多条会话复用同一个屏幕源，避免重复采集和重复系统授权。
+          mediaStream         : screenStream,
+          // 单条会话停止/挂断时不能 stop 共享流，流由 stopConferenceScreenShare 统一释放。
+          stopStreamOnUnShare : false,
+          // detail 优先保证桌面文字、表格和 UI 边缘清晰。
+          contentHint         : 'detail'
+        });
+
+        // share() 等待 re-INVITE 期间用户可能已从系统栏停止共享。此时立即撤销
+        // 刚成功的 sender，不能把 ended track 标记成有效共享。
+        if (screenTrack.readyState === 'ended')
+        {
+          await leg.session.unShare().catch(() => {});
+          throw new Error('屏幕共享已由用户停止');
+        }
+
+        leg.screenActive = true;
         successCount++;
         setStatus(`屏幕共享已发送给 ${getConferenceDisplayRole(leg)}`);
       }
@@ -2478,11 +2332,11 @@ async function startConferenceScreenShare()
       {
         console.warn(`[conference] share screen to ${leg.role} failed`, error);
         setStatus(`屏幕共享发送给 ${getConferenceDisplayRole(leg)} 失败：${error.message || error}`);
-        if (leg.screenSender) await leg.screenSender.replaceTrack(null).catch(() => {});
         leg.screenActive = false;
       }
     }
 
+    // 允许部分成功：例如 B 成功、C 协商失败时仍继续给 B 共享；只有全部失败才收尾。
     if (successCount === 0)
     {
       await stopConferenceScreenShare();
@@ -2500,24 +2354,39 @@ async function startConferenceScreenShare()
   }
 }
 
+/**
+ * 停止当前会议屏幕共享。
+ *
+ * 先让所有 active leg 调用 session.unShare()，等待 SDK 发 stop INFO 并停止 sender；
+ * 然后再清空本地预览。只有页面主动停止时才 stop MediaStream，系统 ended 路径中的
+ * track 已经停止，避免再次操作已结束的共享源。
+ *
+ * @param {boolean} [fromTrackEnded=false] 是否由浏览器系统共享结束事件触发
+ * @returns {Promise<void>} 所有会话的停止请求完成后结束
+ */
 async function stopConferenceScreenShare(fromTrackEnded)
 {
   const tasks = [];
 
   conferenceLegs.forEach((leg) =>
   {
-    if (!leg.screenActive || !leg.screenSender)
+    if (!leg.screenActive)
     {
       return;
     }
 
-    try { sendConferenceScreenInfo(leg, 'stop'); }
-    catch (error) { console.warn(`[conference] send screen stop to ${leg.role} failed`, error); }
-
-    tasks.push(leg.screenSender.replaceTrack(null).catch(() => {}));
+    // 已结束会话会在 RTCSession._close() 中自行释放；仍存活的会话必须显式
+    // unShare()，让对端及时收到 remoteUnShared，而不是等待整条通话结束。
+    if (!leg.session.isEnded())
+    {
+      tasks.push(Promise.resolve()
+        .then(() => leg.session.unShare())
+        .catch((error) => console.warn(`[conference] stop screen to ${leg.role} failed`, error)));
+    }
     leg.screenActive = false;
   });
 
+  // 等待所有 sender 清空后再 stop 共享源，避免 replaceTrack(null) 与 track ended 竞争。
   await Promise.all(tasks);
 
   const stream = conferenceScreenStream;

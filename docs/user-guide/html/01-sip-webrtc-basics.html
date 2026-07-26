@@ -56,6 +56,9 @@
         <a class="nav-link" href="08-demo-guide.html">
           8 Base JS Demo 学习与验证
         </a>
+        <a class="nav-link" href="app-conference-guide.html">
+          三方会议 Demo 实现详解
+        </a>
     </section>
   </aside>
   <div class="sidebar-backdrop" hidden></div>
@@ -222,16 +225,11 @@
 <td>浏览器网络接口是否离线需结合 offline 事件</td>
 </tr>
 </tbody></table></div>
-<p>自动注册是 <code>register: true</code>，<code>ua.start()</code> 连接后自动发送 REGISTER。手动注册是 <code>register: false</code>，在 <code>connected</code> 后调用 <code>ua.register()</code>。两种方式的最终成功标志都相同：<code>registered</code>。</p>
+<p>自动注册是 <code>register: true</code>，<code>ua.start()</code> 连接后自动发送 REGISTER。SDK 也支持配置 <code>register: false</code> 后主动调用 <code>ua.register()</code>；Base JS Demo 选择运行模式后固定使用自动注册。两种方式的最终成功标志都相同：<code>registered</code>。</p>
 <p>Demo 不在 <code>connected</code> 事件中直接开放呼叫，而是分别记录连接和注册结果。以下代码取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">ua.on(&#39;connected&#39;, function()
 {
   setStatus(&#39;信令连接成功&#39;);
-
-  if (manualRegister)
-  {
-    setStatus(&#39;信令连接成功，请点击“主动注册”&#39;);
-  }
 });
 
 ua.on(&#39;registered&#39;, function(data)
