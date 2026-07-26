@@ -74,21 +74,38 @@
 </tbody></table></div>
 <h2 id="1-一句话理解整体设计">1. 一句话理解整体设计<a class="heading-anchor" href="#1-一句话理解整体设计" aria-label="链接到本节">#</a></h2>
 <p>A 页面同时维护 A-B、A-C 两路独立的 SIP/WebRTC 通话，并在浏览器中把 A、B、C 的媒体送入 <code>MediaEffectsComposer</code>。合成器输出一条合成视频和按接收方定制的音频子混音，再通过两路 <code>RTCRtpSender</code> 分别发给 B、C。</p>
-<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">flowchart LR
+<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">%%{init: {&quot;flowchart&quot;: {&quot;curve&quot;: &quot;basis&quot;, &quot;nodeSpacing&quot;: 28, &quot;rankSpacing&quot;: 56, &quot;padding&quot;: 10}}}%%
+flowchart TB
   subgraph A[&quot;浏览器 A：会议桥接端&quot;]
+    direction TB
     UA[&quot;一个 CRTC.UA&quot;]
-    AB[&quot;A-B RTCSession / PeerConnection&quot;]
-    AC[&quot;A-C RTCSession / PeerConnection&quot;]
-    MEC[&quot;MediaEffectsComposer&quot;]
+
+    subgraph SESSIONS[&quot;两路独立会话&quot;]
+      direction LR
+      AB[&quot;A-B RTCSession / PeerConnection&lt;br/&gt;sender：合成视频 + A+C 音频&quot;]
+      AC[&quot;A-C RTCSession / PeerConnection&lt;br/&gt;sender：合成视频 + A+B 音频&quot;]
+    end
+
+    MEC[&quot;MediaEffectsComposer&lt;br/&gt;混流中枢&quot;]
+
     UA --&gt; AB
     UA --&gt; AC
-    AB --&gt;|&quot;B 远端轨&quot;| MEC
-    AC --&gt;|&quot;C 远端轨&quot;| MEC
-    MEC --&gt;|&quot;合成视频 + A+C 音频&quot;| AB
-    MEC --&gt;|&quot;合成视频 + A+B 音频&quot;| AC
+
+    AB -.-&gt;|&quot;B 远端轨&quot;| MEC
+    AC -.-&gt;|&quot;C 远端轨&quot;| MEC
+
+    MEC --&gt; AB
+    MEC --&gt; AC
   end
-  B[&quot;B：普通点对点参与端&quot;] &lt;--&gt;|&quot;SIP + WebRTC&quot;| AB
-  C[&quot;C：普通或静默参与端&quot;] &lt;--&gt;|&quot;SIP + WebRTC&quot;| AC</pre></div>
+
+  subgraph MEMBERS[&quot;点对点参与端&quot;]
+    direction LR
+    B[&quot;B：普通参与端&quot;]
+    C[&quot;C：普通或静默参与端&quot;]
+  end
+
+  AB &lt;--&gt;|&quot;SIP + WebRTC&quot;| B
+  AC &lt;--&gt;|&quot;SIP + WebRTC&quot;| C</pre></div>
 <p>这里没有建立一条真正的“三方 RTCSession”。从 SDK 角度看，A 只是同时进行两通电话；三方能力来自 Demo 对两通电话的会话管理和媒体桥接。</p>
 <h2 id="2-文件位置-加载顺序与模块边界">2. 文件位置、加载顺序与模块边界<a class="heading-anchor" href="#2-文件位置-加载顺序与模块边界" aria-label="链接到本节">#</a></h2>
 <p>页面脚本按以下顺序加载：</p>
@@ -181,27 +198,30 @@
 <li>发给 C 的音频：A + B，即 slot <code>[0, 1]</code>。</li>
 </ul>
 <p>这样 B 不会收到自己的声音，C 也不会收到自己的声音。视频没有按接收方排除自身，两边收到的是同一条合成视频轨。</p>
-<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">flowchart LR
+<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">flowchart TB
   subgraph MEC[&quot;A-B 主 MediaEffectsComposer&quot;]
+    S2[&quot;🎛️ slot 2&quot;]
     S0[&quot;🎛️ slot 0&quot;]
     S1[&quot;🎛️ slot 1&quot;]
-    S2[&quot;🎛️ slot 2&quot;]
-    S0 --&gt; V[&quot;视频画布：A+B+C&quot;]
-    S1 --&gt; V
-    S2 --&gt; V
-    S0 --&gt; MB[&quot;B 音频子混音 [0,2]&quot;]
+    MB[&quot;B 音频子混音 [0,2]&quot;]
+    V[&quot;视频画布：A+B+C&quot;]
+    MC[&quot;C 音频子混音 [0,1]&quot;]
     S2 --&gt; MB
-    S0 --&gt; MC[&quot;C 音频子混音 [0,1]&quot;]
+    S0 --&gt; MB
+    S2 --&gt; V
+    S0 --&gt; V
+    S1 --&gt; V
+    S0 --&gt; MC
     S1 --&gt; MC
   end
 
+  C[&quot;🎥 C 远端音视频&quot;] --&gt; S2
   A[&quot;🎥 A 原始音视频&quot;] --&gt; S0
   B[&quot;🎥 B 远端音视频&quot;] --&gt; S1
-  C[&quot;🎥 C 远端音视频&quot;] --&gt; S2
-  V --&gt; OB[&quot;发给 B 的视频&quot;]
-  V --&gt; OC[&quot;发给 C 的视频&quot;]
-  MB --&gt; AB[&quot;发给 B：A+C&quot;]
-  MC --&gt; AC[&quot;发给 C：A+B&quot;]</pre></div>
+  V --&gt;|&quot;合成视频 A+B+C&quot;| OB[&quot;发送给 B&quot;]
+  MB --&gt;|&quot;音频 A+C&quot;| OB
+  V --&gt;|&quot;合成视频 A+B+C&quot;| OC[&quot;发送给 C&quot;]
+  MC --&gt;|&quot;音频 A+B&quot;| OC</pre></div>
 <h3 id="3-3-静默-c">3.3 静默 C<a class="heading-anchor" href="#3-3-静默-c" aria-label="链接到本节">#</a></h3>
 <p>静默 C 是 Demo 的观察/旁听模式：</p>
 <ul>
@@ -213,19 +233,25 @@
 <li>A-B 主会话保持原始 A-B 媒体，不因静默 C 加入而改变。</li>
 </ul>
 <p>静默身份只由 <code>X-Silent-Join</code> 判断。即使 SDP 自己包含 <code>a=recvonly</code>，没有该头部仍会被当作普通 C。</p>
-<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">flowchart LR
-  A[&quot;🎥 A 原始媒体&quot;] --&gt; AB[&quot;📞 A-B 会话&quot;]
-  AB --&gt;|&quot;A 原始媒体&quot;| B[&quot;B&quot;]
-  B --&gt;|&quot;B 远端媒体&quot;| A
+<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">flowchart TB
+  subgraph MAIN_CALL[&quot;A-B 主通话保持不变&quot;]
+    direction LR
+    A_CALL[&quot;🎥 A 原始媒体&quot;] --&gt; AB[&quot;📞 A-B 会话&lt;br/&gt;A 原始媒体 ↔ B 远端媒体&quot;]
+    AB --&gt; B_CALL[&quot;B&quot;]
+    KEEP[&quot;A-B 不切换 sender&quot;] -.-&gt; AB
+  end
 
-  A --&gt; S0[&quot;🎛️ 静默 C composer slot 0&quot;]
-  B --&gt; S1[&quot;🎛️ 静默 C composer slot 1&quot;]
-  S0 --&gt; MIX[&quot;A+B 合成输出&quot;]
-  S1 --&gt; MIX
-  MIX --&gt; AC[&quot;📞 A-C sendonly 会话&quot;]
-  AC --&gt; C[&quot;静默 C：只接收&quot;]
+  subgraph SILENT_MIX[&quot;静默 C 独立合成链&quot;]
+    direction TB
+    A_SOURCE[&quot;🎥 A 原始媒体&quot;] --&gt; S0[&quot;🎛️ composer slot 0&quot;]
+    B_SOURCE[&quot;🎥 B 远端媒体&quot;] --&gt; S1[&quot;🎛️ composer slot 1&quot;]
+    S0 --&gt; MIX[&quot;A+B 合成输出&quot;]
+    S1 --&gt; MIX
+    MIX --&gt; AC[&quot;📞 A-C sendonly 会话&quot;]
+    AC --&gt; C[&quot;静默 C：只接收&quot;]
+  end
 
-  KEEP[&quot;A-B 不切换 sender&quot;] -.-&gt; AB</pre></div>
+  MAIN_CALL ~~~ SILENT_MIX</pre></div>
 <h2 id="4-核心状态模型">4. 核心状态模型<a class="heading-anchor" href="#4-核心状态模型" aria-label="链接到本节">#</a></h2>
 <h3 id="4-1-页面级会议状态">4.1 页面级会议状态<a class="heading-anchor" href="#4-1-页面级会议状态" aria-label="链接到本节">#</a></h3>
 <div class="table-wrap"><table>
@@ -413,17 +439,17 @@
 <div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">sequenceDiagram
   autonumber
   actor User as 用户
-  participant UI as 页面按钮
-  participant Conf as app-conference.js
-  participant BSession as A-B RTCSession
-  participant Composer as A-B Composer
+  participant UI as 页面
+  participant Conf as 会议逻辑
+  participant BSession as A-B 会话
+  participant Composer as 主 Composer
   participant UA as CRTC.UA
-  participant CSession as A-C RTCSession
+  participant CSession as A-C 会话
 
   User-&gt;&gt;UI: 点击“添加成员”
   UI-&gt;&gt;Conf: callConferenceVideo({ role: &#39;C&#39; })
   Conf-&gt;&gt;Conf: 检查 B 已 confirmed
-  Conf-&gt;&gt;Conf: 设置 pending，锁住重复点击
+  Conf-&gt;&gt;Conf: 设置 pending&lt;br/&gt;锁住重复点击
   Conf-&gt;&gt;BSession: getMediaEffectsComposer()
   BSession--&gt;&gt;Conf: composer
   Conf-&gt;&gt;BSession: getComposerInputStream()
@@ -431,8 +457,8 @@
   Conf-&gt;&gt;Conf: clone A 流作为 fallback
   Conf-&gt;&gt;Composer: addSource(B 远端流, slot 1)
   Conf-&gt;&gt;Composer: getVideoStream()
-  Conf-&gt;&gt;Composer: getAudioStream([0,1]) / ([0,2])
-  Conf-&gt;&gt;BSession: audioSender.replaceTrack(A+C 子混音)
+  Conf-&gt;&gt;Composer: getAudioStream([0,1])&lt;br/&gt;/ ([0,2])
+  Conf-&gt;&gt;BSession: audioSender.replaceTrack&lt;br/&gt;(A+C 子混音)
   Conf-&gt;&gt;UA: call(C, composer 输出流)
   UA--&gt;&gt;Conf: newRTCSession(local)
   Conf-&gt;&gt;Conf: 消费 pending，创建 C leg
@@ -486,11 +512,11 @@
 <div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">sequenceDiagram
   autonumber
   participant C as 远端 C
-  participant UA as A 的 CRTC.UA
-  participant Handler as handleConferenceNewRTCSession
+  participant UA as A 端 UA
+  participant Handler as 会议入口
   participant Host as A-B 主会话
   actor User as A 端用户
-  participant AC as A-C RTCSession
+  participant AC as A-C 会话
 
   C-&gt;&gt;UA: INVITE
   UA-&gt;&gt;Handler: newRTCSession(remote)
@@ -738,11 +764,11 @@
 <div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">sequenceDiagram
   autonumber
   actor User as A 端用户
-  participant Conf as app-conference.js
-  participant Browser as 浏览器媒体 API
-  participant PC as 目标 PeerConnection
-  participant Session as 目标 RTCSession
-  participant Remote as B/C 点对点页面
+  participant Conf as 会议逻辑
+  participant Browser as 媒体 API
+  participant PC as 目标 PC
+  participant Session as 目标会话
+  participant Remote as B/C 页面
 
   User-&gt;&gt;Conf: 选择目标并点击“开始共享”
   Conf-&gt;&gt;Browser: getDisplayMedia()
@@ -752,8 +778,8 @@
     alt 已有可复用 screenSender + MID
       Conf-&gt;&gt;PC: sender.replaceTrack(screenTrack)
     else 首次共享或复用失败
-      Conf-&gt;&gt;PC: addTransceiver(screenTrack, sendonly)
-      Conf-&gt;&gt;Session: renegotiate(useUpdate: false)
+        Conf-&gt;&gt;PC: addTransceiver&lt;br/&gt;(screenTrack, sendonly)
+        Conf-&gt;&gt;Session: renegotiate&lt;br/&gt;(useUpdate: false)
       Session--&gt;&gt;Conf: re-INVITE 完成
       Conf-&gt;&gt;PC: 等待 transceiver.mid
       PC--&gt;&gt;Conf: MID
@@ -1009,7 +1035,7 @@
 <li>三方激活时禁用 REFER 和取消 REFER。</li>
 </ul>
 <p><code>conferencePendingOutgoing</code> 会在 C 媒体准备开始前立即设置，因此用户快速双击“添加成员”不会创建两路相同 C 会话。</p>
-<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">flowchart LR
+<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">flowchart TB
   MODE{&quot;三方模式已启用?&quot;} --&gt;|&quot;否&quot;| DISABLED[&quot;会议控件隐藏或禁用&quot;]
   MODE --&gt;|&quot;是&quot;| MEMBER{&quot;当前成员数&quot;}
   MEMBER --&gt;|&quot;0&quot;| ADD_B[&quot;可添加 B&quot;]
@@ -1394,46 +1420,54 @@
   MAIN --&gt; PREVIEW[&quot;bindConferencePreviewTrack()&quot;]
   LOCAL --&gt; BYROLE</pre></div>
 <h3 id="22-4-composer-子混音-同步与降级调用图">22.4 composer、子混音、同步与降级调用图<a class="heading-anchor" href="#22-4-composer-子混音-同步与降级调用图" aria-label="链接到本节">#</a></h3>
-<p>这张图包含普通 C 信令前媒体准备、实际三方同步以及失败恢复，是媒体链路的完整函数级调用图。</p>
-<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">flowchart TD
-  OPT[&quot;buildConferenceComposerOptions()&quot;] -.-&gt;|&quot;复用 buildCallComposerOptions&quot;| EXTOPT[&quot;外部：页面媒体效果配置&quot;]
-  GET[&quot;getConferenceMediaEffectsComposer()&quot;] --&gt; BYROLE[&quot;getConferenceLegByRole()&quot;]
+<p>这张图包含普通 C 信令前媒体准备、实际三方同步以及失败恢复，是媒体链路的完整函数级调用图。为避免跨分支长距离回折，共用辅助函数会就近重复显示；同名节点仍表示同一个函数。</p>
+<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">flowchart TB
+  subgraph LOOKUP_FLOW[&quot;composer 获取&quot;]
+    direction LR
+    GET[&quot;getConferenceMediaEffectsComposer()&quot;] --&gt; BYROLE_GET[&quot;getConferenceLegByRole()&quot;]
+  end
 
-  ENSURE[&quot;ensureConferenceHostComposer()&quot;] --&gt; OPT
-  ENSURE --&gt; LOCAL[&quot;renderConferenceLocalVideo()&quot;]
+  subgraph PREP_FLOW[&quot;普通 C 入会前准备&quot;]
+    direction LR
+    PREPARE[&quot;prepareNormalCComposerOutput()&quot;] --&gt; ENSURE[&quot;ensureConferenceHostComposer()&quot;]
+    PREPARE --&gt; CLONE_PREP[&quot;cloneConferenceFallbackLocalStream()&quot;]
+    PREPARE --&gt; HYDRATE_PREP[&quot;hydrateConferenceRemoteMainStream()&quot;]
+    PREPARE --&gt; SOURCE_PREP[&quot;updateConferenceComposerSource()&quot;]
+    PREPARE --&gt; REMEMBER[&quot;rememberConferenceOriginalSenders()&quot;]
+    PREPARE --&gt; OUTPUT[&quot;buildConferenceComposerOutputStream()&quot;]
+    PREPARE -.-&gt;|&quot;异常&quot;| ROLLBACK[&quot;rollbackNormalCComposerOutput()&quot;]
+    ENSURE --&gt; OPT[&quot;buildConferenceComposerOptions()&quot;]
+    ENSURE --&gt; LOCAL_PREP[&quot;renderConferenceLocalVideo()&quot;]
+    OPT -.-&gt;|&quot;复用 buildCallComposerOptions&quot;| EXTOPT[&quot;外部：页面媒体效果配置&quot;]
+    ROLLBACK --&gt; RESTORE_ONE_PREP[&quot;restoreConferenceLegOriginalMedia()&quot;]
+    SOURCE_PREP -.-&gt;|&quot;SDK&quot;| ADDREMOVE_PREP[&quot;外部：composer.addSource/removeSource&quot;]
+    OUTPUT -.-&gt;|&quot;浏览器&quot;| STREAM[&quot;外部：new MediaStream()&quot;]
+  end
 
-  PREPARE[&quot;prepareNormalCComposerOutput()&quot;] --&gt; ENSURE
-  PREPARE --&gt; CLONE[&quot;cloneConferenceFallbackLocalStream()&quot;]
-  PREPARE --&gt; HYDRATE[&quot;hydrateConferenceRemoteMainStream()&quot;]
-  PREPARE --&gt; SOURCE[&quot;updateConferenceComposerSource()&quot;]
-  PREPARE --&gt; REMEMBER[&quot;rememberConferenceOriginalSenders()&quot;]
-  PREPARE --&gt; OUTPUT[&quot;buildConferenceComposerOutputStream()&quot;]
-  PREPARE -.-&gt;|&quot;异常&quot;| ROLLBACK[&quot;rollbackNormalCComposerOutput()&quot;]
+  subgraph SYNC_FLOW[&quot;运行期同步与失败降级&quot;]
+    direction LR
+    SCHEDULE[&quot;scheduleConferenceSync()&quot;] --&gt; SYNC[&quot;syncConferenceComposer()&quot;]
+    SCHEDULE -.-&gt;|&quot;sync 异常&quot;| RESTORE_ALL[&quot;restoreConferenceOriginalMedia()&quot;]
+    SCHEDULE -.-&gt;|&quot;sync 异常&quot;| RELEASE[&quot;releaseConferenceComposerOutputs()&quot;]
+    SCHEDULE -.-&gt;|&quot;sync 异常&quot;| MAIN_FAIL[&quot;renderConferenceMainVideo()&quot;]
+    SYNC --&gt; BYROLE_SYNC[&quot;getConferenceLegByRole()&quot;]
+    SYNC --&gt; HYDRATE_SYNC[&quot;hydrateConferenceRemoteMainStream()&quot;]
+    SYNC --&gt; SIGN[&quot;getConferenceComposerSyncSignature()&quot;]
+    SYNC --&gt; SOURCE_SYNC[&quot;updateConferenceComposerSource()&quot;]
+    SYNC -.-&gt;|&quot;composer 宿主切换&quot;| CLONE_SYNC[&quot;cloneConferenceFallbackLocalStream()&quot;]
+    SYNC --&gt; LOCAL_SYNC[&quot;renderConferenceLocalVideo()&quot;]
+    SYNC --&gt; MAIN_SYNC[&quot;renderConferenceMainVideo()&quot;]
+    SYNC --&gt; UI[&quot;updateConferenceUi()&quot;]
+    RESTORE_ALL --&gt; RESTORE_ONE_SYNC[&quot;restoreConferenceLegOriginalMedia()&quot;]
+    RELEASE -.-&gt;|&quot;SDK&quot;| SUBMIX[&quot;外部：releaseSubmixAudioStream()&quot;]
+    SOURCE_SYNC -.-&gt;|&quot;SDK&quot;| ADDREMOVE_SYNC[&quot;外部：composer.addSource/removeSource&quot;]
+    MAIN_SYNC --&gt; BYROLE_MAIN[&quot;getConferenceLegByRole()&quot;]
+    MAIN_SYNC --&gt; PREVIEW[&quot;bindConferencePreviewTrack()&quot;]
+    LOCAL_SYNC --&gt; BYROLE_LOCAL[&quot;getConferenceLegByRole()&quot;]
+  end
 
-  ROLLBACK --&gt; RESTORE_ONE[&quot;restoreConferenceLegOriginalMedia()&quot;]
-
-  SCHEDULE[&quot;scheduleConferenceSync()&quot;] --&gt; SYNC[&quot;syncConferenceComposer()&quot;]
-  SCHEDULE -.-&gt;|&quot;sync 异常&quot;| RESTORE_ALL[&quot;restoreConferenceOriginalMedia()&quot;]
-  SCHEDULE -.-&gt;|&quot;sync 异常&quot;| RELEASE[&quot;releaseConferenceComposerOutputs()&quot;]
-  SCHEDULE -.-&gt;|&quot;sync 异常&quot;| MAIN[&quot;renderConferenceMainVideo()&quot;]
-
-  SYNC --&gt; BYROLE
-  SYNC --&gt; HYDRATE
-  SYNC --&gt; SIGN[&quot;getConferenceComposerSyncSignature()&quot;]
-  SYNC --&gt; SOURCE
-  SYNC -.-&gt;|&quot;composer 宿主切换&quot;| CLONE
-  SYNC --&gt; LOCAL
-  SYNC --&gt; MAIN
-  SYNC --&gt; UI[&quot;updateConferenceUi()&quot;]
-
-  RESTORE_ALL --&gt; RESTORE_ONE
-  MAIN --&gt; BYROLE
-  MAIN --&gt; PREVIEW[&quot;bindConferencePreviewTrack()&quot;]
-  LOCAL --&gt; BYROLE
-
-  SOURCE -.-&gt;|&quot;SDK&quot;| ADDREMOVE[&quot;外部：composer.addSource/removeSource&quot;]
-  OUTPUT -.-&gt;|&quot;浏览器&quot;| STREAM[&quot;外部：new MediaStream()&quot;]
-  RELEASE -.-&gt;|&quot;SDK&quot;| SUBMIX[&quot;外部：releaseSubmixAudioStream()&quot;]</pre></div>
+  LOOKUP_FLOW ~~~ PREP_FLOW
+  PREP_FLOW ~~~ SYNC_FLOW</pre></div>
 <h3 id="22-5-当前成员-统计面板与公共控制调用图">22.5 当前成员、统计面板与公共控制调用图<a class="heading-anchor" href="#22-5-当前成员-统计面板与公共控制调用图" aria-label="链接到本节">#</a></h3>
 <p>这张图覆盖统计格式化小函数，也展示成员选择如何改变 <code>rtcSession</code>、<code>statsSession</code> 和公共控制栏的操作目标。</p>
 <div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">flowchart TD
@@ -1475,28 +1509,42 @@
   REFER --&gt; CURRENT
   CANCELREF --&gt; CURRENT</pre></div>
 <h3 id="22-6-定向屏幕共享完整调用图">22.6 定向屏幕共享完整调用图<a class="heading-anchor" href="#22-6-定向屏幕共享完整调用图" aria-label="链接到本节">#</a></h3>
-<p>图中既包含开始/停止共享，也包含 UI 目标筛选、sender 复用和首次 re-INVITE 协商。</p>
-<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">flowchart TD
-  START[&quot;startConferenceScreenShare()&quot;] --&gt; CONFIRMED[&quot;getConferenceConfirmedLegs()&quot;]
-  START --&gt; TARGETS[&quot;getConferenceScreenTargetLegs()&quot;]
-  START --&gt; UI[&quot;updateConferenceUi()&quot;]
-  START -.-&gt;|&quot;已有共享先停止&quot;| STOP[&quot;stopConferenceScreenShare()&quot;]
-  START -.-&gt;|&quot;每个目标&quot;| SHARE[&quot;shareConferenceScreenToLeg()&quot;]
+<p>图中既包含开始/停止共享，也包含 UI 目标筛选、sender 复用和首次 re-INVITE 协商。为避免开始、发送和停止三条路径互相穿插，同名函数节点可能在不同调用分支就近重复显示。</p>
+<div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">flowchart TB
+  subgraph START_FLOW[&quot;1. 开始共享与目标筛选&quot;]
+    direction LR
+    START[&quot;startConferenceScreenShare()&quot;] --&gt; CONFIRMED_DIRECT[&quot;getConferenceConfirmedLegs()&quot;]
+    START --&gt; TARGETS[&quot;getConferenceScreenTargetLegs()&quot;]
+    TARGETS --&gt; CONFIRMED_TARGETS[&quot;getConferenceConfirmedLegs()&quot;]
+    START --&gt; UI_START[&quot;updateConferenceUi()&quot;]
+    START -.-&gt;|&quot;已有共享&quot;| STOP_ENTRY[&quot;先调用 stopConferenceScreenShare()&quot;]
+    START -.-&gt;|&quot;每个目标&quot;| SHARE_ENTRY[&quot;调用 shareConferenceScreenToLeg()&quot;]
+  end
 
-  TARGETS --&gt; CONFIRMED
-  SHARE -.-&gt;|&quot;可复用 sender&quot;| REPLACE[&quot;外部：screenSender.replaceTrack()&quot;]
-  SHARE -.-&gt;|&quot;首次或复用失败&quot;| RENEGO[&quot;renegotiateConferenceScreen()&quot;]
-  SHARE --&gt; WAITMID[&quot;waitForConferenceScreenMid()&quot;]
-  SHARE --&gt; INFO[&quot;sendConferenceScreenInfo()&quot;]
-  RENEGO -.-&gt;|&quot;SDK&quot;| SESSIONRE[&quot;外部：session.renegotiate()&quot;]
-  WAITMID -.-&gt;|&quot;WebRTC&quot;| MID[&quot;外部：screenTransceiver.mid&quot;]
-  INFO -.-&gt;|&quot;SDK&quot;| SIPINFO[&quot;外部：session.sendInfo()&quot;]
+  subgraph SHARE_FLOW[&quot;2. 向单个目标发送共享&quot;]
+    direction LR
+    SHARE[&quot;shareConferenceScreenToLeg()&quot;] -.-&gt;|&quot;可复用 sender&quot;| REPLACE[&quot;外部：screenSender.replaceTrack()&quot;]
+    SHARE -.-&gt;|&quot;首次或复用失败&quot;| RENEGO[&quot;renegotiateConferenceScreen()&quot;]
+    SHARE --&gt; WAITMID[&quot;waitForConferenceScreenMid()&quot;]
+    SHARE --&gt; INFO[&quot;sendConferenceScreenInfo()&quot;]
+    RENEGO -.-&gt;|&quot;SDK&quot;| SESSIONRE[&quot;外部：session.renegotiate()&quot;]
+    WAITMID -.-&gt;|&quot;WebRTC&quot;| MID[&quot;外部：screenTransceiver.mid&quot;]
+    INFO -.-&gt;|&quot;SDK&quot;| SIPINFO[&quot;外部：session.sendInfo()&quot;]
+  end
 
-  STOP --&gt; INFO
-  STOP --&gt; UI
-  STOP --&gt; REPLACE
-  CLEAN[&quot;cleanupConferenceLeg()&quot;] -.-&gt;|&quot;共享无活跃目标或最后成员结束&quot;| STOP
-  UI --&gt; TARGETS</pre></div>
+  subgraph STOP_FLOW[&quot;3. 停止共享与成员清理&quot;]
+    direction LR
+    CLEAN[&quot;cleanupConferenceLeg()&quot;] -.-&gt;|&quot;共享无活跃目标或最后成员结束&quot;| STOP[&quot;stopConferenceScreenShare()&quot;]
+    STOP --&gt; INFO_STOP[&quot;sendConferenceScreenInfo()&quot;]
+    STOP --&gt; UI_STOP[&quot;updateConferenceUi()&quot;]
+    STOP --&gt; REPLACE_STOP[&quot;外部：screenSender.replaceTrack()&quot;]
+    INFO_STOP -.-&gt;|&quot;SDK&quot;| SIPINFO_STOP[&quot;外部：session.sendInfo()&quot;]
+    UI_STOP --&gt; TARGETS_STOP[&quot;getConferenceScreenTargetLegs()&quot;]
+    TARGETS_STOP --&gt; CONFIRMED_STOP[&quot;getConferenceConfirmedLegs()&quot;]
+  end
+
+  START_FLOW ~~~ SHARE_FLOW
+  SHARE_FLOW ~~~ STOP_FLOW</pre></div>
 <h3 id="22-7-挂断-资源清理与-refer-调用图">22.7 挂断、资源清理与 REFER 调用图<a class="heading-anchor" href="#22-7-挂断-资源清理与-refer-调用图" aria-label="链接到本节">#</a></h3>
 <p>最后一张图展示所有结束入口如何汇入统一清理，以及清理过程会调用哪些恢复和 UI 函数。</p>
 <div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">flowchart TD
@@ -1673,8 +1721,22 @@
         startOnLoad: true,
         securityLevel: 'strict',
         theme: currentTheme() === 'dark' ? 'dark' : 'default',
-        flowchart: { htmlLabels: true, useMaxWidth: true },
-        sequence: { useMaxWidth: true, wrap: true }
+        flowchart: {
+          htmlLabels: true,
+          useMaxWidth: true,
+          curve: 'basis',
+          subGraphTitleMargin: { top: 0, bottom: 20 },
+          nodeSpacing: 30,
+          rankSpacing: 82
+        },
+        sequence: {
+          useMaxWidth: true,
+          wrap: true,
+          diagramMarginX: 8,
+          actorMargin: 24,
+          width: 110,
+          messageMargin: 42
+        }
       });
     }
   });
