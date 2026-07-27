@@ -122,7 +122,7 @@ session.on(...) → failed / ended 清理
 <tbody><tr>
 <td>自动注册、主动注销/重新注册</td>
 <td>顶部初始化区、注册控制区</td>
-<td><code>initializeDemoMode</code>、<code>registerUa</code>、<code>unregisterUa</code></td>
+<td><code>initMode</code>、<code>regUa</code>、<code>unregUa</code></td>
 <td><code>start()</code>、<code>register()</code>、<code>unregister()</code>、注册事件</td>
 </tr>
 <tr>
@@ -146,25 +146,25 @@ session.on(...) → failed / ended 清理
 <tr>
 <td>设备选择</td>
 <td><code>#cameras</code>、<code>#mics</code></td>
-<td><code>buildSelected*Constraints()</code>、设备 <code>change</code> 事件</td>
+<td><code>getAudioOpts() / getVideoOpts()</code>、设备 <code>change</code> 事件</td>
 <td><code>CRTC.Utils.get*()</code>、<code>switchDevice()</code></td>
 </tr>
 <tr>
 <td>音视频模式切换</td>
-<td><code>#toAudio</code>、<code>#toVideo</code>、<code>#toVideoSendonly</code></td>
+<td><code>#toAudio</code>、<code>#toVideo</code>、<code>#toVideoSend</code></td>
 <td><code>newRTCSession</code> 中的模式按钮绑定</td>
 <td><code>downgradeToAudio()</code>、<code>upgradeToVideo()</code>、<code>mode</code></td>
 </tr>
 <tr>
 <td>媒体效果</td>
 <td>输出镜像、虚拟背景和水印控件</td>
-<td><code>buildCallComposerOptions()</code>、<code>buildCallAiNsOptions()</code></td>
+<td><code>getFxOpts()</code>、<code>getNsOpts()</code></td>
 <td><code>getMediaEffectsComposer()</code>、<code>getAiNoiseSuppression()</code></td>
 </tr>
 <tr>
 <td>屏幕/元素分享</td>
 <td>共享与推流区</td>
-<td><code>screenShare</code>、<code>formShare</code>、<code>picShare</code>、<code>videoShare</code></td>
+<td><code>shareScreen</code>、<code>shareHtml</code>、<code>sharePic</code>、<code>shareVideo</code></td>
 <td><code>share()</code>、<code>unShare()</code>、共享事件</td>
 </tr>
 <tr>
@@ -252,7 +252,7 @@ http://localhost:8080/demo/base-js/index.html?caller=1002
 <h2 id="8-5-demo-的-ua-配置">8.5 Demo 的 UA 配置<a class="heading-anchor" href="#8-5-demo-的-ua-配置" aria-label="链接到本节">#</a></h2>
 <p>Demo 会根据已配置的环境和账号创建 <code>CRTC.UA</code>。客户项目应使用服务方提供的 WSS、SIP URI、鉴权凭据、授权码和注册参数，不要迁移 Demo 的测试账号规则。完整 UA 配置见 <a href="06-api-reference.html">SDK API 参考</a>。</p>
 <p>Demo 中的 UA 创建代码位于 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const account = handleGetQuery(&#39;caller&#39;);
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const account = getQuery(&#39;caller&#39;);
 const socket = new CRTC.WebSocketInterface(signalingUrl);
 const configuration = {
   sockets                          : socket,
@@ -292,7 +292,7 @@ ua.on(&#39;registered&#39;, function(data)
 <h3 id="主动注销与重新注册">主动注销与重新注册<a class="heading-anchor" href="#主动注销与重新注册" aria-label="链接到本节">#</a></h3>
 <p>初始化后 Demo 固定自动注册。注册控制区仍保留主动注销和重新注册，用于验证注册生命周期。</p>
 <p>注册控制区对应代码位于 <a href="../../../demo/base-js/js/app.ui-bindings.js"><code>app.ui-bindings.js</code></a>：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">document.querySelector(&#39;#registerUa&#39;).onclick = function()
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">document.querySelector(&#39;#regUa&#39;).onclick = function()
 {
   if (ua.isConnected() &amp;&amp; !ua.isRegistered())
   {
@@ -300,7 +300,7 @@ ua.on(&#39;registered&#39;, function(data)
   }
 };
 
-document.querySelector(&#39;#unregisterUa&#39;).onclick = function()
+document.querySelector(&#39;#unregUa&#39;).onclick = function()
 {
   if (ua.isRegistered())
   {
@@ -336,12 +336,12 @@ pcConfig[&#39;bundlePolicy&#39;] = &#39;max-compat&#39;;
 </div><h3 id="摄像头和麦克风">摄像头和麦克风<a class="heading-anchor" href="#摄像头和麦克风" aria-label="链接到本节">#</a></h3>
 <p>下拉列表来自 <code>CRTC.Utils.getCameras()</code> 和 <code>getMicrophones()</code>。选择后：</p>
 <ul>
-<li>无通话：保存 deviceId，标准呼叫/接听通过 <code>buildSelectedAudioConstraints()</code>、<code>buildSelectedVideoConstraints()</code> 写入 <code>deviceId.exact</code>。</li>
+<li>无通话：保存 deviceId，标准呼叫/接听通过 <code>getAudioOpts()</code>、<code>getVideoOpts()</code> 写入 <code>deviceId.exact</code>。</li>
 <li>通话中：立即调用 <code>session.switchDevice(&#39;camera&#39;/&#39;audio&#39;, deviceId)</code>。</li>
 </ul>
 <p>代码位置：设备枚举和约束构建在 <a href="../../../demo/base-js/js/app.sdk-helper.js"><code>app.sdk-helper.js</code></a>，下拉框 <code>change</code> 事件在 <a href="../../../demo/base-js/js/app.ui-bindings.js"><code>app.ui-bindings.js</code></a>。标准接听和视频升级也复用相同的视频约束，避免呼出、接听使用不同设备。</p>
 <p>约束构建函数会在已选设备时写入 <code>deviceId.exact</code>：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function buildSelectedVideoConstraints()
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function getVideoOpts()
 {
   const constraints = Object.assign({}, videoConstraints);
 
@@ -396,7 +396,7 @@ pcConfig[&#39;bundlePolicy&#39;] = &#39;max-compat&#39;;
 <td>使用 re-INVITE 方式</td>
 </tr>
 </tbody></table></div>
-<p>下拉框在 <a href="../../../demo/base-js/js/app.ui-bindings.js"><code>app.ui-bindings.js</code></a> 更新 <code>useUpdate</code>；<code>#toAudio</code>、<code>#toVideo</code> 和 <code>#toVideoSendonly</code> 在 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a> 把该值传给升级/降级方法。必须由服务端和对端共同支持，默认联调先使用现网已验证的方式。</p>
+<p>下拉框在 <a href="../../../demo/base-js/js/app.ui-bindings.js"><code>app.ui-bindings.js</code></a> 更新 <code>useUpdate</code>；<code>#toAudio</code>、<code>#toVideo</code> 和 <code>#toVideoSend</code> 在 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a> 把该值传给升级/降级方法。必须由服务端和对端共同支持，默认联调先使用现网已验证的方式。</p>
 <h3 id="画质偏好">画质偏好<a class="heading-anchor" href="#画质偏好" aria-label="链接到本节">#</a></h3>
 <p>调用 <code>session.setVideoContentHint(value)</code>：</p>
 <div class="table-wrap"><table>
@@ -481,7 +481,7 @@ pcConfig[&#39;bundlePolicy&#39;] = &#39;max-compat&#39;;
 <tbody><tr>
 <td>Ai 降噪</td>
 <td>空 / <code>AiNS</code></td>
-<td>是否在下一次呼叫/接听传 <code>aiNoiseSuppression</code></td>
+<td>是否在下一次呼叫/接听传 <code>nsMode</code></td>
 </tr>
 <tr>
 <td>强度</td>
@@ -492,16 +492,16 @@ pcConfig[&#39;bundlePolicy&#39;] = &#39;max-compat&#39;;
 <p>关闭下拉并不代表当前通话一定会动态销毁已有 AiNS；Demo 重点展示初始启用和强度热更新。需要运行时开关时应按产品设计明确其生命周期。</p>
 <p>以上三项的参数构建和通话中更新集中在 <a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a>：</p>
 <ul>
-<li><code>buildCallComposerOptions()</code>：组合镜像、水印和虚拟背景，供呼叫/标准接听使用。</li>
-<li><code>applyCurrentOutputMirrorToSession()</code>：更新当前通话输出镜像。</li>
-<li><code>applyCurrentVirtualBackgroundToSession()</code>：更新或清除 slot 0 虚拟背景。</li>
-<li><code>buildCallAiNsOptions()</code>：生成下一次呼叫/标准接听的 AiNS 参数。</li>
-<li><code>applyAiNsLevelToCurrentCall()</code>：热更新当前通话降噪强度。</li>
+<li><code>getFxOpts()</code>：组合镜像、水印和虚拟背景，供呼叫/标准接听使用。</li>
+<li><code>setMirror()</code>：更新当前通话输出镜像。</li>
+<li><code>setVb()</code>：更新或清除 slot 0 虚拟背景。</li>
+<li><code>getNsOpts()</code>：生成下一次呼叫/标准接听的 AiNS 参数。</li>
+<li><code>setNsLevel()</code>：热更新当前通话降噪强度。</li>
 </ul>
 <p>composer 初始配置的核心代码如下，取自 <a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a>：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const outputMirror = document.getElementById(&#39;callMediaEffectsComposerOutputMirror&#39;).value === &#39;on&#39;;
-const aiVBOptions = buildCurrentAiVBOptions();
-const watermarks = buildCurrentWatermarks();
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const outputMirror = document.getElementById(&#39;fxMirror&#39;).value === &#39;on&#39;;
+const aiVBOptions = getVbOpts();
+const watermarks = getMarks();
 const hasComposerEffects = outputMirror || watermarks.length || aiVBOptions;
 const composerOptions = {};
 
@@ -527,9 +527,9 @@ if (aiVBOptions)
 </div><p>AiNS 则使用独立顶层配置：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">return {
   enabled             : true,
-  noiseReductionLevel : getCurrentAiNsLevel(),
+  noiseReductionLevel : getNsLevel(),
   outputGain          : 1,
-  assetConfig         : { cdnUrl: AI_NOISE_ASSET_ROOT }
+  assetConfig         : { cdnUrl: NS_ROOT }
 };
 </code></pre>
 </div><p>前一段将虚拟背景放在 <code>sources[]</code>，后一段将 AiNS 放在呼叫 options 顶层，两者的参数层级不能互换。</p>
@@ -600,25 +600,25 @@ if (aiVBOptions)
 </tr>
 </tbody></table></div>
 <p>“应用”读取当前控件并调用 <code>setWatermarks()</code>；“清空”移除对应水印。<code>getMediaEffectsComposer()</code> 返回 <code>null</code> 时表示本通电话没有启用 composer，按钮不能改变当前发送画面。</p>
-<p>代码位置：水印输入读取、合并和更新位于 <a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a> 的 <code>buildCurrent*Watermark()</code>、<code>mergeSessionWatermarks()</code>、<code>applyCurrent*WatermarkToSession()</code>；按钮绑定位于 <a href="../../../demo/base-js/js/app.ui-bindings.js"><code>app.ui-bindings.js</code></a>。</p>
+<p>代码位置：水印输入读取、合并和更新位于 <a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a> 的 <code>getTextMark() / getImageMark()</code>、<code>mergeMarks()</code>、<code>setTextMark() / setImageMark()</code>；按钮绑定位于 <a href="../../../demo/base-js/js/app.ui-bindings.js"><code>app.ui-bindings.js</code></a>。</p>
 <p>文字水印的构造函数会保留 SDK 默认值，只写入用户真正填写的可选字段：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function buildCurrentTextWatermark()
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function getTextMark()
 {
-  const text = document.getElementById(&#39;callMediaEffectsComposerTextWatermarkText&#39;).value.trim();
+  const text = document.getElementById(&#39;textMarkText&#39;).value.trim();
 
   if (!text)
   {
     return null;
   }
 
-  const textPosition = document.getElementById(&#39;callMediaEffectsComposerTextWatermarkPosition&#39;).value || &#39;bottom-right&#39;;
-  const textSize = document.getElementById(&#39;callMediaEffectsComposerTextWatermarkSize&#39;).value;
-  const textColor = document.getElementById(&#39;callMediaEffectsComposerTextWatermarkColor&#39;).value.trim();
-  const textOpacity = readCallMediaEffectsComposerOpacity(
-    document.getElementById(&#39;callMediaEffectsComposerTextWatermarkOpacity&#39;)
+  const textPosition = document.getElementById(&#39;textMarkPos&#39;).value || &#39;bottom-right&#39;;
+  const textSize = document.getElementById(&#39;textMarkSize&#39;).value;
+  const textColor = document.getElementById(&#39;textMarkColor&#39;).value.trim();
+  const textOpacity = readOpacity(
+    document.getElementById(&#39;textMarkAlpha&#39;)
   );
   const textWatermark = {
-    id       : CALL_TEXT_WATERMARK_ID,
+    id       : TEXT_MARK_ID,
     type     : &#39;text&#39;,
     text     : text,
     position : textPosition
@@ -643,10 +643,10 @@ if (aiVBOptions)
 }
 </code></pre>
 </div><p>更新单个水印前，Demo 用稳定 ID 保留其他水印：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function mergeSessionWatermarks(nextItems, idsToReplace)
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function mergeMarks(nextItems, idsToReplace)
 {
-  const { sessionComposer } = getSessionComposerHandles();
-  const current = getSessionWatermarkSnapshot(sessionComposer);
+  const fx = getFx();
+  const current = getMarkState(fx);
 
   return current
     .filter((item) =&gt; !idsToReplace.includes(item &amp;&amp; item.id))
@@ -721,8 +721,8 @@ options = {
   extraHeaders  : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}`, `X-Direction: ${direction || &#39;sendrecv&#39;}` ],
   extraFeatures : extraFeatures,
   pcConfig      : pcConfig,
-  eventHandlers : {
-    mediaEffectsIssue : handleSessionMediaEffectsIssue
+  events : {
+    mediaEffectsIssue : onFxIssue
   }
 };
 
@@ -733,13 +733,13 @@ if (mediaStream)
 else
 {
   options[&#39;mediaConstraints&#39;] = {
-    audio : buildSelectedAudioConstraints(),
-    video : (type === &#39;video&#39; || type === &#39;onlyVideo&#39;) ? buildSelectedVideoConstraints() : false
+    audio : getAudioOpts(),
+    video : (type === &#39;video&#39; || type === &#39;onlyVideo&#39;) ? getVideoOpts() : false
   };
 }
 
-options.mediaEffectsComposer = buildCallComposerOptions();
-options.aiNoiseSuppression = buildCallAiNsOptions();
+options.mediaEffectsComposer = getFxOpts();
+options.nsMode = getNsOpts();
 
 remoteNo = number;
 
@@ -771,15 +771,15 @@ const session = await ua.call(`${number}@${sipDomain}`, options);
 {
   e.session.answer({
     mediaConstraints : {
-      audio : buildSelectedAudioConstraints(),
+      audio : getAudioOpts(),
       video : false
     },
     pcConfig             : Object.assign(pcConfig, { &#39;rtcpMuxPolicy&#39;: &#39;negotiate&#39; }),
     extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
     rtcOfferConstraints  : { offerToReceiveAudio: true },
     extraFeatures        : extraFeatures,
-    mediaEffectsComposer : buildCallComposerOptions(),
-    aiNoiseSuppression   : buildCallAiNsOptions()
+    mediaEffectsComposer : getFxOpts(),
+    nsMode   : getNsOpts()
   });
 };
 
@@ -787,15 +787,15 @@ document.querySelector(&#39;#answerVideo&#39;).onclick = function()
 {
   e.session.answer({
     mediaConstraints : {
-      audio : buildSelectedAudioConstraints(),
-      video : buildSelectedVideoConstraints()
+      audio : getAudioOpts(),
+      video : getVideoOpts()
     },
     pcConfig             : Object.assign(pcConfig, { &#39;rtcpMuxPolicy&#39;: &#39;negotiate&#39; }),
     extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
     rtcOfferConstraints  : { offerToReceiveAudio: true, offerToReceiveVideo: true },
     extraFeatures        : extraFeatures,
-    mediaEffectsComposer : buildCallComposerOptions(),
-    aiNoiseSuppression   : buildCallAiNsOptions()
+    mediaEffectsComposer : getFxOpts(),
+    nsMode   : getNsOpts()
   });
 };
 </code></pre>
@@ -836,12 +836,12 @@ document.querySelector(&#39;#answerVideo&#39;).onclick = function()
 
 document.querySelector(&#39;#toVideo&#39;).onclick = function()
 {
-  e.session.upgradeToVideo({ useUpdate: useUpdate, videoConstraints: buildSelectedVideoConstraints() }, () =&gt; { setStatus(`切换视频模式完成${curMode}`); });
+  e.session.upgradeToVideo({ useUpdate: useUpdate, videoConstraints: getVideoOpts() }, () =&gt; { setStatus(`切换视频模式完成${curMode}`); });
 };
 
-document.querySelector(&#39;#toVideoSendonly&#39;).onclick = function()
+document.querySelector(&#39;#toVideoSend&#39;).onclick = function()
 {
-  e.session.upgradeToVideo({ sendOnly: true, useUpdate: useUpdate, videoConstraints: buildSelectedVideoConstraints() }, () =&gt; { setStatus(&#39;切换视频模式完成&#39;) + curMode; });
+  e.session.upgradeToVideo({ sendOnly: true, useUpdate: useUpdate, videoConstraints: getVideoOpts() }, () =&gt; { setStatus(&#39;切换视频模式完成&#39;) + curMode; });
 };
 </code></pre>
 </div><p>以上代码取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>。视频升级继续复用当前摄像头约束，因此通话前选择的设备在升级时也不会丢失。</p>
@@ -983,9 +983,9 @@ document.querySelector(&#39;#muteCam&#39;).onclick = function()
 });
 </code></pre>
 </div><p>Demo 负责目标选择和统一停止 <code>screenStream</code>；SDK 负责每条会话的 sender、re-INVITE、MID 通知以及远端 <code>remoteShared/remoteUnShared</code> 事件。页面代码不应直接操作共享 transceiver。</p>
-<p>代码位置：<code>#screenShare</code>、<code>#formShare</code>、<code>#picShare</code>、<code>#videoShare</code>、<code>#stopShare</code> 以及带 <code>D</code> 的双流入口都在 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>。标准客户接入先参考不带 <code>D</code> 的方法；双流需要双方及网络侧能力支持。</p>
+<p>代码位置：<code>#shareScreen</code>、<code>#shareHtml</code>、<code>#sharePic</code>、<code>#shareVideo</code>、<code>#unshare</code> 以及带 <code>D</code> 的双流入口都在 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>。标准客户接入先参考不带 <code>D</code> 的方法；双流需要双方及网络侧能力支持。</p>
 <p>标准屏幕共享会保留 SDK 返回的 stream，并监听浏览器原生停止操作：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">document.querySelector(&#39;#screenShare&#39;).onclick = function()
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">document.querySelector(&#39;#shareScreen&#39;).onclick = function()
 {
   e.session.share(&#39;screen&#39;, {})
     .then((stream) =&gt;
@@ -1001,17 +1001,17 @@ document.querySelector(&#39;#muteCam&#39;).onclick = function()
 };
 </code></pre>
 </div><p>其他标准共享入口和停止逻辑如下：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">document.querySelector(&#39;#formShare&#39;).onclick = function()
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">document.querySelector(&#39;#shareHtml&#39;).onclick = function()
 {
   e.session.share(&#39;html&#39;, { id: &#39;#ele&#39;, assembly: html2canvas });
 };
 
-document.querySelector(&#39;#picShare&#39;).onclick = function()
+document.querySelector(&#39;#sharePic&#39;).onclick = function()
 {
   e.session.share(&#39;pic&#39;, { id: &#39;#pic_s&#39; });
 };
 
-document.querySelector(&#39;#videoShare&#39;).onclick = function()
+document.querySelector(&#39;#shareVideo&#39;).onclick = function()
 {
   document.querySelector(&#39;#video_s&#39;).play()
     .then(() =&gt;
@@ -1020,20 +1020,20 @@ document.querySelector(&#39;#videoShare&#39;).onclick = function()
     });
 };
 
-document.querySelector(&#39;#stopShare&#39;).onclick = function()
+document.querySelector(&#39;#unshare&#39;).onclick = function()
 {
   e.session.unShare();
 
   setTimeout(() =&gt;
   {
-    getStreams(e.session.connection);
+    showStreams(e.session.connection);
   }, 300);
 };
 </code></pre>
 </div><p>以上代码均取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>。<code>unShare()</code> 后重新读取 PeerConnection 媒体，是为了恢复本地和远端主画面。</p>
 <h2 id="8-14-呼转-sip-info-和-dtmf">8.14 呼转、SIP INFO 和 DTMF<a class="heading-anchor" href="#8-14-呼转-sip-info-和-dtmf" aria-label="链接到本节">#</a></h2>
 <h3 id="呼转">呼转<a class="heading-anchor" href="#呼转" aria-label="链接到本节">#</a></h3>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const eventHandlers = {
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const events = {
   &#39;progress&#39;         : function(data) { console.log(&#39;progress&#39;, data); },
   &#39;failed&#39;           : function() { if (e.session.isOnHold().local) { e.session.unhold(); } },
   &#39;accepted&#39;         : function(data) { console.log(&#39;accept&#39;, data); e.session.terminate(); },
@@ -1044,7 +1044,7 @@ document.querySelector(&#39;#stopShare&#39;).onclick = function()
 
 e.session.hold();
 e.session.refer(`${document.querySelector(&#39;#refer&#39;).value}@${sipDomain}`, {
-  eventHandlers : eventHandlers
+  events : events
 });
 </code></pre>
 </div><p>Demo 在呼转前保持当前通话，并根据 refer 的结果恢复或结束。目标格式和转接策略必须与 SIP 服务约定。</p>
@@ -1089,14 +1089,14 @@ e.session.on(&#39;stats:detailed-report&#39;, function(report)
     return `${sessionStatsIssueNames[issue.code] || issue.code}(L${issue.severity})`;
   }).join(&#39; | &#39;);
 
-  renderSessionStatsStreams(&#39;#rtcStatsOutbound&#39;, report.outbound, true);
-  renderSessionStatsStreams(&#39;#rtcStatsInbound&#39;, report.inbound, false);
+  renderSessionStatsStreams(&#39;#statsOut&#39;, report.outbound, true);
+  renderSessionStatsStreams(&#39;#statsIn&#39;, report.inbound, false);
   renderSessionConnectionStats(report.connection);
   setSessionStatsPanelText(
-    &#39;#rtcStatsQuality&#39;,
+    &#39;#statsQuality&#39;,
     `RTT:${formatSessionStatsNumber(quality.RTT, &#39;ms&#39;)} | ↑:${formatSessionNetworkQuality(quality.uplinkNetworkQuality)} | ↓:${formatSessionNetworkQuality(quality.downlinkNetworkQuality)}`
   );
-  setSessionStatsPanelText(&#39;#rtcStatsIssues&#39;, issueText || &#39;无&#39;);
+  setSessionStatsPanelText(&#39;#statsIssues&#39;, issueText || &#39;无&#39;);
 });
 
 e.session.on(&#39;stats:stats-error&#39;, function(error)
@@ -1154,7 +1154,7 @@ e.session.on(&#39;stats:stats-error&#39;, function(error)
 <li><code>mediaEffectsIssue</code> 中的 <code>module/message</code> 能显示具体失败能力。</li>
 </ul>
 <p>Demo 对媒体效果异常只记录和提示，不会挂断通话：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function handleSessionMediaEffectsIssue(d)
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function onFxIssue(d)
 {
   const moduleName = d &amp;&amp; d.module ? d.module : &#39;MediaEffects&#39;;
   const message = d &amp;&amp; d.message ? d.message : &#39;Unknown media effects failure&#39;;
@@ -1166,7 +1166,7 @@ e.session.on(&#39;stats:stats-error&#39;, function(error)
   setStatus(`媒体效果异常[${moduleName}]：${message}`);
 }
 </code></pre>
-</div><p>该函数位于 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>，呼出时通过 <code>options.eventHandlers.mediaEffectsIssue</code> 传入，呼入会话则在 <code>newRTCSession</code> 中绑定事件。</p>
+</div><p>该函数位于 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>，呼出时通过 <code>options.events.mediaEffectsIssue</code> 传入，呼入会话则在 <code>newRTCSession</code> 中绑定事件。</p>
 <h2 id="8-17-按功能逐步验证">8.17 按功能逐步验证<a class="heading-anchor" href="#8-17-按功能逐步验证" aria-label="链接到本节">#</a></h2>
 <h3 id="阶段-a-注册">阶段 A：注册<a class="heading-anchor" href="#阶段-a-注册" aria-label="链接到本节">#</a></h3>
 <ol>
@@ -1295,14 +1295,14 @@ e.session.on(&#39;stats:stats-error&#39;, function(error)
   navigator.mediaDevices.getUserMedia({ video: true, audio: true })
     .then(async(mediastream) =&gt;
     {
-      await updateDevices();
+      await loadDevices();
       mediastream &amp;&amp; mediastream.getTracks().forEach((track) =&gt; track.stop());
     })
     .catch(async(error) =&gt;
     {
       try
       {
-        await updateDevices();
+        await loadDevices();
       }
       catch (deviceError)
       {
@@ -1329,7 +1329,7 @@ e.session.on(&#39;stats:stats-error&#39;, function(error)
 }
 
 start();
-initMediaEffects();
+initFx();
 </code></pre>
 </div><p>这段代码取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>。预采集只为了请求权限和获取带名称的设备列表，因此成功后立即停止这些 tracks。</p>
 <p>页面退出时的 UA 清理位于 <a href="../../../demo/base-js/js/app.ui-bindings.js"><code>app.ui-bindings.js</code></a>：</p>

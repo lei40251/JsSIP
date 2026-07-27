@@ -228,25 +228,25 @@ function loadConferenceDemo()
         }
       }
     },
-    extraFeatures                  : [],
+    features                  : [],
     appMode                       : 'conference',
     pcConfig                       : {},
     xdata                          : '',
     sipDomain                      : 'example.test',
     rtcSession                     : null,
-    statsSession                   : null,
+    statsCall                      : null,
     camFlag                        : true,
     noremb                         : false,
-    localVideo                     : createElement(),
-    remoteVideo                    : createElement(),
-    buildCallComposerOptions       : function() { return {}; },
-    buildCallAiNsOptions           : function() { return null; },
-    buildSelectedAudioConstraints  : function() { return true; },
-    buildSelectedVideoConstraints  : function() { return true; },
-    handleSessionMediaEffectsIssue : function() {},
-    bindMediaStreamIfChanged       : function() {},
-    showIncomingCallNotification   : function() {},
-    closeIncomingCallNotification  : function() {},
+    localVid                     : createElement(),
+    remoteVid                    : createElement(),
+    getFxOpts       : function() { return {}; },
+    getNsOpts           : function() { return null; },
+    getAudioOpts  : function() { return true; },
+    getVideoOpts  : function() { return true; },
+    onFxIssue : function() {},
+    setMedia       : function() {},
+    showNotice   : function() {},
+    closeNotice  : function() {},
     setStatus                      : function(value) { statuses.push(value); },
     ua : {
       configuration : { no_answer_timeout: 1000 },
@@ -261,6 +261,12 @@ function loadConferenceDemo()
   };
 
   vm.createContext(context);
+  // 会议 Demo 与点对点 Demo 共用 app.js 中的统计渲染函数。
+  const appSource = fs.readFileSync(path.join(__dirname, '../demo/base-js/js/app.js'), 'utf8');
+  const statsStart = appSource.indexOf('const statsIssues');
+  const statsEnd = appSource.indexOf('function onFxIssue');
+
+  vm.runInContext(appSource.slice(statsStart, statsEnd), context, { filename: 'app-stats.js' });
   vm.runInContext(
     fs.readFileSync(path.join(__dirname, '../demo/base-js/js/app-conference.js'), 'utf8'),
     context,
@@ -270,6 +276,41 @@ function loadConferenceDemo()
   context.elements = elements;
   context.statuses = statuses;
   context.capturedCalls = capturedCalls;
+
+  return context;
+}
+
+function loadAnnotationDemo()
+{
+  const context = {
+    console,
+    Map,
+    Set,
+    WeakSet,
+    JSON,
+    Math,
+    Date,
+    Number,
+    String,
+    Array,
+    Object,
+    setTimeout,
+    document : {
+      querySelector    : function() { return null; },
+      querySelectorAll : function() { return []; },
+      createElement    : function() { return createElement(); }
+    },
+    appMode  : 'point-to-point',
+    setStatus : function() {},
+    ua        : { configuration: { uri: { user: 'local' } } }
+  };
+
+  vm.createContext(context);
+  vm.runInContext(
+    fs.readFileSync(path.join(__dirname, '../demo/base-js/js/app-annotation.js'), 'utf8'),
+    context,
+    { filename: 'app-annotation.js' }
+  );
 
   return context;
 }
@@ -333,15 +374,152 @@ function createAnswerSession(overrides)
 }
 
 module.exports = {
+  'annotation history and removal operations only affect sender shapes' : function(test)
+  {
+    const context = loadAnnotationDemo();
+    const result = vm.runInContext(`
+      inkMode = 'whiteboard';
+      function testShape(id, authorId) {
+        return {
+          id: id,
+          type: 'rect',
+          color: '#123456',
+          authorId: authorId,
+          authorLabel: authorId,
+          widthNorm: 0.01,
+          start: [ 0.1, 0.1 ],
+          end: [ 0.2, 0.2 ]
+        };
+      }
+      function testOperation(action, senderId, payload, operationId) {
+        return {
+          event: 'annotation',
+          version: INK_VERSION,
+          action: action,
+          boardId: 'whiteboard',
+          operationId: operationId,
+          senderId: senderId,
+          senderLabel: senderId,
+          payload: payload || {}
+        };
+      }
+
+      applyOp(testOperation(
+        'shape:add', 'remote', { shape: testShape('remote-1', 'local') }, 'remote-add-1'
+      ));
+      applyOp(testOperation(
+        'shape:add', 'local', { shape: testShape('local-1', 'local') }, 'local-add-1'
+      ));
+      undoInk();
+
+      const session = { isEnded: function() { return false; }, sendInfo: function() {} };
+      boardLegs.add(session);
+      onInkInfo(session, {
+        originator: 'remote',
+        info: {
+          contentType: INK_TYPE,
+          body: JSON.stringify(testOperation(
+            'shape:add', 'remote', { shape: testShape('remote-2', 'local') }, 'remote-add-2'
+          ))
+        }
+      });
+
+      const unauthorizedRemove = applyOp(testOperation(
+        'shape:remove', 'local', { shapeId: 'remote-1' }, 'local-remove-remote'
+      ));
+      const redoCountAfterRemoteAdd = boards.whiteboard.redo.length;
+
+      applyOp(testOperation('clear', 'remote', {}, 'remote-legacy-clear'));
+      redoInk();
+
+      ({
+        unauthorizedRemove: unauthorizedRemove,
+        redoCountAfterRemoteAdd: redoCountAfterRemoteAdd,
+        shapeIds: boards.whiteboard.shapes.map(function(shape) { return shape.id; }),
+        shapeAuthors: boards.whiteboard.shapes.map(function(shape) { return shape.authorId; })
+      });
+    `, context);
+
+    test.strictEqual(result.unauthorizedRemove, false);
+    test.strictEqual(result.redoCountAfterRemoteAdd, 1);
+    test.deepEqual(Array.from(result.shapeIds), [ 'local-1' ]);
+    test.deepEqual(Array.from(result.shapeAuthors), [ 'local' ]);
+    test.done();
+  },
+
+  'annotation renderer isolates erasers by participant' : function(test)
+  {
+    const context = loadAnnotationDemo();
+    const result = vm.runInContext(`
+      function MockNode(config) { this.config = config; }
+      function MockGroup() { this.children = []; this.cached = false; }
+      MockGroup.prototype.add = function(node) { this.children.push(node); };
+      MockGroup.prototype.cache = function(options) { this.cached = true; this.cacheOptions = options; };
+      function MockLayer() { this.children = []; }
+      MockLayer.prototype.destroyChildren = function() { this.children = []; };
+      MockLayer.prototype.add = function(node) { this.children.push(node); };
+      MockLayer.prototype.batchDraw = function() {};
+
+      Konva = {
+        Group: MockGroup,
+        Line: MockNode,
+        Text: MockNode,
+        Arrow: MockNode,
+        Rect: MockNode,
+        Ellipse: MockNode
+      };
+      inkMode = 'whiteboard';
+      inkStage = { width: function() { return 640; }, height: function() { return 360; } };
+      inkLayer = new MockLayer();
+      boards.whiteboard.shapes = [
+        {
+          id: 'local-shape', type: 'rect', color: '#123456', authorId: 'local', authorLabel: 'local',
+          widthNorm: 0.01, start: [ 0.1, 0.1 ], end: [ 0.2, 0.2 ]
+        },
+        {
+          id: 'remote-shape', type: 'rect', color: '#654321', authorId: 'remote', authorLabel: 'remote',
+          widthNorm: 0.01, start: [ 0.2, 0.2 ], end: [ 0.3, 0.3 ]
+        },
+        {
+          id: 'local-eraser', type: 'eraser', color: '#123456', authorId: 'local', authorLabel: 'local',
+          widthNorm: 0.01, points: [ [ 0.1, 0.1 ], [ 0.2, 0.2 ] ]
+        }
+      ];
+
+      renderBoard();
+
+      const eraser = boards.whiteboard.shapes[2];
+
+      ({
+        groups: inkLayer.children.map(function(group) {
+          return {
+            cached: group.cached,
+            ids: group.children.map(function(node) { return node.config.id; })
+          };
+        }),
+        committedEraserMode: makeNode(eraser).config.globalCompositeOperation,
+        previewEraserMode: makeNode(eraser, true).config.globalCompositeOperation
+      });
+    `, context);
+
+    test.strictEqual(result.groups.length, 2);
+    test.strictEqual(result.groups[0].cached, true);
+    test.deepEqual(Array.from(result.groups[0].ids), [ 'local-shape', 'local-eraser' ]);
+    test.deepEqual(Array.from(result.groups[1].ids), [ 'remote-shape' ]);
+    test.strictEqual(result.committedEraserMode, 'destination-out');
+    test.strictEqual(result.previewEraserMode, 'source-over');
+    test.done();
+  },
+
   'page defers UA creation and selects exactly one session handler' : function(test)
   {
     const source = fs.readFileSync(path.join(__dirname, '../demo/base-js/js/app.js'), 'utf8');
     const conferenceSource = fs.readFileSync(path.join(__dirname, '../demo/base-js/js/app-conference.js'), 'utf8');
 
     test.ok(source.includes('let ua = null;'));
-    test.ok(source.includes('function initializeDemoMode(mode)'));
+    test.ok(source.includes('function initMode(mode)'));
     test.ok(source.includes('register                         : true'));
-    test.strictEqual(source.includes("handleGetQuery('register')"), false);
+    test.strictEqual(source.includes("getQuery('register')"), false);
     test.strictEqual((source.match(/ua\.on\('newRTCSession'/g) || []).length, 1);
     test.strictEqual((conferenceSource.match(/ua\.on\('newRTCSession'/g) || []).length, 0);
     test.done();
@@ -352,11 +530,11 @@ module.exports = {
     const context = loadConferenceDemo();
 
     context.testRequest = createConferenceRequest({});
-    const first = vm.runInContext("resolveConferenceSessionOptions({ originator: 'remote', request: testRequest })", context);
+    const first = vm.runInContext("getSessOpts({ originator: 'remote', request: testRequest })", context);
 
     test.strictEqual(first.role, 'B');
-    vm.runInContext("conferenceLegs.set('b', { role: 'B', confirmed: true });", context);
-    const second = vm.runInContext("resolveConferenceSessionOptions({ originator: 'remote', request: testRequest })", context);
+    vm.runInContext("confLegs.set('b', { role: 'B', confirmed: true });", context);
+    const second = vm.runInContext("getSessOpts({ originator: 'remote', request: testRequest })", context);
 
     test.strictEqual(second.role, 'C');
     test.strictEqual(second.silent, false);
@@ -369,13 +547,13 @@ module.exports = {
     const context = loadConferenceDemo();
 
     context.testRequest = createConferenceRequest({ 'X-Silent-Join': 'true' });
-    vm.runInContext("conferenceLegs.set('b', { role: 'B', confirmed: true });", context);
-    const incoming = vm.runInContext("resolveConferenceSessionOptions({ originator: 'remote', request: testRequest })", context);
+    vm.runInContext("confLegs.set('b', { role: 'B', confirmed: true });", context);
+    const incoming = vm.runInContext("getSessOpts({ originator: 'remote', request: testRequest })", context);
 
     test.strictEqual(incoming.role, 'C');
     test.strictEqual(incoming.silent, true);
     test.strictEqual(incoming.autoAnswer, true);
-    test.strictEqual(incoming.localDirection, 'sendonly');
+    test.strictEqual(incoming.direction, 'sendonly');
     test.done();
   },
 
@@ -385,13 +563,13 @@ module.exports = {
 
     context.testRequest = createConferenceRequest({});
     context.testRequest.body = 'v=0\r\nm=audio 9 RTP/AVP 0\r\na=recvonly\r\n';
-    vm.runInContext("conferenceLegs.set('b', { role: 'B', confirmed: true });", context);
-    const incoming = vm.runInContext("resolveConferenceSessionOptions({ originator: 'remote', request: testRequest })", context);
+    vm.runInContext("confLegs.set('b', { role: 'B', confirmed: true });", context);
+    const incoming = vm.runInContext("getSessOpts({ originator: 'remote', request: testRequest })", context);
 
     test.strictEqual(incoming.role, 'C');
     test.strictEqual(incoming.silent, false);
     test.strictEqual(incoming.autoAnswer, false);
-    test.strictEqual(incoming.localDirection, 'sendrecv');
+    test.strictEqual(incoming.direction, 'sendrecv');
     test.done();
   },
 
@@ -405,7 +583,7 @@ module.exports = {
       id        : 'early-silent',
       terminate : function(options) { terminated = options; }
     };
-    vm.runInContext("handleConferenceNewRTCSession({ originator: 'remote', request: testRequest, session: testSession })", context);
+    vm.runInContext("onConfSession({ originator: 'remote', request: testRequest, session: testSession })", context);
 
     test.strictEqual(terminated.status_code, 486);
     test.ok(context.statuses.some((status) => status.includes('过早')));
@@ -417,13 +595,13 @@ module.exports = {
     const context = loadConferenceDemo();
     let terminated;
 
-    vm.runInContext("conferenceLegs.set('b', { role: 'B', confirmed: false });", context);
+    vm.runInContext("confLegs.set('b', { role: 'B', confirmed: false });", context);
     context.testRequest = createConferenceRequest({});
     context.testSession = {
       id        : 'early-c',
       terminate : function(options) { terminated = options; }
     };
-    vm.runInContext("handleConferenceNewRTCSession({ originator: 'remote', request: testRequest, session: testSession })", context);
+    vm.runInContext("onConfSession({ originator: 'remote', request: testRequest, session: testSession })", context);
 
     test.strictEqual(terminated.status_code, 486);
     test.ok(context.statuses.some((status) => status.includes('尚未确认')));
@@ -435,10 +613,10 @@ module.exports = {
     const context = loadConferenceDemo();
     let terminated;
 
-    vm.runInContext("conferenceLegs.set('b', { role: 'B', confirmed: true }); conferenceLegs.set('c', { role: 'C', confirmed: true });", context);
+    vm.runInContext("confLegs.set('b', { role: 'B', confirmed: true }); confLegs.set('c', { role: 'C', confirmed: true });", context);
     context.testRequest = createConferenceRequest({});
     context.testSession = { terminate: function(options) { terminated = options; } };
-    vm.runInContext("handleConferenceNewRTCSession({ originator: 'remote', request: testRequest, session: testSession })", context);
+    vm.runInContext("onConfSession({ originator: 'remote', request: testRequest, session: testSession })", context);
 
     test.strictEqual(terminated.status_code, 486);
     test.ok(context.statuses.some((status) => status.includes('会议已满')));
@@ -450,7 +628,7 @@ module.exports = {
     const context = loadConferenceDemo();
 
     context.appMode = 'point-to-point';
-    vm.runInContext('appMode = "point-to-point"; callConferenceAsSilentC()', context)
+    vm.runInContext('appMode = "point-to-point"; callSilentC()', context)
       .then(function()
       {
         const call = context.capturedCalls[0];
@@ -477,12 +655,12 @@ module.exports = {
     const context = loadConferenceDemo();
 
     vm.runInContext(`
-      statsLeg = createConferenceLeg({ id: 'stats-b' }, {
+      statsLeg = addLeg({ id: 'stats-b' }, {
         role: 'B', remoteNo: '7301', originator: 'local'
       });
       statsLeg.confirmed = true;
-      selectConferenceLeg(statsLeg);
-      renderConferenceStatsReport(statsLeg, {
+      selectLeg(statsLeg);
+      renderStats(statsLeg.session, {
         connection: {
           connectionState: 'connected', iceConnectionState: 'connected', dtlsState: 'connected',
           sendBitrateBps: 100000, availableOutgoingBitrateBps: 200000,
@@ -499,10 +677,10 @@ module.exports = {
       });
     `, context);
 
-    test.strictEqual(context.elements.get('#rtcStatsPeerConnection').textContent, 'A-B PeerConnection（B: 7301）');
-    test.strictEqual(context.elements.get('#rtcStatsOutboundLabel').textContent, 'A → B:');
-    test.strictEqual(context.elements.get('#rtcStatsInboundLabel').textContent, 'B → A:');
-    const outboundTable = context.elements.get('#rtcStatsOutbound').children[0];
+    test.strictEqual(context.elements.get('#statsPc').textContent, 'A-B PeerConnection（B: 7301）');
+    test.strictEqual(context.elements.get('#statsOutLabel').textContent, 'A → B:');
+    test.strictEqual(context.elements.get('#statsInLabel').textContent, 'B → A:');
+    const outboundTable = context.elements.get('#statsOut').children[0];
 
     test.strictEqual(outboundTable.className, 'rtc-stats-metric-table');
     test.ok(outboundTable.children.some((cell) => cell.textContent === '编码:VP8'));
@@ -513,7 +691,7 @@ module.exports = {
   'A outbound conference call does not send silent or role headers' : function(test)
   {
     const context = loadConferenceDemo();
-    const options = vm.runInContext("buildConferenceCallOptions('B')", context);
+    const options = vm.runInContext("buildCallOpts('B')", context);
 
     test.ok(options.extraHeaders.includes('X-Direction: sendrecv'));
     test.strictEqual(options.extraHeaders.some((header) => header.indexOf('X-Silent-Join') === 0), false);
@@ -526,20 +704,20 @@ module.exports = {
     const context = loadConferenceDemo();
 
     vm.runInContext(`
-      conferenceLegs.set('host', {
+      confLegs.set('host', {
         role: 'B', confirmed: true, ended: false,
         session: { id: 'host' }
       });
       prepareCalls = 0;
       preparation = new Promise(function(resolve) { resolvePreparation = resolve; });
-      prepareNormalCComposerOutput = function() {
+      prepCOutput = function() {
         prepareCalls += 1;
         return preparation;
       };
     `, context);
 
-    const firstCall = vm.runInContext("callConferenceVideo({ role: 'C' })", context);
-    const duplicateCall = vm.runInContext("callConferenceVideo({ role: 'C' })", context);
+    const firstCall = vm.runInContext("callConf({ role: 'C' })", context);
+    const duplicateCall = vm.runInContext("callConf({ role: 'C' })", context);
 
     test.strictEqual(vm.runInContext('prepareCalls', context), 1);
     test.strictEqual(context.capturedCalls.length, 0);
@@ -551,9 +729,9 @@ module.exports = {
           { kind: 'audio', id: 'prepared-audio', readyState: 'live' },
           { kind: 'video', id: 'prepared-video', readyState: 'live' }
         ]),
-        fallbackLocalStream: new MediaStream(),
-        normalComposerHostId: 'host',
-        conferenceAudioStream: new MediaStream()
+        backupStream: new MediaStream(),
+        mixerHostId: 'host',
+        mixAudio: new MediaStream()
       });
     `, context);
 
@@ -580,17 +758,17 @@ module.exports = {
       audioSender = { track: originalAudio };
       videoSender = { track: originalVideo };
       senderLeg = {
-        originalAudioSender: null, originalVideoSender: null,
-        originalAudioTrack: null, originalVideoTrack: null,
+        audioSender: null, videoSender: null,
+        audioTrack: null, videoTrack: null,
         session: { connection: { getSenders: function() { return [ audioSender, videoSender ]; } } }
       };
-      rememberConferenceOriginalSenders(senderLeg);
+      saveMedia(senderLeg);
       audioSender.track = mixedAudio;
-      rememberConferenceOriginalSenders(senderLeg);
+      saveMedia(senderLeg);
     `, context);
 
-    test.strictEqual(vm.runInContext('senderLeg.originalAudioTrack === originalAudio', context), true);
-    test.strictEqual(vm.runInContext('senderLeg.originalVideoTrack === originalVideo', context), true);
+    test.strictEqual(vm.runInContext('senderLeg.audioTrack === originalAudio', context), true);
+    test.strictEqual(vm.runInContext('senderLeg.videoTrack === originalVideo', context), true);
     test.done();
   },
 
@@ -600,13 +778,13 @@ module.exports = {
 
     vm.runInContext(`
       testComposer = {};
-      conferenceLegs.set('host', {
+      confLegs.set('host', {
         role: 'B',
         session: { getMediaEffectsComposer: function() { return testComposer; } }
       });
     `, context);
 
-    test.strictEqual(vm.runInContext('getConferenceMediaEffectsComposer()', context), context.testComposer);
+    test.strictEqual(vm.runInContext('getConfMixer()', context), context.testComposer);
     test.done();
   },
 
@@ -615,7 +793,7 @@ module.exports = {
     const context = loadConferenceDemo();
 
     vm.runInContext(`
-      normalCOutput = {
+      cOutput = {
         mediaStream: new MediaStream([
           { kind: 'audio', id: 'ab-audio', readyState: 'live' },
           { kind: 'video', id: 'ab-video', readyState: 'live' }
@@ -623,25 +801,25 @@ module.exports = {
       };
     `, context);
 
-    const callOptions = vm.runInContext("buildConferenceCallOptions('C', normalCOutput)", context);
-    const answerOptions = vm.runInContext(
-      "buildConferenceAnswerOptions({ role: 'C', localDirection: 'sendrecv', silent: false }, normalCOutput)",
+    const callOptions = vm.runInContext("buildCallOpts('C', cOutput)", context);
+    const answerOpts = vm.runInContext(
+      "getAnswerOpts({ role: 'C', direction: 'sendrecv', silent: false }, cOutput)",
       context
     );
     const silentAnswerOptions = vm.runInContext(
-      "buildConferenceAnswerOptions({ role: 'C', localDirection: 'sendonly', silent: true })",
+      "getAnswerOpts({ role: 'C', direction: 'sendonly', silent: true })",
       context
     );
 
-    test.strictEqual(callOptions.mediaStream, context.normalCOutput.mediaStream);
+    test.strictEqual(callOptions.mediaStream, context.cOutput.mediaStream);
     test.strictEqual(callOptions.mediaConstraints.audio, true);
     test.strictEqual(callOptions.mediaConstraints.video, true);
-    test.strictEqual(answerOptions.mediaStream, context.normalCOutput.mediaStream);
+    test.strictEqual(answerOpts.mediaStream, context.cOutput.mediaStream);
     // false 会删除自定义流的轨道，留空则会使 SDP 约束处理收到 undefined。
     // 明确传 true 保留轨道，SDK 仍会根据 mediaStream 自动跳过重复设备采集。
-    test.strictEqual(answerOptions.mediaConstraints.audio, true);
-    test.strictEqual(answerOptions.mediaConstraints.video, true);
-    test.strictEqual(answerOptions.mediaEffectsComposer, undefined);
+    test.strictEqual(answerOpts.mediaConstraints.audio, true);
+    test.strictEqual(answerOpts.mediaConstraints.video, true);
+    test.strictEqual(answerOpts.mediaEffectsComposer, undefined);
     test.ok(silentAnswerOptions.mediaEffectsComposer);
     test.strictEqual(silentAnswerOptions.mediaStream, undefined);
     test.strictEqual(silentAnswerOptions.mediaConstraints.audio, true);
@@ -677,11 +855,11 @@ module.exports = {
       };
       preparedHostLeg = {
         role: 'B', confirmed: true,
-        remoteMainStream: new MediaStream([ preparedB.audio, preparedB.video ]),
-        remoteMainAudioTrack: preparedB.audio,
-        remoteMainVideoTrack: preparedB.video,
-        composerSourceStream: null,
-        conferenceAudioStream: null,
+        rStream: new MediaStream([ preparedB.audio, preparedB.video ]),
+        rAudio: preparedB.audio,
+        rVideo: preparedB.video,
+        mixSource: null,
+        mixAudio: null,
         session: {
           id: 'prepared-host',
           connection: {
@@ -696,16 +874,16 @@ module.exports = {
       };
     `, context);
 
-    vm.runInContext('prepareNormalCComposerOutput(preparedHostLeg)', context)
+    vm.runInContext('prepCOutput(preparedHostLeg)', context)
       .then(function(output)
       {
         test.strictEqual(vm.runInContext('preparedAddedSources.length', context), 1);
         test.strictEqual(vm.runInContext('preparedAddedSources[0].slot', context), 1);
         test.strictEqual(output.mediaStream.getVideoTracks()[0], context.preparedOutputVideo);
         test.strictEqual(output.mediaStream.getAudioTracks()[0], context.preparedCAudio);
-        test.strictEqual(output.conferenceAudioStream.getAudioTracks()[0], context.preparedCAudio);
-        test.strictEqual(output.normalComposerHostId, 'prepared-host');
-        test.strictEqual(output.fallbackLocalStream.getVideoTracks()[0].id, 'a-video-clone');
+        test.strictEqual(output.mixAudio.getAudioTracks()[0], context.preparedCAudio);
+        test.strictEqual(output.mixerHostId, 'prepared-host');
+        test.strictEqual(output.backupStream.getVideoTracks()[0].id, 'a-video-clone');
         test.strictEqual(vm.runInContext('preparedHostAudioReplacements[0] === preparedBAudio', context), true);
         test.done();
       })
@@ -745,35 +923,35 @@ module.exports = {
       };
       normalHostLeg = {
         role: 'B', confirmed: true, silent: false,
-        remoteMainStream: normalBRemote,
-        remoteMainAudioTrack: normalBRemote.getAudioTracks()[0],
-        remoteMainVideoTrack: normalBRemote.getVideoTracks()[0],
-        composerSourceStream: normalBRemote,
-        conferenceAudioStream: new MediaStream([ normalBAudio ]),
-        originalAudioSender: {
+        rStream: normalBRemote,
+        rAudio: normalBRemote.getAudioTracks()[0],
+        rVideo: normalBRemote.getVideoTracks()[0],
+        mixSource: normalBRemote,
+        mixAudio: new MediaStream([ normalBAudio ]),
+        audioSender: {
           track: normalBAudio,
           replaceTrack: function(track) { normalHostAudioReplacements.push(track); return Promise.resolve(); }
         },
-        originalVideoSender: null,
+        videoSender: null,
         session: { id: 'normal-host', connection: {}, getMediaEffectsComposer: function() { return normalComposer; } }
       };
       normalCLeg = {
         role: 'C', confirmed: true, silent: false,
-        remoteMainStream: normalCRemote,
-        remoteMainAudioTrack: normalCRemote.getAudioTracks()[0],
-        remoteMainVideoTrack: normalCRemote.getVideoTracks()[0],
-        composerSourceStream: null,
-        conferenceAudioStream: new MediaStream([ normalCAudio ]),
-        normalComposerHostId: 'normal-host',
-        originalVideoSender: { replaceTrack: function(track) { normalCVideoReplacements.push(track); return Promise.resolve(); } },
-        originalAudioSender: { replaceTrack: function(track) { normalCAudioReplacements.push(track); return Promise.resolve(); } },
+        rStream: normalCRemote,
+        rAudio: normalCRemote.getAudioTracks()[0],
+        rVideo: normalCRemote.getVideoTracks()[0],
+        mixSource: null,
+        mixAudio: new MediaStream([ normalCAudio ]),
+        mixerHostId: 'normal-host',
+        videoSender: { replaceTrack: function(track) { normalCVideoReplacements.push(track); return Promise.resolve(); } },
+        audioSender: { replaceTrack: function(track) { normalCAudioReplacements.push(track); return Promise.resolve(); } },
         session: { id: 'normal-c', connection: {}, getMediaEffectsComposer: function() { return null; } }
       };
-      conferenceLegs.set('normal-host', normalHostLeg);
-      conferenceLegs.set('normal-c', normalCLeg);
+      confLegs.set('normal-host', normalHostLeg);
+      confLegs.set('normal-c', normalCLeg);
     `, context);
 
-    vm.runInContext('syncConferenceComposer()', context)
+    vm.runInContext('syncMixer()', context)
       .then(function()
       {
         test.strictEqual(vm.runInContext('normalAddedSources.length', context), 1);
@@ -816,12 +994,12 @@ module.exports = {
 
       silentHostLeg = {
         role: 'B', confirmed: true, silent: false,
-        remoteMainStream: new MediaStream([ silentBAudio, silentBVideo ]),
-        remoteMainAudioTrack: silentBAudio, remoteMainVideoTrack: silentBVideo,
-        composerSourceStream: null, conferenceAudioStream: null,
-        originalVideoTrack: silentHostVideo, originalAudioTrack: silentHostAudio,
-        originalVideoSender: { replaceTrack: function(track) { silentHostVideoReplacements.push(track); return Promise.resolve(); } },
-        originalAudioSender: { replaceTrack: function(track) { silentHostAudioReplacements.push(track); return Promise.resolve(); } },
+        rStream: new MediaStream([ silentBAudio, silentBVideo ]),
+        rAudio: silentBAudio, rVideo: silentBVideo,
+        mixSource: null, mixAudio: null,
+        videoTrack: silentHostVideo, audioTrack: silentHostAudio,
+        videoSender: { replaceTrack: function(track) { silentHostVideoReplacements.push(track); return Promise.resolve(); } },
+        audioSender: { replaceTrack: function(track) { silentHostAudioReplacements.push(track); return Promise.resolve(); } },
         session: {
           id: 'silent-host', connection: {},
           getMediaEffectsComposer: function() { throw new Error('silent C must not use the A-B composer'); }
@@ -829,29 +1007,29 @@ module.exports = {
       };
       silentCLeg = {
         role: 'C', confirmed: true, silent: true,
-        remoteMainStream: new MediaStream(),
-        remoteMainAudioTrack: null, remoteMainVideoTrack: null,
-        composerSourceStream: null, conferenceAudioStream: null,
-        originalVideoTrack: { kind: 'video', id: 'temporary-c-video', readyState: 'live' },
-        originalAudioTrack: { kind: 'audio', id: 'temporary-c-audio', readyState: 'live' },
-        originalVideoSender: { replaceTrack: function(track) { silentCVideoReplacements.push(track); return Promise.resolve(); } },
-        originalAudioSender: { replaceTrack: function(track) { silentCAudioReplacements.push(track); return Promise.resolve(); } },
+        rStream: new MediaStream(),
+        rAudio: null, rVideo: null,
+        mixSource: null, mixAudio: null,
+        videoTrack: { kind: 'video', id: 'temporary-c-video', readyState: 'live' },
+        audioTrack: { kind: 'audio', id: 'temporary-c-audio', readyState: 'live' },
+        videoSender: { replaceTrack: function(track) { silentCVideoReplacements.push(track); return Promise.resolve(); } },
+        audioSender: { replaceTrack: function(track) { silentCAudioReplacements.push(track); return Promise.resolve(); } },
         session: {
           id: 'silent-c', connection: {},
           getMediaEffectsComposer: function() { return silentComposer; }
         }
       };
 
-      conferenceLegs.set(silentHostLeg.session.id, silentHostLeg);
-      conferenceLegs.set(silentCLeg.session.id, silentCLeg);
+      confLegs.set(silentHostLeg.session.id, silentHostLeg);
+      confLegs.set(silentCLeg.session.id, silentCLeg);
     `, context);
 
-    vm.runInContext('syncConferenceComposer()', context)
+    vm.runInContext('syncMixer()', context)
       .then(function()
       {
         test.strictEqual(vm.runInContext('silentAddedSources.length', context), 1);
         test.strictEqual(vm.runInContext('silentAddedSources[0].slot', context), 1);
-        test.strictEqual(vm.runInContext('silentAddedSources[0].stream === silentHostLeg.remoteMainStream', context), true);
+        test.strictEqual(vm.runInContext('silentAddedSources[0].stream === silentHostLeg.rStream', context), true);
         test.strictEqual(vm.runInContext('silentHostVideoReplacements.length', context), 0);
         test.strictEqual(vm.runInContext('silentHostAudioReplacements.length', context), 0);
         test.strictEqual(vm.runInContext('silentCVideoReplacements.length', context), 0);
@@ -872,45 +1050,45 @@ module.exports = {
     vm.runInContext(`
       silentCTerminated = 0;
       testB = {
-        role: 'B', ended: false, screenSender: null, audioElement: null,
-        composerSourceStream: null,
+        role: 'B', ended: false, screenSender: null, audioEl: null,
+        mixSource: null,
         session: { id: 'b', isEnded: function() { return true; } }
       };
       testC = {
         role: 'C', silent: true, confirmed: true, ended: false, remoteNo: '7302',
-        screenSender: null, audioElement: null,
-        composerSourceStream: null, remoteMainVideoTrack: null, remoteMainAudioTrack: null,
+        screenSender: null, audioEl: null,
+        mixSource: null, rVideo: null, rAudio: null,
         session: {
           id: 'c', connection: null,
           isEnded: function() { return false; },
           terminate: function() { silentCTerminated += 1; }
         }
       };
-      conferenceLegs.set('b', testB);
-      conferenceLegs.set('c', testC);
+      confLegs.set('b', testB);
+      confLegs.set('c', testC);
     `, context);
 
-    vm.runInContext('cleanupConferenceLeg(testB)', context)
+    vm.runInContext('removeLeg(testB)', context)
       .then(function()
       {
         test.strictEqual(vm.runInContext('silentCTerminated', context), 1);
 
         vm.runInContext(`
-          conferenceLegs.clear();
+          confLegs.clear();
           normalCTerminated = 0;
           testB.ended = false;
           testC.silent = false;
           testC.session.terminate = function() { normalCTerminated += 1; };
-          conferenceLegs.set('b', testB);
-          conferenceLegs.set('c', testC);
+          confLegs.set('b', testB);
+          confLegs.set('c', testC);
         `, context);
 
-        return vm.runInContext('cleanupConferenceLeg(testB)', context);
+        return vm.runInContext('removeLeg(testB)', context);
       })
       .then(function()
       {
         test.strictEqual(vm.runInContext('normalCTerminated', context), 0);
-        test.strictEqual(vm.runInContext("conferenceLegs.has('c')", context), true);
+        test.strictEqual(vm.runInContext("confLegs.has('c')", context), true);
         test.done();
       })
       .catch(function(error)
@@ -929,23 +1107,23 @@ module.exports = {
       fallbackVideo = { kind: 'video', id: 'fallback-video', readyState: 'live' };
       fallbackAudio = { kind: 'audio', id: 'fallback-audio', readyState: 'live' };
       fallbackLeg = {
-        normalComposerHostId: 'ended-b',
-        conferenceAudioStream: new MediaStream([ { kind: 'audio', id: 'old-submix', readyState: 'ended' } ]),
-        fallbackLocalStream: new MediaStream([ fallbackAudio, fallbackVideo ]),
-        originalVideoTrack: { kind: 'video', id: 'ended-composer-video', readyState: 'ended' },
-        originalAudioTrack: { kind: 'audio', id: 'ended-composer-audio', readyState: 'ended' },
-        originalVideoSender: { replaceTrack: function(track) { fallbackVideoReplacements.push(track); return Promise.resolve(); } },
-        originalAudioSender: { replaceTrack: function(track) { fallbackAudioReplacements.push(track); return Promise.resolve(); } }
+        mixerHostId: 'ended-b',
+        mixAudio: new MediaStream([ { kind: 'audio', id: 'old-submix', readyState: 'ended' } ]),
+        backupStream: new MediaStream([ fallbackAudio, fallbackVideo ]),
+        videoTrack: { kind: 'video', id: 'ended-composer-video', readyState: 'ended' },
+        audioTrack: { kind: 'audio', id: 'ended-composer-audio', readyState: 'ended' },
+        videoSender: { replaceTrack: function(track) { fallbackVideoReplacements.push(track); return Promise.resolve(); } },
+        audioSender: { replaceTrack: function(track) { fallbackAudioReplacements.push(track); return Promise.resolve(); } }
       };
     `, context);
 
-    vm.runInContext("restoreConferenceLegOriginalMedia(fallbackLeg, 'ended-b')", context)
+    vm.runInContext("restoreMedia(fallbackLeg, 'ended-b')", context)
       .then(function()
       {
         test.strictEqual(vm.runInContext('fallbackVideoReplacements[0] === fallbackVideo', context), true);
         test.strictEqual(vm.runInContext('fallbackAudioReplacements[0] === fallbackAudio', context), true);
-        test.strictEqual(vm.runInContext('fallbackLeg.normalComposerHostId', context), null);
-        test.strictEqual(vm.runInContext('fallbackLeg.conferenceAudioStream', context), null);
+        test.strictEqual(vm.runInContext('fallbackLeg.mixerHostId', context), null);
+        test.strictEqual(vm.runInContext('fallbackLeg.mixAudio', context), null);
         test.done();
       })
       .catch(function(error)
@@ -1257,9 +1435,9 @@ module.exports = {
     const stopCalls = [];
 
     context.navigator.mediaDevices.getDisplayMedia = function() { return Promise.resolve(screenStream); };
-    context.updateConferenceUi = function() {};
-    context.openScreenShareDialog = function() {};
-    context.closeScreenShareDialog = function() {};
+    context.updateConfUi = function() {};
+    context.openShareBox = function() {};
+    context.closeShareBox = function() {};
     context.testSessionB = {
       id        : 'share-b',
       isEnded   : function() { return false; },
@@ -1294,17 +1472,17 @@ module.exports = {
     };
 
     vm.runInContext(`
-      conferenceLegs.set('share-b', {
-        role: 'B', confirmed: true, ended: false, screenTarget: true, screenActive: false,
+      confLegs.set('share-b', {
+        role: 'B', confirmed: true, ended: false, shareTarget: true, sharingScreen: false,
         session: testSessionB
       });
-      conferenceLegs.set('share-c', {
-        role: 'C', confirmed: true, ended: false, screenTarget: true, screenActive: false,
+      confLegs.set('share-c', {
+        role: 'C', confirmed: true, ended: false, shareTarget: true, sharingScreen: false,
         session: testSessionC
       });
     `, context);
 
-    vm.runInContext('startConferenceScreenShare()', context)
+    vm.runInContext('shareConf()', context)
       .then(function()
       {
         test.strictEqual(shareCalls.length, 2);
@@ -1313,7 +1491,7 @@ module.exports = {
         test.strictEqual(shareCalls[0][1].mediaStream, screenStream);
         test.strictEqual(shareCalls[1][1].mediaStream, screenStream);
 
-        return vm.runInContext('stopConferenceScreenShare()', context);
+        return vm.runInContext('unshareConf()', context);
       })
       .then(function()
       {

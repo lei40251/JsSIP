@@ -33,14 +33,14 @@ session.on(...) → failed / ended 清理
 
 | 功能 | 页面入口 | 代码定位 | 主要 SDK 调用/事件 |
 | --- | --- | --- | --- |
-| 自动注册、主动注销/重新注册 | 顶部初始化区、注册控制区 | `initializeDemoMode`、`registerUa`、`unregisterUa` | `start()`、`register()`、`unregister()`、注册事件 |
+| 自动注册、主动注销/重新注册 | 顶部初始化区、注册控制区 | `initMode`、`regUa`、`unregUa` | `start()`、`register()`、`unregister()`、注册事件 |
 | 语音/视频外呼 | `#call`、`#callVideo` | `call(type, direction, mediaStream)` | `ua.call()`、`newRTCSession` |
 | 语音/视频接听 | `#answer`、`#answerVideo` | `newRTCSession` 中的按钮绑定 | `session.answer()` |
 | 三方通话 | 三方模式下的会议成员区 | `app-conference.js` | `ua.call()`、`session.answer()`、`getMediaEffectsComposer()`、`renegotiate()` |
-| 设备选择 | `#cameras`、`#mics` | `buildSelected*Constraints()`、设备 `change` 事件 | `CRTC.Utils.get*()`、`switchDevice()` |
-| 音视频模式切换 | `#toAudio`、`#toVideo`、`#toVideoSendonly` | `newRTCSession` 中的模式按钮绑定 | `downgradeToAudio()`、`upgradeToVideo()`、`mode` |
-| 媒体效果 | 输出镜像、虚拟背景和水印控件 | `buildCallComposerOptions()`、`buildCallAiNsOptions()` | `getMediaEffectsComposer()`、`getAiNoiseSuppression()` |
-| 屏幕/元素分享 | 共享与推流区 | `screenShare`、`formShare`、`picShare`、`videoShare` | `share()`、`unShare()`、共享事件 |
+| 设备选择 | `#cameras`、`#mics` | `getAudioOpts() / getVideoOpts()`、设备 `change` 事件 | `CRTC.Utils.get*()`、`switchDevice()` |
+| 音视频模式切换 | `#toAudio`、`#toVideo`、`#toVideoSend` | `newRTCSession` 中的模式按钮绑定 | `downgradeToAudio()`、`upgradeToVideo()`、`mode` |
+| 媒体效果 | 输出镜像、虚拟背景和水印控件 | `getFxOpts()`、`getNsOpts()` | `getMediaEffectsComposer()`、`getAiNoiseSuppression()` |
+| 屏幕/元素分享 | 共享与推流区 | `shareScreen`、`shareHtml`、`sharePic`、`shareVideo` | `share()`、`unShare()`、共享事件 |
 | 呼转/INFO/DTMF | 辅助功能区 | `referBtn`、`sendInfo`、`dtmf` | `refer()`、`sendInfo()`、`sendDTMF()` |
 | 通话统计 | 视频区下方浮层 | `stats:detailed-report` 监听和渲染函数 | `stats:*` 会话事件 |
 
@@ -104,7 +104,7 @@ Demo 会根据已配置的环境和账号创建 `CRTC.UA`。客户项目应使�
 Demo 中的 UA 创建代码位于 [`app.js`](../../demo/base-js/js/app.js)：
 
 ```js
-const account = handleGetQuery('caller');
+const account = getQuery('caller');
 const socket = new CRTC.WebSocketInterface(signalingUrl);
 const configuration = {
   sockets                          : socket,
@@ -159,7 +159,7 @@ ua.on('registered', function(data)
 注册控制区对应代码位于 [`app.ui-bindings.js`](../../demo/base-js/js/app.ui-bindings.js)：
 
 ```js
-document.querySelector('#registerUa').onclick = function()
+document.querySelector('#regUa').onclick = function()
 {
   if (ua.isConnected() && !ua.isRegistered())
   {
@@ -167,7 +167,7 @@ document.querySelector('#registerUa').onclick = function()
   }
 };
 
-document.querySelector('#unregisterUa').onclick = function()
+document.querySelector('#unregUa').onclick = function()
 {
   if (ua.isRegistered())
   {
@@ -218,7 +218,7 @@ await ua.call(`${number}@${sipDomain}`, options);
 
 下拉列表来自 `CRTC.Utils.getCameras()` 和 `getMicrophones()`。选择后：
 
-- 无通话：保存 deviceId，标准呼叫/接听通过 `buildSelectedAudioConstraints()`、`buildSelectedVideoConstraints()` 写入 `deviceId.exact`。
+- 无通话：保存 deviceId，标准呼叫/接听通过 `getAudioOpts()`、`getVideoOpts()` 写入 `deviceId.exact`。
 - 通话中：立即调用 `session.switchDevice('camera'/'audio', deviceId)`。
 
 代码位置：设备枚举和约束构建在 [`app.sdk-helper.js`](../../demo/base-js/js/app.sdk-helper.js)，下拉框 `change` 事件在 [`app.ui-bindings.js`](../../demo/base-js/js/app.ui-bindings.js)。标准接听和视频升级也复用相同的视频约束，避免呼出、接听使用不同设备。
@@ -226,7 +226,7 @@ await ua.call(`${number}@${sipDomain}`, options);
 约束构建函数会在已选设备时写入 `deviceId.exact`：
 
 ```js
-function buildSelectedVideoConstraints()
+function getVideoOpts()
 {
   const constraints = Object.assign({}, videoConstraints);
 
@@ -273,7 +273,7 @@ document.querySelector('#cameras').addEventListener('change', function()
 | `useUpdate` | `true` | 音视频升级/降级时使用 UPDATE 方式 |
 | `useReInvite` | `false` | 使用 re-INVITE 方式 |
 
-下拉框在 [`app.ui-bindings.js`](../../demo/base-js/js/app.ui-bindings.js) 更新 `useUpdate`；`#toAudio`、`#toVideo` 和 `#toVideoSendonly` 在 [`app.js`](../../demo/base-js/js/app.js) 把该值传给升级/降级方法。必须由服务端和对端共同支持，默认联调先使用现网已验证的方式。
+下拉框在 [`app.ui-bindings.js`](../../demo/base-js/js/app.ui-bindings.js) 更新 `useUpdate`；`#toAudio`、`#toVideo` 和 `#toVideoSend` 在 [`app.js`](../../demo/base-js/js/app.js) 把该值传给升级/降级方法。必须由服务端和对端共同支持，默认联调先使用现网已验证的方式。
 
 ### 画质偏好
 
@@ -317,25 +317,25 @@ document.querySelector('#videoHint').onchange = function()
 
 | 控件 | 值/范围 | 生效时机 |
 | --- | --- | --- |
-| Ai 降噪 | 空 / `AiNS` | 是否在下一次呼叫/接听传 `aiNoiseSuppression` |
+| Ai 降噪 | 空 / `AiNS` | 是否在下一次呼叫/接听传 `nsMode` |
 | 强度 | 整数 `0～100` | 当前会话已启用时调用 `setSuppressionLevel()`；否则下次生效 |
 
 关闭下拉并不代表当前通话一定会动态销毁已有 AiNS；Demo 重点展示初始启用和强度热更新。需要运行时开关时应按产品设计明确其生命周期。
 
 以上三项的参数构建和通话中更新集中在 [`app-media-effects.js`](../../demo/base-js/js/app-media-effects.js)：
 
-- `buildCallComposerOptions()`：组合镜像、水印和虚拟背景，供呼叫/标准接听使用。
-- `applyCurrentOutputMirrorToSession()`：更新当前通话输出镜像。
-- `applyCurrentVirtualBackgroundToSession()`：更新或清除 slot 0 虚拟背景。
-- `buildCallAiNsOptions()`：生成下一次呼叫/标准接听的 AiNS 参数。
-- `applyAiNsLevelToCurrentCall()`：热更新当前通话降噪强度。
+- `getFxOpts()`：组合镜像、水印和虚拟背景，供呼叫/标准接听使用。
+- `setMirror()`：更新当前通话输出镜像。
+- `setVb()`：更新或清除 slot 0 虚拟背景。
+- `getNsOpts()`：生成下一次呼叫/标准接听的 AiNS 参数。
+- `setNsLevel()`：热更新当前通话降噪强度。
 
 composer 初始配置的核心代码如下，取自 [`app-media-effects.js`](../../demo/base-js/js/app-media-effects.js)：
 
 ```js
-const outputMirror = document.getElementById('callMediaEffectsComposerOutputMirror').value === 'on';
-const aiVBOptions = buildCurrentAiVBOptions();
-const watermarks = buildCurrentWatermarks();
+const outputMirror = document.getElementById('fxMirror').value === 'on';
+const aiVBOptions = getVbOpts();
+const watermarks = getMarks();
 const hasComposerEffects = outputMirror || watermarks.length || aiVBOptions;
 const composerOptions = {};
 
@@ -364,9 +364,9 @@ AiNS 则使用独立顶层配置：
 ```js
 return {
   enabled             : true,
-  noiseReductionLevel : getCurrentAiNsLevel(),
+  noiseReductionLevel : getNsLevel(),
   outputGain          : 1,
-  assetConfig         : { cdnUrl: AI_NOISE_ASSET_ROOT }
+  assetConfig         : { cdnUrl: NS_ROOT }
 };
 ```
 
@@ -395,28 +395,28 @@ return {
 
 “应用”读取当前控件并调用 `setWatermarks()`；“清空”移除对应水印。`getMediaEffectsComposer()` 返回 `null` 时表示本通电话没有启用 composer，按钮不能改变当前发送画面。
 
-代码位置：水印输入读取、合并和更新位于 [`app-media-effects.js`](../../demo/base-js/js/app-media-effects.js) 的 `buildCurrent*Watermark()`、`mergeSessionWatermarks()`、`applyCurrent*WatermarkToSession()`；按钮绑定位于 [`app.ui-bindings.js`](../../demo/base-js/js/app.ui-bindings.js)。
+代码位置：水印输入读取、合并和更新位于 [`app-media-effects.js`](../../demo/base-js/js/app-media-effects.js) 的 `getTextMark() / getImageMark()`、`mergeMarks()`、`setTextMark() / setImageMark()`；按钮绑定位于 [`app.ui-bindings.js`](../../demo/base-js/js/app.ui-bindings.js)。
 
 文字水印的构造函数会保留 SDK 默认值，只写入用户真正填写的可选字段：
 
 ```js
-function buildCurrentTextWatermark()
+function getTextMark()
 {
-  const text = document.getElementById('callMediaEffectsComposerTextWatermarkText').value.trim();
+  const text = document.getElementById('textMarkText').value.trim();
 
   if (!text)
   {
     return null;
   }
 
-  const textPosition = document.getElementById('callMediaEffectsComposerTextWatermarkPosition').value || 'bottom-right';
-  const textSize = document.getElementById('callMediaEffectsComposerTextWatermarkSize').value;
-  const textColor = document.getElementById('callMediaEffectsComposerTextWatermarkColor').value.trim();
-  const textOpacity = readCallMediaEffectsComposerOpacity(
-    document.getElementById('callMediaEffectsComposerTextWatermarkOpacity')
+  const textPosition = document.getElementById('textMarkPos').value || 'bottom-right';
+  const textSize = document.getElementById('textMarkSize').value;
+  const textColor = document.getElementById('textMarkColor').value.trim();
+  const textOpacity = readOpacity(
+    document.getElementById('textMarkAlpha')
   );
   const textWatermark = {
-    id       : CALL_TEXT_WATERMARK_ID,
+    id       : TEXT_MARK_ID,
     type     : 'text',
     text     : text,
     position : textPosition
@@ -444,10 +444,10 @@ function buildCurrentTextWatermark()
 更新单个水印前，Demo 用稳定 ID 保留其他水印：
 
 ```js
-function mergeSessionWatermarks(nextItems, idsToReplace)
+function mergeMarks(nextItems, idsToReplace)
 {
-  const { sessionComposer } = getSessionComposerHandles();
-  const current = getSessionWatermarkSnapshot(sessionComposer);
+  const fx = getFx();
+  const current = getMarkState(fx);
 
   return current
     .filter((item) => !idsToReplace.includes(item && item.id))
@@ -509,8 +509,8 @@ options = {
   extraHeaders  : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}`, `X-Direction: ${direction || 'sendrecv'}` ],
   extraFeatures : extraFeatures,
   pcConfig      : pcConfig,
-  eventHandlers : {
-    mediaEffectsIssue : handleSessionMediaEffectsIssue
+  events : {
+    mediaEffectsIssue : onFxIssue
   }
 };
 
@@ -521,13 +521,13 @@ if (mediaStream)
 else
 {
   options['mediaConstraints'] = {
-    audio : buildSelectedAudioConstraints(),
-    video : (type === 'video' || type === 'onlyVideo') ? buildSelectedVideoConstraints() : false
+    audio : getAudioOpts(),
+    video : (type === 'video' || type === 'onlyVideo') ? getVideoOpts() : false
   };
 }
 
-options.mediaEffectsComposer = buildCallComposerOptions();
-options.aiNoiseSuppression = buildCallAiNsOptions();
+options.mediaEffectsComposer = getFxOpts();
+options.nsMode = getNsOpts();
 
 remoteNo = number;
 
@@ -556,15 +556,15 @@ document.querySelector('#answer').onclick = function()
 {
   e.session.answer({
     mediaConstraints : {
-      audio : buildSelectedAudioConstraints(),
+      audio : getAudioOpts(),
       video : false
     },
     pcConfig             : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
     extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
     rtcOfferConstraints  : { offerToReceiveAudio: true },
     extraFeatures        : extraFeatures,
-    mediaEffectsComposer : buildCallComposerOptions(),
-    aiNoiseSuppression   : buildCallAiNsOptions()
+    mediaEffectsComposer : getFxOpts(),
+    nsMode   : getNsOpts()
   });
 };
 
@@ -572,15 +572,15 @@ document.querySelector('#answerVideo').onclick = function()
 {
   e.session.answer({
     mediaConstraints : {
-      audio : buildSelectedAudioConstraints(),
-      video : buildSelectedVideoConstraints()
+      audio : getAudioOpts(),
+      video : getVideoOpts()
     },
     pcConfig             : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
     extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
     rtcOfferConstraints  : { offerToReceiveAudio: true, offerToReceiveVideo: true },
     extraFeatures        : extraFeatures,
-    mediaEffectsComposer : buildCallComposerOptions(),
-    aiNoiseSuppression   : buildCallAiNsOptions()
+    mediaEffectsComposer : getFxOpts(),
+    nsMode   : getNsOpts()
   });
 };
 ```
@@ -611,12 +611,12 @@ document.querySelector('#toAudio').onclick = function()
 
 document.querySelector('#toVideo').onclick = function()
 {
-  e.session.upgradeToVideo({ useUpdate: useUpdate, videoConstraints: buildSelectedVideoConstraints() }, () => { setStatus(`切换视频模式完成${curMode}`); });
+  e.session.upgradeToVideo({ useUpdate: useUpdate, videoConstraints: getVideoOpts() }, () => { setStatus(`切换视频模式完成${curMode}`); });
 };
 
-document.querySelector('#toVideoSendonly').onclick = function()
+document.querySelector('#toVideoSend').onclick = function()
 {
-  e.session.upgradeToVideo({ sendOnly: true, useUpdate: useUpdate, videoConstraints: buildSelectedVideoConstraints() }, () => { setStatus('切换视频模式完成') + curMode; });
+  e.session.upgradeToVideo({ sendOnly: true, useUpdate: useUpdate, videoConstraints: getVideoOpts() }, () => { setStatus('切换视频模式完成') + curMode; });
 };
 ```
 
@@ -713,12 +713,12 @@ await leg.session.share('screen', {
 
 Demo 负责目标选择和统一停止 `screenStream`；SDK 负责每条会话的 sender、re-INVITE、MID 通知以及远端 `remoteShared/remoteUnShared` 事件。页面代码不应直接操作共享 transceiver。
 
-代码位置：`#screenShare`、`#formShare`、`#picShare`、`#videoShare`、`#stopShare` 以及带 `D` 的双流入口都在 [`app.js`](../../demo/base-js/js/app.js)。标准客户接入先参考不带 `D` 的方法；双流需要双方及网络侧能力支持。
+代码位置：`#shareScreen`、`#shareHtml`、`#sharePic`、`#shareVideo`、`#unshare` 以及带 `D` 的双流入口都在 [`app.js`](../../demo/base-js/js/app.js)。标准客户接入先参考不带 `D` 的方法；双流需要双方及网络侧能力支持。
 
 标准屏幕共享会保留 SDK 返回的 stream，并监听浏览器原生停止操作：
 
 ```js
-document.querySelector('#screenShare').onclick = function()
+document.querySelector('#shareScreen').onclick = function()
 {
   e.session.share('screen', {})
     .then((stream) =>
@@ -737,17 +737,17 @@ document.querySelector('#screenShare').onclick = function()
 其他标准共享入口和停止逻辑如下：
 
 ```js
-document.querySelector('#formShare').onclick = function()
+document.querySelector('#shareHtml').onclick = function()
 {
   e.session.share('html', { id: '#ele', assembly: html2canvas });
 };
 
-document.querySelector('#picShare').onclick = function()
+document.querySelector('#sharePic').onclick = function()
 {
   e.session.share('pic', { id: '#pic_s' });
 };
 
-document.querySelector('#videoShare').onclick = function()
+document.querySelector('#shareVideo').onclick = function()
 {
   document.querySelector('#video_s').play()
     .then(() =>
@@ -756,13 +756,13 @@ document.querySelector('#videoShare').onclick = function()
     });
 };
 
-document.querySelector('#stopShare').onclick = function()
+document.querySelector('#unshare').onclick = function()
 {
   e.session.unShare();
 
   setTimeout(() =>
   {
-    getStreams(e.session.connection);
+    showStreams(e.session.connection);
   }, 300);
 };
 ```
@@ -774,7 +774,7 @@ document.querySelector('#stopShare').onclick = function()
 ### 呼转
 
 ```js
-const eventHandlers = {
+const events = {
   'progress'         : function(data) { console.log('progress', data); },
   'failed'           : function() { if (e.session.isOnHold().local) { e.session.unhold(); } },
   'accepted'         : function(data) { console.log('accept', data); e.session.terminate(); },
@@ -785,7 +785,7 @@ const eventHandlers = {
 
 e.session.hold();
 e.session.refer(`${document.querySelector('#refer').value}@${sipDomain}`, {
-  eventHandlers : eventHandlers
+  events : events
 });
 ```
 
@@ -847,14 +847,14 @@ e.session.on('stats:detailed-report', function(report)
     return `${sessionStatsIssueNames[issue.code] || issue.code}(L${issue.severity})`;
   }).join(' | ');
 
-  renderSessionStatsStreams('#rtcStatsOutbound', report.outbound, true);
-  renderSessionStatsStreams('#rtcStatsInbound', report.inbound, false);
+  renderSessionStatsStreams('#statsOut', report.outbound, true);
+  renderSessionStatsStreams('#statsIn', report.inbound, false);
   renderSessionConnectionStats(report.connection);
   setSessionStatsPanelText(
-    '#rtcStatsQuality',
+    '#statsQuality',
     `RTT:${formatSessionStatsNumber(quality.RTT, 'ms')} | ↑:${formatSessionNetworkQuality(quality.uplinkNetworkQuality)} | ↓:${formatSessionNetworkQuality(quality.downlinkNetworkQuality)}`
   );
-  setSessionStatsPanelText('#rtcStatsIssues', issueText || '无');
+  setSessionStatsPanelText('#statsIssues', issueText || '无');
 });
 
 e.session.on('stats:stats-error', function(error)
@@ -903,7 +903,7 @@ AiNS: ans.wasm、ans_onnx.tar.gz
 Demo 对媒体效果异常只记录和提示，不会挂断通话：
 
 ```js
-function handleSessionMediaEffectsIssue(d)
+function onFxIssue(d)
 {
   const moduleName = d && d.module ? d.module : 'MediaEffects';
   const message = d && d.message ? d.message : 'Unknown media effects failure';
@@ -916,7 +916,7 @@ function handleSessionMediaEffectsIssue(d)
 }
 ```
 
-该函数位于 [`app.js`](../../demo/base-js/js/app.js)，呼出时通过 `options.eventHandlers.mediaEffectsIssue` 传入，呼入会话则在 `newRTCSession` 中绑定事件。
+该函数位于 [`app.js`](../../demo/base-js/js/app.js)，呼出时通过 `options.events.mediaEffectsIssue` 传入，呼入会话则在 `newRTCSession` 中绑定事件。
 
 ## 8.17 按功能逐步验证
 
@@ -1007,14 +1007,14 @@ function start()
   navigator.mediaDevices.getUserMedia({ video: true, audio: true })
     .then(async(mediastream) =>
     {
-      await updateDevices();
+      await loadDevices();
       mediastream && mediastream.getTracks().forEach((track) => track.stop());
     })
     .catch(async(error) =>
     {
       try
       {
-        await updateDevices();
+        await loadDevices();
       }
       catch (deviceError)
       {
@@ -1041,7 +1041,7 @@ function start()
 }
 
 start();
-initMediaEffects();
+initFx();
 ```
 
 这段代码取自 [`app.js`](../../demo/base-js/js/app.js)。预采集只为了请求权限和获取带名称的设备列表，因此成功后立即停止这些 tracks。

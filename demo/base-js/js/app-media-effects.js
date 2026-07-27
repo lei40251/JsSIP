@@ -19,22 +19,22 @@
 // =============================================================================
 
 // 当前选中的虚拟背景类型：''、'none'、'blur'、'img1'、'img2'
-let virtualBackgroundType = '';
-const AI_VB_TASKS_ROOT = './assets/aivb';
+let vbType = '';
+const VB_ROOT = './assets/aivb';
 
 // 演示页内置背景图 key -> URL 映射
-const virtualBackgroundImgs = {
+const vbImgs = {
   img1 : './virtual-background/backgrounds/office.png',
   img2 : './virtual-background/backgrounds/sky.jpg'
 };
 
 // 当前是否启用了 AiNS。演示里只处理 '' 和 'AiNS' 两种值。
 let aiNsType = '';
-const AI_NOISE_ASSET_ROOT = './assets/ains';
+const NS_ROOT = './assets/ains';
 
 // 当前呼叫页里两类输出水印的固定 ID。
-const CALL_TEXT_WATERMARK_ID = 'call-output-text-watermark';
-const CALL_IMAGE_WATERMARK_ID = 'call-output-image-watermark';
+const TEXT_MARK_ID = 'call-output-text-watermark';
+const IMAGE_MARK_ID = 'call-output-image-watermark';
 
 // =============================================================================
 // MediaEffectsComposer 配置构建
@@ -52,7 +52,7 @@ const CALL_IMAGE_WATERMARK_ID = 'call-output-image-watermark';
  * @property {'none'|'blur'|'image'|'color'} [mode] — 虚拟背景模式：
  *   - 'none'  : 不应用虚拟背景效果；保留 AI 虚拟背景配置对象，但不做人像分割、不替换背景
  *   - 'blur'  : 背景模糊
- *   - 'image' : 替换为自定义图片（需同时传 imageUrl）
+ *   - 'image' : 替换为自定义图片（需同时传 url）
  *   - 'color' : 替换为纯色背景（需同时传 color）
  *
  * @property {string}  [imageUrl]   — 背景图片 URL（mode='image' 时需要）
@@ -76,58 +76,58 @@ const CALL_IMAGE_WATERMARK_ID = 'call-output-image-watermark';
  *
  * @returns {AiVBOptions|null}
  */
-function buildCurrentAiVBOptions()
+function getVbOpts()
 {
-  if (!virtualBackgroundType)
+  if (!vbType)
   {
     return null;
   }
 
   // 直接复用当前采集参数，缺失时退回演示页默认值。
-  const sourceWidth = Number(videoConstraints.width) || 640;
-  const sourceHeight = Number(videoConstraints.height) || 480;
-  const sourceFps = Number(videoConstraints.frameRate) || 15;
+  const width = Number(videoOpts.width) || 640;
+  const height = Number(videoOpts.height) || 480;
+  const fps = Number(videoOpts.frameRate) || 15;
 
   /**
    * 组装 AiVBOptions 对象（详见上方 JSDoc）
    *
    * @type {AiVBOptions}
    */
-  const aiVBOptions = {
-    assetConfig : { cdnUrl: AI_VB_TASKS_ROOT },
+  const vbOpts = {
+    assetConfig : { cdnUrl: VB_ROOT },
     video       : {
-      width     : sourceWidth,
-      height    : sourceHeight,
-      targetFps : Math.min(sourceFps, 15)
+      width     : width,
+      height    : height,
+      targetFps : Math.min(fps, 15)
     }
   };
 
-  if (virtualBackgroundType === 'blur')
+  if (vbType === 'blur')
   {
-    aiVBOptions.mode = 'blur';
+    vbOpts.mode = 'blur';
 
-    return aiVBOptions;
+    return vbOpts;
   }
 
-  if (virtualBackgroundType === 'none')
+  if (vbType === 'none')
   {
-    aiVBOptions.mode = 'none';
+    vbOpts.mode = 'none';
 
-    return aiVBOptions;
+    return vbOpts;
   }
 
   // 其余值（img1 / img2）都按图片背景处理。
-  const imageUrl = virtualBackgroundImgs[virtualBackgroundType];
+  const url = vbImgs[vbType];
 
-  if (!imageUrl)
+  if (!url)
   {
     return null;
   }
 
-  aiVBOptions.mode = 'image';
-  aiVBOptions.imageUrl = imageUrl;
+  vbOpts.mode = 'image';
+  vbOpts.imageUrl = url;
 
-  return aiVBOptions;
+  return vbOpts;
 }
 
 // =============================================================================
@@ -172,45 +172,45 @@ function buildCurrentAiVBOptions()
  *
  * @returns {Object|null} 文字水印配置对象，或 null
  */
-function buildCurrentTextWatermark()
+function getTextMark()
 {
-  const text = document.getElementById('callMediaEffectsComposerTextWatermarkText').value.trim();
+  const text = document.getElementById('textMarkText').value.trim();
 
   if (!text)
   {
     return null;
   }
 
-  const textPosition = document.getElementById('callMediaEffectsComposerTextWatermarkPosition').value || 'bottom-right';
-  const textSize = document.getElementById('callMediaEffectsComposerTextWatermarkSize').value;
-  const textColor = document.getElementById('callMediaEffectsComposerTextWatermarkColor').value.trim();
-  const textOpacity = readCallMediaEffectsComposerOpacity(
-    document.getElementById('callMediaEffectsComposerTextWatermarkOpacity')
+  const pos = document.getElementById('textMarkPos').value || 'bottom-right';
+  const size = document.getElementById('textMarkSize').value;
+  const color = document.getElementById('textMarkColor').value.trim();
+  const alpha = readOpacity(
+    document.getElementById('textMarkAlpha')
   );
-  const textWatermark = {
-    id       : CALL_TEXT_WATERMARK_ID,
+  const mark = {
+    id       : TEXT_MARK_ID,
     type     : 'text',
     text     : text,
-    position : textPosition
+    position : pos
   };
 
   // 仅在用户填写时覆盖 SDK 默认值。
-  if (String(textSize).trim())
+  if (String(size).trim())
   {
-    textWatermark.fontSize = Number(textSize);
+    mark.fontSize = Number(size);
   }
 
-  if (textColor)
+  if (color)
   {
-    textWatermark.color = textColor;
+    mark.color = color;
   }
 
-  if (textOpacity !== undefined)
+  if (alpha !== undefined)
   {
-    textWatermark.opacity = textOpacity;
+    mark.opacity = alpha;
   }
 
-  return textWatermark;
+  return mark;
 }
 
 /**
@@ -218,45 +218,45 @@ function buildCurrentTextWatermark()
  *
  * @returns {Object|null} 图片水印配置对象，或 null
  */
-function buildCurrentImageWatermark()
+function getImageMark()
 {
-  const imageUrl = document.getElementById('callMediaEffectsComposerImageWatermarkUrl').value.trim();
+  const url = document.getElementById('imgMarkUrl').value.trim();
 
-  if (!imageUrl)
+  if (!url)
   {
     return null;
   }
 
-  const imagePosition = document.getElementById('callMediaEffectsComposerImageWatermarkPosition').value || 'bottom-right';
-  const imageWidth = document.getElementById('callMediaEffectsComposerImageWatermarkWidth').value;
-  const imageHeight = document.getElementById('callMediaEffectsComposerImageWatermarkHeight').value;
-  const imageOpacity = readCallMediaEffectsComposerOpacity(
-    document.getElementById('callMediaEffectsComposerImageWatermarkOpacity')
+  const pos = document.getElementById('imgMarkPos').value || 'bottom-right';
+  const width = document.getElementById('imgMarkW').value;
+  const height = document.getElementById('imgMarkH').value;
+  const alpha = readOpacity(
+    document.getElementById('imgMarkAlpha')
   );
-  const imageWatermark = {
-    id       : CALL_IMAGE_WATERMARK_ID,
+  const mark = {
+    id       : IMAGE_MARK_ID,
     type     : 'image',
-    image    : imageUrl,
-    position : imagePosition
+    image    : url,
+    position : pos
   };
 
   // 仅在用户填写时覆盖 SDK 默认值。
-  if (String(imageWidth).trim())
+  if (String(width).trim())
   {
-    imageWatermark.width = Number(imageWidth);
+    mark.width = Number(width);
   }
 
-  if (String(imageHeight).trim())
+  if (String(height).trim())
   {
-    imageWatermark.height = Number(imageHeight);
+    mark.height = Number(height);
   }
 
-  if (imageOpacity !== undefined)
+  if (alpha !== undefined)
   {
-    imageWatermark.opacity = imageOpacity;
+    mark.opacity = alpha;
   }
 
-  return imageWatermark;
+  return mark;
 }
 
 /**
@@ -264,16 +264,16 @@ function buildCurrentImageWatermark()
  *
  * @returns {Object[]} 水印配置数组
  */
-function buildCurrentWatermarks()
+function getMarks()
 {
-  const watermarks = [];
-  const textWatermark = buildCurrentTextWatermark();
-  const imageWatermark = buildCurrentImageWatermark();
+  const marks = [];
+  const text = getTextMark();
+  const image = getImageMark();
 
-  textWatermark && watermarks.push(textWatermark);
-  imageWatermark && watermarks.push(imageWatermark);
+  text && marks.push(text);
+  image && marks.push(image);
 
-  return watermarks;
+  return marks;
 }
 
 /**
@@ -293,14 +293,14 @@ function buildCurrentWatermarks()
  *
  * ---- 水印 ----
  * @property {MediaEffectsComposerWatermarkOptions[]|MediaEffectsComposerWatermarkOptions|null} [watermarks]
- *   — 水印配置（数组/单对象/null），详见 buildCurrentTextWatermark 上方注释
+ *   — 水印配置（数组/单对象/null），详见 getTextMark 上方注释
  *
  * ---- 输入源配置（含 AI 虚拟背景）----
  * @property {MediaEffectsComposerSourceOptions[]} [sources]
  *   — 输入源配置数组，每个元素：
  *     @property {number}   [slot]               — 槽位索引
  *     @property {AiVBOptions} [aiVirtualBackground]
- *       — 该源的 AI 虚拟背景配置，详见 buildCurrentAiVBOptions 上方 JSDoc
+ *       — 该源的 AI 虚拟背景配置，详见 getVbOpts 上方 JSDoc
  */
 
 /**
@@ -309,53 +309,53 @@ function buildCurrentWatermarks()
  *
  * @returns {MediaEffectsComposerOptions|null} 有效果时返回配置对象，无效果时返回 null
  */
-function buildCallComposerOptions()
+function getFxOpts()
 {
-  const outputMirror = document.getElementById('callMediaEffectsComposerOutputMirror').value === 'on';
-  const aiVBOptions = buildCurrentAiVBOptions();
-  const watermarks = buildCurrentWatermarks();
-  const hasComposerEffects = outputMirror || watermarks.length || aiVBOptions;
+  const mirror = document.getElementById('fxMirror').value === 'on';
+  const vbOpts = getVbOpts();
+  const watermarks = getMarks();
+  const hasFx = mirror || watermarks.length || vbOpts;
 
   /**
    * SDK 的 MediaEffectsComposerOptions 对象
    * @type {MediaEffectsComposerOptions}
    */
-  const composerOptions = {};
+  const opts = {};
 
-  if (outputMirror)
+  if (mirror)
   {
     // 输出画面水平镜像
-    composerOptions.mirror = true;
+    opts.mirror = true;
   }
 
   if (watermarks.length)
   {
     // 水印配置数组
-    composerOptions.watermarks = watermarks;
+    opts.watermarks = watermarks;
   }
 
-  if (aiVBOptions)
+  if (vbOpts)
   {
     // 输入源配置：每个源可独立设置 AI 虚拟背景。
     // 这里把所有源配置放在第一个槽位（index 0）。
-    composerOptions.sources = [
+    opts.sources = [
       {
-        aiVirtualBackground : aiVBOptions
+        aiVirtualBackground : vbOpts
       }
     ];
   }
 
-  if (hasComposerEffects)
+  if (hasFx)
   {
-    composerOptions.enableInsertable = true;
+    opts.enableInsertable = true;
   }
 
-  if (!hasComposerEffects)
+  if (!hasFx)
   {
     return null;
   }
 
-  return composerOptions;
+  return opts;
 }
 
 // =============================================================================
@@ -396,49 +396,49 @@ function buildCallComposerOptions()
  *           否则返回 null（需在 call/answer 时传入 enableInsertable: true）
  *   - 返回的实例上可用方法见本区块顶部注释
  *
- * @returns {{ sessionComposer: Object|null }}
+ * @returns {Object|null} 当前通话使用的合成器
  */
-function getSessionComposerHandles()
+function getFx()
 {
   // 三方模式下优先使用会议 composer（A-B 主会话的合成器），
   // 确保媒体特效面板操作的是正确的 composer 实例。
-  const conferenceComposer = typeof getConferenceMediaEffectsComposer === 'function' ?
-    getConferenceMediaEffectsComposer() :
+  const confMixer = typeof getConfMixer === 'function' ?
+    getConfMixer() :
     null;
 
   /** @type {import('../../lib/RTCSession').MediaEffectsComposerInstance|null} */
-  const sessionComposer = conferenceComposer || (
+  const fx = confMixer || (
     rtcSession && rtcSession.getMediaEffectsComposer ?
       rtcSession.getMediaEffectsComposer() :
       null
   );
 
-  return { sessionComposer };
+  return fx;
 }
 
 /**
  * 获取当前会话里已存在的水印快照；不可读时返回空数组。
  *
  * ========== SDK 调用 ==========
- * sessionComposer.getWatermarks()
+ * fx.getWatermarks()
  *   - 返回: MediaEffectsComposerWatermarkState[]
  *   - 说明: 返回当前已设置的水印配置数组（已归一化，含 SDK 填充的默认值）
  *   - WatermarkState 比 WatermarkOptions 多出:
  *     { status, reason, slot, sourceId, streamId } 等运行时字段
  *
- * @param {Object} sessionComposer — 当前会话的 MediaEffectsComposer 实例
+ * @param {Object} fx — 当前会话的 MediaEffectsComposer 实例
  * @returns {Object[]} 水印配置数组，获取失败时返回空数组
  */
-function getSessionWatermarkSnapshot(sessionComposer)
+function getMarkState(fx)
 {
-  if (!sessionComposer || typeof sessionComposer.getWatermarks !== 'function')
+  if (!fx || typeof fx.getWatermarks !== 'function')
   {
     return [];
   }
 
   try
   {
-    return [].concat(sessionComposer.getWatermarks() || []);
+    return [].concat(fx.getWatermarks() || []);
   }
   catch (error)
   {}
@@ -449,18 +449,18 @@ function getSessionWatermarkSnapshot(sessionComposer)
 /**
  * 以“先删旧 ID、再追加新项”的方式合并会话内水印。
  *
- * @param {Object[]} nextItems — 要新增或更新的水印项
- * @param {string[]} idsToReplace — 需要从旧列表中移除的水印 ID
+ * @param {Object[]} next — 要新增或更新的水印项
+ * @param {string[]} ids — 需要从旧列表中移除的水印 ID
  * @returns {Object[]} 合并后的水印数组
  */
-function mergeSessionWatermarks(nextItems, idsToReplace)
+function mergeMarks(next, ids)
 {
-  const { sessionComposer } = getSessionComposerHandles();
-  const current = getSessionWatermarkSnapshot(sessionComposer);
+  const fx = getFx();
+  const current = getMarkState(fx);
 
   return current
-    .filter((item) => !idsToReplace.includes(item && item.id))
-    .concat(nextItems);
+    .filter((item) => !ids.includes(item && item.id))
+    .concat(next);
 }
 
 // =============================================================================
@@ -472,46 +472,46 @@ function mergeSessionWatermarks(nextItems, idsToReplace)
  * 未通话时只更新页面状态提示。
  *
  * ========== SDK 调用 ==========
- * sessionComposer.setMirror(enabled: boolean)
+ * fx.setMirror(enabled: boolean)
  *   - enabled: true=开启输出画面水平镜像，false=关闭
  *   - 影响所有观看者看到的画面
  *   - 返回 Promise，建议 await，便于感知运行时失败
  */
-async function applyCurrentOutputMirrorToSession()
+async function setMirror()
 {
   if (!rtcSession)
   {
-    const outputMirror = document.getElementById('callMediaEffectsComposerOutputMirror').value === 'on';
+    const mirror = document.getElementById('fxMirror').value === 'on';
 
-    setStatus(`输出镜像已设为${outputMirror ? '开启' : '关闭'}，将在下一次呼叫/接听时生效`);
+    setStatus(`输出镜像已设为${mirror ? '开启' : '关闭'}，将在下一次呼叫/接听时生效`);
 
     return;
   }
 
-  const { sessionComposer } = getSessionComposerHandles();
+  const fx = getFx();
 
-  if (!sessionComposer)
+  if (!fx)
   {
     setStatus('当前通话没有 MediaEffectsComposer，输出镜像将在下一次呼叫/接听时生效');
 
     return;
   }
 
-  const outputMirror = document.getElementById('callMediaEffectsComposerOutputMirror').value === 'on';
+  const mirror = document.getElementById('fxMirror').value === 'on';
 
   try
   {
     // SDK: setMirror(enabled: boolean) — 设置输出画面水平镜像
-    if (sessionComposer && typeof sessionComposer.setMirror === 'function')
+    if (fx && typeof fx.setMirror === 'function')
     {
-      await sessionComposer.setMirror(outputMirror);
+      await fx.setMirror(mirror);
     }
 
-    setStatus(`已${outputMirror ? '开启' : '关闭'}当前通话输出镜像`);
+    setStatus(`已${mirror ? '开启' : '关闭'}当前通话输出镜像`);
   }
   catch (error)
   {
-    console.warn('applyCurrentOutputMirrorToSession error', error);
+    console.warn('setMirror error', error);
     setStatus(`应用输出镜像失败：${error && error.message ? error.message : error}`);
   }
 }
@@ -520,7 +520,7 @@ async function applyCurrentOutputMirrorToSession()
  * 将一组输出水印写入当前通话。
  *
  * ========== SDK 调用 ==========
- * sessionComposer.setWatermarks(watermarks)
+ * fx.setWatermarks(watermarks)
  *   - 参数:
  *     watermarks: MediaEffectsComposerWatermarkOptions[] | MediaEffectsComposerWatermarkOptions | null
  *       - 数组: 全量替换当前所有水印为新的一组
@@ -531,13 +531,13 @@ async function applyCurrentOutputMirrorToSession()
  *     - 所以 demo 里先通过 getWatermarks() 读旧列表，再 merge 后传回
  *
  * @param {Object[]} watermarks — 水印配置数组（MediaEffectsComposerWatermarkOptions[]），
- *   字段详见 buildCurrentTextWatermark 上方 JSDoc
+ *   字段详见 getTextMark 上方 JSDoc
  */
-async function applyWatermarksToSession(watermarks)
+async function setMarks(watermarks)
 {
-  const { sessionComposer } = getSessionComposerHandles();
+  const fx = getFx();
 
-  if (!sessionComposer)
+  if (!fx)
   {
     setStatus('当前通话没有 MediaEffectsComposer，水印将在下一次呼叫/接听时生效');
 
@@ -545,9 +545,9 @@ async function applyWatermarksToSession(watermarks)
   }
 
   // SDK: setWatermarks(watermarks) — 全量设置水印配置
-  if (sessionComposer && typeof sessionComposer.setWatermarks === 'function')
+  if (fx && typeof fx.setWatermarks === 'function')
   {
-    await sessionComposer.setWatermarks(watermarks);
+    await fx.setWatermarks(watermarks);
 
     return;
   }
@@ -556,9 +556,9 @@ async function applyWatermarksToSession(watermarks)
 /**
  * 把当前文字水印配置同步到当前通话。
  */
-async function applyCurrentTextWatermarkToSession()
+async function setTextMark()
 {
-  const watermark = buildCurrentTextWatermark();
+  const watermark = getTextMark();
 
   if (!rtcSession)
   {
@@ -567,19 +567,19 @@ async function applyCurrentTextWatermarkToSession()
     return;
   }
 
-  const watermarks = mergeSessionWatermarks(
+  const watermarks = mergeMarks(
     watermark ? [ watermark ] : [],
-    [ CALL_TEXT_WATERMARK_ID ]
+    [ TEXT_MARK_ID ]
   );
 
   try
   {
-    await applyWatermarksToSession(watermarks);
+    await setMarks(watermarks);
     setStatus(watermark ? '已应用当前文字水印到当前通话' : '已清除当前文字水印');
   }
   catch (error)
   {
-    console.warn('applyCurrentTextWatermarkToSession error', error);
+    console.warn('setTextMark error', error);
     setStatus(`应用文字水印失败：${error && error.message ? error.message : error}`);
   }
 }
@@ -587,9 +587,9 @@ async function applyCurrentTextWatermarkToSession()
 /**
  * 把当前图片水印配置同步到当前通话。
  */
-async function applyCurrentImageWatermarkToSession()
+async function setImageMark()
 {
-  const watermark = buildCurrentImageWatermark();
+  const watermark = getImageMark();
 
   if (!rtcSession)
   {
@@ -598,19 +598,19 @@ async function applyCurrentImageWatermarkToSession()
     return;
   }
 
-  const watermarks = mergeSessionWatermarks(
+  const watermarks = mergeMarks(
     watermark ? [ watermark ] : [],
-    [ CALL_IMAGE_WATERMARK_ID ]
+    [ IMAGE_MARK_ID ]
   );
 
   try
   {
-    await applyWatermarksToSession(watermarks);
+    await setMarks(watermarks);
     setStatus(watermark ? '已应用当前图片水印到当前通话' : '已清除当前图片水印');
   }
   catch (error)
   {
-    console.warn('applyCurrentImageWatermarkToSession error', error);
+    console.warn('setImageMark error', error);
     setStatus(`应用图片水印失败：${error && error.message ? error.message : error}`);
   }
 }
@@ -618,62 +618,62 @@ async function applyCurrentImageWatermarkToSession()
 /**
  * 清空页面上文字水印相关的输入控件值。
  */
-function resetTextWatermarkInputs()
+function resetTextMark()
 {
-  document.getElementById('callMediaEffectsComposerTextWatermarkText').value = '';
-  document.getElementById('callMediaEffectsComposerTextWatermarkSize').value = '';
-  document.getElementById('callMediaEffectsComposerTextWatermarkOpacity').value = '';
+  document.getElementById('textMarkText').value = '';
+  document.getElementById('textMarkSize').value = '';
+  document.getElementById('textMarkAlpha').value = '';
 }
 
 /**
  * 清空页面上图片水印相关的输入控件值。
  */
-function resetImageWatermarkInputs()
+function resetImgMark()
 {
-  document.getElementById('callMediaEffectsComposerImageWatermarkUrl').value = '';
-  document.getElementById('callMediaEffectsComposerImageWatermarkWidth').value = '';
-  document.getElementById('callMediaEffectsComposerImageWatermarkHeight').value = '';
-  document.getElementById('callMediaEffectsComposerImageWatermarkOpacity').value = '';
+  document.getElementById('imgMarkUrl').value = '';
+  document.getElementById('imgMarkW').value = '';
+  document.getElementById('imgMarkH').value = '';
+  document.getElementById('imgMarkAlpha').value = '';
 }
 
 /**
  * 清空页面文字水印输入并同步清除当前通话中的文字水印。
  */
-async function clearCurrentTextWatermarkFromSession()
+async function clearTextMark()
 {
-  resetTextWatermarkInputs();
-  await applyCurrentTextWatermarkToSession();
+  resetTextMark();
+  await setTextMark();
 }
 
 /**
  * 清空页面图片水印输入并同步清除当前通话中的图片水印。
  */
-async function clearCurrentImageWatermarkFromSession()
+async function clearImgMark()
 {
-  resetImageWatermarkInputs();
-  await applyCurrentImageWatermarkToSession();
+  resetImgMark();
+  await setImageMark();
 }
 
 /**
  * 把当前虚拟背景应用到当前通话。
  *
  * ========== SDK 调用 ==========
- * sessionComposer.setSourceAiVirtualBackground(slotOrTarget, options)
+ * fx.setSourceAiVirtualBackground(slotOrTarget, options)
  *   - slotOrTarget: number | string
  *     - number: 槽位索引（如 0=第一个输入源）
  *   - options: AiVBOptions | null
  *     - 传 null 等同于 clear（但建议用下面的 clear 方法）
- *     - 参数结构详见 buildCurrentAiVBOptions 上方 JSDoc
+ *     - 参数结构详见 getVbOpts 上方 JSDoc
  *
- * sessionComposer.clearSourceAiVirtualBackground(slotOrTarget)
+ * fx.clearSourceAiVirtualBackground(slotOrTarget)
  *   - slotOrTarget: number | string — 同上
  *   - 作用: 清除指定源的 AI 虚拟背景效果
  */
-async function applyCurrentVirtualBackgroundToSession()
+async function setVb()
 {
-  const { sessionComposer } = getSessionComposerHandles();
+  const fx = getFx();
 
-  if (!sessionComposer)
+  if (!fx)
   {
     setStatus('当前通话没有 MediaEffectsComposer，虚拟背景将在下一次呼叫/接听时生效');
 
@@ -682,27 +682,27 @@ async function applyCurrentVirtualBackgroundToSession()
 
   try
   {
-    if (sessionComposer && typeof sessionComposer.setSourceAiVirtualBackground === 'function')
+    if (fx && typeof fx.setSourceAiVirtualBackground === 'function')
     {
-      const aiVBOptions = buildCurrentAiVBOptions();
+      const vbOpts = getVbOpts();
 
-      if (!aiVBOptions)
+      if (!vbOpts)
       {
         // SDK: clearSourceAiVirtualBackground(0)
         // 没选虚拟背景 → 清除槽位 0 的 AI 虚拟背景效果
-        sessionComposer.clearSourceAiVirtualBackground(0);
+        fx.clearSourceAiVirtualBackground(0);
       }
       else
       {
         // SDK: setSourceAiVirtualBackground(0, AiVBOptions)
         // 将虚拟背景配置应用到槽位 0（第一个输入源）
-        sessionComposer.setSourceAiVirtualBackground(0, aiVBOptions);
+        fx.setSourceAiVirtualBackground(0, vbOpts);
       }
     }
   }
   catch (error)
   {
-    console.warn('applyCurrentVirtualBackgroundToSession error', error);
+    console.warn('setVb error', error);
     setStatus(`应用虚拟背景失败：${error && error.message ? error.message : error}`);
   }
 }
@@ -711,33 +711,33 @@ async function applyCurrentVirtualBackgroundToSession()
  * 处理虚拟背景下拉框变化。
  * 这里只同步页面状态，并在当前通话存在 composer 时热更新效果。
  */
-async function handleVirtualBackgroundChange(selectEl)
+async function changeVb(selectEl)
 {
-  const selectedOption = selectEl.options[selectEl.selectedIndex];
+  const option = selectEl.options[selectEl.selectedIndex];
 
-  virtualBackgroundType = selectedOption.value;
+  vbType = option.value;
 
-  if (!virtualBackgroundType)
+  if (!vbType)
   {
     setStatus('虚拟背景已关闭');
   }
-  else if (virtualBackgroundType === 'none')
+  else if (vbType === 'none')
   {
     setStatus('虚拟背景已切换为保留人物，不替换背景');
   }
   else
   {
-    setStatus(`虚拟背景已切换为 ${selectedOption.innerText}`);
+    setStatus(`虚拟背景已切换为 ${option.innerText}`);
   }
 
-  const { sessionComposer } = getSessionComposerHandles();
+  const fx = getFx();
 
-  if (!sessionComposer)
+  if (!fx)
   {
     return;
   }
 
-  await applyCurrentVirtualBackgroundToSession();
+  await setVb();
 }
 
 // =============================================================================
@@ -772,7 +772,7 @@ async function handleVirtualBackgroundChange(selectEl)
  *
  * @returns {AiNSOptions|null} 启用了 AiNS 时返回配置对象，否则返回 null
  */
-function buildCallAiNsOptions()
+function getNsOpts()
 {
   if (aiNsType !== 'AiNS')
   {
@@ -781,9 +781,9 @@ function buildCallAiNsOptions()
 
   return {
     enabled             : true,
-    noiseReductionLevel : getCurrentAiNsLevel(),
+    noiseReductionLevel : getNsLevel(),
     outputGain          : 1,
-    assetConfig         : { cdnUrl: AI_NOISE_ASSET_ROOT }
+    assetConfig         : { cdnUrl: NS_ROOT }
   };
 }
 
@@ -791,21 +791,21 @@ function buildCallAiNsOptions()
  * 把新的降噪强度应用到当前通话。
  * 仅当前会话已创建 AiNS 实例时返回 true。
  */
-function applyAiNsLevelToCurrentCall(level)
+function setNsLevel(level)
 {
   if (aiNsType !== 'AiNS' || !rtcSession)
   {
     return false;
   }
 
-  const aiNsEngine = rtcSession.getAiNoiseSuppression();
+  const ns = rtcSession.getAiNoiseSuppression();
 
-  if (!aiNsEngine)
+  if (!ns)
   {
     return false;
   }
 
-  aiNsEngine.setSuppressionLevel(level);
+  ns.setSuppressionLevel(level);
 
   return true;
 }
@@ -816,21 +816,21 @@ function applyAiNsLevelToCurrentCall(level)
  * @param {number} value — 输出增益，范围 0~4；1 表示不额外放大
  * @returns {boolean} 当前通话存在 AiNS 实例时返回 true
  */
-function applyAiNsOutputGainToCurrentCall(value)
+function setNsGain(value)
 {
   if (aiNsType !== 'AiNS' || !rtcSession)
   {
     return false;
   }
 
-  const aiNsEngine = rtcSession.getAiNoiseSuppression();
+  const ns = rtcSession.getAiNoiseSuppression();
 
-  if (!aiNsEngine)
+  if (!ns)
   {
     return false;
   }
 
-  aiNsEngine.setOutputGain(value);
+  ns.setOutputGain(value);
 
   return true;
 }
@@ -838,12 +838,12 @@ function applyAiNsOutputGainToCurrentCall(value)
 /**
  * 初始化媒体效果表单状态，避免首次呼叫读到未同步的页面值。
  */
-function initMediaEffects()
+function initFx()
 {
-  virtualBackgroundType = document.querySelector('#virtualBackground').value;
-  aiNsType = document.querySelector('#aiNoiseSuppression').value;
+  vbType = document.querySelector('#vbMode').value;
+  aiNsType = document.querySelector('#nsMode').value;
 
-  const levelInput = document.querySelector('#aiNoiseReductionLevel');
+  const levelInput = document.querySelector('#nsLevel');
 
-  levelInput.value = normalizeAiNsReductionLevel(levelInput.value);
+  levelInput.value = normNsLevel(levelInput.value);
 }

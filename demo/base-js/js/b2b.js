@@ -1,27 +1,27 @@
 // ===== 工具函数 =====
 
 // 生成随机 requestId
-function genRequestId() 
+function getReqId()
 {
   return `req-${ Math.random().toString(36)
     .slice(2) }${Date.now()}`;
 }
 
 // 对象按 ASCII 排序（仅一层）
-function sortObject(obj) 
+function sortObj(obj)
 {
   return Object.keys(obj)
     .sort()
-    .reduce((acc, key) => 
+    .reduce((out, key) =>
     {
-      acc[key] = obj[key];
-      
-      return acc;
+      out[key] = obj[key];
+
+      return out;
     }, {});
 }
 
 // 构造 header 字符串
-function buildHeaderString(headers) 
+function getHeaderText(headers)
 {
   const keys = [ 'Content-Type', 'X-Version', 'X-Timestamp', 'X-AID' ].sort();
 
@@ -32,11 +32,11 @@ function buildHeaderString(headers)
 }
 
 // HmacSHA256（浏览器版）
-async function hmacSha256(key, data) 
+async function hmac256(key, data)
 {
   const enc = new TextEncoder();
 
-  const cryptoKey = await crypto.subtle.importKey(
+  const hKey = await crypto.subtle.importKey(
     'raw',
     enc.encode(key),
     { name: 'HMAC', hash: 'SHA-256' },
@@ -44,58 +44,51 @@ async function hmacSha256(key, data)
     [ 'sign' ]
   );
 
-  const signature = await crypto.subtle.sign(
+  const sig = await crypto.subtle.sign(
     'HMAC',
-    cryptoKey,
+    hKey,
     enc.encode(data)
   );
 
-  return Array.from(new Uint8Array(signature))
+  return Array.from(new Uint8Array(sig))
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
 }
 
 // ===== 核心：生成签名 =====
-async function generateSignature({ secret, headers, body }) 
+async function signB2b({ secret, headers, body })
 {
-  // 1. header string
-  const headerStr = buildHeaderString(headers);
+  // 先签请求头，再用结果签请求体。
+  const head = getHeaderText(headers);
+  const headSig = await hmac256(secret, head);
+  const sorted = sortObj(body);
+  const text = JSON.stringify(sorted);
 
-  // 2. header签名
-  const headerSign = await hmacSha256(secret, headerStr);
-
-  // 3. body 排序
-  const sortedBody = sortObject(body);
-  const bodyStr = JSON.stringify(sortedBody);
-
-  // 4. 最终签名
-  const finalSign = await hmacSha256(headerSign, bodyStr);
-
-  return finalSign;
+  return hmac256(headSig, text);
 }
 
 // ===== 核心：发请求 =====
-async function request({ url, method = 'POST', body = {}, secret }) 
+async function b2bReq({ url, method = 'POST', body = {}, secret })
 {
-  const timestamp = Math.floor(Date.now() / 1000).toString();
+  const time = Math.floor(Date.now() / 1000).toString();
 
   const headers = {
     'Content-Type' : 'application/json',
     'X-Version'    : '1.0.0',
-    'X-Timestamp'  : timestamp,
+    'X-Timestamp'  : time,
     'X-AID'        : '10010001'
   };
 
   // 生成签名
-  const signature = await generateSignature({
+  const sig = await signB2b({
     secret,
     headers,
     body
   });
 
   // 写入 Authorization
-  headers['Authorization'] = signature;
-  headers['X-Request-ID'] = genRequestId();
+  headers['Authorization'] = sig;
+  headers['X-Request-ID'] = getReqId();
 
   // 发起请求
   const res = await fetch(url, {

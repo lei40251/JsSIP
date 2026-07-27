@@ -240,13 +240,13 @@ ans_onnx.tar.gz
 <h3 id="demo-对照">Demo 对照<a class="heading-anchor" href="#demo-对照" aria-label="链接到本节">#</a></h3>
 <p>Base JS Demo 中对应：</p>
 <ul>
-<li><code>buildCallAiNsOptions()</code>：构造呼叫和接听参数。</li>
-<li><code>applyAiNsLevelToCurrentCall()</code>：通话中修改降噪强度。</li>
-<li><code>applyAiNsOutputGainToCurrentCall()</code>：通话中修改输出增益。</li>
+<li><code>getNsOpts()</code>：构造呼叫和接听参数。</li>
+<li><code>setNsLevel()</code>：通话中修改降噪强度。</li>
+<li><code>setNsGain()</code>：通话中修改输出增益。</li>
 </ul>
 <p>这些函数位于 [<code>demo/base-js/js/app-media-effects.js</code>]。</p>
 <p>Demo 的实际初始配置只在页面选中 AiNS 时返回对象：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function buildCallAiNsOptions()
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function getNsOpts()
 {
   if (aiNsType !== &#39;AiNS&#39;)
   {
@@ -255,14 +255,14 @@ ans_onnx.tar.gz
 
   return {
     enabled             : true,
-    noiseReductionLevel : getCurrentAiNsLevel(),
+    noiseReductionLevel : getNsLevel(),
     outputGain          : 1,
     assetConfig         : { cdnUrl: AI_NOISE_ASSET_ROOT }
   };
 }
 </code></pre>
 </div><p>通话中热更新不会新建控制器，而是检查当前会话已经存在的 AiNS 实例：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function applyAiNsLevelToCurrentCall(level)
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function setNsLevel(level)
 {
   if (aiNsType !== &#39;AiNS&#39; || !rtcSession)
   {
@@ -425,8 +425,8 @@ function clearVirtualBackground()
 <p>图片跨域时，图片服务器必须返回允许当前页面访问的 CORS 响应头。</p>
 <h3 id="demo-对照-2">Demo 对照<a class="heading-anchor" href="#demo-对照-2" aria-label="链接到本节">#</a></h3>
 <ul>
-<li><code>buildCallComposerOptions()</code>：构造混流和虚拟背景初始配置。</li>
-<li><code>applyCurrentVirtualBackgroundToSession()</code>：通话中切换背景。</li>
+<li><code>getFxOpts()</code>：构造混流和虚拟背景初始配置。</li>
+<li><code>setVb()</code>：通话中切换背景。</li>
 <li>函数实现见 [<code>app-media-effects.js</code>]，页面控件见 [<code>index.html</code>]。</li>
 </ul>
 <p>Demo 把当前视频约束和页面选择转换为 AiVB 配置。以下是 <a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a> 的模式构造节选：</p>
@@ -457,7 +457,7 @@ aiVBOptions.mode = &#39;image&#39;;
 aiVBOptions.imageUrl = imageUrl;
 </code></pre>
 </div><p>通话中使用同一个构造结果更新 slot 0：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const aiVBOptions = buildCurrentAiVBOptions();
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const aiVBOptions = getVbOpts();
 
 if (!aiVBOptions)
 {
@@ -472,11 +472,11 @@ else
 <h2 id="4-5-音视频混流">4.5 音视频混流<a class="heading-anchor" href="#4-5-音视频混流" aria-label="链接到本节">#</a></h2>
 <p>启用 <code>mediaEffectsComposer</code> 后，本地摄像头作为 <code>slot 0</code>。SDK 将合成结果用于当前通话，业务无需再次获取输出流。</p>
 <p>Base JS Demo 根据页面当前镜像、水印和虚拟背景状态构造 composer。以下代码取自 <a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a>：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function buildCallComposerOptions()
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function getFxOpts()
 {
-  const outputMirror = document.getElementById(&#39;callMediaEffectsComposerOutputMirror&#39;).value === &#39;on&#39;;
-  const aiVBOptions = buildCurrentAiVBOptions();
-  const watermarks = buildCurrentWatermarks();
+  const outputMirror = document.getElementById(&#39;fxMirror&#39;).value === &#39;on&#39;;
+  const aiVBOptions = getVbOpts();
+  const watermarks = getMarks();
   const hasComposerEffects = outputMirror || watermarks.length || aiVBOptions;
   const composerOptions = {};
 
@@ -669,19 +669,19 @@ async function addScreenToComposer()
 </code></pre>
 </div><p>更新部分水印时，可先用 <code>getWatermarks()</code> 读取当前列表，按稳定 ID 替换对应项后再调用 <code>setWatermarks()</code>，避免误删其他水印。</p>
 <p>Demo 对单个文字水印的处理就是“读取当前列表→按 ID 合并→全量写回”：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const watermarks = mergeSessionWatermarks(
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const watermarks = mergeMarks(
   watermark ? [ watermark ] : [],
   [ CALL_TEXT_WATERMARK_ID ]
 );
 
 try
 {
-  await applyWatermarksToSession(watermarks);
+  await setMarks(watermarks);
   setStatus(watermark ? &#39;已应用当前文字水印到当前通话&#39; : &#39;已清除当前文字水印&#39;);
 }
 catch (error)
 {
-  console.warn(&#39;applyCurrentTextWatermarkToSession error&#39;, error);
+  console.warn(&#39;setTextMark error&#39;, error);
 }
 </code></pre>
 </div><p>该节选来自 <a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a>。图片水印使用相同流程，只替换稳定 ID 和水印构造函数。</p>

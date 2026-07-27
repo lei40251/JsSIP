@@ -307,8 +307,8 @@ Demo 通过 [`app.sdk-helper.js`](../../demo/base-js/js/app.sdk-helper.js) 从 P
 const localStream = CRTC.Utils.getStreams(pc, 'local');
 const remoteStream = CRTC.Utils.getStreams(pc, 'remote');
 
-bindMediaStreamIfChanged(remoteAudio, remoteStream.audioStream);
-bindMediaStreamIfChanged(remoteVideo, remoteStream.mediaStream);
+setMedia(remoteAudio, remoteStream.audioStream);
+setMedia(remoteVideo, remoteStream.mediaStream);
 
 Promise.all([ localVideo.play(), remoteAudio.play(), remoteVideo.play() ])
   .then(() => { })

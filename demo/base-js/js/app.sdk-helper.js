@@ -15,35 +15,35 @@
  * 4. 渲染远端视频（监听 ended 清理残留黑框）
  * 5. 统一播放（兼容 Chrome 自动播放策略）
  */
-function getStreams(pc)
+function showStreams(pc)
 {
-  const localStream = CRTC.Utils.getStreams(pc, 'local');
-  const remoteStream = CRTC.Utils.getStreams(pc, 'remote');
+  const local = CRTC.Utils.getStreams(pc, 'local');
+  const remote = CRTC.Utils.getStreams(pc, 'remote');
 
-  const audioTrack = localStream.audioStream.getAudioTracks().length > 0 ? localStream.audioStream.getAudioTracks()[0] : null;
-  const videoTrack = (localStream.videoStream.getVideoTracks().length > 0) ? localStream.videoStream.getVideoTracks()[0] : null;
-  const mediaStreamArray = [];
+  const audio = local.audioStream.getAudioTracks().length > 0 ? local.audioStream.getAudioTracks()[0] : null;
+  const video = (local.videoStream.getVideoTracks().length > 0) ? local.videoStream.getVideoTracks()[0] : null;
+  const tracks = [];
 
-  let newCloneStream;
+  let nextStream;
 
-  if (videoTrack)
+  if (video)
   {
-    mediaStreamArray.push(videoTrack);
+    tracks.push(video);
   }
-  else if (audioTrack)
+  else if (audio)
   {
-    mediaStreamArray.push(audioTrack);
+    tracks.push(audio);
   }
 
-  if (mediaStreamArray.length > 0)
+  if (tracks.length > 0)
   {
-    newCloneStream = new MediaStream(mediaStreamArray);
+    nextStream = new MediaStream(tracks);
 
-    if (bindMediaStreamIfChanged(localVideo, newCloneStream))
+    if (setMedia(localVid, nextStream))
     {
-      newCloneStream.getTracks().length > 0 && newCloneStream.getTracks()[0].addEventListener('ended', function()
+      nextStream.getTracks().length > 0 && nextStream.getTracks()[0].addEventListener('ended', function()
       {
-        localVideo.srcObject = null;
+        localVid.srcObject = null;
       });
     }
   }
@@ -57,28 +57,28 @@ function getStreams(pc)
   }
   isRefer = false;
 
-  newCloneStream && (cloneStream = newCloneStream);
+  nextStream && (cloneStream = nextStream);
 
   setTimeout(() =>
   {
-    bindMediaStreamIfChanged(remoteAudio, remoteStream.audioStream);
+    setMedia(remoteAud, remote.audioStream);
 
-    remoteAudio.play()
+    remoteAud.play()
       .catch(() => { });
   }, 100);
 
-  if (bindMediaStreamIfChanged(remoteVideo, remoteStream.mediaStream))
+  if (setMedia(remoteVid, remote.mediaStream))
   {
-    remoteStream.videoStream.getVideoTracks().length > 0 && remoteStream.videoStream.getVideoTracks()[0].addEventListener('ended', function()
+    remote.videoStream.getVideoTracks().length > 0 && remote.videoStream.getVideoTracks()[0].addEventListener('ended', function()
     {
       if (!tmpSession)
       {
-        remoteVideo.srcObject = null;
+        remoteVid.srcObject = null;
       }
     });
   }
 
-  Promise.all([ localVideo.play(), remoteAudio.play(), remoteVideo.play() ])
+  Promise.all([ localVid.play(), remoteAud.play(), remoteVid.play() ])
     .then(() => { })
     .catch(() => { });
 }
@@ -86,11 +86,11 @@ function getStreams(pc)
 /**
  * 停止所有媒体流渲染
  */
-function stopStreams()
+function clearStreams()
 {
-  remoteVideo.srcObject = null;
-  remoteAudio.srcObject = null;
-  localVideo.srcObject = null;
+  remoteVid.srcObject = null;
+  remoteAud.srcObject = null;
+  localVid.srcObject = null;
 }
 
 /**
@@ -99,7 +99,7 @@ function stopStreams()
  * @param {string} name - 参数名（区分大小写）
  * @returns {string|null} 参数值，不存在时返回 null
  */
-function handleGetQuery(name)
+function getQuery(name)
 {
   const reg = new RegExp(`(^|&)${name}=([^&]*)(&|$)`, 'i');
   const r = window.location.search.substr(1).match(reg);
@@ -116,10 +116,10 @@ function handleGetQuery(name)
  */
 function setStatus(text)
 {
-  const statusDom = document.querySelector('#status');
+  const statusEl = document.querySelector('#status');
 
-  statusDom.innerText = `${statusDom.innerText}${text}\r\n`;
-  statusDom.scrollTop = statusDom.scrollHeight;
+  statusEl.innerText = `${statusEl.innerText}${text}\r\n`;
+  statusEl.scrollTop = statusEl.scrollHeight;
 }
 
 // =============================================================================
@@ -133,16 +133,16 @@ function setStatus(text)
  * @param {string|number} value - 输入框里读到的原始值
  * @returns {number} 归一化后的强度，默认 80
  */
-function normalizeAiNsReductionLevel(value)
+function normNsLevel(value)
 {
-  const parsedLevel = parseInt(value, 10);
+  const level = parseInt(value, 10);
 
-  if (Number.isNaN(parsedLevel))
+  if (Number.isNaN(level))
   {
     return 80;
   }
 
-  return Math.max(0, Math.min(100, parsedLevel));
+  return Math.max(0, Math.min(100, level));
 }
 
 /**
@@ -151,12 +151,12 @@ function normalizeAiNsReductionLevel(value)
  *
  * @returns {number} 当前页面上的合法降噪强度
  */
-function getCurrentAiNsLevel()
+function getNsLevel()
 {
-  const levelInput = document.querySelector('#aiNoiseReductionLevel');
-  const currentValue = levelInput ? levelInput.value : '';
+  const input = document.querySelector('#nsLevel');
+  const value = input ? input.value : '';
 
-  return normalizeAiNsReductionLevel(currentValue);
+  return normNsLevel(value);
 }
 
 /**
@@ -165,19 +165,19 @@ function getCurrentAiNsLevel()
  *
  * @returns {MediaTrackConstraints} 音频采集约束
  */
-function buildSelectedAudioConstraints()
+function getAudioOpts()
 {
-  const constraints = {
+  const opts = {
     sampleRate   : 48000,
     channelCount : 1
   };
 
-  if (selectMic)
+  if (micId)
   {
-    constraints.deviceId = { exact: selectMic };
+    opts.deviceId = { exact: micId };
   }
 
-  return constraints;
+  return opts;
 }
 
 /**
@@ -185,16 +185,16 @@ function buildSelectedAudioConstraints()
  *
  * @returns {MediaTrackConstraints} 视频采集约束
  */
-function buildSelectedVideoConstraints()
+function getVideoOpts()
 {
-  const constraints = Object.assign({}, videoConstraints);
+  const opts = Object.assign({}, videoOpts);
 
-  if (selectCamera)
+  if (cameraId)
   {
-    constraints.deviceId = { exact: selectCamera };
+    opts.deviceId = { exact: cameraId };
   }
 
-  return constraints;
+  return opts;
 }
 
 /**
@@ -203,20 +203,20 @@ function buildSelectedVideoConstraints()
  * 1. 小数写法，例如 0.8
  * 2. 百分比写法，例如 80%
  *
- * @param {HTMLInputElement} inputEl - 透明度输入框
+ * @param {HTMLInputElement} input - 透明度输入框
  * @returns {number|undefined} 归一化后的透明度，空值或非法值时返回 undefined
  */
-function readCallMediaEffectsComposerOpacity(inputEl)
+function readOpacity(input)
 {
-  const raw = String(inputEl.value).trim();
+  const raw = String(input.value).trim();
 
   if (!raw)
   {
     return undefined;
   }
 
-  const normalized = raw.endsWith('%') ? raw.slice(0, -1).trim() : raw;
-  const parsed = Number(normalized.replace(',', '.'));
+  const clean = raw.endsWith('%') ? raw.slice(0, -1).trim() : raw;
+  const parsed = Number(clean.replace(',', '.'));
 
   if (!Number.isFinite(parsed))
   {
@@ -231,12 +231,12 @@ function readCallMediaEffectsComposerOpacity(inputEl)
 /**
  * 关闭来电系统通知
  */
-function closeIncomingCallNotification()
+function closeNotice()
 {
-  if (incomingCallNotification)
+  if (callNotice)
   {
-    incomingCallNotification.close();
-    incomingCallNotification = null;
+    callNotice.close();
+    callNotice = null;
   }
 }
 
@@ -246,13 +246,13 @@ function closeIncomingCallNotification()
  * @param {string} mode - 呼叫模式: 'audio' | 'video'
  * @param {string} fromNo - 主叫号码
  */
-async function showIncomingCallNotification(mode, fromNo)
+async function showNotice(mode, fromNo)
 {
   if (typeof window === 'undefined' || !('Notification' in window))
   {
-    if (!notificationUnsupportedLogged)
+    if (!noticeWarned)
     {
-      notificationUnsupportedLogged = true;
+      noticeWarned = true;
       setStatus('当前浏览器不支持系统通知');
     }
 
@@ -266,8 +266,8 @@ async function showIncomingCallNotification(mode, fromNo)
   {
     try
     {
-      closeIncomingCallNotification();
-      incomingCallNotification = new Notification(title, {
+      closeNotice();
+      callNotice = new Notification(title, {
         body,
         tag                : 'crtc-incoming-call',
         renotify           : true,
@@ -275,10 +275,10 @@ async function showIncomingCallNotification(mode, fromNo)
         icon               : './imgs/logo.svg'
       });
 
-      incomingCallNotification.onclick = function()
+      callNotice.onclick = function()
       {
         window.focus();
-        closeIncomingCallNotification();
+        closeNotice();
       };
     }
     catch (error)
@@ -314,14 +314,14 @@ async function showIncomingCallNotification(mode, fromNo)
  *
  * @returns {Promise<string>} 描述摄像头状态的文本
  */
-async function checkCameraStatus()
+async function checkCamera()
 {
   try
   {
     const devices = await navigator.mediaDevices.enumerateDevices();
-    const videoDevices = devices.filter((device) => device.kind === 'videoinput');
+    const cameras = devices.filter((device) => device.kind === 'videoinput');
 
-    if (videoDevices.length === 0)
+    if (cameras.length === 0)
     {
       return '系统没有摄像头';
     }
@@ -330,7 +330,7 @@ async function checkCameraStatus()
     {
       CRTC.Utils.closeMediaStream(mediastream);
     });
-    haveACamera = true;
+    hasCamera = true;
 
     return '摄像头可以正常使用';
   }
@@ -354,7 +354,7 @@ async function checkCameraStatus()
 /**
  * 更新摄像头和麦克风下拉列表
  */
-async function updateDevices()
+async function loadDevices()
 {
   await CRTC.Utils.getCameras()
     .then((cameras) =>
@@ -390,65 +390,67 @@ async function updateDevices()
  * @param {MediaStreamTrack[]} tracks - 目标轨道数组
  * @returns {boolean} 轨道集合完全相同时返回 true
  */
-function hasSameTrackSet(stream, tracks)
+function sameTracks(stream, tracks)
 {
   if (!(stream instanceof MediaStream))
   {
     return false;
   }
 
-  const currentTracks = stream.getTracks();
+  const current = stream.getTracks();
 
-  if (currentTracks.length !== tracks.length)
+  if (current.length !== tracks.length)
   {
     return false;
   }
 
-  return currentTracks.every((track, index) => track === tracks[index]);
+  return current.every((track, index) => track === tracks[index]);
 }
 
 /**
  * 仅在流发生变化时更新媒体元素的 srcObject
  *
- * @param {HTMLMediaElement} mediaEl - video 或 audio 元素
+ * @param {HTMLMediaElement} el - video 或 audio 元素
  * @param {MediaStream} stream - 目标媒体流
  * @returns {boolean} 是否执行了更新
  */
-function bindMediaStreamIfChanged(mediaEl, stream)
+function setMedia(el, stream)
 {
-  if (!mediaEl)
+  if (!el)
   {
     return false;
   }
 
-  const nextTracks = stream instanceof MediaStream ? stream.getTracks() : [];
+  const tracks = stream instanceof MediaStream ? stream.getTracks() : [];
 
-  if (stream instanceof MediaStream && hasSameTrackSet(mediaEl.srcObject, nextTracks))
+  if (stream instanceof MediaStream && sameTracks(el.srcObject, tracks))
   {
     return false;
   }
 
-  mediaEl.srcObject = stream || null;
+  el.srcObject = stream || null;
 
   return true;
 }
 
 // =============================================================================
-// 屏幕共享通用浮层
+// 共享画面与白板通用浮层
 // =============================================================================
 
 /**
- * 展示本端或远端屏幕共享。点对点与三方模式共用同一组页面节点。
+ * 展示本端/远端屏幕共享或独立共享白板。点对点与三方模式共用同一组页面节点。
  *
- * @param {'local'|'remote'} mode - 当前展示的共享来源
+ * @param {'local'|'remote'|'whiteboard'} mode - 当前展示的共享来源或共享白板
  */
-function openScreenShareDialog(mode)
+function openShareBox(mode)
 {
-  const dialog = document.querySelector('#screenShareDialog');
-  const restoreButton = document.querySelector('#screenShareDialogRestore');
-  const localScreen = document.querySelector('#screen');
-  const remoteScreen = document.querySelector('#remoteVideo2');
-  const title = document.querySelector('#screenShareDialogTitle');
+  const dialog = document.querySelector('#shareBox');
+  const restore = document.querySelector('#shareRestore');
+  const local = document.querySelector('#screen');
+  const remote = document.querySelector('#shareVid');
+  const title = document.querySelector('#shareTitle');
+  const subtitle = document.querySelector('#shareSub');
+  const icon = document.querySelector('#shareIcon i');
 
   if (!dialog)
   {
@@ -457,33 +459,51 @@ function openScreenShareDialog(mode)
 
   dialog.dataset.mode = mode;
   dialog.classList.remove('hide');
-  if (restoreButton) restoreButton.classList.add('hide');
-  if (localScreen) localScreen.classList.toggle('hide', mode !== 'local');
-  if (remoteScreen) remoteScreen.classList.toggle('hide', mode !== 'remote');
-  if (title) title.textContent = mode === 'local' ? '本端屏幕共享' : '远端屏幕共享';
+  if (restore)
+  {
+    restore.classList.add('hide');
+    restore.textContent = mode === 'whiteboard' ? '打开共享白板' : '打开屏幕共享';
+  }
+  if (local) local.classList.toggle('hide', mode !== 'local');
+  if (remote) remote.classList.toggle('hide', mode !== 'remote');
+  if (title)
+  {
+    title.textContent = mode === 'whiteboard' ? '共享白板' :
+      (mode === 'local' ? '本端屏幕共享' : '远端屏幕共享');
+  }
+  if (subtitle)
+  {
+    subtitle.textContent = mode === 'whiteboard' ? '独立协作画布 · 标注内容实时同步' :
+      '共享画面预览与实时标注';
+  }
+  if (icon)
+  {
+    icon.className = mode === 'whiteboard' ? 'bi bi-pencil-square' : 'bi bi-display';
+  }
+  if (typeof setInkMode === 'function') setInkMode(mode);
 }
 
 /**
  * 临时隐藏屏幕共享浮层，保留当前共享来源以便恢复。
  */
-function minimizeScreenShareDialog()
+function minShareBox()
 {
-  const dialog = document.querySelector('#screenShareDialog');
-  const restoreButton = document.querySelector('#screenShareDialogRestore');
+  const dialog = document.querySelector('#shareBox');
+  const restore = document.querySelector('#shareRestore');
 
   if (dialog) dialog.classList.add('hide');
-  if (restoreButton) restoreButton.classList.remove('hide');
+  if (restore) restore.classList.remove('hide');
 }
 
 /**
  * 关闭屏幕共享浮层。
  *
- * @param {'local'|'remote'} [mode] - 仅关闭指定来源；省略时无条件关闭
+ * @param {'local'|'remote'|'whiteboard'} [mode] - 仅关闭指定来源；省略时无条件关闭
  */
-function closeScreenShareDialog(mode)
+function closeShareBox(mode)
 {
-  const dialog = document.querySelector('#screenShareDialog');
-  const restoreButton = document.querySelector('#screenShareDialogRestore');
+  const dialog = document.querySelector('#shareBox');
+  const restore = document.querySelector('#shareRestore');
 
   if (!dialog || (mode && dialog.dataset.mode && dialog.dataset.mode !== mode))
   {
@@ -492,7 +512,8 @@ function closeScreenShareDialog(mode)
 
   dialog.classList.add('hide');
   dialog.dataset.mode = '';
-  if (restoreButton) restoreButton.classList.add('hide');
+  if (restore) restore.classList.add('hide');
+  if (typeof setInkMode === 'function') setInkMode('');
 }
 
 /**
@@ -501,25 +522,25 @@ function closeScreenShareDialog(mode)
  * @param {object} request - SIP 请求/响应对象
  * @returns {'ios' | 'android' | 'unknown'}
  */
-function detectRemoteOS(request)
+function getRemoteOs(request)
 {
   if (!request || typeof request.getHeader !== 'function')
   {
     return 'unknown';
   }
 
-  const userAgent = request.getHeader('User-Agent') || '';
+  const agent = request.getHeader('User-Agent') || '';
   const server = request.getHeader('Server') || '';
-  const headerText = `${userAgent} ${server}`.toLowerCase();
+  const text = `${agent} ${server}`.toLowerCase();
 
-  if (!userAgent && !server)
+  if (!agent && !server)
   {
     return 'unknown';
   }
 
   if (
-    headerText.includes('ios') ||
-    headerText.includes('iphone')
+    text.includes('ios') ||
+    text.includes('iphone')
   )
   {
     return 'ios';

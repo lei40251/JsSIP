@@ -76,7 +76,7 @@
 
   session.on(&#39;stats:detailed-report&#39;, function(report)
   {
-    renderConnection(report.connection);
+    renderConn(report.connection);
     renderOutboundStreams(report.outbound);
     renderInboundStreams(report.inbound);
     renderQuality(report.quality);
@@ -153,14 +153,14 @@ e.session.on(&#39;stats:detailed-report&#39;, function(report)
     return `${sessionStatsIssueNames[issue.code] || issue.code}(L${issue.severity})`;
   }).join(&#39; | &#39;);
 
-  renderSessionStatsStreams(&#39;#rtcStatsOutbound&#39;, report.outbound, true);
-  renderSessionStatsStreams(&#39;#rtcStatsInbound&#39;, report.inbound, false);
+  renderSessionStatsStreams(&#39;#statsOut&#39;, report.outbound, true);
+  renderSessionStatsStreams(&#39;#statsIn&#39;, report.inbound, false);
   renderSessionConnectionStats(report.connection);
   setSessionStatsPanelText(
-    &#39;#rtcStatsQuality&#39;,
+    &#39;#statsQuality&#39;,
     `RTT:${formatSessionStatsNumber(quality.RTT, &#39;ms&#39;)} | ↑:${formatSessionNetworkQuality(quality.uplinkNetworkQuality)} | ↓:${formatSessionNetworkQuality(quality.downlinkNetworkQuality)}`
   );
-  setSessionStatsPanelText(&#39;#rtcStatsIssues&#39;, issueText || &#39;无&#39;);
+  setSessionStatsPanelText(&#39;#statsIssues&#39;, issueText || &#39;无&#39;);
 });
 
 e.session.on(&#39;stats:stats-error&#39;, function(error)
@@ -911,7 +911,7 @@ if (monitor)
 <p>页面常规展示使用 <code>stats:detailed-report</code> 即可。问题上报时只选取排障需要的字段，并按产品安全要求脱敏。</p>
 <p><code>session.statsMonitor</code> 在 PeerConnection 创建后可用，会话结束释放后为 <code>null</code>。会话内实例不要自行调用 <code>start()</code>、<code>stop()</code> 或 <code>reset()</code>。</p>
 <p>Demo 把最近一份结果暴露给浏览器控制台，便于联调时对照页面面板。以下代码取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function getCurrentCallStats()
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function readStats()
 {
   const monitor = rtcSession &amp;&amp; rtcSession.statsMonitor;
 
@@ -927,7 +927,7 @@ if (monitor)
   };
 }
 
-window.getCurrentCallStats = getCurrentCallStats;
+window.readStats = readStats;
 </code></pre>
 </div><p>这些 getter 只读取缓存，不会立即触发一轮 <code>getStats()</code>。</p>
 <h2 id="5-13-独立-peerconnection-监控">5.13 独立 PeerConnection 监控<a class="heading-anchor" href="#5-13-独立-peerconnection-监控" aria-label="链接到本节">#</a></h2>
@@ -1008,11 +1008,11 @@ monitor.stop();
 {
   const waitingText = &#39;--&#39;;
 
-  setSessionStatsPanelText(&#39;#rtcStatsConnection&#39;, waitingText);
-  setSessionStatsPanelText(&#39;#rtcStatsQuality&#39;, waitingText);
-  setSessionStatsPanelText(&#39;#rtcStatsIssues&#39;, &#39;无&#39;);
-  setSessionStatsPanelText(&#39;#rtcStatsOutbound&#39;, waitingText);
-  setSessionStatsPanelText(&#39;#rtcStatsInbound&#39;, waitingText);
+  setSessionStatsPanelText(&#39;#statsConn&#39;, waitingText);
+  setSessionStatsPanelText(&#39;#statsQuality&#39;, waitingText);
+  setSessionStatsPanelText(&#39;#statsIssues&#39;, &#39;无&#39;);
+  setSessionStatsPanelText(&#39;#statsOut&#39;, waitingText);
+  setSessionStatsPanelText(&#39;#statsIn&#39;, waitingText);
 };
 </code></pre>
 </div><p>只清空局部文字而不切换 <code>statsSession</code> 不够；结束时还需将归属引用置为 <code>null</code>，才能屏蔽旧会话的延迟事件。</p>

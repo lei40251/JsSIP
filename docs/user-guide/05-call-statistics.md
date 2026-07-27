@@ -15,7 +15,7 @@ ua.on('newRTCSession', function(data)
 
   session.on('stats:detailed-report', function(report)
   {
-    renderConnection(report.connection);
+    renderConn(report.connection);
     renderOutboundStreams(report.outbound);
     renderInboundStreams(report.inbound);
     renderQuality(report.quality);
@@ -70,14 +70,14 @@ e.session.on('stats:detailed-report', function(report)
     return `${sessionStatsIssueNames[issue.code] || issue.code}(L${issue.severity})`;
   }).join(' | ');
 
-  renderSessionStatsStreams('#rtcStatsOutbound', report.outbound, true);
-  renderSessionStatsStreams('#rtcStatsInbound', report.inbound, false);
+  renderSessionStatsStreams('#statsOut', report.outbound, true);
+  renderSessionStatsStreams('#statsIn', report.inbound, false);
   renderSessionConnectionStats(report.connection);
   setSessionStatsPanelText(
-    '#rtcStatsQuality',
+    '#statsQuality',
     `RTT:${formatSessionStatsNumber(quality.RTT, 'ms')} | ↑:${formatSessionNetworkQuality(quality.uplinkNetworkQuality)} | ↓:${formatSessionNetworkQuality(quality.downlinkNetworkQuality)}`
   );
-  setSessionStatsPanelText('#rtcStatsIssues', issueText || '无');
+  setSessionStatsPanelText('#statsIssues', issueText || '无');
 });
 
 e.session.on('stats:stats-error', function(error)
@@ -416,7 +416,7 @@ if (monitor)
 Demo 把最近一份结果暴露给浏览器控制台，便于联调时对照页面面板。以下代码取自 [`app.js`](../../demo/base-js/js/app.js)：
 
 ```js
-function getCurrentCallStats()
+function readStats()
 {
   const monitor = rtcSession && rtcSession.statsMonitor;
 
@@ -432,7 +432,7 @@ function getCurrentCallStats()
   };
 }
 
-window.getCurrentCallStats = getCurrentCallStats;
+window.readStats = readStats;
 ```
 
 这些 getter 只读取缓存，不会立即触发一轮 `getStats()`。
@@ -482,11 +482,11 @@ const resetSessionStatsPanel = function()
 {
   const waitingText = '--';
 
-  setSessionStatsPanelText('#rtcStatsConnection', waitingText);
-  setSessionStatsPanelText('#rtcStatsQuality', waitingText);
-  setSessionStatsPanelText('#rtcStatsIssues', '无');
-  setSessionStatsPanelText('#rtcStatsOutbound', waitingText);
-  setSessionStatsPanelText('#rtcStatsInbound', waitingText);
+  setSessionStatsPanelText('#statsConn', waitingText);
+  setSessionStatsPanelText('#statsQuality', waitingText);
+  setSessionStatsPanelText('#statsIssues', '无');
+  setSessionStatsPanelText('#statsOut', waitingText);
+  setSessionStatsPanelText('#statsIn', waitingText);
 };
 ```
 

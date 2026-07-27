@@ -75,7 +75,7 @@
 </div><p><code>adapter-latest.js</code> 用于浏览器 WebRTC 兼容，<code>CRTC.min.js</code> 是页面需要引入的 SDK 文件。实际路径以交付包的目录结构为准。</p>
 <h2 id="2-2-准备页面元素">2.2 准备页面元素<a class="heading-anchor" href="#2-2-准备页面元素" aria-label="链接到本节">#</a></h2>
 <div class="code-block"><div class="code-toolbar"><span>html</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-html">&lt;p id=&quot;status&quot;&gt;尚未启动&lt;/p&gt;
-&lt;video id=&quot;remoteVideo&quot; autoplay playsinline&gt;&lt;/video&gt;
+&lt;video id=&quot;remoteVid&quot; autoplay playsinline&gt;&lt;/video&gt;
 
 &lt;input id=&quot;target&quot; value=&quot;sip:bob@example.com&quot;&gt;
 &lt;button id=&quot;callButton&quot; disabled&gt;音视频呼叫&lt;/button&gt;
@@ -155,7 +155,7 @@ const ua = new CRTC.UA({
 </tbody></table></div>
 <p>生产环境不要把账号密码和授权码直接写入前端代码或提交到版本管理系统。</p>
 <p>Base JS Demo 把环境配置和账号参数组合成 <code>configuration</code>，再只创建一个 UA。以下节选自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const account = handleGetQuery(&#39;caller&#39;);
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const account = getQuery(&#39;caller&#39;);
 const socket = new CRTC.WebSocketInterface(signalingUrl);
 const configuration = {
   sockets                          : socket,
@@ -287,7 +287,7 @@ const ua = new CRTC.UA(configuration);
 </tbody></table></div>
 <p>第一版接入建议先使用 Demo 的 <code>640×480@15fps</code>，基础通话稳定后再提高分辨率和帧率。约束越严格，设备不支持时越容易产生 <code>OverconstrainedError</code>。</p>
 <p>Demo 将设备选择收敛成两个构造函数，呼出、接听和视频升级都复用它们。代码取自 <a href="../../../demo/base-js/js/app.sdk-helper.js"><code>app.sdk-helper.js</code></a>：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function buildSelectedAudioConstraints()
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function getAudioOpts()
 {
   const constraints = {
     sampleRate   : 48000,
@@ -302,7 +302,7 @@ const ua = new CRTC.UA(configuration);
   return constraints;
 }
 
-function buildSelectedVideoConstraints()
+function getVideoOpts()
 {
   const constraints = Object.assign({}, videoConstraints);
 
@@ -325,7 +325,7 @@ function buildSelectedVideoConstraints()
 &lt;/head&gt;
 &lt;body&gt;
   &lt;p id=&quot;status&quot;&gt;尚未启动&lt;/p&gt;
-  &lt;video id=&quot;remoteVideo&quot; autoplay playsinline&gt;&lt;/video&gt;
+  &lt;video id=&quot;remoteVid&quot; autoplay playsinline&gt;&lt;/video&gt;
 
   &lt;input id=&quot;target&quot; value=&quot;sip:bob@example.com&quot;&gt;
   &lt;button id=&quot;callButton&quot; disabled&gt;音视频呼叫&lt;/button&gt;
@@ -336,7 +336,7 @@ function buildSelectedVideoConstraints()
   &lt;script src=&quot;./CRTC.min.js&quot;&gt;&lt;/script&gt;
   &lt;script&gt;
     const statusElement = document.getElementById(&#39;status&#39;);
-    const remoteVideo = document.getElementById(&#39;remoteVideo&#39;);
+    const remoteVid = document.getElementById(&#39;remoteVid&#39;);
     const targetInput = document.getElementById(&#39;target&#39;);
     const callButton = document.getElementById(&#39;callButton&#39;);
     const answerButton = document.getElementById(&#39;answerButton&#39;);
@@ -401,8 +401,8 @@ function buildSelectedVideoConstraints()
 
         if (stream)
         {
-          remoteVideo.srcObject = stream;
-          remoteVideo.play().catch(function(error)
+          remoteVid.srcObject = stream;
+          remoteVid.play().catch(function(error)
           {
             console.warn(&#39;远端视频自动播放失败：&#39;, error);
           });
@@ -417,7 +417,7 @@ function buildSelectedVideoConstraints()
         currentSession = null;
       }
 
-      remoteVideo.srcObject = null;
+      remoteVid.srcObject = null;
       answerButton.disabled = true;
       hangupButton.disabled = true;
       callButton.disabled = !ua.isRegistered();
@@ -564,17 +564,17 @@ options = {
   extraFeatures : extraFeatures,
   pcConfig      : pcConfig,
   eventHandlers : {
-    mediaEffectsIssue : handleSessionMediaEffectsIssue
+    mediaEffectsIssue : onFxIssue
   }
 };
 
 options[&#39;mediaConstraints&#39;] = {
-  audio : buildSelectedAudioConstraints(),
-  video : (type === &#39;video&#39; || type === &#39;onlyVideo&#39;) ? buildSelectedVideoConstraints() : false
+  audio : getAudioOpts(),
+  video : (type === &#39;video&#39; || type === &#39;onlyVideo&#39;) ? getVideoOpts() : false
 };
 
-options.mediaEffectsComposer = buildCallComposerOptions();
-options.aiNoiseSuppression = buildCallAiNsOptions();
+options.mediaEffectsComposer = getFxOpts();
+options.nsMode = getNsOpts();
 
 const session = await ua.call(`${number}@${sipDomain}`, options);
 </code></pre>
@@ -584,21 +584,21 @@ const session = await ua.call(`${number}@${sipDomain}`, options);
 {
   e.session.answer({
     mediaConstraints : {
-      audio : buildSelectedAudioConstraints(),
-      video : buildSelectedVideoConstraints()
+      audio : getAudioOpts(),
+      video : getVideoOpts()
     },
     pcConfig             : Object.assign(pcConfig, { &#39;rtcpMuxPolicy&#39;: &#39;negotiate&#39; }),
     extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
     rtcOfferConstraints  : { offerToReceiveAudio: true, offerToReceiveVideo: true },
     extraFeatures        : extraFeatures,
-    mediaEffectsComposer : buildCallComposerOptions(),
-    aiNoiseSuppression   : buildCallAiNsOptions()
+    mediaEffectsComposer : getFxOpts(),
+    nsMode   : getNsOpts()
   });
 
   setStatus(&#39;video answer&#39;);
 };
 </code></pre>
-</div><p>呼出和接听都调用 <code>buildSelected*Constraints()</code>、<code>buildCallComposerOptions()</code> 和 <code>buildCallAiNsOptions()</code>，这正是两条路径保持一致的关键。</p>
+</div><p>呼出和接听都调用 <code>getAudioOpts() / getVideoOpts()</code>、<code>getFxOpts()</code> 和 <code>getNsOpts()</code>，这正是两条路径保持一致的关键。</p>
 <h2 id="2-8-自动注册和手动注册">2.8 自动注册和手动注册<a class="heading-anchor" href="#2-8-自动注册和手动注册" aria-label="链接到本节">#</a></h2>
 <p>示例默认自动注册。手动注册写法：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const ua = new CRTC.UA({
@@ -650,7 +650,7 @@ ua.on(&#39;connected&#39;, function()
 <td>需要明确接收音频/视频方向时</td>
 </tr>
 <tr>
-<td><code>aiNoiseSuppression</code></td>
+<td><code>nsMode</code></td>
 <td><code>object</code></td>
 <td>开启 AiNS 时</td>
 </tr>

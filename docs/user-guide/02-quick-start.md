@@ -17,7 +17,7 @@
 
 ```html
 <p id="status">尚未启动</p>
-<video id="remoteVideo" autoplay playsinline></video>
+<video id="remoteVid" autoplay playsinline></video>
 
 <input id="target" value="sip:bob@example.com">
 <button id="callButton" disabled>音视频呼叫</button>
@@ -55,7 +55,7 @@ const ua = new CRTC.UA({
 Base JS Demo 把环境配置和账号参数组合成 `configuration`，再只创建一个 UA。以下节选自 [`app.js`](../../demo/base-js/js/app.js)：
 
 ```js
-const account = handleGetQuery('caller');
+const account = getQuery('caller');
 const socket = new CRTC.WebSocketInterface(signalingUrl);
 const configuration = {
   sockets                          : socket,
@@ -140,7 +140,7 @@ const mediaConstraints = {
 Demo 将设备选择收敛成两个构造函数，呼出、接听和视频升级都复用它们。代码取自 [`app.sdk-helper.js`](../../demo/base-js/js/app.sdk-helper.js)：
 
 ```js
-function buildSelectedAudioConstraints()
+function getAudioOpts()
 {
   const constraints = {
     sampleRate   : 48000,
@@ -155,7 +155,7 @@ function buildSelectedAudioConstraints()
   return constraints;
 }
 
-function buildSelectedVideoConstraints()
+function getVideoOpts()
 {
   const constraints = Object.assign({}, videoConstraints);
 
@@ -183,7 +183,7 @@ function buildSelectedVideoConstraints()
 </head>
 <body>
   <p id="status">尚未启动</p>
-  <video id="remoteVideo" autoplay playsinline></video>
+  <video id="remoteVid" autoplay playsinline></video>
 
   <input id="target" value="sip:bob@example.com">
   <button id="callButton" disabled>音视频呼叫</button>
@@ -194,7 +194,7 @@ function buildSelectedVideoConstraints()
   <script src="./CRTC.min.js"></script>
   <script>
     const statusElement = document.getElementById('status');
-    const remoteVideo = document.getElementById('remoteVideo');
+    const remoteVid = document.getElementById('remoteVid');
     const targetInput = document.getElementById('target');
     const callButton = document.getElementById('callButton');
     const answerButton = document.getElementById('answerButton');
@@ -259,8 +259,8 @@ function buildSelectedVideoConstraints()
 
         if (stream)
         {
-          remoteVideo.srcObject = stream;
-          remoteVideo.play().catch(function(error)
+          remoteVid.srcObject = stream;
+          remoteVid.play().catch(function(error)
           {
             console.warn('远端视频自动播放失败：', error);
           });
@@ -275,7 +275,7 @@ function buildSelectedVideoConstraints()
         currentSession = null;
       }
 
-      remoteVideo.srcObject = null;
+      remoteVid.srcObject = null;
       answerButton.disabled = true;
       hangupButton.disabled = true;
       callButton.disabled = !ua.isRegistered();
@@ -427,17 +427,17 @@ options = {
   extraFeatures : extraFeatures,
   pcConfig      : pcConfig,
   eventHandlers : {
-    mediaEffectsIssue : handleSessionMediaEffectsIssue
+    mediaEffectsIssue : onFxIssue
   }
 };
 
 options['mediaConstraints'] = {
-  audio : buildSelectedAudioConstraints(),
-  video : (type === 'video' || type === 'onlyVideo') ? buildSelectedVideoConstraints() : false
+  audio : getAudioOpts(),
+  video : (type === 'video' || type === 'onlyVideo') ? getVideoOpts() : false
 };
 
-options.mediaEffectsComposer = buildCallComposerOptions();
-options.aiNoiseSuppression = buildCallAiNsOptions();
+options.mediaEffectsComposer = getFxOpts();
+options.nsMode = getNsOpts();
 
 const session = await ua.call(`${number}@${sipDomain}`, options);
 ```
@@ -451,22 +451,22 @@ document.querySelector('#answerVideo').onclick = function()
 {
   e.session.answer({
     mediaConstraints : {
-      audio : buildSelectedAudioConstraints(),
-      video : buildSelectedVideoConstraints()
+      audio : getAudioOpts(),
+      video : getVideoOpts()
     },
     pcConfig             : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
     extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
     rtcOfferConstraints  : { offerToReceiveAudio: true, offerToReceiveVideo: true },
     extraFeatures        : extraFeatures,
-    mediaEffectsComposer : buildCallComposerOptions(),
-    aiNoiseSuppression   : buildCallAiNsOptions()
+    mediaEffectsComposer : getFxOpts(),
+    nsMode   : getNsOpts()
   });
 
   setStatus('video answer');
 };
 ```
 
-呼出和接听都调用 `buildSelected*Constraints()`、`buildCallComposerOptions()` 和 `buildCallAiNsOptions()`，这正是两条路径保持一致的关键。
+呼出和接听都调用 `getAudioOpts() / getVideoOpts()`、`getFxOpts()` 和 `getNsOpts()`，这正是两条路径保持一致的关键。
 
 ## 2.8 自动注册和手动注册
 
@@ -498,7 +498,7 @@ ua.on('connected', function()
 | `mediaStream` | `MediaStream` | 使用业务已创建的自定义流时 |
 | `extraHeaders` | `string[]` | 服务端要求随路数据时 |
 | `rtcOfferConstraints` | `RTCOfferOptions` | 需要明确接收音频/视频方向时 |
-| `aiNoiseSuppression` | `object` | 开启 AiNS 时 |
+| `nsMode` | `object` | 开启 AiNS 时 |
 | `mediaEffectsComposer` | `object` | 开启虚拟背景、混流、镜像或水印时 |
 
 `mediaStream` 与 `mediaConstraints` 不要随意同时传。使用自定义流时先检查所需音频/视频 tracks 是否存在且 `readyState === 'live'`。

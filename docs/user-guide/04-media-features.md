@@ -139,16 +139,16 @@ function updateAiNS(level, gain)
 
 Base JS Demo 中对应：
 
-- `buildCallAiNsOptions()`：构造呼叫和接听参数。
-- `applyAiNsLevelToCurrentCall()`：通话中修改降噪强度。
-- `applyAiNsOutputGainToCurrentCall()`：通话中修改输出增益。
+- `getNsOpts()`：构造呼叫和接听参数。
+- `setNsLevel()`：通话中修改降噪强度。
+- `setNsGain()`：通话中修改输出增益。
 
 这些函数位于 [`demo/base-js/js/app-media-effects.js`]。
 
 Demo 的实际初始配置只在页面选中 AiNS 时返回对象：
 
 ```js
-function buildCallAiNsOptions()
+function getNsOpts()
 {
   if (aiNsType !== 'AiNS')
   {
@@ -157,7 +157,7 @@ function buildCallAiNsOptions()
 
   return {
     enabled             : true,
-    noiseReductionLevel : getCurrentAiNsLevel(),
+    noiseReductionLevel : getNsLevel(),
     outputGain          : 1,
     assetConfig         : { cdnUrl: AI_NOISE_ASSET_ROOT }
   };
@@ -167,7 +167,7 @@ function buildCallAiNsOptions()
 通话中热更新不会新建控制器，而是检查当前会话已经存在的 AiNS 实例：
 
 ```js
-function applyAiNsLevelToCurrentCall(level)
+function setNsLevel(level)
 {
   if (aiNsType !== 'AiNS' || !rtcSession)
   {
@@ -286,8 +286,8 @@ function clearVirtualBackground()
 
 ### Demo 对照
 
-- `buildCallComposerOptions()`：构造混流和虚拟背景初始配置。
-- `applyCurrentVirtualBackgroundToSession()`：通话中切换背景。
+- `getFxOpts()`：构造混流和虚拟背景初始配置。
+- `setVb()`：通话中切换背景。
 - 函数实现见 [`app-media-effects.js`]，页面控件见 [`index.html`]。
 
 Demo 把当前视频约束和页面选择转换为 AiVB 配置。以下是 [`app-media-effects.js`](../../demo/base-js/js/app-media-effects.js) 的模式构造节选：
@@ -323,7 +323,7 @@ aiVBOptions.imageUrl = imageUrl;
 通话中使用同一个构造结果更新 slot 0：
 
 ```js
-const aiVBOptions = buildCurrentAiVBOptions();
+const aiVBOptions = getVbOpts();
 
 if (!aiVBOptions)
 {
@@ -344,11 +344,11 @@ else
 Base JS Demo 根据页面当前镜像、水印和虚拟背景状态构造 composer。以下代码取自 [`app-media-effects.js`](../../demo/base-js/js/app-media-effects.js)：
 
 ```js
-function buildCallComposerOptions()
+function getFxOpts()
 {
-  const outputMirror = document.getElementById('callMediaEffectsComposerOutputMirror').value === 'on';
-  const aiVBOptions = buildCurrentAiVBOptions();
-  const watermarks = buildCurrentWatermarks();
+  const outputMirror = document.getElementById('fxMirror').value === 'on';
+  const aiVBOptions = getVbOpts();
+  const watermarks = getMarks();
   const hasComposerEffects = outputMirror || watermarks.length || aiVBOptions;
   const composerOptions = {};
 
@@ -481,19 +481,19 @@ async function updateComposerDisplay()
 Demo 对单个文字水印的处理就是“读取当前列表→按 ID 合并→全量写回”：
 
 ```js
-const watermarks = mergeSessionWatermarks(
+const watermarks = mergeMarks(
   watermark ? [ watermark ] : [],
   [ CALL_TEXT_WATERMARK_ID ]
 );
 
 try
 {
-  await applyWatermarksToSession(watermarks);
+  await setMarks(watermarks);
   setStatus(watermark ? '已应用当前文字水印到当前通话' : '已清除当前文字水印');
 }
 catch (error)
 {
-  console.warn('applyCurrentTextWatermarkToSession error', error);
+  console.warn('setTextMark error', error);
 }
 ```
 

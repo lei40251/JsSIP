@@ -343,22 +343,22 @@ document.querySelector('#answer').onclick = function()
 {
   e.session.answer({
     mediaConstraints : {
-      audio : buildSelectedAudioConstraints(),
+      audio : getAudioOpts(),
       video : false
     },
     pcConfig             : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
     extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
     rtcOfferConstraints  : { offerToReceiveAudio: true },
     extraFeatures        : extraFeatures,
-    mediaEffectsComposer : buildCallComposerOptions(),
-    aiNoiseSuppression   : buildCallAiNsOptions()
+    mediaEffectsComposer : getFxOpts(),
+    aiNoiseSuppression   : getNsOpts()
   });
 
   setStatus('audio answer');
 };
 ```
 
-标准视频接听只把 `video: false` 换成 `video: buildSelectedVideoConstraints()`，并设置 `offerToReceiveVideo: true`。
+标准视频接听只把 `video: false` 换成 `video: getVideoOpts()`，并设置 `offerToReceiveVideo: true`。
 
 ## 3.7 `newRTCSession` 统一会话入口
 
@@ -389,7 +389,7 @@ if (e.originator === 'remote')
   document.querySelector('#callee').value = remoteNo;
 
   setStatus(`收到${e.request.mode === 'video' ? '视频' : '音频'}呼叫`);
-  showIncomingCallNotification(e.request.mode, remoteNo);
+  showNotice(e.request.mode, remoteNo);
 }
 ```
 
@@ -468,8 +468,8 @@ function getStreams(pc)
   const localStream = CRTC.Utils.getStreams(pc, 'local');
   const remoteStream = CRTC.Utils.getStreams(pc, 'remote');
 
-  bindMediaStreamIfChanged(remoteAudio, remoteStream.audioStream);
-  bindMediaStreamIfChanged(remoteVideo, remoteStream.mediaStream);
+  setMedia(remoteAudio, remoteStream.audioStream);
+  setMedia(remoteVideo, remoteStream.mediaStream);
 
   Promise.all([ localVideo.play(), remoteAudio.play(), remoteVideo.play() ])
     .then(() => { })

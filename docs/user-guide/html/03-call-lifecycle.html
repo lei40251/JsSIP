@@ -418,21 +418,21 @@ session.connection.ontrack = function(event)
 {
   e.session.answer({
     mediaConstraints : {
-      audio : buildSelectedAudioConstraints(),
+      audio : getAudioOpts(),
       video : false
     },
     pcConfig             : Object.assign(pcConfig, { &#39;rtcpMuxPolicy&#39;: &#39;negotiate&#39; }),
     extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
     rtcOfferConstraints  : { offerToReceiveAudio: true },
     extraFeatures        : extraFeatures,
-    mediaEffectsComposer : buildCallComposerOptions(),
-    aiNoiseSuppression   : buildCallAiNsOptions()
+    mediaEffectsComposer : getFxOpts(),
+    aiNoiseSuppression   : getNsOpts()
   });
 
   setStatus(&#39;audio answer&#39;);
 };
 </code></pre>
-</div><p>标准视频接听只把 <code>video: false</code> 换成 <code>video: buildSelectedVideoConstraints()</code>，并设置 <code>offerToReceiveVideo: true</code>。</p>
+</div><p>标准视频接听只把 <code>video: false</code> 换成 <code>video: getVideoOpts()</code>，并设置 <code>offerToReceiveVideo: true</code>。</p>
 <h2 id="3-7-newrtcsession-统一会话入口">3.7 <code>newRTCSession</code> 统一会话入口<a class="heading-anchor" href="#3-7-newrtcsession-统一会话入口" aria-label="链接到本节">#</a></h2>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">ua.on(&#39;newRTCSession&#39;, function(data)
 {
@@ -474,7 +474,7 @@ session.connection.ontrack = function(event)
   document.querySelector(&#39;#callee&#39;).value = remoteNo;
 
   setStatus(`收到${e.request.mode === &#39;video&#39; ? &#39;视频&#39; : &#39;音频&#39;}呼叫`);
-  showIncomingCallNotification(e.request.mode, remoteNo);
+  showNotice(e.request.mode, remoteNo);
 }
 </code></pre>
 </div><p>这段代码取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>。读取 <code>request</code> 只用于展示来电信息，真正接听仍要等用户点击后调用 <code>session.answer()</code>。</p>
@@ -625,8 +625,8 @@ session.connection.ontrack = function(event)
   const localStream = CRTC.Utils.getStreams(pc, &#39;local&#39;);
   const remoteStream = CRTC.Utils.getStreams(pc, &#39;remote&#39;);
 
-  bindMediaStreamIfChanged(remoteAudio, remoteStream.audioStream);
-  bindMediaStreamIfChanged(remoteVideo, remoteStream.mediaStream);
+  setMedia(remoteAudio, remoteStream.audioStream);
+  setMedia(remoteVideo, remoteStream.mediaStream);
 
   Promise.all([ localVideo.play(), remoteAudio.play(), remoteVideo.play() ])
     .then(() =&gt; { })

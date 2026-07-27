@@ -18,14 +18,14 @@ CRTC.debug.enable('CRTC:*');
 // =============================================================================
 
 // 无摄像头时展示的占位 SVG 图标
-const no_camera_svg = '<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg t="1756366745939" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="10589" xmlns:xlink="http://www.w3.org/1999/xlink" width="100" height="100"><path d="M865.08627 773.036973l-0.83027 0.996324a35.424865 35.424865 0 0 0-17.380324-4.649513 36.006054 36.006054 0 0 0-2.767568 71.956757c8.468757 7.140324 13.062919 14.612757 13.062919 22.417297 0 45.111351-152.050162 81.643243-339.635892 81.643243-130.739892 0-244.154811-17.767784-300.945297-43.782919l-50.425081 50.36973C241.442595 995.272649 370.632649 1024 517.535135 1024c232.475676 0 420.67027-71.956757 420.67027-160.518919 0-33.542919-27.011459-64.70573-73.119135-90.444108zM965.881081 49.816216a33.210811 33.210811 0 0 0-46.937946 0L58.118919 910.751135a33.210811 33.210811 0 0 0 46.827243 46.827243L965.881081 96.643459a33.210811 33.210811 0 0 0 0-46.827243zM251.350486 647.610811a363.935135 363.935135 0 0 1-73.229837-221.405406c0-195.611676 148.895135-354.248649 339.414486-354.248648a329.728 329.728 0 0 1 222.955243 86.126702l51.58746-51.532108A407.164541 407.164541 0 0 0 517.535135 0c-229.265297 0-415.135135 190.796108-415.135135 426.205405a431.076324 431.076324 0 0 0 96.754162 273.380325z m382.643892-382.588541a199.264865 199.264865 0 0 0-278.14054 278.140541l120.665946-120.942703a83.027027 83.027027 0 1 1 53.635459-53.635459zM716.8 426.205405a207.622919 207.622919 0 0 0-1.439135-23.635027l-221.405406 221.405406a207.622919 207.622919 0 0 0 23.579676 1.494486 199.264865 199.264865 0 0 0 199.264865-199.264865z m-398.861838 373.732325A404.618378 404.618378 0 0 0 517.535135 852.410811c229.265297 0 415.135135-190.796108 415.135135-426.205406a433.34573 433.34573 0 0 0-45.996973-194.947459L830.380973 287.827027a371.407568 371.407568 0 0 1 26.568649 138.378378c0 195.611676-148.895135 354.248649-339.414487 354.248649a329.783351 329.783351 0 0 1-146.127567-33.819676z" fill="#8a8a8a" p-id="10590"></path></svg>';
+const NO_CAMERA = '<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg t="1756366745939" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="10589" xmlns:xlink="http://www.w3.org/1999/xlink" width="100" height="100"><path d="M865.08627 773.036973l-0.83027 0.996324a35.424865 35.424865 0 0 0-17.380324-4.649513 36.006054 36.006054 0 0 0-2.767568 71.956757c8.468757 7.140324 13.062919 14.612757 13.062919 22.417297 0 45.111351-152.050162 81.643243-339.635892 81.643243-130.739892 0-244.154811-17.767784-300.945297-43.782919l-50.425081 50.36973C241.442595 995.272649 370.632649 1024 517.535135 1024c232.475676 0 420.67027-71.956757 420.67027-160.518919 0-33.542919-27.011459-64.70573-73.119135-90.444108zM965.881081 49.816216a33.210811 33.210811 0 0 0-46.937946 0L58.118919 910.751135a33.210811 33.210811 0 0 0 46.827243 46.827243L965.881081 96.643459a33.210811 33.210811 0 0 0 0-46.827243zM251.350486 647.610811a363.935135 363.935135 0 0 1-73.229837-221.405406c0-195.611676 148.895135-354.248649 339.414486-354.248648a329.728 329.728 0 0 1 222.955243 86.126702l51.58746-51.532108A407.164541 407.164541 0 0 0 517.535135 0c-229.265297 0-415.135135 190.796108-415.135135 426.205405a431.076324 431.076324 0 0 0 96.754162 273.380325z m382.643892-382.588541a199.264865 199.264865 0 0 0-278.14054 278.140541l120.665946-120.942703a83.027027 83.027027 0 1 1 53.635459-53.635459zM716.8 426.205405a207.622919 207.622919 0 0 0-1.439135-23.635027l-221.405406 221.405406a207.622919 207.622919 0 0 0 23.579676 1.494486 199.264865 199.264865 0 0 0 199.264865-199.264865z m-398.861838 373.732325A404.618378 404.618378 0 0 0 517.535135 852.410811c229.265297 0 415.135135-190.796108 415.135135-426.205406a433.34573 433.34573 0 0 0-45.996973-194.947459L830.380973 287.827027a371.407568 371.407568 0 0 1 26.568649 138.378378c0 195.611676-148.895135 354.248649-339.414487 354.248649a329.783351 329.783351 0 0 1-146.127567-33.819676z" fill="#8a8a8a" p-id="10590"></path></svg>';
 
 // =============================================================================
 // 通话状态变量
 // =============================================================================
 
 // 当前向页面统计浮层提供数据的 RTCSession。
-let statsSession;
+let statsCall;
 // 远端是否存在回铃音：false 表示可播放本地振铃音
 let earlyMedia = false;
 // 当前活跃通话的 RTCSession 实例
@@ -33,15 +33,15 @@ let rtcSession;
 // 用户选择模式前不创建 UA，也不会连接或注册。
 let appMode = null;
 let ua = null;
-let appRegistrationState = 'idle';
+let regState = 'idle';
 
 /**
  * 读取当前通话最近一份统计，不触发新的采样。
- * 可在浏览器控制台执行 getCurrentCallStats() 对照 docs/user-guide/05-call-statistics.md。
+ * 可在浏览器控制台执行 readStats() 对照 docs/user-guide/05-call-statistics.md。
  *
  * @returns {{networkQuality: object|null, legacyReport: object|null, detailedReport: object|null}|null}
  */
-function getCurrentCallStats()
+function readStats()
 {
   const monitor = rtcSession && rtcSession.statsMonitor;
 
@@ -57,9 +57,9 @@ function getCurrentCallStats()
   };
 }
 
-window.getCurrentCallStats = getCurrentCallStats;
+window.readStats = readStats;
 // iOS 兼容：定时发送 OPTIONS 保活的定时器句柄
-let optionsTimer;
+let keepTimer;
 // 呼叫转移场景中被转入的新会话实例
 let tmpSession;
 // Safari 浏览器屏幕分享降级标志：需用户手势触发
@@ -78,9 +78,9 @@ let remoteNo;
 // =============================================================================
 
 // 当前选中的摄像头 deviceId
-let selectCamera;
+let cameraId;
 // 当前选中的麦克风 deviceId
-let selectMic;
+let micId;
 
 // 移动端摄像头方向切换标记：true 表示下次切换到 environment（后置），false 表示下次切换到 user（前置）
 let camFlag = true;
@@ -88,7 +88,7 @@ let camFlag = true;
 // 音视频升级模式选择：true = useUpdate，false = useReInvite
 let useUpdate = true;
 // 系统是否有可用摄像头
-let haveACamera = false;
+let hasCamera = false;
 // 通话是否已确认（ACK 完成）
 let confirmed = false;
 
@@ -99,10 +99,10 @@ let confirmed = false;
 // 是否主动停止 UA（页面卸载时设为 true，避免误判断网）
 let handleStop = false;
 // 断网原因标记：'BROWSER'（浏览器离线）、'UA'（信令断开）
-let disconnectedBy = null;
+let endBy = null;
 // eslint-disable-next-line no-unused-vars
 // 断网提示 UI 是否已显示
-let isShowUI = false;
+let offlineUi = false;
 
 // =============================================================================
 // 通话模式与媒体流变量
@@ -128,12 +128,12 @@ let isRefer = false;
 // 通话录音实例（MultiStreamRecorder）
 let recorder;
 // 浏览器系统通知实例，用于来电弹窗
-let incomingCallNotification = null;
+let callNotice = null;
 // 浏览器是否不支持系统通知（只记录一次，避免重复日志）
-let notificationUnsupportedLogged = false;
+let noticeOnce = false;
 
 // 通话附加扩展特性列表（如 BP720P、BFCP 等）
-const extraFeatures = [];
+const features = [];
 
 // let payload;
 
@@ -142,14 +142,14 @@ const extraFeatures = [];
 // =============================================================================
 
 // 本端视频播放元素
-const localVideo = document.querySelector('#localVideo');
+const localVid = document.querySelector('#localVid');
 // 远端视频播放元素
-const remoteVideo = document.querySelector('#remoteVideo');
+const remoteVid = document.querySelector('#remoteVid');
 // 远端音频播放元素（用于回铃音/早期媒体播放）
-const remoteAudio = document.querySelector('#remoteAudio');
+const remoteAud = document.querySelector('#remoteAud');
 
 // 自定义媒体流容器（屏幕分享等场景复用）
-let cusMediaStream = new MediaStream();
+let callStream = new MediaStream();
 // 无摄像头/黑屏视频轨道生成器实例
 let blackVideo = null;
 
@@ -158,41 +158,41 @@ let blackVideo = null;
 // =============================================================================
 
 // 随路数据（Base64 编码），默认 'dGVzdCB4LWRhdGE=' → 'test x-data'
-let xdata = handleGetQuery('xdata') || 'dGVzdCB4LWRhdGE=';
+let xdata = getQuery('xdata') || 'dGVzdCB4LWRhdGE=';
 // 最大视频码率（kbps），用于 RTCRtpSender 配置
-const mbit = handleGetQuery('mbit') || 400;
+const mbit = getQuery('mbit') || 400;
 // 通话录音时长（秒），0 或不传则不录音
-const rec = handleGetQuery('rec') || false;
+const rec = getQuery('rec') || false;
 // 环境标识，用于切换不同的信令服务器/密码等配置
-const env = handleGetQuery('env');
+const env = getQuery('env');
 // 是否移除 REMB/Transport-CC 扩展（VoLTE 互通兼容）
-const noremb = handleGetQuery('noremb') || false;
+const noremb = getQuery('noremb') || false;
 // 根据 env 参数选择对应的环境配置，默认使用 env_default
 const { signalingUrl, sipDomain, secretKey, iceServers, iceTransportPolicy, password } = env ? envs[`env_${env}`] : envs['env_default'];
 // 附加扩展特性的 URL 参数，逗号分隔
-const exts = handleGetQuery('ext') ? handleGetQuery('ext').split(',') : null;
+const exts = getQuery('ext') ? getQuery('ext').split(',') : null;
 // 扩展特性转为大写集合，便于快速查重
 const extSet = new Set((exts || []).map((ext) => String(ext).trim()
   .toUpperCase()).filter(Boolean));
 
-// 将 URL 传入的扩展特性逐个注册到 extraFeatures 列表
-exts && exts.forEach((ext) => extraFeatures.push(ext));
+// 将 URL 传入的扩展特性逐个注册到 features 列表
+exts && exts.forEach((ext) => features.push(ext));
 
 // =============================================================================
 // UA 与信令配置
 // =============================================================================
 
 // SIP 注册用户名（来自 URL 参数 caller）
-const account = handleGetQuery('caller');
+const account = getQuery('caller');
 
 /**
  * 构建 UA 配置对象。
- * 在用户选择点对点或三方模式后才调用，替代之前页面加载时即创建的 const configuration。
+ * 在用户选择点对点或三方模式后才调用，替代之前页面加载时即创建的 const config。
  *
  * @param {object} transport - WebSocket 信令传输实例
  * @returns {object} 传给 new CRTC.UA() 的配置
  */
-function buildUaConfiguration(transport)
+function getUaOpts(transport)
 {
   return {
     sockets                          : transport,
@@ -214,7 +214,7 @@ function buildUaConfiguration(transport)
 // =============================================================================
 
 // 默认视频采集参数：前置摄像头、640x480、15fps
-let videoConstraints = {
+let videoOpts = {
   facingMode : 'user',
   width      : 640,
   height     : 480,
@@ -224,12 +224,28 @@ let videoConstraints = {
 // 如果请求了 BP720P 扩展，则升级到 720p 分辨率
 if (extSet.has('BP720P'))
 {
-  videoConstraints = {
+  videoOpts = {
     facingMode : 'user',
     width      : 1280,
     height     : 720,
     frameRate  : 15
   };
+}
+
+// 黑屏占位轨只创建一次，接听和音视频升级场景共用。
+function getBlackTrack()
+{
+  if (!blackVideo)
+  {
+    blackVideo = CRTC.Utils.generateAnBlackVideoTrack({
+      svgSource : NO_CAMERA,
+      width     : videoOpts.width,
+      height    : videoOpts.height,
+      fps       : videoOpts.frameRate
+    });
+  }
+
+  return blackVideo;
 }
 
 // =============================================================================
@@ -248,15 +264,20 @@ pcConfig['iceCandidatePoolSize'] = 4;
 // BUNDLE 策略设为最大兼容模式，所有媒体流复用同一端口
 pcConfig['bundlePolicy'] = 'max-compat';
 
+function getAnswerPc()
+{
+  return Object.assign({}, pcConfig, { rtcpMuxPolicy: 'negotiate' });
+}
+
 // ***** UA 事件回调 *****
 // 点对点和三方模式共用同一组 UA 层事件（连接、注册、断网等）。
 // newRTCSession 事件在模式初始化时按模式分别绑定不同的处理函数。
 
 /**
  * 绑定 UA 级别的事件回调（连接、注册、断网、浏览器网络状态）。
- * 点对点和三方模式共用，在 initializeDemoMode 中调用。
+ * 点对点和三方模式共用，在 initMode 中调用。
  */
-function bindCommonUaEvents()
+function bindUa()
 {
   /**
    * browser:navigator:offline — 浏览器离线
@@ -271,12 +292,12 @@ function bindCommonUaEvents()
     setStatus('浏览器已离线');
 
     // 仅首次断开时设置断开来源，后续重复事件忽略
-    if (!disconnectedBy)
+    if (!endBy)
     {
-      disconnectedBy = 'BROWSER';
+      endBy = 'BROWSER';
 
       // 显示断网提示 UI
-      isShowUI = true;
+      offlineUi = true;
     }
   });
 
@@ -292,12 +313,12 @@ function bindCommonUaEvents()
   {
     setStatus('浏览器在线');
     // 只有浏览器离线导致的断网才在此恢复
-    if (disconnectedBy === 'BROWSER')
+    if (endBy === 'BROWSER')
     {
-      disconnectedBy = null;
+      endBy = null;
 
       // 关闭断网提示 UI
-      isShowUI = false;
+      offlineUi = false;
     }
   });
 
@@ -312,14 +333,14 @@ function bindCommonUaEvents()
   ua.on('connected', function()
   {
     // 信令连接成功后清除所有断网标记
-    disconnectedBy = null;
+    endBy = null;
 
     // 关闭断网提示 UI
-    isShowUI = false;
+    offlineUi = false;
 
     // 连接成功后进入注册中状态，更新页面标签
-    appRegistrationState = 'registering';
-    updateAppModeUi();
+    regState = 'registering';
+    updateMode();
     setStatus('信令连接成功');
   });
 
@@ -341,8 +362,8 @@ function bindCommonUaEvents()
   {
     setStatus(`信令连接断开: ${data.code} ${data.reason}`);
     // 信令断开后标记未注册，更新页面标签为"未注册"
-    appRegistrationState = 'unregistered';
-    updateAppModeUi();
+    regState = 'unregistered';
+    updateMode();
 
     // 页面卸载/主动停止 UA 导致的断开，不触发断网提示
     if (handleStop)
@@ -351,11 +372,11 @@ function bindCommonUaEvents()
     }
 
     // 首次被动断开时显示断网提示
-    if (!disconnectedBy)
+    if (!endBy)
     {
-      isShowUI = true;
+      offlineUi = true;
     }
-    disconnectedBy = 'UA';
+    endBy = 'UA';
   });
 
   /**
@@ -391,8 +412,8 @@ function bindCommonUaEvents()
   {
     setStatus(`注册成功：${data.response.from.uri.toString()}`);
     // 注册成功后更新状态标签为"已注册"（绿色）
-    appRegistrationState = 'registered';
-    updateAppModeUi();
+    regState = 'registered';
+    updateMode();
     // 注册成功后自动发起呼叫（测试用，已注释）
     // setTimeout(() =>
     // {
@@ -415,8 +436,8 @@ function bindCommonUaEvents()
   {
     setStatus(`注册失败${data.cause}`);
     // 注册失败后更新状态标签为"未注册"
-    appRegistrationState = 'unregistered';
-    updateAppModeUi();
+    regState = 'unregistered';
+    updateMode();
   });
 
   /**
@@ -426,9 +447,234 @@ function bindCommonUaEvents()
   {
     setStatus(`已注销${data && data.cause ? `：${data.cause}` : ''}`);
     // 注销后更新状态标签为"未注册"
-    appRegistrationState = 'unregistered';
-    updateAppModeUi();
+    regState = 'unregistered';
+    updateMode();
   });
+}
+
+// =============================================================================
+// 通话统计面板
+// =============================================================================
+
+// 统计事件中的问题编码保持不变，Demo 只负责转成便于阅读的中文。
+const statsIssues = {
+  CONNECTION_UNAVAILABLE       : '连接不可用',
+  CONNECTION_PATH_CHANGED      : '网络路径变化',
+  DOWNLINK_HIGH_JITTER         : '下行高抖动',
+  DOWNLINK_JITTER_BUFFER_DELAY : '下行缓冲过高',
+  DOWNLINK_PACKET_DISCARDS     : '下行本地丢弃',
+  DOWNLINK_PACKET_LOSS         : '下行丢包',
+  DOWNLINK_TRANSPORT_STALLED   : '下行传输停滞',
+  DOWNLINK_FEEDBACK_REQUESTS   : '下行重传请求多',
+  ENCODER_CPU_LIMITED          : '编码器 CPU 受限',
+  ENCODER_FRAME_RATE_REDUCED   : '编码帧率下降',
+  ENCODER_RESOLUTION_REDUCED   : '编码分辨率下降',
+  ENCODER_SLOW                 : '编码器过慢',
+  HIGH_RTT                     : '高延迟',
+  UPLINK_BANDWIDTH_BUDGET_LOW  : '上行可用带宽不足',
+  UPLINK_BANDWIDTH_LIMITED     : '上行带宽受限',
+  UPLINK_FEEDBACK_REQUESTS     : '上行重传请求多',
+  UPLINK_HIGH_RETRANSMISSION   : '上行重传率高',
+  UPLINK_LOCAL_SEND_DISCARDS   : '上行本地丢弃',
+  UPLINK_PACKET_LOSS           : '上行丢包',
+  UPLINK_SEND_QUEUE_DELAY      : '上行发送排队',
+  VIDEO_DECODER_SLOW           : '解码器过慢',
+  VIDEO_FRAME_DROPPING         : '视频丢帧',
+  VIDEO_FREEZING               : '视频卡顿',
+  VIDEO_PAUSING                : '视频暂停'
+};
+const qualityText = [ '暂无数据', '极佳', '较好', '一般', '差', '极差', '严重异常' ];
+
+function setStats(selector, value)
+{
+  const element = document.querySelector(selector);
+
+  if (element) element.textContent = value;
+}
+
+function fmtNum(value, unit)
+{
+  return value === null || value === undefined ? '-' : `${value}${unit || ''}`;
+}
+
+function fmtRate(value)
+{
+  return value === null || value === undefined ? '-' : `${(value / 1000).toFixed(1)}kbps`;
+}
+
+function fmtQuality(value)
+{
+  return value === null || value === undefined ? '-' :
+    `${qualityText[value] || '未知'}(${value})`;
+}
+
+function addStatsRow(table, values)
+{
+  values.forEach((value) =>
+  {
+    const cell = document.createElement('span');
+
+    cell.className = 'rtc-stats-cell';
+    cell.textContent = value;
+    table.appendChild(cell);
+  });
+}
+
+function renderMedia(selector, streams, outbound)
+{
+  const element = document.querySelector(selector);
+
+  if (!element) return;
+
+  // 固定按音频、视频、MID 排序，便于和 SDP 中的媒体行对照。
+  const sorted = (streams || []).slice().sort((left, right) =>
+  {
+    const leftKind = left.kind || left.type;
+    const rightKind = right.kind || right.type;
+
+    if (leftKind !== rightKind) return leftKind === 'audio' ? -1 : 1;
+
+    return String(left.mid === null ? '' : left.mid).localeCompare(
+      String(right.mid === null ? '' : right.mid), undefined, { numeric: true }
+    );
+  });
+
+  element.textContent = '';
+  if (sorted.length === 0)
+  {
+    element.textContent = '无';
+
+    return;
+  }
+
+  const table = document.createElement('div');
+
+  table.className = 'rtc-stats-metric-table';
+  sorted.forEach((stream) =>
+  {
+    const streamName = (stream.kind || stream.type) === 'audio' ? '音频' : '视频';
+    const feedback = stream.remoteInbound;
+    const bitrate = outbound ? stream.actualBitrateBps : stream.receiveBitrateBps;
+    const jitter = outbound ? feedback && feedback.jitterMs : stream.jitterMs;
+    const loss = outbound ? feedback && feedback.intervalLossPercent : stream.intervalLossPercent;
+
+    addStatsRow(table, [
+      `${streamName}[${stream.mid === null || stream.mid === undefined ? '-' : stream.mid}]`,
+      `编码:${stream.codec && stream.codec.name ? stream.codec.name : '-'}`,
+      `码率:${fmtRate(bitrate)}`,
+      `抖动:${fmtNum(jitter, 'ms')}`,
+      `丢包:${fmtNum(loss, '%')}`
+    ]);
+
+    if (streamName === '视频')
+    {
+      const hasSize = stream.frameWidth !== null && stream.frameWidth !== undefined &&
+        stream.frameHeight !== null && stream.frameHeight !== undefined;
+
+      addStatsRow(table, [
+        '',
+        `画面:${hasSize ? `${stream.frameWidth}x${stream.frameHeight}` : '-'}`,
+        `FPS:${fmtNum(stream.framesPerSecond)}`,
+        outbound ? `编码:${fmtNum(stream.averageEncodeTimeMs, 'ms')}` :
+          `解码:${fmtNum(stream.averageDecodeTimeMs, 'ms')}`,
+        outbound ? `限制:${stream.qualityLimitationReason || '-'}` : ''
+      ]);
+    }
+  });
+  element.appendChild(table);
+}
+
+function renderConn(connection)
+{
+  const element = document.querySelector('#statsConn');
+
+  if (!element) return;
+
+  const table = document.createElement('div');
+
+  table.className = 'rtc-stats-connection-table';
+  addStatsRow(table, [
+    `状态:${connection.connectionState || '-'}`,
+    `ICE:${connection.iceConnectionState || '-'}`,
+    `DTLS:${connection.dtlsState || '-'}`
+  ]);
+  addStatsRow(table, [
+    `↑:${fmtRate(connection.sendBitrateBps)}/可用${fmtRate(connection.availableOutgoingBitrateBps)}`,
+    `↓:${fmtRate(connection.receiveBitrateBps)}/可用${fmtRate(connection.availableIncomingBitrateBps)}`,
+    ''
+  ]);
+  element.textContent = '';
+  element.appendChild(table);
+}
+
+/**
+ * 展示 RTCSession 的详细统计。点对点和三方会话共用此函数。
+ */
+function renderStats(session, report)
+{
+  if (!report || statsCall !== session) return;
+
+  const quality = report.quality || {};
+  const issues = (quality.issues || []).map((issue) =>
+    `${statsIssues[issue.code] || issue.code}(L${issue.severity})`).join(' | ');
+
+  renderMedia('#statsOut', report.outbound, true);
+  renderMedia('#statsIn', report.inbound, false);
+  renderConn(report.connection || {});
+  setStats('#statsQuality',
+    `RTT:${fmtNum(quality.RTT, 'ms')} | ` +
+    `↑:${fmtQuality(quality.uplinkNetworkQuality)} | ` +
+    `↓:${fmtQuality(quality.downlinkNetworkQuality)}`);
+  setStats('#statsIssues', issues || '无');
+}
+
+function resetStats()
+{
+  [ '#statsConn', '#statsQuality', '#statsOut', '#statsIn' ]
+    .forEach((selector) => setStats(selector, '--'));
+  setStats('#statsIssues', '无');
+}
+
+// 屏幕共享统一使用同一个浮层。mode 为 local 时显示本端预览，为 remote 时显示远端画面。
+function showShare(stream, mode)
+{
+  const video = document.querySelector(mode === 'local' ? '#screen' : '#shareVid');
+
+  video.srcObject = stream;
+  video.className = 'screen-share-dialog-video';
+  if (typeof startInk === 'function') startInk(mode);
+  if (typeof openShareBox === 'function') openShareBox(mode);
+}
+
+function hideShare(mode)
+{
+  const video = document.querySelector(mode === 'local' ? '#screen' : '#shareVid');
+
+  video.srcObject = null;
+  video.className = 'screen-share-dialog-video hide';
+  if (typeof stopInk === 'function') stopInk(mode);
+  if (typeof closeShareBox === 'function') closeShareBox(mode);
+}
+
+// 部分浏览器不触发 ended，双流分享额外轮询轨道状态作为兼容处理。
+function watchShare(stream, poll)
+{
+  const track = stream.getVideoTracks()[0];
+  let timer;
+  const stop = function()
+  {
+    if (timer) clearInterval(timer);
+    hideShare('local');
+  };
+
+  track.addEventListener('ended', stop);
+  if (poll)
+  {
+    timer = setInterval(() =>
+    {
+      if (track.readyState === 'ended') stop();
+    }, 100);
+  }
 }
 
 /**
@@ -446,7 +692,7 @@ function bindCommonUaEvents()
  * 2. 会话交接：已有会话时按冲突策略处理（终止新会话或排队为 tmpSession）
  * 3. 远端呼入时提取主叫号码并显示通知
  */
-function handleSessionMediaEffectsIssue(d)
+function onFxIssue(d)
 {
   const moduleName = d && d.module ? d.module : 'MediaEffects';
   const message = d && d.message ? d.message : 'Unknown media effects failure';
@@ -461,17 +707,17 @@ function handleSessionMediaEffectsIssue(d)
 /**
  * 点对点模式下的 newRTCSession 事件处理入口。
  *
- * 三方模式下此函数不会被调用（由 handleConferenceNewRTCSession 接管）。
+ * 三方模式下此函数不会被调用（由 onConfSession 接管）。
  * 除常规的呼叫/接听逻辑外，还包括：
  * - 通过 SDK remoteShared/remoteUnShared 事件渲染远端共享
  * - 点对点模式下的 stats 面板标签设置
  */
-function handlePointToPointNewRTCSession(e)
+function onSession(e)
 {
   // 输出完整会话对象用于调试
   console.warn('nsession: ', e);
   // 检测远端设备的操作系统类型（用于后续兼容处理）
-  console.warn('dOS: ', detectRemoteOS(e.request));
+  console.warn('dOS: ', getRemoteOs(e.request));
 
   // 重置通话确认标志
   confirmed = false;
@@ -494,6 +740,14 @@ function handlePointToPointNewRTCSession(e)
     tmpSession = e.session;
   }
 
+  // 标注消息属于当前 RTCSession。这里只绑定已被 Demo 接管的会话，避免被 486
+  // 拒绝的额外来电在 failed 事件中误清理当前白板。
+  if ((e.session === rtcSession || e.session === tmpSession) &&
+    typeof bindInk === 'function')
+  {
+    bindInk(e.session);
+  }
+
   // ---- 远端呼入处理 ----
   if (e.originator === 'remote')
   {
@@ -503,256 +757,31 @@ function handlePointToPointNewRTCSession(e)
 
     // 根据请求模式显示对应的呼叫通知
     setStatus(`收到${e.request.mode === 'video' ? '视频' : '音频'}呼叫`);
-    showIncomingCallNotification(e.request.mode, remoteNo);
+    showNotice(e.request.mode, remoteNo);
     // 可通过 request.getHeader(param) 获取随路数据
     // setStatus(`收到 x-data: ${e.request.getHeader('x-data')}`);
   }
 
-  // =========================================================================
-  // RTCSession 统计事件接入示例
-  // =========================================================================
-
-  // 统计浮层只负责展示；节点不存在时不影响通话流程。
-  const setSessionStatsPanelText = function(selector, value)
-  {
-    const element = document.querySelector(selector);
-
-    if (element)
-    {
-      element.textContent = value;
-    }
-  };
-
-  // null/undefined 表示浏览器未提供该指标，不应显示为 0。
-  const formatSessionStatsNumber = function(value, unit)
-  {
-    return value === null || value === undefined ? '-' : `${value}${unit || ''}`;
-  };
-
-  // stats:detailed-report 中的码率统一为 bps，页面换算为 kbps。
-  const formatSessionStatsBitrate = function(value)
-  {
-    return value === null || value === undefined ? '-' : `${(Math.round(value / 100) / 10).toFixed(1)}kbps`;
-  };
-
-  const getSessionStatsStreamName = function(stream)
-  {
-    return stream.kind === 'audio' || stream.type === 'audio' ? '音频' : '视频';
-  };
-
-  // 质量问题 code 保持在事件中不变，页面只转换成更短、更直观的中文名称。
-  const sessionStatsIssueNames = {
-    CONNECTION_UNAVAILABLE       : '连接不可用',
-    CONNECTION_PATH_CHANGED      : '网络路径变化',
-    DOWNLINK_HIGH_JITTER         : '下行高抖动',
-    DOWNLINK_JITTER_BUFFER_DELAY : '下行缓冲过高',
-    DOWNLINK_PACKET_DISCARDS     : '下行本地丢弃',
-    DOWNLINK_PACKET_LOSS         : '下行丢包',
-    DOWNLINK_TRANSPORT_STALLED   : '下行传输停滞',
-    DOWNLINK_FEEDBACK_REQUESTS   : '下行重传请求多',
-    ENCODER_CPU_LIMITED          : '编码器CPU受限',
-    ENCODER_FRAME_RATE_REDUCED   : '编码帧率下降',
-    ENCODER_RESOLUTION_REDUCED   : '编码分辨率下降',
-    ENCODER_SLOW                 : '编码器过慢',
-    HIGH_RTT                     : '高延迟',
-    UPLINK_BANDWIDTH_BUDGET_LOW  : '上行可用带宽不足',
-    UPLINK_BANDWIDTH_LIMITED     : '上行带宽受限',
-    UPLINK_FEEDBACK_REQUESTS     : '上行重传请求多',
-    UPLINK_HIGH_RETRANSMISSION   : '上行重传率高',
-    UPLINK_LOCAL_SEND_DISCARDS   : '上行本地丢弃',
-    UPLINK_PACKET_LOSS           : '上行丢包',
-    UPLINK_SEND_QUEUE_DELAY      : '上行发送排队',
-    VIDEO_DECODER_SLOW           : '解码器过慢',
-    VIDEO_FRAME_DROPPING         : '视频丢帧',
-    VIDEO_FREEZING               : '视频卡顿',
-    VIDEO_PAUSING                : '视频暂停'
-  };
-
-  const sessionStatsQualityNames = [ '暂无数据', '极佳', '较好', '一般', '差', '极差', '严重异常' ];
-
-  const formatSessionNetworkQuality = function(value)
-  {
-    if (value === null || value === undefined)
-    {
-      return '-';
-    }
-
-    return `${sessionStatsQualityNames[value] || '未知'}(${value})`;
-  };
-
-  const appendSessionStatsRow = function(table, values)
-  {
-    values.forEach((value) =>
-    {
-      const cell = document.createElement('span');
-
-      cell.className = 'rtc-stats-cell';
-      cell.textContent = value;
-      table.appendChild(cell);
-    });
-  };
-
-  const renderSessionStatsStreams = function(selector, streams, outbound)
-  {
-    const element = document.querySelector(selector);
-
-    if (!element)
-    {
-      return;
-    }
-
-    // 上下行都按音频、视频、MID 排序，统计行与 SDP 中的媒体顺序保持一致。
-    const sortedStreams = streams.slice().sort((left, right) =>
-    {
-      const leftKindOrder = getSessionStatsStreamName(left) === '音频' ? 0 : 1;
-      const rightKindOrder = getSessionStatsStreamName(right) === '音频' ? 0 : 1;
-
-      if (leftKindOrder !== rightKindOrder)
-      {
-        return leftKindOrder - rightKindOrder;
-      }
-
-      return String(left.mid === null ? '' : left.mid).localeCompare(
-        String(right.mid === null ? '' : right.mid),
-        undefined,
-        { numeric: true }
-      );
-    });
-
-    element.textContent = '';
-
-    if (sortedStreams.length === 0)
-    {
-      element.textContent = '无';
-
-      return;
-    }
-
-    const table = document.createElement('div');
-
-    table.className = 'rtc-stats-metric-table';
-
-    sortedStreams.forEach((stream) =>
-    {
-      const streamName = getSessionStatsStreamName(stream);
-      const codecName = stream.codec && stream.codec.name ? stream.codec.name : '-';
-      const feedback = stream.remoteInbound;
-      const bitrate = outbound ? stream.actualBitrateBps : stream.receiveBitrateBps;
-      const jitter = outbound ? feedback && feedback.jitterMs : stream.jitterMs;
-      const loss = outbound ? feedback && feedback.intervalLossPercent : stream.intervalLossPercent;
-
-      appendSessionStatsRow(table, [
-        `${streamName}[${stream.mid === null ? '-' : stream.mid}]`,
-        `编码:${codecName}`,
-        `码率:${formatSessionStatsBitrate(bitrate)}`,
-        `抖动:${formatSessionStatsNumber(jitter, 'ms')}`,
-        `丢包:${formatSessionStatsNumber(loss, '%')}`
-      ]);
-
-      if (streamName === '视频')
-      {
-        appendSessionStatsRow(table, [
-          '',
-          `画面:${stream.frameWidth === null || stream.frameWidth === undefined ||
-            stream.frameHeight === null || stream.frameHeight === undefined
-            ? '-' : `${stream.frameWidth}x${stream.frameHeight}`}`,
-          `FPS:${formatSessionStatsNumber(stream.framesPerSecond)}`,
-          outbound
-            ? `编码:${formatSessionStatsNumber(stream.averageEncodeTimeMs, 'ms')}`
-            : `解码:${formatSessionStatsNumber(stream.averageDecodeTimeMs, 'ms')}`,
-          outbound ? `限制:${stream.qualityLimitationReason || '-'}` : ''
-        ]);
-      }
-    });
-
-    element.appendChild(table);
-  };
-
-  const renderSessionConnectionStats = function(connection)
-  {
-    const element = document.querySelector('#rtcStatsConnection');
-
-    if (!element)
-    {
-      return;
-    }
-
-    const table = document.createElement('div');
-
-    table.className = 'rtc-stats-connection-table';
-    appendSessionStatsRow(table, [
-      `状态:${connection.connectionState || '-'}`,
-      `ICE:${connection.iceConnectionState || '-'}`,
-      `DTLS:${connection.dtlsState || '-'}`
-    ]);
-    appendSessionStatsRow(table, [
-      `↑:${formatSessionStatsBitrate(connection.sendBitrateBps)}/可用${formatSessionStatsBitrate(connection.availableOutgoingBitrateBps)}`,
-      `↓:${formatSessionStatsBitrate(connection.receiveBitrateBps)}/可用${formatSessionStatsBitrate(connection.availableIncomingBitrateBps)}`,
-      ''
-    ]);
-
-    element.textContent = '';
-    element.appendChild(table);
-  };
-
-  // 会话切换或结束时清空旧数据，避免把上一通通话误认为当前状态。
-  const resetSessionStatsPanel = function()
-  {
-    const waitingText = '--';
-
-    setSessionStatsPanelText('#rtcStatsConnection', waitingText);
-    setSessionStatsPanelText('#rtcStatsQuality', waitingText);
-    setSessionStatsPanelText('#rtcStatsIssues', '无');
-    setSessionStatsPanelText('#rtcStatsOutbound', waitingText);
-    setSessionStatsPanelText('#rtcStatsInbound', waitingText);
-  };
-
-  statsSession = e.session;
-  // 点对点模式下的统计面板标签：标明 PeerConnection 对象和链路方向。
-  // 三方模式下由 renderConferenceStatsPeerLabels() 覆盖为 A-B/A-C 等。
-  setSessionStatsPanelText('#rtcStatsPeerConnection', '点对点 PeerConnection');
-  setSessionStatsPanelText('#rtcStatsOutboundLabel', '本端 → 远端:');
-  setSessionStatsPanelText('#rtcStatsInboundLabel', '远端 → 本端:');
-  resetSessionStatsPanel();
+  statsCall = e.session;
+  setStats('#statsPc', '点对点 PeerConnection');
+  setStats('#statsOutLabel', '本端 → 远端:');
+  setStats('#statsInLabel', '远端 → 本端:');
+  resetStats();
 
   // 推荐从 RTCSession 消费统计事件，不在 Demo 中直接管理 RTCStatsMonitor。
   e.session.on('stats:detailed-report', function(report)
   {
-    if (statsSession !== e.session)
-    {
-      return;
-    }
-
-    // 事件只提供浮层使用的摘要；完整报告由 SDK logger 输出，也可通过
-    // e.session.statsMonitor.getLatestReport() 获取。
-    const quality = report.quality;
-    const issueText = quality.issues.map((issue) =>
-    {
-      return `${sessionStatsIssueNames[issue.code] || issue.code}(L${issue.severity})`;
-    }).join(' | ');
-
-    renderSessionStatsStreams('#rtcStatsOutbound', report.outbound, true);
-    renderSessionStatsStreams('#rtcStatsInbound', report.inbound, false);
-    renderSessionConnectionStats(report.connection);
-    setSessionStatsPanelText(
-      '#rtcStatsQuality',
-      `RTT:${formatSessionStatsNumber(quality.RTT, 'ms')} | ↑:${formatSessionNetworkQuality(quality.uplinkNetworkQuality)} | ↓:${formatSessionNetworkQuality(quality.downlinkNetworkQuality)}`
-    );
-    setSessionStatsPanelText('#rtcStatsIssues', issueText || '无');
+    renderStats(e.session, report);
   });
 
   // 统计失败不会中断通话，业务只需按需记录。
   e.session.on('stats:stats-error', function(error)
   {
-    if (statsSession === e.session)
+    if (statsCall === e.session)
     {
       console.warn('[RTCStatsMonitor] stats-error:', error);
     }
   });
-
-  // 以下可以用于兼容原来 stats = new CRTC.getStats(e.session.connection) 的对应事件
-  e.session.on('stats:network-quality', function(error) { });
-  e.session.on('stats:report', function(error) { });
 
   // ***** Session 事件回调 *****
   // 以下为通话级事件监听，在每个 newRTCSession 中注册
@@ -873,7 +902,7 @@ function handlePointToPointNewRTCSession(e)
   {
     setStatus(`${d.originator} hold`);
     // 清空所有音视频渲染，切换 UI 为暂停状态
-    stopStreams();
+    clearStreams();
   });
 
   /**
@@ -885,14 +914,14 @@ function handlePointToPointNewRTCSession(e)
    * @property {string} originator - 'remote' 或 'local'
    *
    * 处理逻辑：恢复后重新从 PeerConnection 获取本地和远端媒体流并渲染。
-   * 部分场景下取消保持后可能无法自动恢复媒体，因此这里主动调用 getStreams。
+   * 部分场景下取消保持后可能无法自动恢复媒体，因此这里主动调用 showStreams。
    */
   e.session.on('unhold', function(d)
   {
     setStatus(`${d.originator} unhold`);
 
     // 重新获取并渲染媒体流
-    getStreams(e.session.connection);
+    showStreams(e.session.connection);
   });
 
   /**
@@ -933,7 +962,7 @@ function handlePointToPointNewRTCSession(e)
     }
 
     // 模式切换后重新获取媒体流
-    getStreams(e.session.connection);
+    showStreams(e.session.connection);
   });
 
   /**
@@ -973,12 +1002,12 @@ function handlePointToPointNewRTCSession(e)
 
     // 创建新的克隆流用于本地预览
     cloneStream = new MediaStream(tmpTracks);
-    localVideo.srcObject = cloneStream;
+    localVid.srcObject = cloneStream;
 
     // 延迟播放兼容不同浏览器的自动播放策略
     setTimeout(() =>
     {
-      localVideo.play();
+      localVid.play();
     }, 100);
   });
 
@@ -996,10 +1025,7 @@ function handlePointToPointNewRTCSession(e)
    */
   e.session.on('remoteShared', function(d)
   {
-    document.querySelector('#remoteVideo2').srcObject = d.sharedStream.videoStream;
-    // 替换为屏幕共享浮层样式，并自动弹出浮层
-    document.querySelector('#remoteVideo2').className = 'screen-share-dialog-video';
-    if (typeof openScreenShareDialog === 'function') openScreenShareDialog('remote');
+    showShare(d.sharedStream.videoStream, 'remote');
   });
 
   /**
@@ -1012,9 +1038,7 @@ function handlePointToPointNewRTCSession(e)
    */
   e.session.on('remoteUnShared', function()
   {
-    document.querySelector('#remoteVideo2').srcObject = null;
-    document.querySelector('#remoteVideo2').className = 'screen-share-dialog-video hide';
-    if (typeof closeScreenShareDialog === 'function') closeScreenShareDialog('remote');
+    hideShare('remote');
   });
 
   /**
@@ -1072,7 +1096,7 @@ function handlePointToPointNewRTCSession(e)
 
   if (e.originator !== 'local')
   {
-    e.session.on('mediaEffectsIssue', handleSessionMediaEffectsIssue);
+    e.session.on('mediaEffectsIssue', onFxIssue);
   }
 
   /**
@@ -1092,7 +1116,7 @@ function handlePointToPointNewRTCSession(e)
    */
   e.session.on('failed', function(d)
   {
-    closeIncomingCallNotification();
+    closeNotice();
     videoOnly = false;
     remoteNo = undefined;
     // 停止混流实例（如果存在）
@@ -1118,23 +1142,23 @@ function handlePointToPointNewRTCSession(e)
     setStatus(`start: ${e.session.start_time}`);
     setStatus(`ended: ${e.session.end_time}`);
 
-    if (statsSession === e.session)
+    if (statsCall === e.session)
     {
-      statsSession = null;
-      resetSessionStatsPanel();
+      statsCall = null;
+      resetStats();
     }
 
     // 停止 iOS OPTIONS 保活定时器
-    optionsTimer && clearInterval(optionsTimer);
+    keepTimer && clearInterval(keepTimer);
 
     // 清理 UI：恢复远端视频区域布局，关闭共享浮层
-    document.querySelector('#remoteVideo').classList = 'h-100';
-    document.querySelector('#remoteVideo2').className = 'screen-share-dialog-video hide';
-    if (typeof closeScreenShareDialog === 'function') closeScreenShareDialog();
+    document.querySelector('#remoteVid').classList = 'h-100';
+    document.querySelector('#shareVid').className = 'screen-share-dialog-video hide';
+    if (typeof closeShareBox === 'function') closeShareBox();
 
     // 清理自定义媒体流（用 SDK closeMediaStream 统一释放，避免轨道泄漏）
-    CRTC.Utils.closeMediaStream(cusMediaStream);
-    cusMediaStream = new MediaStream();
+    CRTC.Utils.closeMediaStream(callStream);
+    callStream = new MediaStream();
 
     // 停止 AiNS 验证器（如果该 demo 版本提供了该函数）
     if (typeof stopAiNsMonitor === 'function')
@@ -1178,7 +1202,7 @@ function handlePointToPointNewRTCSession(e)
    */
   e.session.on('ended', function(d)
   {
-    closeIncomingCallNotification();
+    closeNotice();
     videoOnly = false;
     remoteNo = undefined;
     // 停止混流实例
@@ -1200,10 +1224,10 @@ function handlePointToPointNewRTCSession(e)
     setStatus(`start: ${e.session.start_time}`);
     setStatus(`ended: ${e.session.end_time}`);
 
-    if (statsSession === e.session)
+    if (statsCall === e.session)
     {
-      statsSession = null;
-      resetSessionStatsPanel();
+      statsCall = null;
+      resetStats();
     }
 
     // ---- 会话交接逻辑 ----
@@ -1211,8 +1235,8 @@ function handlePointToPointNewRTCSession(e)
     if (rtcSession === e.session && Boolean(tmpSession))
     {
       // 停止当前渲染，切换到临时会话的媒体流
-      stopStreams();
-      getStreams(tmpSession.connection);
+      clearStreams();
+      showStreams(tmpSession.connection);
     }
     else
     {
@@ -1220,16 +1244,16 @@ function handlePointToPointNewRTCSession(e)
       tmpSession = null;
       rtcSession = null;
     }
-    optionsTimer && clearInterval(optionsTimer);
+    keepTimer && clearInterval(keepTimer);
 
     // 清理 UI：恢复视频布局并关闭共享浮层
-    document.querySelector('#remoteVideo').classList = 'h-100';
-    document.querySelector('#remoteVideo2').className = 'screen-share-dialog-video hide';
-    if (typeof closeScreenShareDialog === 'function') closeScreenShareDialog();
+    document.querySelector('#remoteVid').classList = 'h-100';
+    document.querySelector('#shareVid').className = 'screen-share-dialog-video hide';
+    if (typeof closeShareBox === 'function') closeShareBox();
 
     // 清理自定义媒体流（用 SDK closeMediaStream 统一释放，避免轨道泄漏）
-    CRTC.Utils.closeMediaStream(cusMediaStream);
-    cusMediaStream = new MediaStream();
+    CRTC.Utils.closeMediaStream(callStream);
+    callStream = new MediaStream();
 
     // 停止 AiNS 验证器（如果该 demo 版本提供了该函数）
     if (typeof stopAiNsMonitor === 'function')
@@ -1272,6 +1296,14 @@ function handlePointToPointNewRTCSession(e)
    */
   e.session.on('newInfo', function(d)
   {
+    // 白板/屏幕标注由 app-annotation.js 独立校验和处理，避免通用 INFO 状态栏
+    // 输出整段坐标数据。其他历史 INFO 行为保持不变。
+    if (d.info && String(d.info.contentType || '').toLowerCase()
+      .indexOf('application/vnd.crtc.annotation+json') === 0)
+    {
+      return;
+    }
+
     if (d.originator === 'remote')
     {
       setStatus(`收到新消息：${JSON.stringify(d.info.body)}`);
@@ -1341,9 +1373,9 @@ function handlePointToPointNewRTCSession(e)
             sampleRate   : 48000,
             channelCount : 1
           },
-          video : buildSelectedVideoConstraints()
+          video : getVideoOpts()
         },
-        pcConfig : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' })
+        pcConfig : getAnswerPc()
       });
       setStatus('3pcc answer');
     }
@@ -1409,13 +1441,13 @@ function handlePointToPointNewRTCSession(e)
   e.session.on('upgradeToVideo', (d) =>
   {
     // 已确认通话且无摄像头时拒绝升级
-    if (confirmed && !haveACamera)
+    if (confirmed && !hasCamera)
     {
       d.reject();
     }
     else
     {
-      d.accept(buildSelectedVideoConstraints());
+      d.accept(getVideoOpts());
     }
   });
 
@@ -1429,8 +1461,8 @@ function handlePointToPointNewRTCSession(e)
   e.session.on('accepted', (d) =>
   {
     // 已应答，关闭来电提示
-    closeIncomingCallNotification();
-    console.warn('dOS: ', detectRemoteOS(d.response));
+    closeNotice();
+    console.warn('dOS: ', getRemoteOs(d.response));
   });
 
   /**
@@ -1451,7 +1483,7 @@ function handlePointToPointNewRTCSession(e)
    */
   e.session.on('confirmed', async function()
   {
-    closeIncomingCallNotification();
+    closeNotice();
 
     // ---- ICE 异常检测 ----
     // 如果 ICE 仍处于 'new' 状态，说明网络连接可能异常
@@ -1493,7 +1525,7 @@ function handlePointToPointNewRTCSession(e)
     confirmed = true;
 
     // ---- 渲染本地和远端媒体流 ----
-    getStreams(e.session.connection);
+    showStreams(e.session.connection);
 
     // ---- 设置视频发送最大码率 ----
     // 根据 URL 参数 mbit 调整视频编码码率
@@ -1549,16 +1581,16 @@ function handlePointToPointNewRTCSession(e)
   {
     e.session.answer({
       mediaConstraints : {
-        audio : buildSelectedAudioConstraints(),
+        audio : getAudioOpts(),
         video : false // 不采集视频
       },
-      pcConfig             : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
+      pcConfig             : getAnswerPc(),
       // 随路数据：注意 'X' 大写及 ':' 后面的空格
       extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
       rtcOfferConstraints  : { offerToReceiveAudio: true },
-      extraFeatures        : extraFeatures,
-      mediaEffectsComposer : buildCallComposerOptions(),
-      aiNoiseSuppression   : buildCallAiNsOptions()
+      extraFeatures        : features,
+      mediaEffectsComposer : getFxOpts(),
+      nsMode               : getNsOpts()
     });
 
     setStatus('audio answer');
@@ -1567,21 +1599,21 @@ function handlePointToPointNewRTCSession(e)
   /**
    * answerVideo — 视频接听
    *
-   * 同时采集音频和视频，使用当前的 videoConstraints。
+   * 同时采集音频和视频，使用当前的 videoOpts。
    */
   document.querySelector('#answerVideo').onclick = function()
   {
     e.session.answer({
       mediaConstraints : {
-        audio : buildSelectedAudioConstraints(),
-        video : buildSelectedVideoConstraints()
+        audio : getAudioOpts(),
+        video : getVideoOpts()
       },
-      pcConfig             : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
+      pcConfig             : getAnswerPc(),
       extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
       rtcOfferConstraints  : { offerToReceiveAudio: true, offerToReceiveVideo: true },
-      extraFeatures        : extraFeatures,
-      mediaEffectsComposer : buildCallComposerOptions(),
-      aiNoiseSuppression   : buildCallAiNsOptions()
+      extraFeatures        : features,
+      mediaEffectsComposer : getFxOpts(),
+      nsMode               : getNsOpts()
     });
 
     setStatus('video answer');
@@ -1603,12 +1635,12 @@ function handlePointToPointNewRTCSession(e)
     e.session.answer({
       mediaConstraints : {
         audio : true,
-        video : buildSelectedVideoConstraints()
+        video : getVideoOpts()
       },
-      pcConfig            : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
+      pcConfig            : getAnswerPc(),
       extraHeaders        : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
       rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
-      extraFeatures       : extraFeatures,
+      extraFeatures       : features,
       mediaStream         : tmpStream // 使用自定义的静默音频流
     });
 
@@ -1616,51 +1648,49 @@ function handlePointToPointNewRTCSession(e)
   };
 
   /**
-   * onlyVideoAudio — 单视频接听（无音频采集）
+   * ansVideoOnly — 单视频接听（无音频采集）
    *
    * 仅采集视频，不采集麦克风。设置 videoOnly 标志。
    */
-  document.querySelector('#onlyVideoAudio').onclick = async function()
+  document.querySelector('#ansVideoOnly').onclick = async function()
   {
     videoOnly = true;
     e.session.answer({
       mediaConstraints : {
         audio : false, // 不采集音频
-        video : buildSelectedVideoConstraints()
+        video : getVideoOpts()
       },
-      pcConfig            : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
+      pcConfig            : getAnswerPc(),
       extraHeaders        : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
       rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
-      extraFeatures       : extraFeatures
+      extraFeatures       : features
     });
 
     setStatus('video answer');
   };
 
   /**
-   * onlyCommVideo — 自定义黑屏视频接听（无音频）
+   * answerBlack — 自定义黑屏视频接听（无音频）
    *
    * 使用黑色占位视频轨道（无摄像头图标）代替真实摄像头。
    * 不采集音频。适用于仅需展示占位视频的场景。
    */
-  document.querySelector('#onlyCommVideo').onclick = async function()
+  document.querySelector('#answerBlack').onclick = async function()
   {
     const tmpStream = new MediaStream();
 
     // 生成黑色占位视频轨道（仅首次创建）
-    blackVideo || (blackVideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg, width: videoConstraints.width, height: videoConstraints.height, fps: videoConstraints.fps }));
-
-    tmpStream.addTrack(blackVideo.videoTrack, tmpStream);
+    tmpStream.addTrack(getBlackTrack().videoTrack, tmpStream);
 
     e.session.answer({
       mediaConstraints : {
         audio : false,
         video : true
       },
-      pcConfig            : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
+      pcConfig            : getAnswerPc(),
       extraHeaders        : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
       rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
-      extraFeatures       : extraFeatures,
+      extraFeatures       : features,
       mediaStream         : tmpStream
     });
 
@@ -1668,27 +1698,25 @@ function handlePointToPointNewRTCSession(e)
   };
 
   /**
-   * audioCommVideo — 自定义黑屏视频接听（含音频）
+   * ansBlackAv — 自定义黑屏视频接听（含音频）
    *
-   * 与 onlyCommVideo 相同，但保留真实音频采集。
+   * 与 answerBlack 相同，但保留真实音频采集。
    */
-  document.querySelector('#audioCommVideo').onclick = async function()
+  document.querySelector('#ansBlackAv').onclick = async function()
   {
     const tmpStream = new MediaStream();
 
-    blackVideo || (blackVideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg, width: videoConstraints.width, height: videoConstraints.height, fps: videoConstraints.fps }));
-
-    tmpStream.addTrack(blackVideo.videoTrack, tmpStream);
+    tmpStream.addTrack(getBlackTrack().videoTrack, tmpStream);
 
     e.session.answer({
       mediaConstraints : {
         audio : true,
         video : true
       },
-      pcConfig            : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
+      pcConfig            : getAnswerPc(),
       extraHeaders        : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
       rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
-      extraFeatures       : extraFeatures,
+      extraFeatures       : features,
       mediaStream         : tmpStream
     });
 
@@ -1712,55 +1740,19 @@ function handlePointToPointNewRTCSession(e)
    */
   document.querySelector('#toVideo').onclick = function()
   {
-    e.session.upgradeToVideo({ useUpdate: useUpdate, videoConstraints: buildSelectedVideoConstraints() }, () => { setStatus(`切换视频模式完成${curMode}`); });
+    e.session.upgradeToVideo({ useUpdate: useUpdate, videoConstraints: getVideoOpts() }, () => { setStatus(`切换视频模式完成${curMode}`); });
   };
 
-  // // b2b切换视频模式
-  // document.querySelector('#b2bToVideo').onclick =async function()
-  // {
-  //   request({
-  //     url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/getInCallIdStr',
-  //     method : 'POST',
-  //     secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
-
-  //     body : { 'caller': remoteNo }
-  //   })
-  //     .then((callId) =>
-  //     {
-  //       console.warn('cid: ', callId);
-
-  //       return request({
-  //         url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/status',
-  //         method : 'POST',
-  //         secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
-
-  //         body : { 'callId': callId.data.data, 'cmd': 'query' }
-  //       });
-  //     })
-  //     .then(((callNo) =>
-  //     {
-  //       b2bChannel.postMessage({ type: 'toVideo', data: BigInt(callNo.data.data.stat) });
-  //     }));
-  // };
-
-  // // b2b切换音频模式
-  // document.querySelector('#b2bToAudio').onclick = function()
-  // {
-  //   b2bChannel.postMessage({ type: 'toAudio' });
-  // };
-
   /**
-   * toCommonVideoSendonly — 切换为单向视频（自定义黑屏流，仅发送）
+   * toBlackSend — 切换为单向视频（自定义黑屏流，仅发送）
    *
    * 使用黑色占位视频轨道，仅发不收。依赖 useUpdate 全局变量。
    */
-  document.querySelector('#toCommonVideoSendonly').onclick = function()
+  document.querySelector('#toBlackSend').onclick = function()
   {
     const tmpStream = new MediaStream();
 
-    blackVideo || (blackVideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg, width: videoConstraints.width, height: videoConstraints.height, fps: videoConstraints.fps }));
-
-    tmpStream.addTrack(blackVideo.videoTrack, tmpStream);
+    tmpStream.addTrack(getBlackTrack().videoTrack, tmpStream);
 
     e.session.upgradeToVideo({ sendOnly: true, useUpdate: useUpdate, videoStream: tmpStream }, () => { setStatus('切换视频模式完成') + curMode; });
   };
@@ -1772,37 +1764,33 @@ function handlePointToPointNewRTCSession(e)
    */
   document.querySelector('#switchVideo').onclick = function()
   {
-    const cusVideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg, width: videoConstraints.width, height: videoConstraints.height, fps: videoConstraints.fps });
-
     e.session.connection.getSenders().forEach((sender) =>
     {
       if (sender.track.kind === 'video')
       {
-        sender.replaceTrack(cusVideo.videoTrack).then(() => setStatus('替换成功'));
+        sender.replaceTrack(getBlackTrack().videoTrack).then(() => setStatus('替换成功'));
       }
     });
   };
 
   /**
-   * toVideoSendonly — 切换为单向视频（真实摄像头，仅发送）
+   * toVideoSend — 切换为单向视频（真实摄像头，仅发送）
    */
-  document.querySelector('#toVideoSendonly').onclick = function()
+  document.querySelector('#toVideoSend').onclick = function()
   {
-    e.session.upgradeToVideo({ sendOnly: true, useUpdate: useUpdate, videoConstraints: buildSelectedVideoConstraints() }, () => { setStatus('切换视频模式完成') + curMode; });
+    e.session.upgradeToVideo({ sendOnly: true, useUpdate: useUpdate, videoConstraints: getVideoOpts() }, () => { setStatus('切换视频模式完成') + curMode; });
   };
 
   /**
-   * toCommonVideo — 切换为自定义流视频模式（双向）
+   * toBlackVideo — 切换为自定义流视频模式（双向）
    *
    * 使用黑色占位视频作为视频源进行双向视频通话。
    */
-  document.querySelector('#toCommonVideo').onclick = function()
+  document.querySelector('#toBlackVideo').onclick = function()
   {
     const tmpStream = new MediaStream();
 
-    blackVideo || (blackVideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg, width: videoConstraints.width, height: videoConstraints.height, fps: videoConstraints.fps }));
-
-    tmpStream.addTrack(blackVideo.videoTrack, tmpStream);
+    tmpStream.addTrack(getBlackTrack().videoTrack, tmpStream);
     e.session.upgradeToVideo({ useUpdate: useUpdate, videoStream: tmpStream }, () => { setStatus('切换视频模式完成') + curMode; });
   };
 
@@ -1815,7 +1803,7 @@ function handlePointToPointNewRTCSession(e)
    * 在 'user'（前置）和 'environment'（后置）之间切换。
    * 切换后调用 renegotiate 更新 SDP。
    */
-  document.querySelector('#switchDevice').onclick = async function()
+  document.querySelector('#switchDev').onclick = async function()
   {
     if (cloneStream)
     {
@@ -1840,7 +1828,7 @@ function handlePointToPointNewRTCSession(e)
    */
   document.querySelector('#cancel').onclick = function()
   {
-    closeIncomingCallNotification();
+    closeNotice();
     blackVideo && blackVideo.cleanup();
 
     try
@@ -1855,11 +1843,11 @@ function handlePointToPointNewRTCSession(e)
   };
 
   /**
-   * cancelReferBtn — 取消呼转
+   * cancelRefer — 取消呼转
    *
    * 通过 SIP INFO 发送 cancel 事件通知对端。
    */
-  document.querySelector('#cancelReferBtn').onclick = function()
+  document.querySelector('#cancelRefer').onclick = function()
   {
     e.session.sendInfo('text/plain', JSON.stringify({ 'event': 'cancel' }));
   };
@@ -1875,7 +1863,7 @@ function handlePointToPointNewRTCSession(e)
   document.querySelector('#referBtn').onclick = function()
   {
     // 转接过程中的事件回调
-    const eventHandlers = {
+    const events = {
       'progress'         : function(data) { console.log('progress', data); },
       'failed'           : function() { if (e.session.isOnHold().local) { e.session.unhold(); } },
       'accepted'         : function(data) { console.log('accept', data); e.session.terminate(); },
@@ -1887,7 +1875,7 @@ function handlePointToPointNewRTCSession(e)
     // 保持当前通话后发起盲转
     e.session.hold();
     e.session.refer(`${document.querySelector('#refer').value}@${sipDomain}`, {
-      eventHandlers : eventHandlers
+      eventHandlers : events
     });
   };
 
@@ -1959,33 +1947,24 @@ function handlePointToPointNewRTCSession(e)
   };
 
   /**
-   * screenShare — 分享屏幕（简单模式）
+   * shareScreen — 分享屏幕（简单模式）
    *
    * 启动普通屏幕分享，用屏幕轨临时替换当前发送的摄像头轨。
    * 推荐使用 share(type, options) 对象参数，屏幕分享不需要额外 options 字段。
    * 未开启 dual 时沿用原有替换摄像头轨的分享方式。
    */
-  document.querySelector('#screenShare').onclick = function()
+  document.querySelector('#shareScreen').onclick = function()
   {
     e.session.share('screen', {})
       .then((stream) =>
       {
-        document.querySelector('#screen').srcObject = stream;
-        // 屏幕共享统一使用浮层样式，并弹出共享浮层
-        document.querySelector('#screen').className = 'screen-share-dialog-video';
-        if (typeof openScreenShareDialog === 'function') openScreenShareDialog('local');
-
-        // 用户通过浏览器 UI 停止分享时隐藏屏幕预览
-        stream.getVideoTracks()[0].onended = () =>
-        {
-          document.querySelector('#screen').className = 'screen-share-dialog-video hide';
-          if (typeof closeScreenShareDialog === 'function') closeScreenShareDialog('local');
-        };
+        showShare(stream, 'local');
+        watchShare(stream, false);
       });
   };
 
   /**
-   * screenShareD — 分享屏幕（双流模式）
+   * shareScreen2 — 分享屏幕（双流模式）
    *
    * 在双流模式下分享屏幕：额外的视频流作为第二路发送。
    * share(type, options) 参数说明：
@@ -1998,37 +1977,13 @@ function handlePointToPointNewRTCSession(e)
    * Safari 兼容：检测到 user gesture 错误时设置 safari_r 标志，
    * 引导用户点击专用的 macOS 分享按钮。
    */
-  document.querySelector('#screenShareD').onclick = function()
+  document.querySelector('#shareScreen2').onclick = function()
   {
     e.session.share('screen', { dual: true })
       .then((stream) =>
       {
-        // 渲染屏幕共享预览
-        document.querySelector('#screen').srcObject = stream;
-        document.querySelector('#screen').className = 'screen-share-dialog-video';
-        if (typeof openScreenShareDialog === 'function') openScreenShareDialog('local');
-
-        // 方式一：监听 ended 事件（主流浏览器支持）
-        stream.getVideoTracks()[0].addEventListener('ended', () =>
-        {
-          document.querySelector('#screen').className = 'screen-share-dialog-video hide';
-          if (typeof closeScreenShareDialog === 'function') closeScreenShareDialog('local');
-        });
-
-        // 方式二：定时轮询兜底（部分被动场景 ended 事件不触发）
-        const timer = setInterval(() =>
-        {
-          if (stream.getVideoTracks()[0].readyState === 'ended')
-          {
-            document.querySelector('#screen').className = 'screen-share-dialog-video hide';
-            if (typeof closeScreenShareDialog === 'function') closeScreenShareDialog('local');
-            clearInterval(timer);
-          }
-        }, 100);
-
-        // 双流模式下清空辅助视频区
-        document.querySelector('#remoteVideo2').srcObject = null;
-        document.querySelector('#remoteVideo2').className = 'screen-share-dialog-video hide';
+        showShare(stream, 'local');
+        watchShare(stream, true);
       })
       .catch((error) =>
       {
@@ -2044,7 +1999,7 @@ function handlePointToPointNewRTCSession(e)
   };
 
   /**
-   * screenShareD_iOS — Safari 屏幕分享补救按钮
+   * shareIos — Safari 屏幕分享补救按钮
    *
    * 当首次分享因 Safari 缺少 user gesture 而失败（safari_r 被置为 true）时，
    * 用户需手动点击此按钮以提供用户手势上下文，重新发起分享。
@@ -2053,7 +2008,7 @@ function handlePointToPointNewRTCSession(e)
    *   dual: true     — 双流模式
    *   skip: true     — 跳过 BFCP 握手（Safari 兼容），直接发起屏幕分享
    */
-  document.querySelector('#screenShareD_iOS').onclick = function()
+  document.querySelector('#shareIos').onclick = function()
   {
     if (safari_r)
     {
@@ -2061,28 +2016,8 @@ function handlePointToPointNewRTCSession(e)
       e.session.share('screen', { dual: true, skip: true })
         .then((stream) =>
         {
-          document.querySelector('#screen').srcObject = stream;
-          document.querySelector('#screen').className = 'screen-share-dialog-video';
-          if (typeof openScreenShareDialog === 'function') openScreenShareDialog('local');
-
-          stream.getVideoTracks()[0].addEventListener('ended', () =>
-          {
-            document.querySelector('#screen').className = 'screen-share-dialog-video hide';
-            if (typeof closeScreenShareDialog === 'function') closeScreenShareDialog('local');
-          });
-
-          const timer = setInterval(() =>
-          {
-            if (stream.getVideoTracks()[0].readyState === 'ended')
-            {
-              document.querySelector('#screen').className = 'screen-share-dialog-video hide';
-              if (typeof closeScreenShareDialog === 'function') closeScreenShareDialog('local');
-              clearInterval(timer);
-            }
-          }, 100);
-
-          document.querySelector('#remoteVideo2').srcObject = null;
-          document.querySelector('#remoteVideo2').className = 'screen-share-dialog-video hide';
+          showShare(stream, 'local');
+          watchShare(stream, true);
         })
         .catch((err) =>
         {
@@ -2092,7 +2027,7 @@ function handlePointToPointNewRTCSession(e)
   };
 
   /**
-   * formShare / formShareD — 分享 HTML 元素
+   * shareHtml / shareHtmlDual — 分享 HTML 元素
    *
    * share(type, options) 参数说明：
    *   type: 'html'        — 分享页面 HTML 元素
@@ -2101,34 +2036,34 @@ function handlePointToPointNewRTCSession(e)
    *   dual: true/false    — 是否双流模式（D 后缀版本传 true）
    * 依赖 html2canvas.js 将 DOM 元素渲染为视频流。
    */
-  document.querySelector('#formShare').onclick = function()
+  document.querySelector('#shareHtml').onclick = function()
   {
     e.session.share('html', { id: '#ele', assembly: html2canvas });
   };
-  document.querySelector('#formShareD').onclick = function()
+  document.querySelector('#shareHtmlDual').onclick = function()
   {
     e.session.share('html', { id: '#ele', assembly: html2canvas, dual: true });
   };
 
   /**
-   * picShare / picShareD — 分享图片
+   * sharePic / sharePicDual — 分享图片
    *
    * share(type, options) 参数说明：
    *   type: 'pic'     — 分享图片元素
    *   id: '#pic_s'    — 图片元素的 CSS 选择器
    *   dual: true/false — 是否双流模式（D 后缀版本传 true）
    */
-  document.querySelector('#picShare').onclick = function()
+  document.querySelector('#sharePic').onclick = function()
   {
     e.session.share('pic', { id: '#pic_s' });
   };
-  document.querySelector('#picShareD').onclick = function()
+  document.querySelector('#sharePicDual').onclick = function()
   {
     e.session.share('pic', { id: '#pic_s', dual: true });
   };
 
   /**
-   * videoShare / videoShareD — 分享视频元素
+   * shareVideo / shareVideo2 — 分享视频元素
    *
    * share(type, options) 参数说明：
    *   type: 'video'    — 分享正在播放的 video 元素
@@ -2136,7 +2071,7 @@ function handlePointToPointNewRTCSession(e)
    *   dual: true/false — 是否双流模式（D 后缀版本传 true）
    * 需要视频已在播放状态。
    */
-  document.querySelector('#videoShare').onclick = function()
+  document.querySelector('#shareVideo').onclick = function()
   {
     document.querySelector('#video_s').play()
       .then(() =>
@@ -2144,7 +2079,7 @@ function handlePointToPointNewRTCSession(e)
         e.session.share('video', { id: '#video_s' });
       });
   };
-  document.querySelector('#videoShareD').onclick = function()
+  document.querySelector('#shareVideo2').onclick = function()
   {
     document.querySelector('#video_s').play()
       .then(() =>
@@ -2154,21 +2089,18 @@ function handlePointToPointNewRTCSession(e)
   };
 
   /**
-   * stopShare — 停止分享
+   * unshare — 停止分享
    *
    * 停止后延迟 300ms 恢复本地/远端媒体渲染。
    */
-  document.querySelector('#stopShare').onclick = function()
+  document.querySelector('#unshare').onclick = function()
   {
     e.session.unShare();
-    // 手动停止共享后同步清理屏幕预览和浮层
-    document.querySelector('#screen').srcObject = null;
-    document.querySelector('#screen').className = 'screen-share-dialog-video hide';
-    if (typeof closeScreenShareDialog === 'function') closeScreenShareDialog('local');
+    hideShare('local');
 
     setTimeout(() =>
     {
-      getStreams(e.session.connection);
+      showStreams(e.session.connection);
     }, 300);
   };
 
@@ -2203,7 +2135,7 @@ function handlePointToPointNewRTCSession(e)
   {
     const canvas = document.getElementById('captureView');
     const ctx = canvas.getContext('2d');
-    const videoEl = $('#remoteVideo')[0];
+    const videoEl = $('#remoteVid')[0];
     // 优先取实际视频分辨率，回退到 CSS 尺寸，最后回退到默认值
     const frameW = videoEl.videoWidth || videoEl.clientWidth || 640;
     const frameH = videoEl.videoHeight || videoEl.clientHeight || 360;
@@ -2222,17 +2154,17 @@ function handlePointToPointNewRTCSession(e)
     // drawImage 是同步的，画完后直接显示预览面板
     canvas.classList.remove('hide');
 
-    const captureEmpty = document.getElementById('capture-empty');
-    const capturePanel = document.getElementById('capture-preview-panel');
+    const emptyEl = document.getElementById('captureEmpty');
+    const panel = document.getElementById('capturePanel');
 
-    if (captureEmpty)
+    if (emptyEl)
     {
-      captureEmpty.classList.add('hide');
+      emptyEl.classList.add('hide');
     }
 
-    if (capturePanel)
+    if (panel)
     {
-      capturePanel.classList.add('has-capture');
+      panel.classList.add('has-capture');
     }
   };
 
@@ -2261,7 +2193,7 @@ function handlePointToPointNewRTCSession(e)
  */
 async function call(type, direction, mediaStream)
 {
-  // 仅点对点模式可用；三方模式使用 callConferenceVideo 等专用入口。
+  // 仅点对点模式可用；三方模式使用 callConf 等专用入口。
   if (appMode !== 'point-to-point')
   {
     setStatus(appMode ? '三方模式下请使用会议呼叫按钮' : '请先选择点对点模式');
@@ -2289,66 +2221,22 @@ async function call(type, direction, mediaStream)
   options = {
     // 随路数据：X-Data（业务数据）、X-UA（设备信息）、X-Direction（媒体方向）
     extraHeaders  : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}`, `X-Direction: ${direction || 'sendrecv'}` ],
-    extraFeatures : extraFeatures,
+    extraFeatures : features,
     pcConfig      : pcConfig,
     eventHandlers : {
-      mediaEffectsIssue : handleSessionMediaEffectsIssue
+      mediaEffectsIssue : onFxIssue
     }
   };
 
-  // ---- 附加媒体特效合成器配置 ----
-  const composerOptions = buildCallComposerOptions();
-
-  if (composerOptions)
-  {
-    options.mediaEffectsComposer = composerOptions;
-  }
-
-  // options = {
-  //   'extraHeaders'  : [ 'X-Data: dGVzdCB4LWRhdGE=', 'X-UA: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36' ],
-  //   'extraFeatures' : [],
-  //   'pcConfig'      : {
-  //     'iceServers'           : [ { 'urls': 'turn:5g.vsbc.com:60000?transport=udp', 'username': 'ipcu', 'credential': 'yl_19cu' } ],
-  //     'iceTransportPolicy'   : 'relay',
-  //     'iceCandidatePoolSize' : 10,
-  //     'bundlePolicy'         : 'max-compat'
-  //   },
-  //   'mediaConstraints' : { 'audio': true, 'video': true },
-  //   'mediaStream'      : {}
-  // };
-
-  // options = {
-  //   'extraHeaders'  : [ 'X-Data: dGVzdCB4LWRhdGE=', 'X-UA: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', 'X-Direction: sendrecv' ],
-  //   'extraFeatures' : [],
-  //   'pcConfig'      : {
-  //     'iceServers'           : [ { 'urls': 'turn:5g.vsbc.com:60000?transport=udp', 'username': 'ipcu', 'credential': 'yl_19cu' } ],
-  //     'iceTransportPolicy'   : 'relay',
-  //     'iceCandidatePoolSize' : 10,
-  //     'bundlePolicy'         : 'max-compat'
-  //   },
-  //   'mediaConstraints' : {
-  //     'audio' : {
-  //       'sampleRate'   : 48000,
-  //       'channelCount' : 1
-  //     },
-  //     'video' : {
-  //       'facingMode' : 'user',
-  //       'width'      : 640,
-  //       'height'     : 480,
-  //       'frameRate'  : 15
-  //     }
-  //   }
-  // };
-
   // ---- 媒体方向控制 ----
-  if (direction == 'sendonly')
+  if (direction === 'sendonly')
   {
     // 仅发送模式：不接收远端视频
-    options['rtcOfferConstraints'] = { offerToReceiveAudio: true, offerToReceiveVideo: false };
+    options.rtcOfferConstraints = { offerToReceiveAudio: true, offerToReceiveVideo: false };
     // 纯视频 + 仅发送：音频也不接收
     if (type === 'onlyVideo')
     {
-      options['rtcOfferConstraints'] = { offerToReceiveAudio: false, offerToReceiveVideo: false };
+      options.rtcOfferConstraints = { offerToReceiveAudio: false, offerToReceiveVideo: false };
     }
   }
 
@@ -2356,33 +2244,32 @@ async function call(type, direction, mediaStream)
   if (mediaStream)
   {
     // 使用传入的自定义媒体流
-    options['mediaStream'] = mediaStream;
+    options.mediaStream = mediaStream;
   }
   else
   {
     // 使用媒体约束让浏览器自动采集
-    options['mediaConstraints'] = {
-      audio : buildSelectedAudioConstraints(),
+    options.mediaConstraints = {
+      audio : getAudioOpts(),
       // 仅 video 和 onlyVideo 类型需要视频
-      video : (type === 'video' || type === 'onlyVideo') ? buildSelectedVideoConstraints() : false
+      video : (type === 'video' || type === 'onlyVideo') ? getVideoOpts() : false
     };
   }
 
   // ---- 屏幕分享模式：采集屏幕 + 麦克风 ----
   if (type === 'screen')
   {
-    await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 15 }, audio: false })
-      .then(async(stream) =>
-      {
-        // 同时获取麦克风音频流
-        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: options['mediaConstraints'].audio, video: false });
+    const screen = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 15 }, audio: false });
+    const audioStream = await navigator.mediaDevices.getUserMedia({
+      audio : options.mediaConstraints.audio,
+      video : false
+    });
 
-        // 合并屏幕视频 + 麦克风音频
-        cusMediaStream.addTrack(stream.getVideoTracks()[0]);
-        cusMediaStream.addTrack(audioStream.getAudioTracks()[0]);
-        delete options['mediaConstraints'];
-        options['mediaStream'] = cusMediaStream;
-      });
+    // 自定义流直接传给 ua.call()，包含屏幕视频轨和麦克风音频轨。
+    callStream.addTrack(screen.getVideoTracks()[0]);
+    callStream.addTrack(audioStream.getAudioTracks()[0]);
+    delete options.mediaConstraints;
+    options.mediaStream = callStream;
   }
 
   // ---- 空媒体模式：使用静默/黑屏占位轨道 ----
@@ -2399,19 +2286,19 @@ async function call(type, direction, mediaStream)
     }
 
     // 生成黑色占位视频轨道（全局复用，仅首次创建）
-    blackVideo || (blackVideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg, width: videoConstraints.width, height: videoConstraints.height, fps: videoConstraints.fps }));
+    getBlackTrack();
 
     window.novideo = blackVideo;
 
     // callnullvideo 或 callnull：附加黑屏视频轨道
-    (type === 'callnullvideo' || type === 'callnull') && tmpStream.addTrack(novideo.videoTrack, tmpStream);
+    if (type === 'callnullvideo' || type === 'callnull') tmpStream.addTrack(blackVideo.videoTrack, tmpStream);
 
-    options['mediaStream'] = tmpStream;
+    options.mediaStream = tmpStream;
 
     // 同时指定媒体约束作为 fallback（系统麦克风和摄像头）
-    options['mediaConstraints'] = {
+    options.mediaConstraints = {
       audio : type === 'callnullvideo' ? true : false,
-      video : type === 'callnullaudio' ? videoConstraints : true
+      video : type === 'callnullaudio' ? videoOpts : true
     };
   }
 
@@ -2429,30 +2316,9 @@ async function call(type, direction, mediaStream)
     // 确定被叫号码：优先使用 B2B 转接的 callee，否则取输入框值
     const number = callee || document.querySelector('#callee').value;
 
-    // ---- 应用选中的摄像头设备 ----
-    if (selectCamera && options.mediaConstraints && options.mediaConstraints.video)
-    {
-      options.mediaConstraints.video.deviceId = { exact: selectCamera };
-    }
-
-    // ---- 应用选中的麦克风设备 ----
-    if (selectMic && options.mediaConstraints && options.mediaConstraints.audio)
-    {
-      if (typeof options.mediaConstraints.audio === 'object')
-      {
-        // 音频约束是对象，直接附加 deviceId
-        options.mediaConstraints.audio.deviceId = { exact: selectMic };
-      }
-      else
-      {
-        // 音频约束是布尔值，需要构造对象
-        options.mediaConstraints.audio = { deviceId: { exact: selectMic } };
-      }
-    }
-
-    // ---- 重新构建媒体效果和降噪配置（使用最新的 UI 选择） ----
-    options.mediaEffectsComposer = buildCallComposerOptions();
-    options.aiNoiseSuppression = buildCallAiNsOptions();
+    // 呼叫前读取页面当前选择的媒体效果和降噪参数。
+    options.mediaEffectsComposer = getFxOpts();
+    options.nsMode = getNsOpts();
 
     remoteNo = number;
 
@@ -2472,10 +2338,10 @@ async function call(type, direction, mediaStream)
         earlyMedia = true;
 
         // 将远端音频渲染到音频元素
-        remoteAudio.srcObject = event.streams[0];
+        remoteAud.srcObject = event.streams[0];
 
         // Chrome 自动播放策略兼容：必须 catch 否则可能抛出 NotAllowedError
-        remoteAudio.play()
+        remoteAud.play()
           .catch(() => { });
       }
     };
@@ -2483,7 +2349,7 @@ async function call(type, direction, mediaStream)
     // ---- 外呼阶段取消按钮（newRTCSession 触发前有效） ----
     document.querySelector('#cancel').onclick = function()
     {
-      closeIncomingCallNotification();
+      closeNotice();
       try
       {
         session.terminate();
@@ -2505,7 +2371,7 @@ async function call(type, direction, mediaStream)
       if (cloneStream)
       {
         CRTC.Utils.closeMediaStream(cloneStream);
-        localVideo.srcObject = null;
+        localVid.srcObject = null;
       }
 
       cloneStream = null;
@@ -2519,14 +2385,14 @@ async function call(type, direction, mediaStream)
   // ---- iOS 保活机制 ----
   // iOS 设备在后台时 WebSocket 可能被系统挂起，
   // 定时发送 OPTIONS 请求保持信令通道活跃
-  if (optionsTimer)
+  if (keepTimer)
   {
-    clearInterval(optionsTimer);
+    clearInterval(keepTimer);
   }
 
   if (navigator.userAgent.indexOf('iPhone') != -1)
   {
-    optionsTimer = setInterval(() =>
+    keepTimer = setInterval(() =>
     {
       ua.sendOptions(`sip_ping@${sipDomain}`);
     }, 3000);
@@ -2541,24 +2407,24 @@ async function call(type, direction, mediaStream)
  * 2. 预采集一次媒体权限以填充设备列表
  * 3. 提示用户选择"点对点"或"三方"模式
  *
- * UA 的创建、信令连接和注册在用户点击模式按钮后由 initializeDemoMode() 执行。
+ * UA 的创建、信令连接和注册在用户点击模式按钮后由 initMode() 执行。
  * 按钮绑定、设备变化监听等在 app.ui-bindings.js 中统一管理。
  */
-function initializePage()
+function initPage()
 {
   setStatus(`${CRTC.version}`);
 
   navigator.mediaDevices.getUserMedia({ video: true, audio: true })
     .then(async(mediastream) =>
     {
-      await updateDevices();
+      await loadDevices();
       CRTC.Utils.closeMediaStream(mediastream);
     })
     .catch(async(error) =>
     {
       try
       {
-        await updateDevices();
+        await loadDevices();
       }
       catch (deviceError)
       {
@@ -2572,7 +2438,7 @@ function initializePage()
 }
 
 /**
- * 根据当前 appMode 和 appRegistrationState 刷新页面 UI。
+ * 根据当前 appMode 和 regState 刷新页面 UI。
  *
  * 负责：
  * - 更新顶部模式/注册状态标签（"点对点 · 已注册" 等）
@@ -2580,63 +2446,63 @@ function initializePage()
  * - 禁用/启用点对点专属按钮（data-mode="point-to-point"、呼叫/接听按钮组）
  * - 展开/收起会议面板（三方模式首次选择时自动展开）
  * - 切换会议面板的帮助文字和控件可见性
- * - 同步调用三方模块的 updateConferenceUi（如果已加载）
+ * - 同步调用三方模块的 updateConfUi（如果已加载）
  *
  * 此函数在注册状态变化和模式切换时被多处调用，是页面状态同步的中心入口。
  */
-function updateAppModeUi()
+function updateMode()
 {
-  const modeLabel = document.querySelector('#appModeLabel');
-  const pointButton = document.querySelector('#initializePointToPoint');
-  const conferenceButton = document.querySelector('#initializeConference');
-  const conferencePanel = document.querySelector('#conferencePanel');
-  const conferenceSummary = document.querySelector('#conferenceModeSummary');
-  const pointToPointOnly = document.querySelectorAll(
-    '[data-mode="point-to-point"], #pointToPointCallControls button, #pointToPointAnswerControls button'
+  const modeLabel = document.querySelector('#modeLabel');
+  const pointButton = document.querySelector('#initP2p');
+  const confBtn = document.querySelector('#initConf');
+  const confPanel = document.querySelector('#confPanel');
+  const confSummary = document.querySelector('#confSummary');
+  const p2pOnly = document.querySelectorAll(
+    '[data-mode="point-to-point"], #p2pCall button, #p2pAnswer button'
   );
-  const conferenceActiveControls = document.querySelector('#conferenceActiveControls');
-  const conferenceInactiveHelp = document.querySelector('#conferenceInactiveHelp');
+  const confActive = document.querySelector('#confActive');
+  const confHelp = document.querySelector('#confHelp');
 
   if (modeLabel)
   {
     const modeName = appMode === 'conference' ? '三方 A' : '点对点';
-    const stateText = appRegistrationState === 'registered' ? '已注册' :
-      (appRegistrationState === 'registering' ? '注册中' : '未注册');
+    const stateText = regState === 'registered' ? '已注册' :
+      (regState === 'registering' ? '注册中' : '未注册');
 
     modeLabel.textContent = appMode ? `${modeName} · ${stateText}` : '尚未注册';
-    modeLabel.classList.toggle('is-active', appRegistrationState === 'registered');
-    modeLabel.classList.toggle('is-pending', appRegistrationState === 'registering');
+    modeLabel.classList.toggle('is-active', regState === 'registered');
+    modeLabel.classList.toggle('is-pending', regState === 'registering');
   }
   if (pointButton) pointButton.disabled = Boolean(appMode);
-  if (conferenceButton) conferenceButton.disabled = Boolean(appMode);
+  if (confBtn) confBtn.disabled = Boolean(appMode);
 
-  pointToPointOnly.forEach((element) =>
+  p2pOnly.forEach((element) =>
   {
     element.disabled = appMode !== 'point-to-point';
   });
 
-  if (conferencePanel)
+  if (confPanel)
   {
-    if (appMode === 'conference' && conferencePanel.dataset.autoOpened !== 'true')
+    if (appMode === 'conference' && confPanel.dataset.autoOpened !== 'true')
     {
-      conferencePanel.open = true;
-      conferencePanel.dataset.autoOpened = 'true';
+      confPanel.open = true;
+      confPanel.dataset.autoOpened = 'true';
     }
     else if (appMode !== 'conference')
     {
-      conferencePanel.open = false;
-      delete conferencePanel.dataset.autoOpened;
+      confPanel.open = false;
+      delete confPanel.dataset.autoOpened;
     }
-    conferencePanel.classList.toggle('conference-inactive', appMode !== 'conference');
+    confPanel.classList.toggle('conference-inactive', appMode !== 'conference');
   }
-  if (conferenceSummary)
+  if (confSummary)
   {
-    conferenceSummary.textContent = appMode === 'conference' ?
+    confSummary.textContent = appMode === 'conference' ?
       '三方会议（A 作为媒体桥接端）' : '三方会议（选择三方模式后启用）';
   }
-  if (conferenceActiveControls) conferenceActiveControls.classList.toggle('hide', appMode !== 'conference');
-  if (conferenceInactiveHelp) conferenceInactiveHelp.classList.toggle('hide', appMode === 'conference');
-  if (typeof updateConferenceUi === 'function') updateConferenceUi();
+  if (confActive) confActive.classList.toggle('hide', appMode !== 'conference');
+  if (confHelp) confHelp.classList.toggle('hide', appMode === 'conference');
+  if (typeof updateConfUi === 'function') updateConfUi();
 }
 
 /**
@@ -2649,13 +2515,13 @@ function updateAppModeUi()
  *
  * 执行流程：
  * 1. 检查是否已选择模式，已选择则提示刷新
- * 2. 三方模式需确认 handleConferenceNewRTCSession 已加载
+ * 2. 三方模式需确认 onConfSession 已加载
  * 3. 创建 WebSocket 信令传输和 UA 实例
  * 4. 绑定共用 UA 事件 + 模式对应的 newRTCSession 处理函数
  * 5. 重置断网状态并调用 ua.start()
  * 6. 10 秒后检测连接/注册状态，超时则停止 UA
  */
-function initializeDemoMode(mode)
+function initMode(mode)
 {
   if (appMode)
   {
@@ -2669,7 +2535,7 @@ function initializeDemoMode(mode)
 
     return;
   }
-  if (mode === 'conference' && typeof handleConferenceNewRTCSession !== 'function')
+  if (mode === 'conference' && typeof onConfSession !== 'function')
   {
     setStatus('三方模块尚未加载');
 
@@ -2678,40 +2544,40 @@ function initializeDemoMode(mode)
 
   appMode = mode;
   // 创建 UA 后立即进入"注册中"状态，页面标签显示蓝色"注册中"
-  appRegistrationState = 'registering';
+  regState = 'registering';
   const socket = new CRTC.WebSocketInterface(signalingUrl);
-  const configuration = buildUaConfiguration(socket);
+  const config = getUaOpts(socket);
 
-  ua = new CRTC.UA(configuration);
-  bindCommonUaEvents();
+  ua = new CRTC.UA(config);
+  bindUa();
   // 按模式绑定不同的 newRTCSession 处理函数：点对点 vs 三方
   ua.on('newRTCSession', mode === 'conference' ?
-    handleConferenceNewRTCSession : handlePointToPointNewRTCSession);
+    onConfSession : onSession);
 
   // 重置断网状态（每次新建 UA 时都从干净状态开始）
   handleStop = false;
-  disconnectedBy = null;
-  isShowUI = false;
+  endBy = null;
+  offlineUi = false;
   // 刷新页面 UI：禁用模式选择按钮、展开/收起会议面板等
-  updateAppModeUi();
+  updateMode();
   setStatus(`正在注册${mode === 'conference' ? '三方' : '点对点'}模式`);
   ua.start();
 
   // 闭包捕获当前 UA 引用，防止 setTimeout 时 ua 已被重新赋值。
-  const initializedUa = ua;
+  const newUa = ua;
 
   setTimeout(() =>
   {
     // 10 秒后如果 UA 已被重新赋值（虽然当前不支持切换模式），则跳过检测
-    if (initializedUa !== ua)
+    if (newUa !== ua)
     {
       return;
     }
-    if (!initializedUa.isConnected() || !initializedUa.isRegistered())
+    if (!newUa.isConnected() || !newUa.isRegistered())
     {
-      initializedUa.stop();
-      appRegistrationState = 'unregistered';
-      updateAppModeUi();
+      newUa.stop();
+      regState = 'unregistered';
+      updateMode();
       setStatus('网络连接异常或未注册成功');
     }
   }, 10000);
@@ -2722,7 +2588,7 @@ function initializeDemoMode(mode)
 // =============================================================================
 
 // 页面只初始化 UI 和设备列表；UA 必须由用户选择模式后创建。
-initializePage();
-updateAppModeUi();
+initPage();
+updateMode();
 // 初始化媒体效果模块（虚拟背景、AI 降噪、水印等）
-initMediaEffects();
+initFx();

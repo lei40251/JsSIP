@@ -1,6 +1,6 @@
-# `app-conference.js` 三方会议实现详解
+# 三方会议、屏幕标注与共享白板实现详解
 
-本文档用于解释 [`demo/base-js/js/app-conference.js`](../demo/base-js/js/app-conference.js) 实现了什么、为什么这样实现，以及页面操作最终如何进入 CRTC SDK。阅读完后，应能独立回答以下问题：
+本文档用于解释 [`demo/base-js/js/app-conference.js`](../demo/base-js/js/app-conference.js) 和 [`demo/base-js/js/app-annotation.js`](../demo/base-js/js/app-annotation.js) 实现了什么、为什么这样实现，以及页面操作最终如何进入 CRTC SDK。阅读完后，应能独立回答以下问题：
 
 - A、B、C 分别是什么角色，为什么 A 是“浏览器侧桥接端”。
 - 两路 `RTCSession`、两个 `RTCPeerConnection` 和一个/两个 `MediaEffectsComposer` 如何配合。
@@ -8,9 +8,10 @@
 - B、C 分别会听到什么、看到什么，如何避免音频回送。
 - 来电如何分配 B/C 角色，什么情况下会被拒绝或自动接听。
 - 定向屏幕共享如何通过 SDK `RTCSession.share()` 为每条会话发送独立辅流。
+- 屏幕标注和共享白板如何通过 SIP INFO 同步，以及 B 的操作如何经 A 转发给 C。
 - 成员挂断或 composer 失败后，代码如何恢复为仍可继续的点对点通话。
 
-> 本文针对当前源码版本。`app-conference.js` 是 Demo 层实现，不是 SDK 内置的会议服务器或 MCU/SFU 功能。
+> 本文针对当前源码版本。会议桥接、标注和白板均为 Demo 层实现，不是 SDK 内置的会议服务器、MCU/SFU 或白板服务。
 
 ### 图中标识
 
@@ -70,21 +71,23 @@ flowchart TB
 2. [`app.sdk-helper.js`](../demo/base-js/js/app.sdk-helper.js)：设备约束、状态提示、媒体元素和弹窗辅助函数。
 3. [`app.js`](../demo/base-js/js/app.js)：UA 配置、点对点通话和页面公共状态。
 4. [`app-conference.js`](../demo/base-js/js/app-conference.js)：三方会议逻辑。
-5. [`app.ui-bindings.js`](../demo/base-js/js/app.ui-bindings.js)：把页面按钮绑定到上述全局函数。
+5. [`app-annotation.js`](../demo/base-js/js/app-annotation.js)：屏幕标注、共享白板和 INFO 同步逻辑。
+6. [`app.ui-bindings.js`](../demo/base-js/js/app.ui-bindings.js)：把页面按钮绑定到上述全局函数。
 
 `app-conference.js` 没有模块导入/导出，而是依赖同一页面全局作用域中的变量和函数。主要外部依赖如下：
 
 | 来源 | 被会议模块使用的内容 | 用途 |
 | --- | --- | --- |
 | `app.js` | `ua`、`rtcSession`、`statsSession`、`appMode`、`pcConfig`、`extraFeatures`、`sipDomain`、`xdata`、`noremb`、`camFlag` | 注册状态、当前会话、网络配置、SIP 地址和兼容开关 |
-| `app.js` | `localVideo`、`remoteVideo` | A 本地预览和 B/C 远端主画面 |
-| `app-media-effects.js` | `buildCallComposerOptions()`、`buildCallAiNsOptions()`、`handleSessionMediaEffectsIssue()` | 复用页面选择的镜像、水印、虚拟背景和 AiNS 配置 |
-| `app.sdk-helper.js` | `buildSelectedAudioConstraints()`、`buildSelectedVideoConstraints()` | 获取页面当前选择的麦克风和摄像头约束 |
-| `app.sdk-helper.js` | `setStatus()`、`bindMediaStreamIfChanged()`、来电通知和共享弹窗函数 | 页面反馈和媒体渲染 |
+| `app.js` | `localVid`、`remoteVid` | A 本地预览和 B/C 远端主画面 |
+| `app-media-effects.js` | `getFxOpts()`、`getNsOpts()`、`onFxIssue()` | 复用页面选择的镜像、水印、虚拟背景和 AiNS 配置 |
+| `app.sdk-helper.js` | `getAudioOpts()`、`getVideoOpts()` | 获取页面当前选择的麦克风和摄像头约束 |
+| `app.sdk-helper.js` | `setStatus()`、`setMedia()`、来电通知和共享弹窗函数 | 页面反馈和媒体渲染 |
+| `app-annotation.js` | `bindInk()`、`sendSnapshot()`、`isBoardOpen()` | 标注会话绑定、白板成员状态和快照同步 |
 | CRTC SDK | `CRTC.UA`、`RTCSession`、`CRTC.Utils.getStreams()`、`closeMediaStream()` | SIP 会话、WebRTC 和资源释放 |
 | 浏览器 API | `MediaStream`、`RTCPeerConnection`、`RTCRtpSender`、`getDisplayMedia()` | 轨道组合、替换和屏幕采集 |
 
-会议模块并不自行监听 UA。`initializeDemoMode('conference')` 在 [`app.js`](../demo/base-js/js/app.js) 中创建唯一的 `CRTC.UA`，并将其 `newRTCSession` 事件绑定到 `handleConferenceNewRTCSession`。因此同一页面只会进入点对点处理器或会议处理器中的一个。
+会议模块并不自行监听 UA。`initMode('conference')` 在 [`app.js`](../demo/base-js/js/app.js) 中创建唯一的 `CRTC.UA`，并将其 `newRTCSession` 事件绑定到 `onConfSession`。因此同一页面只会进入点对点处理器或会议处理器中的一个。
 
 ## 3. 角色、容量和两种 C
 
@@ -98,7 +101,7 @@ flowchart TB
 
 最多只允许两个成员 leg，即 B + C，常量 `CONFERENCE_MAX_LEGS` 固定为 `2`。
 
-角色不是由远端传来的 `X-Conference-Role` 决定。代码使用 `getConferenceNextRole()` 按当前空槽分配：没有 B 时返回 B；已有 B 时返回 C。测试也明确保证外呼头中不发送角色头。
+角色不是由远端传来的 `X-Conference-Role` 决定。代码使用 `getNextRole()` 按当前空槽分配：没有 B 时返回 B；已有 B 时返回 C。测试也明确保证外呼头中不发送角色头。
 
 ### 3.2 普通 C
 
@@ -189,45 +192,45 @@ flowchart TB
 | `conferenceSyncTimer` | timer/null | 将同一轮连续 track 变化合并为一次同步 |
 | `conferenceComposerSyncSignature` | string | 轨道没有变化时跳过重复同步 |
 
-`conferencePendingOutgoing` 不只是“加载中”标志。`ua.call()` 触发 `newRTCSession` 时，`resolveConferenceSessionOptions()` 会消费这个对象，把之前准备好的 C 合成流、降级流等信息交给新 leg。
+`conferencePendingOutgoing` 不只是“加载中”标志。`ua.call()` 触发 `newRTCSession` 时，`getSessOpts()` 会消费这个对象，把之前准备好的 C 合成流、降级流等信息交给新 leg。
 
 ### 4.2 每个成员的 leg
 
-`createConferenceLeg()` 为每条 `RTCSession` 创建一个 leg。字段可按职责分为五组：
+`addLeg()` 为每条 `RTCSession` 创建一个 leg。字段可按职责分为五组：
 
 | 分组 | 字段 | 含义 |
 | --- | --- | --- |
 | 身份 | `session`、`role`、`remoteNo`、`originator` | SDK 会话、B/C、号码、呼入或呼出 |
-| 方向/生命周期 | `localDirection`、`silent`、`confirmed`、`answering`、`answerTimer`、`signalingStage`、`autoAnswer`、`ended` | 媒体方向、静默标志和会话阶段 |
-| 远端媒体 | `remoteMainStream`、`remoteMainAudioTrack`、`remoteMainVideoTrack`、`audioElement` | 收集并播放远端主音视频 |
-| composer/降级 | `original*Sender`、`original*Track`、`fallbackLocalStream`、`normalComposerHostId`、`composerSourceStream`、`conferenceAudioStream` | 合成、sender 替换和失败恢复 |
-| 屏幕共享 | `screenActive`、`screenTarget` | 页面记录的共享目标和活跃状态；sender/MID 由 SDK 管理 |
-| UI/统计 | `trackListenerAttached`、`latestStatsReport` | 防重复监听和保存最新统计报告 |
+| 方向/生命周期 | `direction`、`silent`、`confirmed`、`answering`、`answerTimer`、`stage`、`autoAnswer`、`ended` | 媒体方向、静默标志和会话阶段 |
+| 远端媒体 | `rStream`、`rAudio`、`rVideo`、`audioEl` | 收集并播放远端主音视频 |
+| composer/降级 | `original*Sender`、`original*Track`、`backupStream`、`mixerHostId`、`mixSource`、`conferenceAudioStream` | 合成、sender 替换和失败恢复 |
+| 屏幕共享 | `sharingScreen`、`shareTarget` | 页面记录的共享目标和活跃状态；sender/MID 由 SDK 管理 |
+| UI/统计 | `tracksBound`、`stats` | 防重复监听和保存最新统计报告 |
 
-`originalAudioTrack`/`originalVideoTrack` 只在第一次发现 sender 时保存。后续即使 sender 已被 `replaceTrack()` 替换成混音轨，也不会覆盖原始快照，否则失败时无法恢复。
+`audioTrack`/`videoTrack` 只在第一次发现 sender 时保存。后续即使 sender 已被 `replaceTrack()` 替换成混音轨，也不会覆盖原始快照，否则失败时无法恢复。
 
 ## 5. 从页面初始化到新会话
 
 ### 5.1 选择三方模式
 
-页面点击 `#initializeConference` 后：
+页面点击 `#initConf` 后：
 
 ```text
 app.ui-bindings.js
-  → initializeDemoMode('conference')
+  → initMode('conference')
     → new CRTC.WebSocketInterface(signalingUrl)
     → new CRTC.UA(configuration)
     → bindCommonUaEvents()
-    → ua.on('newRTCSession', handleConferenceNewRTCSession)
-    → updateAppModeUi()
+    → ua.on('newRTCSession', onConfSession)
+    → updateMode()
     → ua.start()
 ```
 
-模式选定后不能在当前页面切换；需要刷新页面。`updateAppModeUi()` 会展开会议面板、禁用点对点专属按钮，并调用 `updateConferenceUi()`。
+模式选定后不能在当前页面切换；需要刷新页面。`updateMode()` 会展开会议面板、禁用点对点专属按钮，并调用 `updateConfUi()`。
 
 ### 5.2 `newRTCSession` 准入逻辑
 
-所有呼入和呼出最终都进入 `handleConferenceNewRTCSession()`。检查顺序如下：
+所有呼入和呼出最终都进入 `onConfSession()`。检查顺序如下：
 
 1. 本地外呼如果没有 `conferencePendingOutgoing`，说明不是从会议“添加成员”入口发起，立即终止。
 2. 已有两个 leg 时，以 `486 Conference Full` 拒绝额外会话。
@@ -236,7 +239,7 @@ app.ui-bindings.js
 5. 第一通来电如果携带静默头，即“静默 B”，以 `486 Conference Host Not Ready` 拒绝。
 6. 第二路 C 到达时，如果 B 不存在或尚未 `confirmed`，同样以 486 拒绝。
 7. 合法会话创建 leg、绑定事件并刷新 UI。
-8. 普通来电等待用户点击“接听来电”；静默 C 通过零延时任务自动调用 `answerConferenceLeg()`。
+8. 普通来电等待用户点击“接听来电”；静默 C 通过零延时任务自动调用 `answerLeg()`。
 
 ```mermaid
 flowchart TD
@@ -248,10 +251,10 @@ flowchart TD
   O --> F{"容量/角色/主会话检查通过?"}
   A --> F
   F -->|"否"| R1["486 拒绝"]
-  F -->|"是"| C["createConferenceLeg"]
-  C --> E["setupConferenceSessionEvents"]
+  F -->|"是"| C["addLeg"]
+  C --> E["bindLegEvents"]
   E --> S{"静默 C?"}
-  S -->|"是"| AA["自动 answerConferenceLeg"]
+  S -->|"是"| AA["自动 answerLeg"]
   S -->|"否，呼入"| UI["显示来电与接听按钮"]
   S -->|"否，呼出"| W["等待信令事件"]
 ```
@@ -263,12 +266,12 @@ flowchart TD
 点击“添加成员”且当前没有 B 时：
 
 ```text
-#conferenceCallVideo.onclick
-  → getConferenceNextRole()                     // B
-  → callConferenceVideo({ role: 'B' })
+#confCall.onclick
+  → getNextRole()                     // B
+  → callConf({ role: 'B' })
     → 检查三方模式、注册状态、容量、号码
     → 设置 conferencePendingOutgoing
-    → buildConferenceCallOptions('B')
+    → buildCallOpts('B')
       → 使用页面选中的麦克风/摄像头约束
       → mediaEffectsComposer.enableInsertable = true
       → 配置 AiNS（如果页面启用）
@@ -285,19 +288,19 @@ flowchart TD
 C 的外呼比 B 多出“信令前准备媒体”阶段：
 
 ```text
-callConferenceVideo({ role: 'C' })
+callConf({ role: 'C' })
   → 要求 B 已 confirmed
   → 立即设置 pending，锁住重复点击
-  → prepareNormalCComposerOutput(B)
-    → ensureConferenceHostComposer(B)
-    → cloneConferenceFallbackLocalStream(B)
+  → prepCOutput(B)
+    → ensureMixer(B)
+    → cloneHost(B)
     → 把 B 远端流放入 composer slot 1
     → 取得稳定合成视频轨
     → 取得给 C 的音频 [0,1] = A+B
     → 取得给 B 的音频 [0,2] = A+C（C 尚未到达时等价于 A）
     → 用后者替换 B 的 audio sender
     → 返回 C 的 mediaStream 和降级信息
-  → buildConferenceCallOptions('C', output)
+  → buildCallOpts('C', output)
     → mediaStream = composer 视频 + A+B 音频
     → mediaConstraints = { audio: true, video: true }
   → ua.call(...)
@@ -307,7 +310,7 @@ callConferenceVideo({ role: 'C' })
 
 `mediaConstraints` 明确传 `{ audio: true, video: true }` 是为了让 SDK 保留自定义 `mediaStream` 中已有轨道，同时避免重复 `getUserMedia`。传 `false` 会移除轨道，省略又可能让约束处理收到 `undefined`。
 
-如果媒体准备或 `ua.call()` 失败，`rollbackNormalCComposerOutput()` 会移除 B source、恢复 B 原始 sender、释放音频子混音，并关闭克隆的降级流。
+如果媒体准备或 `ua.call()` 失败，`undoCOutput()` 会移除 B source、恢复 B 原始 sender、释放音频子混音，并关闭克隆的降级流。
 
 ```mermaid
 sequenceDiagram
@@ -321,7 +324,7 @@ sequenceDiagram
   participant CSession as A-C 会话
 
   User->>UI: 点击“添加成员”
-  UI->>Conf: callConferenceVideo({ role: 'C' })
+  UI->>Conf: callConf({ role: 'C' })
   Conf->>Conf: 检查 B 已 confirmed
   Conf->>Conf: 设置 pending<br/>锁住重复点击
   Conf->>BSession: getMediaEffectsComposer()
@@ -348,7 +351,7 @@ sequenceDiagram
 静默 C 必须在另一个 Base JS Demo 页面选择“点对点”模式，然后点击“静默呼叫 A”：
 
 ```text
-callConferenceAsSilentC()
+callSilentC()
   → mediaConstraints = { audio: false, video: false }
   → rtcOfferConstraints = { receiveAudio: true, receiveVideo: true }
   → X-Direction: recvonly
@@ -360,12 +363,12 @@ C 端会监听 PeerConnection 的 `track` 和会话 `confirmed`，在 A 的合�
 
 ## 7. 呼入与接听逻辑
 
-`answerConferenceLeg()` 只处理 `originator === 'remote'`、尚未确认且不在接听中的 leg。
+`answerLeg()` 只处理 `originator === 'remote'`、尚未确认且不在接听中的 leg。
 
 | 来电类型 | 接听媒体准备 | answer 方向 | composer |
 | --- | --- | --- | --- |
 | B | 页面选择的设备流 | `sendrecv` | B 会话独立创建，强制 insertable |
-| 普通 C | 先执行 `prepareNormalCComposerOutput(B)` | `sendrecv` | 不为 C 新建 composer，直接使用 B composer 输出流 |
+| 普通 C | 先执行 `prepCOutput(B)` | `sendrecv` | 不为 C 新建 composer，直接使用 B composer 输出流 |
 | 静默 C | 页面选择的 A 设备流 | `sendonly` | 在 A-C 会话上创建独立 composer |
 
 接听后会按 `ua.configuration.no_answer_timeout` 设置保护定时器，缺省回退为 60 秒。如果会话没有进入 `accepted`/`confirmed`，将以 480 终止，避免 INVITE 长时间挂起。
@@ -389,7 +392,7 @@ sequenceDiagram
 
   alt 普通 C
     Handler-->>User: 显示来电与“接听来电”
-    User->>Handler: answerConferenceLeg(C)
+    User->>Handler: answerLeg(C)
     Handler->>Host: 准备 A-B composer 输出
     Host-->>Handler: 合成流 + fallback
     Handler->>AC: answer(sendrecv, 合成流)
@@ -424,11 +427,11 @@ sequenceDiagram
 
 ### 8.2 合成触发和串行化
 
-远端轨到达、轨结束、会话确认等场景都会调用 `scheduleConferenceSync()`。它有三层保护：
+远端轨到达、轨结束、会话确认等场景都会调用 `queueMix()`。它有三层保护：
 
 1. `setTimeout(..., 0)` 把同一事件循环内的连续变化防抖成一次。
-2. `conferenceSyncQueue.then(syncConferenceComposer)` 保证 composer source 和 sender 修改串行执行。
-3. `getConferenceComposerSyncSignature()` 用两条会话 ID、C 类型以及四条远端轨的 `id/readyState` 构建签名，没有变化则跳过。
+2. `conferenceSyncQueue.then(syncMixer)` 保证 composer source 和 sender 修改串行执行。
+3. `getMixKey()` 用两条会话 ID、C 类型以及四条远端轨的 `id/readyState` 构建签名，没有变化则跳过。
 
 ```mermaid
 stateDiagram-v2
@@ -441,7 +444,7 @@ stateDiagram-v2
 
   [*] --> Idle
   Idle --> Debounce: confirmed / track / ended
-  Debounce --> Queue: scheduleConferenceSync
+  Debounce --> Queue: queueMix
   Queue --> Check: 前一轮同步完成
   Check --> Idle: B/C 未齐或签名未变化
   Check --> Apply: 需要同步
@@ -452,7 +455,7 @@ stateDiagram-v2
 
 ### 8.3 普通 C 同步
 
-`syncConferenceComposer()` 在 B、C 都 `confirmed` 后执行：
+`syncMixer()` 在 B、C 都 `confirmed` 后执行：
 
 1. 使用 B 会话 composer。
 2. 补齐 B/C 当前已有的远端轨。
@@ -475,7 +478,7 @@ stateDiagram-v2
 
 ### 8.5 composer 与页面媒体效果
 
-`getConferenceMediaEffectsComposer()` 优先返回当前会议 composer。`app-media-effects.js` 的媒体效果面板会先调用它，再回退到全局 `rtcSession.getMediaEffectsComposer()`。因此三方模式下镜像、水印、虚拟背景等操作会落到会议实际使用的 composer。
+`getConfMixer()` 优先返回当前会议 composer。`app-media-effects.js` 的媒体效果面板会先调用它，再回退到全局 `rtcSession.getMediaEffectsComposer()`。因此三方模式下镜像、水印、虚拟背景等操作会落到会议实际使用的 composer。
 
 需要注意：静默 C 场景的“当前会议 composer”会切换到 A-C 会话的独立 composer；普通三方则是 A-B 主 composer。
 
@@ -483,11 +486,11 @@ stateDiagram-v2
 
 ### 9.1 会话事件
 
-`setupConferenceSessionEvents()` 监听的主要事件如下：
+`bindLegEvents()` 监听的主要事件如下：
 
 | 事件 | 处理 |
 | --- | --- |
-| `sending`、`trying`、`progress`、`connecting` | 更新 `signalingStage` 和页面状态 |
+| `sending`、`trying`、`progress`、`connecting` | 更新 `stage` 和页面状态 |
 | `sdp` | 记录 SDP 阶段；若启用 `noremb`，删除 goog-remb 和 transport-cc 反馈行 |
 | `remoteSupportsVideo` | 提示远端支持视频 |
 | `accepted` | 清除接听中状态和接听超时 |
@@ -496,40 +499,40 @@ stateDiagram-v2
 | `hold`、`unhold`、`muted`、`unmuted` | 更新页面状态 |
 | `refer` | 三方期间拒绝远端 REFER |
 | 多个 PeerConnection/SDP 失败事件 | 记录失败阶段并提示媒体协商失败 |
-| `failed`、`ended` | 清除定时器并进入 `cleanupConferenceLeg()` |
+| `failed`、`ended` | 清除定时器并进入 `removeLeg()` |
 | `mediaEffectsIssue` | 呼入会话手工绑定公共媒体效果错误处理器 |
 | `stats:detailed-report` | 缓存和渲染当前选中会话统计 |
 
 ### 9.2 远端轨收集
 
-`attachConferenceTrackListener()` 每个 leg 只绑定一次 `RTCPeerConnection.track`：
+`bindTracks()` 每个 leg 只绑定一次 `RTCPeerConnection.track`：
 
-- 首条 live audio/video track 分别保存到 `remoteMainAudioTrack`、`remoteMainVideoTrack`。
-- 两者加入同一个 `remoteMainStream`，供 composer 作为一个 source 使用。
+- 首条 live audio/video track 分别保存到 `rAudio`、`rVideo`。
+- 两者加入同一个 `rStream`，供 composer 作为一个 source 使用。
 - 音频另建隐藏 `<audio autoplay>` 播放，视频交给页面预览函数。
 - 轨道 `ended` 时从 stream 移除、清空字段并重新调度合成。
 
-`hydrateConferenceRemoteMainStream()` 是补偿路径：它通过 `CRTC.Utils.getStreams(connection, 'remote')` 获取可能已经存在的远端轨，覆盖 early media 或 `track` 监听绑定稍晚的情况。
+`loadRemote()` 是补偿路径：它通过 `CRTC.Utils.getStreams(connection, 'remote')` 获取可能已经存在的远端轨，覆盖 early media 或 `track` 监听绑定稍晚的情况。
 
 ### 9.3 页面预览
 
-- `remoteVideo` 优先显示 B。
-- `#conferenceRemoteVideoC` 显示普通 C。
+- `remoteVid` 优先显示 B。
+- `#confVideoC` 显示普通 C。
 - B 没有视频时，普通 C 自动占用主区域。
 - 静默 C 本来不上传视频，因此不会保留空白的 C 预览区域。
-- `localVideo` 优先显示 B 会话 `getComposerInputStream()` 中 A 的原始视频，而不是合成输出；没有 composer 输入时才回退到本地 stream。
+- `localVid` 优先显示 B 会话 `getComposerInputStream()` 中 A 的原始视频，而不是合成输出；没有 composer 输入时才回退到本地 stream。
 
 ## 10. 选中成员、通话控制和统计
 
-三方模式下 `rtcSession` 不再表示“唯一会话”，而是被 `selectConferenceLeg()` 更新为当前选中的 B 或 C。`statsSession` 同步指向同一会话。
+三方模式下 `rtcSession` 不再表示“唯一会话”，而是被 `selectLeg()` 更新为当前选中的 B 或 C。`statsSession` 同步指向同一会话。
 
 动态成员列表中，每个 leg 有三个按钮：
 
 1. 成员按钮：选中该会话，并切换统计和通用控制目标。
-2. 屏幕按钮：切换 `screenTarget`。
+2. 共享目标按钮：切换 `shareTarget`；屏幕共享和共享白板复用同一组选中目标。
 3. 挂断按钮：只终止该成员。
 
-`bindConferenceSelectedSessionControls()` 将公共控制栏重绑定到当前成员，覆盖：
+`bindControls()` 将公共控制栏重绑定到当前成员，覆盖：
 
 - 挂断。
 - 麦克风/摄像头 mute、unmute。
@@ -548,23 +551,23 @@ stateDiagram-v2
 - 视频分辨率、FPS、编码/解码耗时和质量限制原因。
 - SDK `quality.issues` 的中文映射和严重级别。
 
-非当前选中 leg 的统计只缓存到 `latestStatsReport`，切换成员后立即渲染，不需要等待下一次统计事件。
+非当前选中 leg 的统计只缓存到 `stats`，切换成员后立即渲染，不需要等待下一次统计事件。
 
 ## 11. 定向屏幕共享
 
 ### 11.1 为什么不用 BFCP
 
-三方模式同时维护 A-B、A-C 两条独立 PeerConnection。每条会话都通过 `RTCSession.share()` 的 `auxiliary` 模式增加自己的第二条 video m-line，不需要 BFCP floor 控制，因此 `buildConferenceExtraFeatures()` 会从 `extraFeatures` 中移除 BFCP，避免同时启用两套共享机制。
+三方模式同时维护 A-B、A-C 两条独立 PeerConnection。每条会话都通过 `RTCSession.share()` 的 `auxiliary` 模式增加自己的第二条 video m-line，不需要 BFCP floor 控制，因此 `getConfFx()` 会从 `extraFeatures` 中移除 BFCP，避免同时启用两套共享机制。
 
 ### 11.2 发起流程
 
-用户先在成员列表选择一个或两个共享目标，再点击“开始共享”：
+用户先在成员列表选择一个或两个共享目标，再点击“开始共享屏幕”：
 
 ```text
-startConferenceScreenShare()
+shareConf()
   → getDisplayMedia(video: max 1920x1080 @ 15fps, audio: false)
   → contentHint = 'detail'
-  → 对每个 screenTarget 调用 session.share('screen', options)
+  → 对每个 shareTarget 调用 session.share('screen', options)
     → mode: 'auxiliary'
     → mediaStream: 同一个 screenStream
     → stopStreamOnUnShare: false
@@ -589,11 +592,11 @@ sequenceDiagram
   participant Session as RTCSession
   participant Remote as B/C 页面
 
-  User->>Conf: 选择目标并点击“开始共享”
+  User->>Conf: 选择目标并点击“开始共享屏幕”
   Conf->>Browser: getDisplayMedia()
   Browser-->>Conf: screenStream / screenTrack
 
-  loop 每个 screenTarget
+  loop 每个 shareTarget
     Conf->>Session: share(screen, auxiliary, screenStream)
     Note over Session: SDK 创建/复用 sender<br/>重协商并通知 MID
     Session-->>Conf: Promise resolve / reject
@@ -617,11 +620,11 @@ B/C 的 `RTCSession` 内部同时监听 INFO 和 PeerConnection `track`：
 4. MID 与轨匹配后触发 `remoteShared`。
 5. `screen-share/stop` 或轨 `ended` 时触发 `remoteUnShared`。
 
-[`app.js`](../demo/base-js/js/app.js) 只监听这两个 SDK 事件更新 `#remoteVideo2`，不再读取 MID 或直接监听共享 track。
+[`app.js`](../demo/base-js/js/app.js) 只监听这两个 SDK 事件更新 `#shareVid`，不再读取 MID 或直接监听共享 track。
 
 ### 11.4 停止流程
 
-`stopConferenceScreenShare()` 对所有 `screenActive` leg：
+`unshareConf()` 对所有 `sharingScreen` leg：
 
 1. 调用对应 `session.unShare()`，SDK 负责 INFO 和 sender 清理。
 2. 清空本地共享预览和弹窗。
@@ -629,16 +632,87 @@ B/C 的 `RTCSession` 内部同时监听 INFO 和 PeerConnection `track`：
 
 共享过程中不能改变目标；UI 会禁用成员的共享目标按钮。
 
+屏幕共享只能由发起方停止。接收端共享浮层右上角仅提供“最小化”，不会调用 `unShare()`；A 端可通过会议面板的“停止共享”按钮或浏览器原生停止共享入口结束屏幕辅流。
+
+### 11.5 屏幕标注
+
+本端和接收端都可以在共享浮层点击“开启标注”。标注层由 Konva 绘制在共享视频上方，画笔、箭头、矩形、椭圆和橡皮操作会保存为归一化矢量数据，因此不同分辨率的页面可以按各自画布尺寸还原；标注不会烧录进屏幕视频轨。
+
+每次完成绘制后，`app-annotation.js` 才通过 `session.sendInfo()` 发送一条 `shape:add`，不会在每次 `pointermove` 时发送信令。三方模式下，A 会把从一条会话收到的操作转发给另一条已确认会话。例如 B 的标注同步给 C 的路径是：
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant B as B 页面
+  participant AB as A-B RTCSession
+  participant A as A 页面（转发端）
+  participant AC as A-C RTCSession
+  participant C as C 页面
+
+  B->>AB: annotation / shape:add
+  AB->>A: newInfo
+  A->>A: 校验、去重并绘制
+  A->>AC: 转发相同 operationId
+  AC->>C: newInfo
+  C->>C: 去重并绘制
+```
+
+参与者颜色和身份规则如下：
+
+- `senderId` 默认取当前 UA 的 SIP 用户名，`senderLabel` 当前与其相同。
+- 页面按 `senderId` 稳定映射一个默认颜色，不同账号通常得到不同颜色；用户仍可在工具栏修改“我的颜色”。
+- 每个 shape 都带有 `authorId` 和 `authorLabel`，远端图例使用“颜色 + 参与者”标明是谁绘制。
+- 撤销从全部图形中查找当前账号最后绘制的一项，重做栈也只保存当前账号撤销的图形；其他参与者继续绘制不会清掉本地重做栈。
+- 清空发送 `author:clear`，只清除当前账号的图形；收到 `shape:remove` 时还会校验图形的 `authorId` 必须与操作 `senderId` 一致。
+- 每位参与者的图形使用独立 Konva 缓存组绘制，因此橡皮的 `destination-out` 只擦除同一参与者自己的图形。
+- 点击“关闭标注”时发送 `author:clear`，自动删除并同步清除当前账号自己的标注，不影响其他参与者已经绘制的内容。
+
+### 11.6 定向共享白板
+
+共享白板只在三方 A 端的会议面板发起，入口位于“开始共享屏幕”旁边。A 先用成员列表中的共享目标按钮选中 B、C 或其中一人，再点击“开始共享白板”。白板复用屏幕共享的目标选择，但不调用 `getDisplayMedia()`、`session.share()` 或 re-INVITE；它显示独立网格画布，并通过标注 INFO 协议同步矢量操作。
+
+白板开始后，`boardLegs` 保存本次选中的会话集合，目标按钮会被锁定。A 向目标发送 `board:open` 和当前 `snapshot`。如果 B、C 都被选中，B 的操作按以下路径到达 C：
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor User as A 端用户
+  participant A as A 页面（白板发起/转发端）
+  participant AB as A-B RTCSession
+  participant B as B 页面
+  participant AC as A-C RTCSession
+  participant C as C 页面
+
+  User->>A: 选中 B、C，点击“开始共享白板”
+  A->>AB: board:open + snapshot
+  AB->>B: 打开白板并恢复快照
+  A->>AC: board:open + snapshot
+  AC->>C: 打开白板并恢复快照
+
+  B->>AB: shape:add（senderId=B）
+  AB->>A: newInfo
+  A->>A: 校验目标成员、去重并绘制
+  A->>AC: 转发相同 operationId
+  AC->>C: newInfo
+  C->>C: 去重并绘制
+
+  User->>A: 点击“关闭白板”
+  A->>AB: board:close
+  A->>AC: board:close
+```
+
+如果 A 只选中 B，C 不会收到 `board:open`、快照或后续绘制。`boardUserId` 记录白板发起方，只有发起方显示“关闭白板”按钮并可以广播 `board:close`；B/C 只能最小化浮层，A 也会忽略非发起方伪造的关闭操作。
+
 ## 12. 挂断、清理与失败降级
 
 ### 12.1 单 leg 清理
 
-`cleanupConferenceLeg()` 只执行一次，主要步骤为：
+`removeLeg()` 只执行一次，主要步骤为：
 
 1. 标记 `ended`，清除接听定时器。
 2. 停止该 leg 的屏幕 sender。
 3. 移除隐藏的远端音频元素。
-4. 关闭该 leg 的 `fallbackLocalStream`。
+4. 关闭该 leg 的 `backupStream`。
 5. 从 `conferenceLegs` 删除。
 6. 按 B/C 类型决定剩余会话是否保留。
 7. 从 composer 移除 source，恢复 sender，释放子混音。
@@ -657,7 +731,7 @@ B/C 的 `RTCSession` 内部同时监听 INFO 和 PeerConnection `track`：
 
 ```mermaid
 flowchart TD
-  END["📞 failed / ended"] --> CLEAN["🛡️ cleanupConferenceLeg"]
+  END["📞 failed / ended"] --> CLEAN["🛡️ removeLeg"]
   CLEAN --> COMMON["停止共享 sender、音频元素和定时器<br/>从 conferenceLegs 删除"]
   COMMON --> ROLE{"结束的是谁?"}
 
@@ -685,11 +759,11 @@ flowchart TD
 
 普通 C 的 sender 使用 B 会话 composer 输出。B 会话结束时，其会话级 composer 会被 SDK 销毁，composer 输出轨也随之失效。创建 C 之前，代码会通过 `getComposerInputStream()` 取得 A 原始流并逐轨 `clone()`，保存到 C leg。
 
-B 结束后，`restoreConferenceLegOriginalMedia(C, endedBId)` 使用克隆轨替换 C sender，使 A-C 继续通话。不能直接复用 B composer 的输入轨，因为它的所有权和生命周期仍属于 B 会话。
+B 结束后，`restoreMedia(C, endedBId)` 使用克隆轨替换 C sender，使 A-C 继续通话。不能直接复用 B composer 的输入轨，因为它的所有权和生命周期仍属于 B 会话。
 
 ### 12.4 composer 同步失败
 
-任何 `syncConferenceComposer()` 异常都会被队列统一捕获：
+任何 `syncMixer()` 异常都会被队列统一捕获：
 
 - 从 composer 移除所有 leg source。
 - 清空同步签名。
@@ -710,7 +784,7 @@ B 结束后，`restoreConferenceLegOriginalMedia(C, endedBId)` 使用克隆轨�
 | A 接听普通 B/C | `X-Direction: sendrecv` |
 | A 接听静默 C | `X-Direction: sendonly` |
 
-`isConferenceHeaderEnabled()` 接受 `true`、`1`、`yes`，忽略大小写和分号后的参数。
+`hasConfHeader()` 接受 `true`、`1`、`yes`，忽略大小写和分号后的参数。
 
 ### 13.2 屏幕共享 INFO
 
@@ -726,6 +800,44 @@ B 结束后，`restoreConferenceLegOriginalMedia(C, endedBId)` 使用克隆轨�
 
 停止时 `action` 为 `stop`。接收端只依赖 `event`、`action`、`mid`。
 
+### 13.3 标注与白板 INFO
+
+标注和白板是 Demo 协议，不由 SDK 自动解释。`app-annotation.js` 在每条 `RTCSession` 上监听 `newInfo`，只处理内容类型 `application/vnd.crtc.annotation+json`。典型操作如下：
+
+```json
+{
+  "event": "annotation",
+  "version": 1,
+  "action": "shape:add",
+  "boardId": "whiteboard",
+  "operationId": "7302-1780000000000-12",
+  "senderId": "7302",
+  "senderLabel": "7302",
+  "sequence": 12,
+  "payload": {
+    "shape": {
+      "id": "shape-7302-1780000000000-11",
+      "type": "pen",
+      "authorId": "7302",
+      "authorLabel": "7302",
+      "color": "#2563eb",
+      "widthNorm": 0.006,
+      "points": [[0.2, 0.3], [0.4, 0.5]]
+    }
+  }
+}
+```
+
+| `action` | 含义 |
+| --- | --- |
+| `shape:add` / `shape:remove` | 添加发送方图形，或按 ID 删除发送方自己的图形 |
+| `author:clear` | 只清除 `senderId` 对应参与者的图形 |
+| `clear` | 旧版兼容操作；接收时同样只清除 `senderId` 对应参与者的图形 |
+| `snapshot` | 向新加入的目标同步屏幕标注和白板快照 |
+| `board:open` / `board:close` | 打开或关闭共享白板 |
+
+接收端会校验协议版本、`boardId`、action、操作 ID 和 shape 字段。单条消息上限为 64 KiB，每块画布最多保留 500 个图形，单条自由线最多 1200 个归一化点。A 转发时保留原 `operationId`，各端使用最近操作集合去重，避免三方转发形成重复绘制。
+
 ## 14. REFER 行为
 
 三方激活时不支持 REFER：
@@ -733,7 +845,7 @@ B 结束后，`restoreConferenceLegOriginalMedia(C, endedBId)` 使用克隆轨�
 - 本地 REFER 按钮被禁用。
 - 收到远端 `refer` 事件时调用 `data.reject()`。
 
-只有 `conferenceLegs.size === 1` 且该 leg 已确认时，`referConferenceTwoPartyCall()` 才允许执行：先 hold 当前会话，再调用 `session.refer()`；REFER 失败时恢复 unhold，成功接受后终止原会话。
+只有 `conferenceLegs.size === 1` 且该 leg 已确认时，`referSelected()` 才允许执行：先 hold 当前会话，再调用 `session.refer()`；REFER 失败时恢复 unhold，成功接受后终止原会话。
 
 “取消呼转”通过 `sendInfo('text/plain', JSON.stringify({ event: 'cancel' }))` 通知远端。
 
@@ -754,7 +866,7 @@ B 结束后，`restoreConferenceLegOriginalMedia(C, endedBId)` 使用克隆轨�
 | `sender.replaceTrack()` | 切换混音或 fallback 轨；共享 sender 由 SDK 管理 |
 | `session.share('screen', { mode: 'auxiliary' })` | 向一条会话发送独立屏幕辅流 |
 | `session.unShare()` | 停止该会话的共享，保留可复用 m-line |
-| `session.sendInfo()` | Demo 只用它发送取消呼转信息；共享 INFO 由 SDK 内部发送 |
+| `session.sendInfo()` | 发送取消呼转，以及 Demo 层的标注/白板操作；屏幕共享 INFO 仍由 SDK 内部发送 |
 | `session.mute/unmute/hold/unhold()` | 当前选中成员的通话控制 |
 | `session.sendDTMF()` | 发送 RFC2833 DTMF |
 | `navigator.mediaDevices.getDisplayMedia()` | 获取 A 的屏幕轨 |
@@ -763,15 +875,16 @@ B 结束后，`restoreConferenceLegOriginalMedia(C, endedBId)` 使用克隆轨�
 
 ## 16. UI 状态规则
 
-`updateConferenceUi()` 是会议面板的统一刷新入口：
+`updateConfUi()` 是会议面板的统一刷新入口：
 
 - 有待手工接听的普通来电时才显示“接听来电”。
 - pending 外呼存在或成员已满时隐藏“添加成员”。
 - 下一角色为 C 但 B 尚未确认时，禁用“添加成员”。
 - 没有任何成员时禁用“全部挂断”。
-- 至少选择一个已确认的共享目标后才能开始共享。
-- 共享启动中或已经共享时不能再次开始。
-- 共享活动期间显示“停止共享”，隐藏“开始共享”。
+- 至少选择一个已确认的共享目标后，才能开始共享屏幕或共享白板。
+- 屏幕共享启动中、已共享或白板已打开时，不能再次开始屏幕共享。
+- 屏幕共享活动期间显示“停止共享”，隐藏“开始共享屏幕”。
+- 白板打开后锁定共享目标；只有白板发起方显示“关闭白板”，接收端只能最小化。
 - 三方激活时禁用 REFER 和取消 REFER。
 
 `conferencePendingOutgoing` 会在 C 媒体准备开始前立即设置，因此用户快速双击“添加成员”不会创建两路相同 C 会话。
@@ -790,9 +903,12 @@ flowchart TB
   PENDING --> SESSION["newRTCSession 消费 pending"]
 
   SESSION --> TARGET{"已选共享目标且目标 confirmed?"}
-  TARGET -->|"是，未在共享"| START["启用开始共享"]
-  TARGET -->|"否"| NO_START["禁用开始共享"]
-  START --> ACTIVE["共享中：锁定目标并显示停止按钮"]
+  TARGET -->|"是"| TYPE{"选择共享类型"}
+  TARGET -->|"否"| NO_START["禁用两个开始按钮"]
+  TYPE --> SCREEN["开始共享屏幕"]
+  TYPE --> BOARD["开始共享白板"]
+  SCREEN --> ACTIVE["屏幕共享中：锁定目标并显示停止按钮"]
+  BOARD --> BOARD_ACTIVE["白板共享中：锁定目标且仅发起方可关闭"]
 ```
 
 ## 17. 设计限制与接入注意事项
@@ -806,9 +922,11 @@ flowchart TB
 7. **视频不排除自己。** 普通 B/C 都接收 A+B+C 合成视频；只有音频按接收方排除了自身。
 8. **屏幕共享依赖 SIP INFO + MID。** 远端必须实现对应 INFO 解析和第二视频轨渲染。
 9. **屏幕不含系统音频。** `getDisplayMedia` 明确使用 `audio: false`。
-10. **页面全局变量耦合较强。** 抽到业务项目时应明确传入依赖，但不应改变 SDK 的会话和媒体时序。
-11. **自动播放可能受浏览器策略限制。** 代码对 `play()` 失败静默处理，真实产品应提供明确的用户交互恢复入口。
-12. **浏览器兼容需实机验证。** 多 PeerConnection、同一屏幕轨发给多个 sender、动态 transceiver、re-INVITE 和 composer 都属于高风险 WebRTC 路径。
+10. **标注和白板依赖 Demo INFO 协议。** 它们是叠加在页面上的矢量数据，不会进入屏幕视频；第三方终端需要实现相同内容类型、消息校验和渲染逻辑。
+11. **三方白板依赖 A 转发。** B、C 之间没有直接会话，A 页面离线后无法继续同步；该实现也不提供服务端持久化、离线恢复或并发冲突合并。
+12. **页面全局变量耦合较强。** 抽到业务项目时应明确传入依赖，但不应改变 SDK 的会话和媒体时序。
+13. **自动播放可能受浏览器策略限制。** 代码对 `play()` 失败静默处理，真实产品应提供明确的用户交互恢复入口。
+14. **浏览器兼容需实机验证。** 多 PeerConnection、同一屏幕轨发给多个 sender、动态 transceiver、re-INVITE 和 composer 都属于高风险 WebRTC 路径。
 
 ## 18. 排查问题的推荐顺序
 
@@ -818,7 +936,7 @@ flowchart TB
 2. 确认 B leg 存在并已收到 `confirmed`。
 3. 检查是否已有 pending 外呼或两个 leg 已满。
 4. 查看 `[conference] ... stage=...` 日志，判断停在 INVITE、SDP、accepted 还是 confirmed。
-5. 普通 C 检查 `prepareNormalCComposerOutput()` 是否取得 composer 视频和两条音频子混音。
+5. 普通 C 检查 `prepCOutput()` 是否取得 composer 视频和两条音频子混音。
 6. 静默 C 检查 `X-Silent-Join: true` 是否到达 A；只发 recvonly SDP 不够。
 
 ### 18.2 B/C 没有声音
@@ -826,24 +944,32 @@ flowchart TB
 1. 检查 A、B、C 远端 audio track 是否为 `live`。
 2. 检查 composer slot：A=0、B=1、C=2。
 3. B 应使用 `[0,2]`，C 应使用 `[0,1]`。
-4. 检查 `originalAudioSender.track` 当前是否已经替换为预期子混音轨。
+4. 检查 `audioSender.track` 当前是否已经替换为预期子混音轨。
 5. 查看 `stats:detailed-report` 的 outbound/inbound 音频码率、丢包和抖动。
 6. 若出现“三方媒体合成失败，已保留原始通话”，说明代码已经进入降级路径，应继续检查 composer 异常。
 
 ### 18.3 屏幕共享不显示
 
-1. A 端确认目标 leg 已 `confirmed` 且 `screenTarget=true`。
+1. A 端确认目标 leg 已 `confirmed` 且 `shareTarget=true`。
 2. 检查 `session.share()` Promise 是否成功以及 SDK 日志中的重协商错误。
 3. 检查共享 video sender 是否存在 MID、轨道是否为 `live`。
 4. B/C 端检查是否触发 `remoteShared`，停止时是否触发 `remoteUnShared`。
-5. 检查 `#remoteVideo2` 是否绑定了 `sharedStream.videoStream`。
+5. 检查 `#shareVid` 是否绑定了 `sharedStream.videoStream`。
 
 ### 18.4 B 挂断后 C 也没有媒体
 
 1. 确认 C 是普通 C；静默 C 本来就会随 B 自动结束。
-2. 检查 C leg 是否保存了 `fallbackLocalStream`。
-3. 检查 `normalComposerHostId` 是否等于已结束 B 的 session ID。
-4. 检查 `restoreConferenceLegOriginalMedia()` 是否把 C sender 替换为 fallback 克隆轨。
+2. 检查 C leg 是否保存了 `backupStream`。
+3. 检查 `mixerHostId` 是否等于已结束 B 的 session ID。
+4. 检查 `restoreMedia()` 是否把 C sender 替换为 fallback 克隆轨。
+
+### 18.5 标注或白板不同步
+
+1. 确认 `app-annotation.js` 已在 `app-conference.js` 之后、`app.ui-bindings.js` 之前加载。
+2. 检查各条会话是否执行 `bindInk()`，并收到内容类型为 `application/vnd.crtc.annotation+json` 的 `newInfo`。
+3. 白板场景确认 A 发起前已选中目标，且目标会话存在于 `boardLegs`。
+4. B 能画但 C 看不到时，检查 A 是否收到 B 的 `operationId`，并通过 A-C 会话转发了同一操作 ID。
+5. 颜色或参与者名称不正确时，检查 UA SIP 用户名以及 shape 中的 `authorId`、`authorLabel`。
 
 ## 19. 现有测试覆盖
 
@@ -872,76 +998,81 @@ flowchart TB
 
 | 函数 | 作用 |
 | --- | --- |
-| `handleConferenceNewRTCSession` | 所有会议新会话的准入和分类入口 |
-| `resolveConferenceSessionOptions` | 将 pending 外呼或呼入请求解析成 leg 参数 |
-| `createConferenceLeg` | 创建并注册 B/C 状态对象 |
-| `setupConferenceSessionEvents` | 绑定 RTCSession 全生命周期事件 |
-| `callConferenceVideo` | A 添加普通 B/C |
-| `callConferenceAsSilentC` | 点对点页面作为静默 C 呼叫 A |
-| `answerConferenceLeg` | A 接听普通/静默 B/C |
+| `onConfSession` | 所有会议新会话的准入和分类入口 |
+| `getSessOpts` | 将 pending 外呼或呼入请求解析成 leg 参数 |
+| `addLeg` | 创建并注册 B/C 状态对象 |
+| `bindLegEvents` | 绑定 RTCSession 全生命周期事件 |
+| `callConf` | A 添加普通 B/C |
+| `callSilentC` | 点对点页面作为静默 C 呼叫 A |
+| `answerLeg` | A 接听普通/静默 B/C |
 
 ### 20.2 composer 与媒体
 
 | 函数 | 作用 |
 | --- | --- |
-| `buildConferenceComposerOptions` | 强制创建可动态插源的 composer |
-| `ensureConferenceHostComposer` | 确保 B 会话存在 composer |
-| `prepareNormalCComposerOutput` | 在 C 信令前生成稳定的 composer 输出 |
-| `rollbackNormalCComposerOutput` | C 创建失败时恢复 B |
-| `scheduleConferenceSync` | 防抖并串行调度合成 |
-| `syncConferenceComposer` | 普通/静默三方合成核心 |
-| `updateConferenceComposerSource` | 安全替换某 leg 的 composer source |
-| `rememberConferenceOriginalSenders` | 保存首次 sender/track 快照 |
-| `restoreConferenceLegOriginalMedia` | 恢复原始或 fallback 轨 |
-| `releaseConferenceComposerOutputs` | 释放子混音并清空 composer 缓存 |
+| `buildMixOpts` | 强制创建可动态插源的 composer |
+| `ensureMixer` | 确保 B 会话存在 composer |
+| `prepCOutput` | 在 C 信令前生成稳定的 composer 输出 |
+| `undoCOutput` | C 创建失败时恢复 B |
+| `queueMix` | 防抖并串行调度合成 |
+| `syncMixer` | 普通/静默三方合成核心 |
+| `setMixSource` | 安全替换某 leg 的 composer source |
+| `saveMedia` | 保存首次 sender/track 快照 |
+| `restoreMedia` | 恢复原始或 fallback 轨 |
+| `releaseMixer` | 释放子混音并清空 composer 缓存 |
 
 ### 20.3 远端轨、预览和统计
 
 | 函数 | 作用 |
 | --- | --- |
-| `attachConferenceTrackListener` | 监听并维护远端主轨 |
-| `hydrateConferenceRemoteMainStream` | 从 PeerConnection 补齐已有远端轨 |
-| `bindConferenceRemoteAudio` | 为每个 leg 创建隐藏音频播放器 |
-| `renderConferenceMainVideo` | B/C 远端画面布局 |
-| `renderConferenceLocalVideo` | A 原始输入预览 |
-| `selectConferenceLeg` | 切换当前会话和统计目标 |
-| `bindConferenceStatsEvents` | 消费 SDK 详细统计事件 |
-| `renderConferenceStatsReport` | 渲染连接、质量和媒体指标 |
+| `bindTracks` | 监听并维护远端主轨 |
+| `loadRemote` | 从 PeerConnection 补齐已有远端轨 |
+| `bindAudio` | 为每个 leg 创建隐藏音频播放器 |
+| `showMain` | B/C 远端画面布局 |
+| `showLocal` | A 原始输入预览 |
+| `selectLeg` | 切换当前会话和统计目标 |
+| `bindLegStats` | 消费 SDK 详细统计事件 |
+| `renderStats` | 渲染连接、质量和媒体指标 |
 
-### 20.4 屏幕、控制和清理
+### 20.4 屏幕、标注、白板、控制和清理
 
 | 函数 | 作用 |
 | --- | --- |
-| `startConferenceScreenShare` | 获取一次屏幕流，并对选中成员调用 SDK `share()` |
-| `getConferenceScreenTargetLegs` | 取得已确认且被选为共享目标的 leg |
-| `stopConferenceScreenShare` | 对活跃目标调用 SDK `unShare()` 并统一停止屏幕流 |
-| `cleanupConferenceLeg` | 单 leg 完整资源清理和降级 |
-| `terminateConferenceLeg` | 挂断指定成员 |
-| `terminateConference` | 挂断全部成员并取消 pending |
-| `bindConferenceSelectedSessionControls` | 让公共控制栏操作当前成员 |
-| `updateConferenceUi` | 统一刷新成员、接听、共享、REFER 等按钮 |
+| `shareConf` | 获取一次屏幕流，并对选中成员调用 SDK `share()` |
+| `getShareLegs` | 取得已确认且被选为共享目标的 leg |
+| `unshareConf` | 对活跃目标调用 SDK `unShare()` 并统一停止屏幕流 |
+| `bindInk` | 监听标注 INFO，并在三方 A 端转发操作 |
+| `openBoard` | 固定目标集合，广播打开操作和当前快照 |
+| `onInkInfo` | 校验、去重、应用并按需转发标注/白板操作 |
+| `sendSnapshot` | 向指定白板目标同步当前画布状态 |
+| `closeBoard` | 仅允许发起方广播关闭白板 |
+| `removeLeg` | 单 leg 完整资源清理和降级 |
+| `endLeg` | 挂断指定成员 |
+| `endConf` | 挂断全部成员并取消 pending |
+| `bindControls` | 让公共控制栏操作当前成员 |
+| `updateConfUi` | 统一刷新成员、接听、共享、REFER 等按钮 |
 
 ## 21. 最短阅读路线
 
 如果只想快速掌握主干，依次阅读以下函数即可：
 
 ```text
-initializeDemoMode（app.js）
-  → handleConferenceNewRTCSession
-  → createConferenceLeg
-  → setupConferenceSessionEvents
-  → callConferenceVideo / answerConferenceLeg
-  → prepareNormalCComposerOutput
-  → syncConferenceComposer
-  → cleanupConferenceLeg
-  → updateConferenceUi
+initMode（app.js）
+  → onConfSession
+  → addLeg
+  → bindLegEvents
+  → callConf / answerLeg
+  → prepCOutput
+  → syncMixer
+  → removeLeg
+  → updateConfUi
 ```
 
-掌握这条链后，再分别阅读 `callConferenceAsSilentC()` 和屏幕共享函数，即可覆盖该文件绝大多数功能。
+掌握这条链后，再分别阅读 `callSilentC()`、屏幕共享函数，以及 `app-annotation.js` 中的 `bindInk()`、`onInkInfo()` 和 `openBoard()`，即可覆盖会议、标注和白板的主干流程。
 
 ## 22. `app-conference.js` 完整方法调用图
 
-本节覆盖当前文件声明的全部 69 个函数。图中：
+本节先覆盖 `app-conference.js` 当前声明的全部 69 个函数，并补充它与 `app-annotation.js` 的跨文件调用关系。图中：
 
 - 实线箭头表示函数直接调用另一个函数。
 - 虚线箭头表示页面绑定、SDK 事件或异步回调触发。
@@ -954,32 +1085,34 @@ initializeDemoMode（app.js）
 
 ```mermaid
 flowchart TD
-  MODE["外部：initializeDemoMode('conference')"] -.->|"UA newRTCSession"| NEW["handleConferenceNewRTCSession()"]
+  MODE["外部：initMode('conference')"] -.->|"UA newRTCSession"| NEW["onConfSession()"]
 
-  ADD["外部：添加成员按钮"] --> NEXT["getConferenceNextRole()"]
-  NEXT --> CALL["callConferenceVideo()"]
+  ADD["外部：添加成员按钮"] --> NEXT["getNextRole()"]
+  NEXT --> CALL["callConf()"]
 
-  SILENT["外部：静默呼叫 A 按钮"] --> SCALL["callConferenceAsSilentC()"]
-  ANSWER["外部：接听来电按钮"] --> AP["answerPendingConferenceVideo()"]
-  AP --> ALEG["answerConferenceLeg()"]
-  HANGALL["外部：全部挂断按钮"] --> TERMALL["terminateConference()"]
+  SILENT["外部：静默呼叫 A 按钮"] --> SCALL["callSilentC()"]
+  ANSWER["外部：接听来电按钮"] --> AP["answerConf()"]
+  AP --> ALEG["answerLeg()"]
+  HANGALL["外部：全部挂断按钮"] --> TERMALL["endConf()"]
 
-  STARTUI["外部：开始共享按钮"] --> START["startConferenceScreenShare()"]
-  STOPUI["外部：停止共享按钮"] --> STOP["stopConferenceScreenShare()"]
+  STARTUI["外部：开始共享屏幕按钮"] --> START["shareConf()"]
+  STOPUI["外部：停止共享按钮"] --> STOP["unshareConf()"]
+  BOARDUI["外部：开始共享白板按钮"] --> OPENBOARD["openBoard()"]
+  OPENBOARD --> TARGETBOARD["getShareLegs()"]
 
-  EFFECTS["外部：媒体效果面板"] --> GETMEC["getConferenceMediaEffectsComposer()"]
-  GETMEC --> BYROLE["getConferenceLegByRole()"]
+  EFFECTS["外部：媒体效果面板"] --> GETMEC["getConfMixer()"]
+  GETMEC --> BYROLE["getLegByRole()"]
 
-  NEW --> LEG["createConferenceLeg()"]
-  NEW --> EVENTS["setupConferenceSessionEvents()"]
-  NEW --> UI["updateConferenceUi()"]
+  NEW --> LEG["addLeg()"]
+  NEW --> EVENTS["bindLegEvents()"]
+  NEW --> UI["updateConfUi()"]
   CALL -.->|"ua.call → newRTCSession"| NEW
   SCALL -.->|"远端 A 收到 newRTCSession"| NEW
   ALEG -.->|"session.answer 后触发 accepted / confirmed"| EVENTS
 
-  EVENTS --> SYNC["scheduleConferenceSync()"]
-  SYNC --> MIX["syncConferenceComposer()"]
-  EVENTS -.->|"failed / ended"| CLEAN["cleanupConferenceLeg()"]
+  EVENTS --> SYNC["queueMix()"]
+  SYNC --> MIX["syncMixer()"]
+  EVENTS -.->|"failed / ended"| CLEAN["removeLeg()"]
 ```
 
 ### 22.2 呼叫、来电分类与接听调用图
@@ -988,79 +1121,79 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  NEW["handleConferenceNewRTCSession()"] --> RESOLVE["resolveConferenceSessionOptions()"]
-  NEW --> BYROLE["getConferenceLegByRole()"]
-  NEW --> REQHEAD["getConferenceRequestHeader()"]
-  NEW --> REMOTE["getConferenceRemoteNumber()"]
-  NEW --> CREATE["createConferenceLeg()"]
-  NEW --> SETUP["setupConferenceSessionEvents()"]
-  NEW --> UI["updateConferenceUi()"]
-  NEW -.->|"静默 C 自动接听"| ANSWER["answerConferenceLeg()"]
+  NEW["onConfSession()"] --> RESOLVE["getSessOpts()"]
+  NEW --> BYROLE["getLegByRole()"]
+  NEW --> REQHEAD["getConfHeader()"]
+  NEW --> REMOTE["getRemoteNo()"]
+  NEW --> CREATE["addLeg()"]
+  NEW --> SETUP["bindLegEvents()"]
+  NEW --> UI["updateConfUi()"]
+  NEW -.->|"静默 C 自动接听"| ANSWER["answerLeg()"]
 
-  RESOLVE --> NEXT["getConferenceNextRole()"]
+  RESOLVE --> NEXT["getNextRole()"]
   RESOLVE --> REQHEAD
-  RESOLVE --> ENABLED["isConferenceHeaderEnabled()"]
+  RESOLVE --> ENABLED["hasConfHeader()"]
   RESOLVE --> REMOTE
   NEXT --> BYROLE
 
-  CALL["callConferenceVideo()"] --> NEXT
+  CALL["callConf()"] --> NEXT
   CALL --> BYROLE
   CALL --> UI
-  CALL --> PREPARE["prepareNormalCComposerOutput()"]
-  CALL --> BUILD_CALL["buildConferenceCallOptions()"]
-  CALL -.->|"准备或 ua.call 失败"| ROLLBACK["rollbackNormalCComposerOutput()"]
-  BUILD_CALL --> EXTRA["buildConferenceExtraFeatures()"]
-  BUILD_CALL -->|"B"| COMPOSER_OPT["buildConferenceComposerOptions()"]
+  CALL --> PREPARE["prepCOutput()"]
+  CALL --> BUILD_CALL["buildCallOpts()"]
+  CALL -.->|"准备或 ua.call 失败"| ROLLBACK["undoCOutput()"]
+  BUILD_CALL --> EXTRA["getConfFx()"]
+  BUILD_CALL -->|"B"| COMPOSER_OPT["buildMixOpts()"]
 
-  SILENT["callConferenceAsSilentC()"] --> EXTRA
+  SILENT["callSilentC()"] --> EXTRA
   SILENT -.->|"ua.call()"| NEW
 
-  PENDING["answerPendingConferenceVideo()"] --> ANSWER
-  ANSWER --> SELECTED["getConferenceSelectedLeg()"]
+  PENDING["answerConf()"] --> ANSWER
+  ANSWER --> SELECTED["getSelLeg()"]
   ANSWER --> BYROLE
   ANSWER --> PREPARE
-  ANSWER --> BUILD_ANSWER["buildConferenceAnswerOptions()"]
-  ANSWER --> CLEAR["clearConferenceAnswerTimer()"]
+  ANSWER --> BUILD_ANSWER["getAnswerOpts()"]
+  ANSWER --> CLEAR["clearAnswer()"]
   ANSWER -.->|"接听失败"| ROLLBACK
   BUILD_ANSWER --> EXTRA
   BUILD_ANSWER -->|"B 或静默 C"| COMPOSER_OPT
 
   PREPARE -.->|"内部异常"| ROLLBACK
-  ROLLBACK --> RESTORE_ONE["restoreConferenceLegOriginalMedia()"]
+  ROLLBACK --> RESTORE_ONE["restoreMedia()"]
 ```
 
 ### 22.3 RTCSession 事件、远端轨与预览调用图
 
-`setupConferenceSessionEvents()` 是事件分发中心；图中虚线边表示某个 SDK 事件触发对应处理路径。
+`bindLegEvents()` 是事件分发中心；图中虚线边表示某个 SDK 事件触发对应处理路径。
 
 ```mermaid
 flowchart TD
-  SETUP["setupConferenceSessionEvents()"] --> DISPLAY["getConferenceDisplayRole()"]
-  SETUP --> STATS["bindConferenceStatsEvents()"]
-  SETUP --> ATTACH["attachConferenceTrackListener()"]
+  SETUP["bindLegEvents()"] --> DISPLAY["leg.role"]
+  SETUP --> STATS["bindLegStats()"]
+  SETUP --> ATTACH["bindTracks()"]
 
-  SETUP -.->|"accepted"| CLEAR["clearConferenceAnswerTimer()"]
-  SETUP -.->|"confirmed"| HYDRATE["hydrateConferenceRemoteMainStream()"]
-  SETUP -.->|"confirmed"| REMEMBER["rememberConferenceOriginalSenders()"]
-  SETUP -.->|"confirmed"| LOCAL["renderConferenceLocalVideo()"]
-  SETUP -.->|"confirmed"| MAIN["renderConferenceMainVideo()"]
-  SETUP -.->|"confirmed"| UI["updateConferenceUi()"]
-  SETUP -.->|"confirmed"| SCHEDULE["scheduleConferenceSync()"]
+  SETUP -.->|"accepted"| CLEAR["clearAnswer()"]
+  SETUP -.->|"confirmed"| HYDRATE["loadRemote()"]
+  SETUP -.->|"confirmed"| REMEMBER["saveMedia()"]
+  SETUP -.->|"confirmed"| LOCAL["showLocal()"]
+  SETUP -.->|"confirmed"| MAIN["showMain()"]
+  SETUP -.->|"confirmed"| UI["updateConfUi()"]
+  SETUP -.->|"confirmed"| SCHEDULE["queueMix()"]
 
   SETUP -.->|"cameraChanged / localMediastreamUpdate"| LOCAL
   SETUP -.->|"failed / ended"| CLEAR
-  SETUP -.->|"failed / ended"| CLEAN["cleanupConferenceLeg()"]
+  SETUP -.->|"failed / ended"| CLEAN["removeLeg()"]
 
-  ATTACH -.->|"PeerConnection track"| AUDIO["bindConferenceRemoteAudio()"]
+  ATTACH -.->|"PeerConnection track"| AUDIO["bindAudio()"]
   ATTACH -.->|"video track"| MAIN
   ATTACH -.->|"audio/video track"| SCHEDULE
-  ATTACH --> ENDED["addConferenceTrackEndedListener()"]
+  ATTACH --> ENDED["onTrackEnd()"]
   ENDED -.->|"MediaStreamTrack ended"| SCHEDULE
   ENDED -.->|"video ended"| MAIN
 
   HYDRATE --> AUDIO
-  MAIN --> BYROLE["getConferenceLegByRole()"]
-  MAIN --> PREVIEW["bindConferencePreviewTrack()"]
+  MAIN --> BYROLE["getLegByRole()"]
+  MAIN --> PREVIEW["bindPreview()"]
   LOCAL --> BYROLE
 ```
 
@@ -1072,46 +1205,46 @@ flowchart TD
 flowchart TB
   subgraph LOOKUP_FLOW["composer 获取"]
     direction LR
-    GET["getConferenceMediaEffectsComposer()"] --> BYROLE_GET["getConferenceLegByRole()"]
+    GET["getConfMixer()"] --> BYROLE_GET["getLegByRole()"]
   end
 
   subgraph PREP_FLOW["普通 C 入会前准备"]
     direction LR
-    PREPARE["prepareNormalCComposerOutput()"] --> ENSURE["ensureConferenceHostComposer()"]
-    PREPARE --> CLONE_PREP["cloneConferenceFallbackLocalStream()"]
-    PREPARE --> HYDRATE_PREP["hydrateConferenceRemoteMainStream()"]
-    PREPARE --> SOURCE_PREP["updateConferenceComposerSource()"]
-    PREPARE --> REMEMBER["rememberConferenceOriginalSenders()"]
-    PREPARE --> OUTPUT["buildConferenceComposerOutputStream()"]
-    PREPARE -.->|"异常"| ROLLBACK["rollbackNormalCComposerOutput()"]
-    ENSURE --> OPT["buildConferenceComposerOptions()"]
-    ENSURE --> LOCAL_PREP["renderConferenceLocalVideo()"]
-    OPT -.->|"复用 buildCallComposerOptions"| EXTOPT["外部：页面媒体效果配置"]
-    ROLLBACK --> RESTORE_ONE_PREP["restoreConferenceLegOriginalMedia()"]
+    PREPARE["prepCOutput()"] --> ENSURE["ensureMixer()"]
+    PREPARE --> CLONE_PREP["cloneHost()"]
+    PREPARE --> HYDRATE_PREP["loadRemote()"]
+    PREPARE --> SOURCE_PREP["setMixSource()"]
+    PREPARE --> REMEMBER["saveMedia()"]
+    PREPARE --> OUTPUT["getMixStream()"]
+    PREPARE -.->|"异常"| ROLLBACK["undoCOutput()"]
+    ENSURE --> OPT["buildMixOpts()"]
+    ENSURE --> LOCAL_PREP["showLocal()"]
+    OPT -.->|"复用 getFxOpts"| EXTOPT["外部：页面媒体效果配置"]
+    ROLLBACK --> RESTORE_ONE_PREP["restoreMedia()"]
     SOURCE_PREP -.->|"SDK"| ADDREMOVE_PREP["外部：composer.addSource/removeSource"]
     OUTPUT -.->|"浏览器"| STREAM["外部：new MediaStream()"]
   end
 
   subgraph SYNC_FLOW["运行期同步与失败降级"]
     direction LR
-    SCHEDULE["scheduleConferenceSync()"] --> SYNC["syncConferenceComposer()"]
-    SCHEDULE -.->|"sync 异常"| RESTORE_ALL["restoreConferenceOriginalMedia()"]
-    SCHEDULE -.->|"sync 异常"| RELEASE["releaseConferenceComposerOutputs()"]
-    SCHEDULE -.->|"sync 异常"| MAIN_FAIL["renderConferenceMainVideo()"]
-    SYNC --> BYROLE_SYNC["getConferenceLegByRole()"]
-    SYNC --> HYDRATE_SYNC["hydrateConferenceRemoteMainStream()"]
-    SYNC --> SIGN["getConferenceComposerSyncSignature()"]
-    SYNC --> SOURCE_SYNC["updateConferenceComposerSource()"]
-    SYNC -.->|"composer 宿主切换"| CLONE_SYNC["cloneConferenceFallbackLocalStream()"]
-    SYNC --> LOCAL_SYNC["renderConferenceLocalVideo()"]
-    SYNC --> MAIN_SYNC["renderConferenceMainVideo()"]
-    SYNC --> UI["updateConferenceUi()"]
-    RESTORE_ALL --> RESTORE_ONE_SYNC["restoreConferenceLegOriginalMedia()"]
+    SCHEDULE["queueMix()"] --> SYNC["syncMixer()"]
+    SCHEDULE -.->|"sync 异常"| RESTORE_ALL["restoreAll()"]
+    SCHEDULE -.->|"sync 异常"| RELEASE["releaseMixer()"]
+    SCHEDULE -.->|"sync 异常"| MAIN_FAIL["showMain()"]
+    SYNC --> BYROLE_SYNC["getLegByRole()"]
+    SYNC --> HYDRATE_SYNC["loadRemote()"]
+    SYNC --> SIGN["getMixKey()"]
+    SYNC --> SOURCE_SYNC["setMixSource()"]
+    SYNC -.->|"composer 宿主切换"| CLONE_SYNC["cloneHost()"]
+    SYNC --> LOCAL_SYNC["showLocal()"]
+    SYNC --> MAIN_SYNC["showMain()"]
+    SYNC --> UI["updateConfUi()"]
+    RESTORE_ALL --> RESTORE_ONE_SYNC["restoreMedia()"]
     RELEASE -.->|"SDK"| SUBMIX["外部：releaseSubmixAudioStream()"]
     SOURCE_SYNC -.->|"SDK"| ADDREMOVE_SYNC["外部：composer.addSource/removeSource"]
-    MAIN_SYNC --> BYROLE_MAIN["getConferenceLegByRole()"]
-    MAIN_SYNC --> PREVIEW["bindConferencePreviewTrack()"]
-    LOCAL_SYNC --> BYROLE_LOCAL["getConferenceLegByRole()"]
+    MAIN_SYNC --> BYROLE_MAIN["getLegByRole()"]
+    MAIN_SYNC --> PREVIEW["bindPreview()"]
+    LOCAL_SYNC --> BYROLE_LOCAL["getLegByRole()"]
   end
 
   LOOKUP_FLOW ~~~ PREP_FLOW
@@ -1124,41 +1257,41 @@ flowchart TB
 
 ```mermaid
 flowchart TD
-  UI["updateConferenceUi()"] --> BYROLE["getConferenceLegByRole()"]
-  UI --> DISPLAY["getConferenceDisplayRole()"]
-  UI -.->|"成员按钮 onclick"| SELECT["selectConferenceLeg()"]
-  UI -.->|"成员按钮 onclick"| MAIN["renderConferenceMainVideo()"]
-  UI -.->|"单成员挂断 onclick"| TERM["terminateConferenceLeg()"]
-  UI --> NEXT["getConferenceNextRole()"]
-  UI --> TARGETS["getConferenceScreenTargetLegs()"]
-  UI --> BINDCTRL["bindConferenceSelectedSessionControls()"]
-  UI -.->|"单路 REFER 按钮绑定"| REFER["referConferenceTwoPartyCall()"]
-  UI -.->|"取消 REFER 按钮绑定"| CANCELREF["cancelConferenceTwoPartyRefer()"]
+  UI["updateConfUi()"] --> BYROLE["getLegByRole()"]
+  UI --> DISPLAY["leg.role"]
+  UI -.->|"成员按钮 onclick"| SELECT["selectLeg()"]
+  UI -.->|"成员按钮 onclick"| MAIN["showMain()"]
+  UI -.->|"单成员挂断 onclick"| TERM["endLeg()"]
+  UI --> NEXT["getNextRole()"]
+  UI --> TARGETS["getShareLegs()"]
+  UI --> BINDCTRL["bindControls()"]
+  UI -.->|"单路 REFER 按钮绑定"| REFER["referSelected()"]
+  UI -.->|"取消 REFER 按钮绑定"| CANCELREF["cancelRefer()"]
 
   NEXT --> BYROLE
-  SELECT --> PEERLABEL["renderConferenceStatsPeerLabels()"]
-  SELECT --> REPORT["renderConferenceStatsReport()"]
-  SELECT --> TEXT["setConferenceStatsText()"]
+  SELECT --> PEERLABEL["showLegStats()"]
+  SELECT --> REPORT["renderStats()"]
+  SELECT --> TEXT["setStats()"]
   PEERLABEL --> DISPLAY
   PEERLABEL --> TEXT
 
-  BINDSTATS["bindConferenceStatsEvents()"] -.->|"stats:detailed-report"| REPORT
+  BINDSTATS["bindLegStats()"] -.->|"stats:detailed-report"| REPORT
   BINDSTATS --> SELECT
-  REPORT --> CONNECTION["renderConferenceConnectionStats()"]
-  REPORT --> STREAMS["renderConferenceStatsStreams()"]
-  REPORT --> NUMBER["formatConferenceStatsNumber()"]
-  REPORT --> QUALITY["formatConferenceNetworkQuality()"]
+  REPORT --> CONNECTION["renderConn()"]
+  REPORT --> STREAMS["renderMedia()"]
+  REPORT --> NUMBER["fmtNum()"]
+  REPORT --> QUALITY["fmtQuality()"]
   REPORT --> TEXT
 
-  CONNECTION --> BITRATE["formatConferenceStatsBitrate()"]
-  CONNECTION --> ROW["appendConferenceStatsRow()"]
-  STREAMS --> NAME["getConferenceStatsStreamName()"]
+  CONNECTION --> BITRATE["fmtRate()"]
+  CONNECTION --> ROW["addStatsRow()"]
+  STREAMS --> NAME["renderMedia()"]
   STREAMS --> BITRATE
   STREAMS --> NUMBER
   STREAMS --> ROW
 
-  BINDCTRL -.->|"各公共按钮 onclick"| WITH["withConferenceSelectedSession()"]
-  WITH --> CURRENT["getConferenceSelectedLeg()"]
+  BINDCTRL -.->|"各公共按钮 onclick"| WITH["withLeg()"]
+  WITH --> CURRENT["getSelLeg()"]
   REFER --> CURRENT
   CANCELREF --> CURRENT
 ```
@@ -1171,11 +1304,11 @@ flowchart TD
 flowchart TB
   subgraph START_FLOW["1. 开始共享与目标筛选"]
     direction LR
-    START["startConferenceScreenShare()"] --> CONFIRMED_DIRECT["getConferenceConfirmedLegs()"]
-    START --> TARGETS["getConferenceScreenTargetLegs()"]
-    TARGETS --> CONFIRMED_TARGETS["getConferenceConfirmedLegs()"]
-    START --> UI_START["updateConferenceUi()"]
-    START -.->|"已有共享"| STOP_ENTRY["先调用 stopConferenceScreenShare()"]
+    START["shareConf()"] --> CONFIRMED_DIRECT["getLiveLegs()"]
+    START --> TARGETS["getShareLegs()"]
+    TARGETS --> CONFIRMED_TARGETS["getLiveLegs()"]
+    START --> UI_START["updateConfUi()"]
+    START -.->|"已有共享"| STOP_ENTRY["先调用 unshareConf()"]
     START --> GDM["外部：getDisplayMedia()"]
     START -.->|"每个目标"| SHARE_ENTRY["session.share(screen, auxiliary)"]
   end
@@ -1191,13 +1324,13 @@ flowchart TB
 
   subgraph STOP_FLOW["3. 停止共享与成员清理"]
     direction LR
-    CLEAN["cleanupConferenceLeg()"] -.->|"共享无活跃目标或最后成员结束"| STOP["stopConferenceScreenShare()"]
+    CLEAN["removeLeg()"] -.->|"共享无活跃目标或最后成员结束"| STOP["unshareConf()"]
     STOP --> UNSHARE["session.unShare()"]
-    STOP --> UI_STOP["updateConferenceUi()"]
+    STOP --> UI_STOP["updateConfUi()"]
     UNSHARE --> SDK_STOP["SDK 发送 stop INFO 并清空 sender"]
     STOP --> CLOSE_STREAM["统一 closeMediaStream()"]
-    UI_STOP --> TARGETS_STOP["getConferenceScreenTargetLegs()"]
-    TARGETS_STOP --> CONFIRMED_STOP["getConferenceConfirmedLegs()"]
+    UI_STOP --> TARGETS_STOP["getShareLegs()"]
+    TARGETS_STOP --> CONFIRMED_STOP["getLiveLegs()"]
   end
 
   START_FLOW ~~~ SHARE_FLOW
@@ -1210,43 +1343,85 @@ flowchart TB
 
 ```mermaid
 flowchart TD
-  TERMONE["terminateConferenceLeg()"] -.->|"session.terminate → ended"| CLEAN["cleanupConferenceLeg()"]
-  TERMALL["terminateConference()"] -.->|"每个 session.terminate → ended"| CLEAN
-  EVENTS["setupConferenceSessionEvents()"] -.->|"failed / ended"| CLEAN
+  TERMONE["endLeg()"] -.->|"session.terminate → ended"| CLEAN["removeLeg()"]
+  TERMALL["endConf()"] -.->|"每个 session.terminate → ended"| CLEAN
+  EVENTS["bindLegEvents()"] -.->|"failed / ended"| CLEAN
 
-  CLEAN --> BYROLE["getConferenceLegByRole()"]
-  CLEAN --> CLEAR["clearConferenceAnswerTimer()"]
-  CLEAN --> STOPSCREEN["stopConferenceScreenShare()"]
-  CLEAN --> RESTORE["restoreConferenceOriginalMedia()"]
-  CLEAN --> RELEASE["releaseConferenceComposerOutputs()"]
-  CLEAN --> CURRENT["getConferenceSelectedLeg()"]
-  CLEAN --> SELECT["selectConferenceLeg()"]
-  CLEAN --> TEXT["setConferenceStatsText()"]
-  CLEAN --> LOCAL["renderConferenceLocalVideo()"]
-  CLEAN --> MAIN["renderConferenceMainVideo()"]
-  CLEAN --> UI["updateConferenceUi()"]
+  CLEAN --> BYROLE["getLegByRole()"]
+  CLEAN --> CLEAR["clearAnswer()"]
+  CLEAN --> STOPSCREEN["unshareConf()"]
+  CLEAN --> RESTORE["restoreAll()"]
+  CLEAN --> RELEASE["releaseMixer()"]
+  CLEAN --> CURRENT["getSelLeg()"]
+  CLEAN --> SELECT["selectLeg()"]
+  CLEAN --> TEXT["setStats()"]
+  CLEAN --> LOCAL["showLocal()"]
+  CLEAN --> MAIN["showMain()"]
+  CLEAN --> UI["updateConfUi()"]
 
-  RESTORE --> RESTORE_ONE["restoreConferenceLegOriginalMedia()"]
+  RESTORE --> RESTORE_ONE["restoreMedia()"]
   LOCAL --> BYROLE
   MAIN --> BYROLE
-  MAIN --> PREVIEW["bindConferencePreviewTrack()"]
+  MAIN --> PREVIEW["bindPreview()"]
 
-  UI -.->|"只有一路 confirmed"| REFER["referConferenceTwoPartyCall()"]
-  UI -.->|"只有一路"| CANCEL["cancelConferenceTwoPartyRefer()"]
+  UI -.->|"只有一路 confirmed"| REFER["referSelected()"]
+  UI -.->|"只有一路"| CANCEL["cancelRefer()"]
   REFER --> CURRENT
   CANCEL --> CURRENT
   REFER -.->|"SDK"| SDKREF["外部：session.hold/refer/terminate"]
   CANCEL -.->|"SDK"| SDKINFO["外部：session.sendInfo(cancel)"]
 ```
 
-### 22.8 如何沿调用图定位问题
+### 22.8 标注与共享白板跨文件调用图
+
+屏幕标注和白板不修改 SDK 媒体链路。会议模块提供会话与目标集合，标注模块通过 `RTCSession.sendInfo()` 发送操作，并消费 `newInfo` 完成校验、绘制和三方转发。
+
+```mermaid
+flowchart TB
+  subgraph BIND_FLOW["1. 绑定每条会话"]
+    direction LR
+    NEW["onConfSession()"] --> BIND["bindInk(session)"]
+    BIND -.->|"RTCSession newInfo"| HANDLE["onInkInfo(session, data)"]
+    BIND -.->|"ended / failed"| REMOVE["从 boardLegs 删除会话"]
+  end
+
+  subgraph SCREEN_FLOW["2. 屏幕标注"]
+    direction LR
+    TOGGLE["toggleInk()"] --> DRAW["startDraw() / moveDraw() / endDraw()"]
+    DRAW --> APPLY_SCREEN["applyOp(shape:add)"]
+    APPLY_SCREEN --> SEND_SCREEN["sendOp()"]
+    SEND_SCREEN --> CONFIRMED["getLiveLegs()"]
+    TOGGLE -.->|"关闭标注"| CLEAR_OWN["clearMine() / author:clear"]
+    CLEAR_OWN --> SEND_SCREEN
+  end
+
+  subgraph BOARD_FLOW["3. 定向共享白板"]
+    direction LR
+    OPEN["openBoard(true)"] --> TARGETS["getShareLegs()"]
+    OPEN --> MEMBERS["保存 boardLegs"]
+    OPEN --> OPEN_OP["发送 board:open"]
+    OPEN --> SNAPSHOT["sendSnapshot()"]
+    HANDLE -.->|"A 收到 B/C 操作"| CHECK["校验目标成员与 operationId"]
+    CHECK --> FORWARD["排除来源会话后转发"]
+    CLOSE["closeBoard(true)"] --> OWNER{"当前账号是 owner?"}
+    OWNER -->|"是"| CLOSE_OP["发送 board:close"]
+    OWNER -->|"否"| REJECT["拒绝关闭"]
+  end
+
+  BIND_FLOW ~~~ SCREEN_FLOW
+  SCREEN_FLOW ~~~ BOARD_FLOW
+```
+
+### 22.9 如何沿调用图定位问题
 
 | 现象 | 先看哪张图 | 建议从哪个函数开始 |
 | --- | --- | --- |
-| 点击添加成员没有发起呼叫 | 22.1、22.2 | `callConferenceVideo()` |
-| 来电被错误分成 B/C 或静默状态 | 22.2 | `resolveConferenceSessionOptions()` |
-| confirmed 后没有远端画面 | 22.3 | `attachConferenceTrackListener()` |
-| 三方声音路由错误或合成失败 | 22.4 | `syncConferenceComposer()` |
-| 统计或控制操作了错误成员 | 22.5 | `selectConferenceLeg()` |
-| 屏幕共享没有第二路视频 | 22.6 | `startConferenceScreenShare()` 与 SDK `share()` 日志 |
-| 成员挂断后剩余会话没有恢复 | 22.7 | `cleanupConferenceLeg()` |
+| 点击添加成员没有发起呼叫 | 22.1、22.2 | `callConf()` |
+| 来电被错误分成 B/C 或静默状态 | 22.2 | `getSessOpts()` |
+| confirmed 后没有远端画面 | 22.3 | `bindTracks()` |
+| 三方声音路由错误或合成失败 | 22.4 | `syncMixer()` |
+| 统计或控制操作了错误成员 | 22.5 | `selectLeg()` |
+| 屏幕共享没有第二路视频 | 22.6 | `shareConf()` 与 SDK `share()` 日志 |
+| 标注没有显示参与者颜色 | 22.8 | `getInkColor()` 与 shape 的 author 字段 |
+| B 的白板操作无法到达 C | 22.8 | `onInkInfo()` 与 `boardLegs` |
+| 成员挂断后剩余会话没有恢复 | 22.7 | `removeLeg()` |

@@ -558,20 +558,20 @@ if (aiNS)
 Base JS Demo 在调用这些方法前先判断当前会话是否真的创建了 composer。以下是 [`app-media-effects.js`](../../demo/base-js/js/app-media-effects.js) 的运行时镜像更新节选：
 
 ```js
-const { sessionComposer } = getSessionComposerHandles();
+const fx = getFx();
 
-if (!sessionComposer)
+if (!fx)
 {
   setStatus('当前通话没有 MediaEffectsComposer，输出镜像将在下一次呼叫/接听时生效');
 
   return;
 }
 
-const outputMirror = document.getElementById('callMediaEffectsComposerOutputMirror').value === 'on';
+const outputMirror = document.getElementById('fxMirror').value === 'on';
 
-if (sessionComposer && typeof sessionComposer.setMirror === 'function')
+if (fx && typeof fx.setMirror === 'function')
 {
-  await sessionComposer.setMirror(outputMirror);
+  await fx.setMirror(outputMirror);
 }
 ```
 

@@ -109,22 +109,22 @@ composer && composer.clearSourceAiVirtualBackground(0);
 Base JS Demo 将“更新”和“清除”收敛到同一个通话中函数，这样页面下拉框切换到空值时不会遗留上一个背景：
 
 ```js
-const { sessionComposer } = getSessionComposerHandles();
+const fx = getFx();
 
-if (!sessionComposer)
+if (!fx)
 {
   return;
 }
 
-const aiVBOptions = buildCurrentAiVBOptions();
+const aiVBOptions = getVbOpts();
 
 if (!aiVBOptions)
 {
-  sessionComposer.clearSourceAiVirtualBackground(0);
+  fx.clearSourceAiVirtualBackground(0);
 }
 else
 {
-  sessionComposer.setSourceAiVirtualBackground(0, aiVBOptions);
+  fx.setSourceAiVirtualBackground(0, aiVBOptions);
 }
 ```
 
@@ -188,15 +188,15 @@ session.answer(options);
 Base JS Demo 在发起呼叫前从当前页面状态重新构造效果参数：
 
 ```js
-options.mediaEffectsComposer = buildCallComposerOptions();
-options.aiNoiseSuppression = buildCallAiNsOptions();
+options.mediaEffectsComposer = getFxOpts();
+options.aiNoiseSuppression = getNsOpts();
 
 remoteNo = number;
 
 const session = await ua.call(`${number}@${sipDomain}`, options);
 ```
 
-标准音频和视频接听也调用同样的 `buildCallComposerOptions()` 和 `buildCallAiNsOptions()`。这段代码取自 [`app.js`](../../demo/base-js/js/app.js)，可作为检查“呼出已升级、接听未升级”问题的对照点。
+标准音频和视频接听也调用同样的 `getFxOpts()` 和 `getNsOpts()`。这段代码取自 [`app.js`](../../demo/base-js/js/app.js)，可作为检查“呼出已升级、接听未升级”问题的对照点。
 
 当前会话需要动态更新时：
 

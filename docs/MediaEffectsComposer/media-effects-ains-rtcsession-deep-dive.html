@@ -1318,13 +1318,13 @@ this._sessionAiNSOptions = null;</pre>
           </tr>
         </thead>
         <tbody>
-          <tr><td data-label="函数"><code>buildCurrentAiVBOptions()</code></td><td data-label="大致位置">79+</td><td data-label="作用">把 UI 中的虚拟背景选项转成 source 0 的 AiVB 配置。</td></tr>
-          <tr><td data-label="函数"><code>buildCurrentTextWatermark()</code></td><td data-label="大致位置">175+</td><td data-label="作用">构建文字水印。</td></tr>
-          <tr><td data-label="函数"><code>buildCurrentImageWatermark()</code></td><td data-label="大致位置">221+</td><td data-label="作用">构建图片水印。</td></tr>
-          <tr><td data-label="函数"><code>buildCurrentWatermarks()</code></td><td data-label="大致位置">269+</td><td data-label="作用">把文字/图片水印合并成数组。</td></tr>
-          <tr><td data-label="函数"><code>buildCallComposerOptions()</code></td><td data-label="大致位置">314+</td><td data-label="作用">构建传给 <code>RTCSession.connect()/answer()</code> 的 <code>mediaEffectsComposer</code>。</td></tr>
+          <tr><td data-label="函数"><code>getVbOpts()</code></td><td data-label="大致位置">79+</td><td data-label="作用">把 UI 中的虚拟背景选项转成 source 0 的 AiVB 配置。</td></tr>
+          <tr><td data-label="函数"><code>getTextMark()</code></td><td data-label="大致位置">175+</td><td data-label="作用">构建文字水印。</td></tr>
+          <tr><td data-label="函数"><code>getImageMark()</code></td><td data-label="大致位置">221+</td><td data-label="作用">构建图片水印。</td></tr>
+          <tr><td data-label="函数"><code>getMarks()</code></td><td data-label="大致位置">269+</td><td data-label="作用">把文字/图片水印合并成数组。</td></tr>
+          <tr><td data-label="函数"><code>getFxOpts()</code></td><td data-label="大致位置">314+</td><td data-label="作用">构建传给 <code>RTCSession.connect()/answer()</code> 的 <code>mediaEffectsComposer</code>。</td></tr>
           <tr><td data-label="函数"><code>getCurrentSessionComposer()</code></td><td data-label="大致位置">403+</td><td data-label="作用">从当前 rtcSession 拿 composer 实例。</td></tr>
-          <tr><td data-label="函数"><code>applyWatermarksToSession()</code></td><td data-label="大致位置">528+</td><td data-label="作用">直接对当前通话里的 composer 实例打水印。</td></tr>
+          <tr><td data-label="函数"><code>setMarks()</code></td><td data-label="大致位置">528+</td><td data-label="作用">直接对当前通话里的 composer 实例打水印。</td></tr>
         </tbody>
       </table></div>
 
@@ -1394,8 +1394,8 @@ const mixed = await composer.getOutput({ type: 'mixed' });</pre>
       <h3>9.2 通过 RTCSession 使用</h3>
       <pre>session.connect(target, {
   mediaConstraints: { audio: true, video: true },
-  mediaEffectsComposer: buildCallComposerOptions(),
-  aiNoiseSuppression: buildCallAiNsOptions()
+  mediaEffectsComposer: getFxOpts(),
+  aiNoiseSuppression: getNsOpts()
 });</pre>
 
       <p>这时请牢记：</p>

@@ -1076,20 +1076,20 @@ if (aiNS)
 <h3 id="clearsourceaivirtualbackground-slot-void"><code>clearSourceAiVirtualBackground(slot): void</code><a class="heading-anchor" href="#clearsourceaivirtualbackground-slot-void" aria-label="链接到本节">#</a></h3>
 <p>清除对应输入源的虚拟背景。本地摄像头通常使用 <code>clearSourceAiVirtualBackground(0)</code>。</p>
 <p>Base JS Demo 在调用这些方法前先判断当前会话是否真的创建了 composer。以下是 <a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a> 的运行时镜像更新节选：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const { sessionComposer } = getSessionComposerHandles();
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const fx = getFx();
 
-if (!sessionComposer)
+if (!fx)
 {
   setStatus(&#39;当前通话没有 MediaEffectsComposer，输出镜像将在下一次呼叫/接听时生效&#39;);
 
   return;
 }
 
-const outputMirror = document.getElementById(&#39;callMediaEffectsComposerOutputMirror&#39;).value === &#39;on&#39;;
+const outputMirror = document.getElementById(&#39;fxMirror&#39;).value === &#39;on&#39;;
 
-if (sessionComposer &amp;&amp; typeof sessionComposer.setMirror === &#39;function&#39;)
+if (fx &amp;&amp; typeof fx.setMirror === &#39;function&#39;)
 {
-  await sessionComposer.setMirror(outputMirror);
+  await fx.setMirror(outputMirror);
 }
 </code></pre>
 </div><p>Getter 返回 <code>null</code> 不是异常；它通常表示本通呼叫/接听没有启用该能力。</p>

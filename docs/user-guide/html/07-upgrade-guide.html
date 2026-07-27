@@ -198,22 +198,22 @@ if (composer)
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">composer &amp;&amp; composer.clearSourceAiVirtualBackground(0);
 </code></pre>
 </div><p>Base JS Demo 将“更新”和“清除”收敛到同一个通话中函数，这样页面下拉框切换到空值时不会遗留上一个背景：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const { sessionComposer } = getSessionComposerHandles();
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const fx = getFx();
 
-if (!sessionComposer)
+if (!fx)
 {
   return;
 }
 
-const aiVBOptions = buildCurrentAiVBOptions();
+const aiVBOptions = getVbOpts();
 
 if (!aiVBOptions)
 {
-  sessionComposer.clearSourceAiVirtualBackground(0);
+  fx.clearSourceAiVirtualBackground(0);
 }
 else
 {
-  sessionComposer.setSourceAiVirtualBackground(0, aiVBOptions);
+  fx.setSourceAiVirtualBackground(0, aiVBOptions);
 }
 </code></pre>
 </div><p>代码节选自 <a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a>。升级时应同时替换开启、切换和清除三条路径，不能只改初始呼叫参数。</p>
@@ -321,14 +321,14 @@ const session = await ua.call(target, options);
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">session.answer(options);
 </code></pre>
 </div><p>Base JS Demo 在发起呼叫前从当前页面状态重新构造效果参数：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">options.mediaEffectsComposer = buildCallComposerOptions();
-options.aiNoiseSuppression = buildCallAiNsOptions();
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">options.mediaEffectsComposer = getFxOpts();
+options.aiNoiseSuppression = getNsOpts();
 
 remoteNo = number;
 
 const session = await ua.call(`${number}@${sipDomain}`, options);
 </code></pre>
-</div><p>标准音频和视频接听也调用同样的 <code>buildCallComposerOptions()</code> 和 <code>buildCallAiNsOptions()</code>。这段代码取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>，可作为检查“呼出已升级、接听未升级”问题的对照点。</p>
+</div><p>标准音频和视频接听也调用同样的 <code>getFxOpts()</code> 和 <code>getNsOpts()</code>。这段代码取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>，可作为检查“呼出已升级、接听未升级”问题的对照点。</p>
 <p>当前会话需要动态更新时：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const composer = session.getMediaEffectsComposer();
 

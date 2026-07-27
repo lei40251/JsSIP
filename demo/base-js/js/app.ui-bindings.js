@@ -7,75 +7,79 @@
 // =============================================================================
 
 // ---- 模式选择 ----
-// 用户点击"点对点"或"三方"按钮后，通过 initializeDemoMode 创建 UA 并启动。
+// 用户点击"点对点"或"三方"按钮后，通过 initMode 创建 UA 并启动。
 // 模式一旦选定不可切换（需刷新页面重新选择）。
 
-document.querySelector('#initializePointToPoint').onclick = function()
+document.querySelector('#initP2p').onclick = function()
 {
-  initializeDemoMode('point-to-point');
+  initMode('point-to-point');
 };
 
-document.querySelector('#initializeConference').onclick = function()
+document.querySelector('#initConf').onclick = function()
 {
-  initializeDemoMode('conference');
+  initMode('conference');
 };
+
+// 白板和屏幕标注按钮、Konva Stage 由独立模块初始化。屏幕共享开始后不会自动
+// 抢占鼠标，用户需在共享浮层中点击“开启标注”。
+initInk();
 
 // ---- 屏幕共享浮层控制 ----
 // 点对点与三方模式共用屏幕共享浮层，页面级按钮统一在此绑定。
-// 关闭按钮调用 minimizeScreenShareDialog（隐藏浮层，保留恢复按钮）。
+// 关闭按钮调用 minShareBox（隐藏浮层，保留恢复按钮）。
 // 恢复按钮读取 dialog.dataset.mode 恢复之前的状态。
 
-document.querySelector('#screenShareDialogClose').onclick = minimizeScreenShareDialog;
-document.querySelector('#screenShareDialogRestore').onclick = function()
+document.querySelector('#shareClose').onclick = minShareBox;
+document.querySelector('#shareRestore').onclick = function()
 {
-  const dialog = document.querySelector('#screenShareDialog');
+  const dialog = document.querySelector('#shareBox');
 
   if (dialog && dialog.dataset.mode)
   {
-    openScreenShareDialog(dialog.dataset.mode);
+    openShareBox(dialog.dataset.mode);
   }
 };
 
 // ---- 三方会议控制按钮 ----
 // 三方会议静态按钮只负责调用会议模块公开给 Demo 的操作函数。
-// 按钮的禁用/启用状态由 updateConferenceUi() 统一管理。
+// 按钮的禁用/启用状态由 updateConfUi() 统一管理。
 
 // "添加成员"：根据当前会议状态自动分配 B 或 C 角色
-document.querySelector('#conferenceCallVideo').onclick = function()
+document.querySelector('#confCall').onclick = function()
 {
-  const role = getConferenceNextRole();
+  const role = getNextRole();
 
-  callConferenceVideo({ role }).catch((error) => setStatus(`会议呼叫失败：${error.message || error}`));
+  callConf({ role }).catch((error) => setStatus(`会议呼叫失败：${error.message || error}`));
 };
 
 // "静默呼叫 A"：点对点模式下以静默 C 身份接入
-document.querySelector('#conferenceSilentJoin').onclick = function()
+document.querySelector('#confSilent').onclick = function()
 {
-  callConferenceAsSilentC().catch((error) => setStatus(`静默接入呼叫失败：${error.message || error}`));
+  callSilentC().catch((error) => setStatus(`静默接入呼叫失败：${error.message || error}`));
 };
 
 // "接听来电"：仅在有待接听的会议来电时可用
-document.querySelector('#conferenceAnswerVideo').onclick = answerPendingConferenceVideo;
-document.querySelector('#conferenceHangupAll').onclick = terminateConference;
+document.querySelector('#confAnswer').onclick = answerConf;
+document.querySelector('#confHangup').onclick = endConf;
 
-document.querySelector('#conferenceStartScreen').onclick = function()
+document.querySelector('#confShare').onclick = function()
 {
-  startConferenceScreenShare()
-    .then(updateConferenceUi)
+  shareConf()
+    .then(updateConfUi)
     .catch((error) => setStatus(`会议屏幕共享失败：${error.message || error}`));
 };
 
-document.querySelector('#conferenceStopScreen').onclick = function()
+document.querySelector('#confUnshare').onclick = function()
 {
-  stopConferenceScreenShare()
-    .then(updateConferenceUi)
+  unshareConf()
+    .then(updateConfUi)
     .catch((error) => setStatus(`停止会议屏幕共享失败：${error.message || error}`));
 };
 
-updateConferenceUi();
+updateConfUi();
 
 // 主动注册：初始化时会自动注册，该按钮用于主动注销后重新注册。
-document.querySelector('#registerUa').onclick = function()
+document.querySelector('#regUa').onclick = function()
 {
   if (!ua)
   {
@@ -98,13 +102,13 @@ document.querySelector('#registerUa').onclick = function()
   }
 
   setStatus('正在主动注册');
-  appRegistrationState = 'registering';
-  updateAppModeUi();
+  regState = 'registering';
+  updateMode();
   ua.register();
 };
 
 // 主动注销：注销 SIP 注册但保留 WSS 连接，可再次点击“主动注册”。
-document.querySelector('#unregisterUa').onclick = function()
+document.querySelector('#unregUa').onclick = function()
 {
   if (!ua)
   {
@@ -160,9 +164,9 @@ document.querySelector('#callVideo').onclick = function()
 };
 
 // B2B 纯视频呼叫（无音频）
-document.querySelector('#b2bCallVideoOnly').onclick = function()
+document.querySelector('#b2bVideo').onclick = function()
 {
-  request({
+  b2bReq({
     url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/getInCallIdStr',
     method : 'POST',
     secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
@@ -173,7 +177,7 @@ document.querySelector('#b2bCallVideoOnly').onclick = function()
     {
       console.warn('cid: ', callId);
 
-      return request({
+      return b2bReq({
         url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/status',
         method : 'POST',
         secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
@@ -194,9 +198,9 @@ document.querySelector('#b2bCallVideoOnly').onclick = function()
 };
 
 // B2B 纯视频单向呼叫（仅发送）
-document.querySelector('#b2bCallVideoSendonly').onclick = function()
+document.querySelector('#b2bVideoSend').onclick = function()
 {
-  request({
+  b2bReq({
     url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/getInCallIdStr',
     method : 'POST',
     secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
@@ -207,7 +211,7 @@ document.querySelector('#b2bCallVideoSendonly').onclick = function()
     {
       console.warn('cid: ', callId);
 
-      return request({
+      return b2bReq({
         url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/status',
         method : 'POST',
         secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
@@ -228,7 +232,7 @@ document.querySelector('#b2bCallVideoSendonly').onclick = function()
 };
 
 // 发起纯视频呼叫（无音频、双向）
-document.querySelector('#callVideoSendonly').onclick = function()
+document.querySelector('#callVideoSend').onclick = function()
 {
   videoOnly = true;
   call('onlyVideo');
@@ -243,7 +247,7 @@ document.addEventListener('visibilitychange', function()
   }
   else
   {
-    closeIncomingCallNotification();
+    closeNotice();
     console.warn('页面回到前台');
   }
 });
@@ -259,7 +263,7 @@ document.querySelector('#cameras').addEventListener('change', function()
 {
   const deviceId = this.options[this.selectedIndex].value;
 
-  selectCamera = deviceId;
+  cameraId = deviceId;
 
   // 会话内热切换
   if (rtcSession)
@@ -288,7 +292,7 @@ document.querySelector('#mics').addEventListener('change', function()
 {
   const deviceId = this.options[this.selectedIndex].value;
 
-  selectMic = deviceId;
+  micId = deviceId;
 
   // 会话内热切换
   if (rtcSession)
@@ -340,7 +344,7 @@ document.querySelector('#useupdate').onchange = function()
 navigator.mediaDevices.addEventListener('devicechange', () =>
 {
   // 当前不自动刷新设备列表，可按需开启
-  // updateDevices();
+  // loadDevices();
 });
 
 // 页面卸载时优雅退出：终止所有会话并注销 UA
@@ -357,18 +361,18 @@ window.onbeforeunload = function()
 // 虚拟背景下拉框变化时：
 // 1. 更新全局状态
 // 2. 同步到当前通话
-document.querySelector('#virtualBackground').addEventListener('change', function()
+document.querySelector('#vbMode').addEventListener('change', function()
 {
-  handleVirtualBackgroundChange(this).catch((error) =>
+  changeVb(this).catch((error) =>
   {
     console.warn('virtual background change error', error);
     setStatus(`虚拟背景切换失败：${error && error.message ? error.message : error}`);
   });
 });
 
-document.querySelector('#callMediaEffectsComposerOutputMirror').addEventListener('change', function()
+document.querySelector('#fxMirror').addEventListener('change', function()
 {
-  applyCurrentOutputMirrorToSession().catch((error) =>
+  setMirror().catch((error) =>
   {
     console.warn('output mirror change error', error);
     setStatus(`输出镜像切换失败：${error && error.message ? error.message : error}`);
@@ -378,7 +382,7 @@ document.querySelector('#callMediaEffectsComposerOutputMirror').addEventListener
 // AiNS 开关变化时：
 // 1. 更新当前模式
 // 2. 提示当前状态
-document.querySelector('#aiNoiseSuppression').addEventListener('change', function()
+document.querySelector('#nsMode').addEventListener('change', function()
 {
   // 保存当前下拉框值，供构建呼叫参数复用
   aiNsType = this.value;
@@ -386,7 +390,7 @@ document.querySelector('#aiNoiseSuppression').addEventListener('change', functio
   // 先提示当前模式
   if (aiNsType === 'AiNS')
   {
-    setStatus(`AI 降噪强度已设为 ${getCurrentAiNsLevel()}，将在下一次呼叫/接听时生效`);
+    setStatus(`AI 降噪强度已设为 ${getNsLevel()}，将在下一次呼叫/接听时生效`);
   }
   else
   {
@@ -397,10 +401,10 @@ document.querySelector('#aiNoiseSuppression').addEventListener('change', functio
 // AiNS 强度变化时：
 // 1. 先把输入值整理到 0-100
 // 2. 如果当前通话已经开了 AiNS，就直接动态生效
-document.querySelector('#aiNoiseReductionLevel').addEventListener('change', function()
+document.querySelector('#nsLevel').addEventListener('change', function()
 {
   // 先把输入整理成 SDK 期望的合法范围
-  const nextLevel = normalizeAiNsReductionLevel(this.value);
+  const nextLevel = normNsLevel(this.value);
 
   // 再把规范化后的值回写到输入框
   this.value = nextLevel;
@@ -409,7 +413,7 @@ document.querySelector('#aiNoiseReductionLevel').addEventListener('change', func
   if (aiNsType === 'AiNS')
   {
     // 已经在通话里并且拿到了 AiNS 实例，就直接热更新
-    if (applyAiNsLevelToCurrentCall(nextLevel))
+    if (setNsLevel(nextLevel))
     {
       setStatus(`AI 降噪强度已设为 ${nextLevel}，已应用到当前通话`);
     }
@@ -421,22 +425,22 @@ document.querySelector('#aiNoiseReductionLevel').addEventListener('change', func
   }
 });
 
-document.querySelector('#applyCurrentTextWatermark').onclick = async function()
+document.querySelector('#textMarkSet').onclick = async function()
 {
-  await applyCurrentTextWatermarkToSession();
+  await setTextMark();
 };
 
-document.querySelector('#clearCurrentTextWatermark').onclick = async function()
+document.querySelector('#textMarkClear').onclick = async function()
 {
-  await clearCurrentTextWatermarkFromSession();
+  await clearTextMark();
 };
 
-document.querySelector('#applyCurrentImageWatermark').onclick = async function()
+document.querySelector('#imgMarkSet').onclick = async function()
 {
-  await applyCurrentImageWatermarkToSession();
+  await setImageMark();
 };
 
-document.querySelector('#clearCurrentImageWatermark').onclick = async function()
+document.querySelector('#imgMarkClear').onclick = async function()
 {
-  await clearCurrentImageWatermarkFromSession();
+  await clearImgMark();
 };
