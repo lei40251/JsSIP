@@ -89,8 +89,8 @@
         const monitor = new CRTC.RTCStatsMonitor(localPc, {
           autoStart              : false,
           sampleIntervalMs       : 500,
-          legacyReportIntervalMs : 1000,
-          transitionGraceSamples : 0
+          reportIntervalMs : 1000,
+          transitionSamples : 0
         });
         const detailedReports = [];
         let legacyReport = null;
@@ -108,7 +108,7 @@
         }, 10000);
 
         const detailedEvent = detailedReports[detailedReports.length - 1];
-        const detailed = monitor.getLatestReport();
+        const detailed = monitor.getReport();
         const eventShape = Object.keys(detailedEvent).sort().join(',') === 'connection,inbound,outbound,quality';
         const consistent = legacyReport.RTT === detailed.quality.RTT &&
           networkReport.RTT === detailed.quality.RTT &&

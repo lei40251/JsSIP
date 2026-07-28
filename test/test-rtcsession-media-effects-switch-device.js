@@ -343,8 +343,8 @@ async function testSwitchDeviceAudioReusesSessionAiNoiseSuppressionEngine()
   };
   session._localMediaStream = new MockMediaStream([ oldAudioTrack ]);
   session._sessionAiNSOptions = {
-    enabled             : true,
-    noiseReductionLevel : 75
+    enabled : true,
+    level   : 75
   };
   session._sessionAiNSEngine = new MockAiNSEngine(session._sessionAiNSOptions);
   session._aiNSInputStream = new MockMediaStream([ oldInputAudioTrack ]);
@@ -396,7 +396,7 @@ async function testSwitchDeviceCameraAppliesSessionAiVirtualBackground()
     mediaEffectsComposer : {
       sources : [
         {
-          aiVirtualBackground : {
+          aiBackground : {
             enabled  : true,
             mode     : 'image',
             imageUrl : 'https://example.com/bg.png'
@@ -411,7 +411,7 @@ async function testSwitchDeviceCameraAppliesSessionAiVirtualBackground()
   await session.switchDevice('camera', 'user');
 
   assert.strictEqual(MockMixer.instances.length, 1);
-  assert.strictEqual(MockMixer.instances[0].options.sources[0].aiVirtualBackground.imageUrl, 'https://example.com/bg.png');
+  assert.strictEqual(MockMixer.instances[0].options.sources[0].aiBackground.imageUrl, 'https://example.com/bg.png');
   assert.strictEqual(sender.replaced, MockMixer.instances[0].outputTrack);
   assert.strictEqual(session._localMediaStream.getVideoTracks()[0], MockMixer.instances[0].outputTrack);
 }
@@ -452,7 +452,7 @@ async function testUpgradeToVideoAcceptsComposerSourceAiVBOptions()
     mediaEffectsComposer : {
       sources : [
         {
-          aiVirtualBackground : {
+          aiBackground : {
             enabled : true,
             mode    : 'color',
             color   : '#abcdef'
@@ -462,9 +462,9 @@ async function testUpgradeToVideoAcceptsComposerSourceAiVBOptions()
     }
   }, () => {});
 
-  assert.strictEqual(session._sessionMediaEffectsComposerOptions.sources[0].aiVirtualBackground.mode, 'color');
+  assert.strictEqual(session._sessionMediaEffectsComposerOptions.sources[0].aiBackground.mode, 'color');
   assert.strictEqual(MockMixer.instances.length, 1);
-  assert.strictEqual(MockMixer.instances[0].options.sources[0].aiVirtualBackground.color, '#abcdef');
+  assert.strictEqual(MockMixer.instances[0].options.sources[0].aiBackground.color, '#abcdef');
   assert.strictEqual(senderState.replaced, MockMixer.instances[0].outputTrack);
 }
 

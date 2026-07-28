@@ -33,9 +33,9 @@ async function testInitialSourcesArrayMapsSourceOptionsByIndex()
     renderMode : 'main-2d',
     sources    : [
       {
-        slot                : 0,
-        sourceMirror        : true,
-        aiVirtualBackground : {
+        slot         : 0,
+        sourceMirror : true,
+        aiBackground : {
           enabled    : true,
           mode       : 'blur',
           blurRadius : 7
@@ -53,11 +53,11 @@ async function testInitialSourcesArrayMapsSourceOptionsByIndex()
   assert.strictEqual(sources.length, 2);
   assert.strictEqual(sources[0].slot, 0);
   assert.strictEqual(sources[0].sourceMirror, true);
-  assert.strictEqual(sources[0].aiVirtualBackground.mode, 'blur');
-  assert.strictEqual(sources[0].aiVirtualBackground.blurRadius, 7);
+  assert.strictEqual(sources[0].aiBackground.mode, 'blur');
+  assert.strictEqual(sources[0].aiBackground.blurRadius, 7);
   assert.strictEqual(sources[1].slot, 1);
   assert.strictEqual(sources[1].sourceMirror, false);
-  assert.strictEqual(sources[1].aiVirtualBackground, null);
+  assert.strictEqual(sources[1].aiBackground, null);
 
   mixer.stop();
 }
@@ -542,24 +542,24 @@ this.__workerTest = {
   sandbox.__workerTest.setGl(new sandbox.OffscreenCanvas(320, 180).getContext('webgl2'));
   sandbox.__workerTest.overrideGetRenderableSurface(async function(item)
   {
-    return item.aiVirtualBackground ? composedSurface : item.frame;
+    return item.aiBackground ? composedSurface : item.frame;
   });
 
   await sandbox.__workerTest.renderWebGL2({
     backgroundColor : '#000',
     items           : [
       {
-        id                  : 'plain',
-        draw                : { x: 0, y: 0, width: 100, height: 100 },
-        mirrorX             : false,
-        aiVirtualBackground : null,
-        frame               : sourceFrame
+        id           : 'plain',
+        draw         : { x: 0, y: 0, width: 100, height: 100 },
+        mirrorX      : false,
+        aiBackground : null,
+        frame        : sourceFrame
       },
       {
-        id                  : 'aivb',
-        draw                : { x: 0, y: 0, width: 100, height: 100 },
-        mirrorX             : false,
-        aiVirtualBackground : {
+        id           : 'aivb',
+        draw         : { x: 0, y: 0, width: 100, height: 100 },
+        mirrorX      : false,
+        aiBackground : {
           enabled : true,
           mode    : 'color'
         },
@@ -769,9 +769,9 @@ async function testWorkerRendererPassesBitmapToInsertableFrameCallback()
 {
   resetMockState();
   const renderer = new WorkerRenderer({
-    backgroundColor  : '#000',
-    maxFrameQueue    : 1,
-    enableInsertable : true
+    backgroundColor : '#000',
+    maxFrameQueue   : 1,
+    insertable      : true
   }, {});
   const canvas = new MockCanvasElement();
   const received = [];
@@ -786,7 +786,7 @@ async function testWorkerRendererPassesBitmapToInsertableFrameCallback()
 
   renderer._canvas = canvas;
   renderer._outputContext = canvas.getContext('2d');
-  renderer.setFramePresentedCallback((frameCtx) => received.push(frameCtx));
+  renderer.setFrameCallback((frameCtx) => received.push(frameCtx));
 
   renderer._handleWorkerMessage({
     data : {
@@ -807,10 +807,10 @@ async function testWorkerWebGL2AiVBDisablesDirectInsertableBitmapPath()
 {
   resetMockState();
   const renderer = new WorkerRenderer({
-    backgroundColor              : '#000',
-    maxFrameQueue                : 1,
-    enableInsertable             : true,
-    hasSourceAiVirtualBackground : true
+    backgroundColor : '#000',
+    maxFrameQueue   : 1,
+    insertable      : true,
+    hasAiBackground : true
   }, {
     actualMode : 'worker-webgl2',
     isWorker   : true,
@@ -829,7 +829,7 @@ async function testWorkerWebGL2AiVBDisablesDirectInsertableBitmapPath()
 
   renderer._canvas = canvas;
   renderer._outputContext = canvas.getContext('2d');
-  renderer.setFramePresentedCallback((frameCtx) => received.push(frameCtx));
+  renderer.setFrameCallback((frameCtx) => received.push(frameCtx));
 
   renderer._handleWorkerMessage({
     data : {
@@ -895,11 +895,11 @@ async function testConsumedInsertableFrameSourceClosesOnSuccessAndCreationFailur
   enableInsertableMocks();
 
   const mixer = new MediaEffectsComposer([ createStream() ], {
-    width            : 320,
-    height           : 180,
-    fps              : 15,
-    renderMode       : 'main-2d',
-    enableInsertable : true
+    width      : 320,
+    height     : 180,
+    fps        : 15,
+    renderMode : 'main-2d',
+    insertable : true
   });
 
   mixer.getVideoStream();
@@ -952,11 +952,11 @@ async function testRepeatedInsertableWriteFailureSwitchesLiveOutputToCaptureStre
   enableInsertableMocks();
 
   const mixer = new MediaEffectsComposer([ createStream() ], {
-    width            : 320,
-    height           : 180,
-    fps              : 15,
-    renderMode       : 'main-2d',
-    enableInsertable : true
+    width      : 320,
+    height     : 180,
+    fps        : 15,
+    renderMode : 'main-2d',
+    insertable : true
   });
   const output = mixer.getVideoStream();
   const oldTrack = output.getVideoTracks()[0];
@@ -987,11 +987,11 @@ async function testRequestFrameFailureSwitchesLiveOutputToAutomaticCapture()
   MockCanvasElement.captureTrackHasRequestFrame = true;
 
   const mixer = new MediaEffectsComposer([ createStream() ], {
-    width                     : 320,
-    height                    : 180,
-    fps                       : 15,
-    renderMode                : 'main-2d',
-    manualCaptureFrameControl : true
+    width              : 320,
+    height             : 180,
+    fps                : 15,
+    renderMode         : 'main-2d',
+    manualFrameControl : true
   });
   const output = mixer.getVideoStream();
   const oldTrack = output.getVideoTracks()[0];
@@ -1007,7 +1007,7 @@ async function testRequestFrameFailureSwitchesLiveOutputToAutomaticCapture()
   assert.notStrictEqual(nextTrack, oldTrack);
   assert.strictEqual(oldTrack.readyState, 'ended');
   assert.strictEqual(nextTrack.readyState, 'live');
-  assert.strictEqual(mixer.getRenderInfo().captureFrameControlMode, 'auto-capture-fps');
+  assert.strictEqual(mixer.getRenderInfo().frameControlMode, 'auto-capture-fps');
   mixer.stop();
 }
 
@@ -1018,11 +1018,11 @@ async function testDefaultPrefersCaptureStreamEvenWhenInsertableSupported()
   enableInsertableMocks();
 
   const mixer = new MediaEffectsComposer([ createStream({ audio: true }) ], {
-    width                     : 320,
-    height                    : 180,
-    fps                       : 15,
-    renderMode                : 'main-2d',
-    manualCaptureFrameControl : false
+    width              : 320,
+    height             : 180,
+    fps                : 15,
+    renderMode         : 'main-2d',
+    manualFrameControl : false
   });
   const output = mixer.getVideoStream();
   const info = mixer.getRenderInfo();
@@ -1031,9 +1031,9 @@ async function testDefaultPrefersCaptureStreamEvenWhenInsertableSupported()
   assert.strictEqual(mixer._capturedStreams.length, 1);
   assert.strictEqual(info.outputMode, 'capture-stream');
   assert.strictEqual(info.insertableActive, false);
-  assert.strictEqual(info.insertableEnabledByConfig, false);
+  assert.strictEqual(info.insertableConfigured, false);
   assert.strictEqual(info.insertableSupported, true);
-  assert.strictEqual(info.activeCaptureSinkAttached, true);
+  assert.strictEqual(info.captureSinkActive, true);
   assert.ok(mixer._outMgr._captureSinkVideo);
   assert.strictEqual(mixer._outMgr._captureSinkVideo.srcObject, mixer._capturedStreams[0]);
 
@@ -1073,11 +1073,11 @@ async function testInsertableVideoStreamPreferredWhenSupported()
   enableInsertableMocks();
 
   const mixer = new MediaEffectsComposer([ createStream({ audio: true }) ], {
-    width            : 320,
-    height           : 180,
-    fps              : 15,
-    renderMode       : 'main-2d',
-    enableInsertable : true
+    width      : 320,
+    height     : 180,
+    fps        : 15,
+    renderMode : 'main-2d',
+    insertable : true
   });
   const output = mixer.getVideoStream();
   const generator = MockVideoTrackGenerator.instances[0];
@@ -1094,9 +1094,9 @@ async function testInsertableVideoStreamPreferredWhenSupported()
 
   assert.strictEqual(info.outputMode, 'insertable');
   assert.strictEqual(info.insertableActive, true);
-  assert.strictEqual(info.insertableEnabledByConfig, true);
+  assert.strictEqual(info.insertableConfigured, true);
   assert.strictEqual(info.insertableSupported, true);
-  assert.strictEqual(info.insertableGeneratorType, 'video-track-generator');
+  assert.strictEqual(info.generatorType, 'video-track-generator');
 
   mixer.stop();
 }
@@ -1119,11 +1119,11 @@ async function testInsertableFallbacksToCaptureStreamWhenGeneratorUnavailable()
   delete global.window.MediaStreamTrackGenerator;
 
   const mixer = new MediaEffectsComposer([ createStream({ audio: true }) ], {
-    width                     : 320,
-    height                    : 180,
-    fps                       : 15,
-    renderMode                : 'main-2d',
-    manualCaptureFrameControl : false
+    width              : 320,
+    height             : 180,
+    fps                : 15,
+    renderMode         : 'main-2d',
+    manualFrameControl : false
   });
   const output = mixer.getVideoStream();
   const info = mixer.getRenderInfo();
@@ -1133,7 +1133,7 @@ async function testInsertableFallbacksToCaptureStreamWhenGeneratorUnavailable()
   assert.strictEqual(info.outputMode, 'capture-stream');
   assert.strictEqual(info.insertableActive, false);
   assert.strictEqual(info.insertableSupported, false);
-  assert.strictEqual(info.captureFrameControlMode, 'auto-capture-fps');
+  assert.strictEqual(info.frameControlMode, 'auto-capture-fps');
 
   mixer.stop();
 }
@@ -1157,11 +1157,11 @@ async function testCaptureStreamUsesManualRequestFrameWhenSupported()
   delete global.window.MediaStreamTrackGenerator;
 
   const mixer = new MediaEffectsComposer([ createStream({ audio: true }) ], {
-    width                     : 320,
-    height                    : 180,
-    fps                       : 15,
-    renderMode                : 'main-2d',
-    manualCaptureFrameControl : true
+    width              : 320,
+    height             : 180,
+    fps                : 15,
+    renderMode         : 'main-2d',
+    manualFrameControl : true
   });
   const output = mixer.getVideoStream();
   const capturedTrack = output.getVideoTracks()[0];
@@ -1174,7 +1174,7 @@ async function testCaptureStreamUsesManualRequestFrameWhenSupported()
   const info = mixer.getRenderInfo();
 
   assert.strictEqual(info.outputMode, 'capture-stream');
-  assert.strictEqual(info.captureFrameControlMode, 'manual-request-frame');
+  assert.strictEqual(info.frameControlMode, 'manual-request-frame');
   assert.ok(after > before);
 
   mixer.stop();
@@ -1187,11 +1187,11 @@ async function testInsertableCanUseLegacyMediaStreamTrackGenerator()
   enableInsertableMocks({ useLegacyGenerator: true });
 
   const mixer = new MediaEffectsComposer([ createStream({ audio: true }) ], {
-    width            : 320,
-    height           : 180,
-    fps              : 15,
-    renderMode       : 'main-2d',
-    enableInsertable : true
+    width      : 320,
+    height     : 180,
+    fps        : 15,
+    renderMode : 'main-2d',
+    insertable : true
   });
   const output = mixer.getVideoStream();
 
@@ -1209,12 +1209,12 @@ async function testDisableInsertableForcesCaptureStreamEvenWhenSupported()
   enableInsertableMocks();
 
   const mixer = new MediaEffectsComposer([ createStream({ audio: true }) ], {
-    width                     : 320, 
-    height                    : 180,
-    fps                       : 15,
-    renderMode                : 'main-2d',
-    enableInsertable          : false,
-    manualCaptureFrameControl : false
+    width              : 320,
+    height             : 180,
+    fps                : 15,
+    renderMode         : 'main-2d',
+    insertable         : false,
+    manualFrameControl : false
   });
   const output = mixer.getVideoStream();
   const info = mixer.getRenderInfo();
@@ -1223,7 +1223,7 @@ async function testDisableInsertableForcesCaptureStreamEvenWhenSupported()
   assert.strictEqual(mixer._capturedStreams.length, 1);
   assert.strictEqual(info.outputMode, 'capture-stream');
   assert.strictEqual(info.insertableActive, false);
-  assert.strictEqual(info.insertableEnabledByConfig, false);
+  assert.strictEqual(info.insertableConfigured, false);
   assert.strictEqual(info.insertableSupported, true);
 
   mixer.stop();

@@ -283,7 +283,7 @@ function testCapabilityReportListsMissingRequirements()
   try
   {
     const Engine = loadEngine();
-    const report = Engine.getCapabilityReport();
+    const report = Engine.getCapabilities();
 
     assert.strictEqual(report.supported, false);
     assert.ok(report.missing.indexOf('audioContext') !== -1);
@@ -303,26 +303,26 @@ async function testProcessBuildsProcessedStreamAndPreservesVideoTrack()
   try
   {
     const Engine = loadEngine();
-    const engine = new Engine({ noiseReductionLevel: 92, sampleRate: 44100, outputGain: 1.2 });
+    const engine = new Engine({ level: 92, sampleRate: 44100, outputGain: 1.2 });
     const input = createInputStream();
     const output = await engine.process(input.stream);
 
     assert.strictEqual(output.getAudioTracks().length, 1);
     assert.strictEqual(output.getVideoTracks().length, 1);
     assert.strictEqual(output.getVideoTracks()[0], input.videoTrack);
-    assert.strictEqual(engine.getOutputStream(), output);
-    assert.strictEqual(engine.getCapabilityReport().supported, true);
-    assert.strictEqual(engine.getCapabilityReport().runtime.initialized, true);
-    assert.strictEqual(engine.getCapabilityReport().runtime.noiseReductionLevel, 92);
-    assert.strictEqual(engine.getCapabilityReport().runtime.outputGain, 1.2);
+    assert.strictEqual(engine.getOutput(), output);
+    assert.strictEqual(engine.getCapabilities().supported, true);
+    assert.strictEqual(engine.getCapabilities().runtime.initialized, true);
+    assert.strictEqual(engine.getCapabilities().runtime.level, 92);
+    assert.strictEqual(engine.getCapabilities().runtime.outputGain, 1.2);
     assert.strictEqual(MockAudioContext.instances[0].outputGainNode.gain.value, 1.2);
     assert.strictEqual(MockAudioContext.instances[0].lastSourceStream.getAudioTracks()[0], input.audioTrack);
-    assert.strictEqual(engine.getProcessor().workletNode.options.channelCount, 1);
-    assert.strictEqual(engine.getProcessor().workletNode.options.channelCountMode, 'explicit');
-    assert.deepStrictEqual(engine.getProcessor().workletNode.options.outputChannelCount, [ 1 ]);
+    assert.strictEqual(engine.getRuntime().workletNode.options.channelCount, 1);
+    assert.strictEqual(engine.getRuntime().workletNode.options.channelCountMode, 'explicit');
+    assert.deepStrictEqual(engine.getRuntime().workletNode.options.outputChannelCount, [ 1 ]);
 
     assert.strictEqual(engine.setOutputGain(1.5), 1.5);
-    assert.strictEqual(engine.getCapabilityReport().runtime.outputGain, 1.5);
+    assert.strictEqual(engine.getCapabilities().runtime.outputGain, 1.5);
     assert.strictEqual(MockAudioContext.instances[0].outputGainNode.gain.value, 1.5);
     assert.strictEqual(engine.setOutputGain(10), 4);
     assert.strictEqual(MockAudioContext.instances[0].outputGainNode.gain.value, 4);
@@ -349,7 +349,7 @@ async function testReplaceAudioTrackPreservesVideoTrack()
     await engine.process(input.stream);
 
     const replacementAudio = new MockMediaStreamTrack('audio');
-    const replaced = await engine.replaceAudioTrack(new MockMediaStream([ replacementAudio ]));
+    const replaced = await engine.replaceTrack(new MockMediaStream([ replacementAudio ]));
 
     assert.strictEqual(replaced.getVideoTracks()[0], input.videoTrack);
     assert.strictEqual(engine.inputStream.getAudioTracks()[0], replacementAudio);
@@ -401,7 +401,7 @@ async function testProcessFailsWhenAssetFetchFails()
     assert.strictEqual(issues[0].degraded, true);
     assert.strictEqual(engine.getIssues().length, 1);
     assert.strictEqual(engine.getLastIssue().stage, 'asset-fetch');
-    assert.strictEqual(engine.getCapabilityReport().runtime.issueCount, 1);
+    assert.strictEqual(engine.getCapabilities().runtime.issueCount, 1);
   }
   finally
   {
@@ -449,7 +449,7 @@ async function testWorkletPortWarningIsRecordedInEngineIssueHistory()
     });
 
     await engine.process(createInputStream().stream);
-    engine.getProcessor().workletNode.port.emitMessage({
+    engine.getRuntime().workletNode.port.emitMessage({
       type    : 'AINS_UNSUPPORTED_CHANNEL_LAYOUT',
       message : 'Bypassed AI noise suppression for unsupported multi-channel input',
       details : {
@@ -513,7 +513,7 @@ async function testProcessorErrorReconnectsRawAudioAndBoundsIssueHistory()
     const sourceNode = engine.sourceNode;
     const outputGainNode = engine.outputGainNode;
 
-    engine.getProcessor().workletNode.onprocessorerror({ message: 'processor crashed' });
+    engine.getRuntime().workletNode.onprocessorerror({ message: 'processor crashed' });
 
     assert.strictEqual(sourceNode.disconnected, true);
     assert.strictEqual(sourceNode.connectedTo, outputGainNode);
@@ -522,7 +522,7 @@ async function testProcessorErrorReconnectsRawAudioAndBoundsIssueHistory()
 
     for (let i = 0; i < 60; i++)
     {
-      engine.getProcessor().workletNode.port.emitMessage({
+      engine.getRuntime().workletNode.port.emitMessage({
         type    : 'AINS_UNSUPPORTED_CHANNEL_LAYOUT',
         message : `warning-${i}`
       });

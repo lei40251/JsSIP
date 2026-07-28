@@ -19,8 +19,8 @@ function testResolveMediaEffectsComposerOptionsUsesSourcesOnly()
       mirror  : true,
       sources : [
         {
-          sourceMirror        : true,
-          aiVirtualBackground : {
+          sourceMirror : true,
+          aiBackground : {
             enabled    : true,
             mode       : 'blur',
             blurRadius : 12
@@ -33,7 +33,7 @@ function testResolveMediaEffectsComposerOptionsUsesSourcesOnly()
   assert.strictEqual(resolved.mirror, true);
   assert.strictEqual(resolved.sources.length, 1);
   assert.strictEqual(resolved.sources[0].sourceMirror, true);
-  assert.strictEqual(resolved.sources[0].aiVirtualBackground.blurRadius, 12);
+  assert.strictEqual(resolved.sources[0].aiBackground.blurRadius, 12);
   assert.strictEqual(Object.prototype.hasOwnProperty.call(resolved, 'sourceOptions'), false);
 }
 
@@ -49,15 +49,15 @@ async function testUpdateMediaEffectsComposerUpdatesConfigPatch()
   });
 
   const state = await session.updateMediaEffectsComposer({
-    mirror                     : true,
-    mirrorWatermarksWithOutput : false,
-    watermarks                 : [
+    mirror           : true,
+    mirrorWatermarks : false,
+    watermarks       : [
       { id: 'wm1', target: 'output', type: 'text', text: 'live' }
     ]
   });
 
   assert.strictEqual(state.config.outputMirror, true);
-  assert.strictEqual(state.config.mirrorWatermarksWithOutput, false);
+  assert.strictEqual(state.config.mirrorWatermarks, false);
   assert.strictEqual(state.config.watermarks.length, 1);
   assert.strictEqual(state.config.watermarks[0].id, 'wm1');
 }
@@ -71,7 +71,7 @@ async function testUpdateMediaEffectsComposerUpdatesPrimarySourceEffects()
   await session._mediaPipeline.applyMediaEffectsComposerOnSdkGumStream(sourceStream, {
     sources : [
       {
-        aiVirtualBackground : {
+        aiBackground : {
           enabled    : true,
           mode       : 'blur',
           blurRadius : 6
@@ -83,8 +83,8 @@ async function testUpdateMediaEffectsComposerUpdatesPrimarySourceEffects()
   const state = await session.updateMediaEffectsComposer({
     sources : [
       {
-        sourceMirror        : true,
-        aiVirtualBackground : {
+        sourceMirror : true,
+        aiBackground : {
           enabled : true,
           mode    : 'color',
           color   : '#456789'
@@ -93,7 +93,7 @@ async function testUpdateMediaEffectsComposerUpdatesPrimarySourceEffects()
     ]
   });
 
-  assert.strictEqual(state.sources[0].aiVirtualBackground.color, '#456789');
+  assert.strictEqual(state.sources[0].aiBackground.color, '#456789');
   assert.strictEqual(state.sources[0].sourceMirror, true);
   assert.strictEqual(session.getAiVirtualBackground().color, '#456789');
 }
@@ -108,7 +108,7 @@ async function testUpdateMediaEffectsComposerClearsPrimarySourceAiVirtualBackgro
     mirror  : true,
     sources : [
       {
-        aiVirtualBackground : {
+        aiBackground : {
           enabled    : true,
           mode       : 'blur',
           blurRadius : 6
@@ -124,14 +124,14 @@ async function testUpdateMediaEffectsComposerClearsPrimarySourceAiVirtualBackgro
     ],
     sources : [
       {
-        aiVirtualBackground : null
+        aiBackground : null
       }
     ]
   });
 
   assert.strictEqual(state.config.outputMirror, false);
   assert.strictEqual(state.config.watermarks.length, 1);
-  assert.strictEqual(state.sources[0].aiVirtualBackground, null);
+  assert.strictEqual(state.sources[0].aiBackground, null);
   assert.strictEqual(session.getAiVirtualBackground(), null);
 }
 
@@ -148,7 +148,7 @@ async function testUpdateMediaEffectsComposerPreservesSessionCreateOptionsAcross
     mirror     : false,
     sources    : [
       {
-        aiVirtualBackground : {
+        aiBackground : {
           enabled    : true,
           mode       : 'blur',
           blurRadius : 6
@@ -162,15 +162,15 @@ async function testUpdateMediaEffectsComposerPreservesSessionCreateOptionsAcross
   });
 
   await session.updateMediaEffectsComposer({
-    mirror                     : true,
-    mirrorWatermarksWithOutput : false
+    mirror           : true,
+    mirrorWatermarks : false
   });
 
   assert.strictEqual(session._sessionMediaEffectsComposerOptions.width, 1280);
   assert.strictEqual(session._sessionMediaEffectsComposerOptions.height, 720);
   assert.strictEqual(session._sessionMediaEffectsComposerOptions.renderMode, 'worker-webgl2');
   assert.strictEqual(session._sessionMediaEffectsComposerOptions.mirror, true);
-  assert.strictEqual(session._sessionMediaEffectsComposerOptions.sources[0].aiVirtualBackground.blurRadius, 6);
+  assert.strictEqual(session._sessionMediaEffectsComposerOptions.sources[0].aiBackground.blurRadius, 6);
 }
 
 
@@ -236,7 +236,7 @@ async function testUpdateMediaEffectsComposerCreatesComposerForCurrentVideoTrack
     mirror  : true,
     sources : [
       {
-        aiVirtualBackground : {
+        aiBackground : {
           enabled    : true,
           mode       : 'blur',
           blurRadius : 8
@@ -247,14 +247,14 @@ async function testUpdateMediaEffectsComposerCreatesComposerForCurrentVideoTrack
 
   assert.strictEqual(MockMixer.instances.length, 1);
   assert.strictEqual(MockMixer.instances[0].options.mirror, true);
-  assert.strictEqual(MockMixer.instances[0].options.sources[0].aiVirtualBackground.blurRadius, 8);
+  assert.strictEqual(MockMixer.instances[0].options.sources[0].aiBackground.blurRadius, 8);
   assert.strictEqual(MockMixer.instances[0].streams[0].getAudioTracks()[0], localAudioTrack);
   assert.strictEqual(videoSender.replaced, MockMixer.instances[0].outputTrack);
   assert.strictEqual(audioSender.replaced, MockMixer.instances[0].outputAudioTrack);
   assert.strictEqual(session._localMediaStream.getVideoTracks()[0], MockMixer.instances[0].outputTrack);
   assert.strictEqual(session._localMediaStream.getAudioTracks()[0], MockMixer.instances[0].outputAudioTrack);
   assert.strictEqual(state.config.outputMirror, true);
-  assert.strictEqual(state.sources[0].aiVirtualBackground.blurRadius, 8);
+  assert.strictEqual(state.sources[0].aiBackground.blurRadius, 8);
 }
 
 
@@ -294,7 +294,7 @@ async function testUpdateMediaEffectsComposerKeepsComposerWhenMainWebGL2Supports
     mirror  : true,
     sources : [
       {
-        aiVirtualBackground : {
+        aiBackground : {
           enabled    : true,
           mode       : 'blur',
           blurRadius : 10
@@ -308,10 +308,10 @@ async function testUpdateMediaEffectsComposerKeepsComposerWhenMainWebGL2Supports
   assert.strictEqual(sourceVideoTrack.readyState, 'live');
   assert.strictEqual(sourceAudioTrack.readyState, 'live');
   assert.strictEqual(MockMixer.instances[0].streams[0], sourceStream);
-  assert.strictEqual(firstComposer.getSourceAiVirtualBackground(0).blurRadius, 10);
+  assert.strictEqual(firstComposer.getAiBackground(0).blurRadius, 10);
   assert.strictEqual(sender.replaced, undefined);
   assert.strictEqual(session._localMediaStream.getVideoTracks()[0], outputVideoTrack);
-  assert.strictEqual(state.sources[0].aiVirtualBackground.blurRadius, 10);
+  assert.strictEqual(state.sources[0].aiBackground.blurRadius, 10);
 }
 
 const TESTS = [

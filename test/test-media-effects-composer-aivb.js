@@ -25,8 +25,8 @@ async function testOutputMirrorKeepsWorkerRendererWithAiVirtualBackground()
   });
 
   mixer.appendStream(createStream(), {
-    slot                : 0,
-    aiVirtualBackground : {
+    slot         : 0,
+    aiBackground : {
       enabled  : true,
       mode     : 'image',
       imageUrl : 'background.png'
@@ -60,8 +60,8 @@ async function testSourceAiVBOptionsAppearInSourceSnapshot()
   });
 
   mixer.appendStream(createStream(), {
-    slot                : 0,
-    aiVirtualBackground : {
+    slot         : 0,
+    aiBackground : {
       enabled        : true,
       mode           : 'color',
       color          : '#123456',
@@ -76,11 +76,11 @@ async function testSourceAiVBOptionsAppearInSourceSnapshot()
   const source = mixer.getSources()[0];
 
   assert.ok(source);
-  assert.strictEqual(source.aiVirtualBackground.mode, 'color');
-  assert.strictEqual(source.aiVirtualBackground.backgroundColor, '#123456');
-  assert.strictEqual(source.aiVirtualBackground.postProcessing.foregroundBrightness, 1.2);
-  assert.strictEqual(source.aiVirtualBackground.foregroundFilter, undefined);
-  assert.strictEqual(mixer._config.hasSourceAiVirtualBackground, true);
+  assert.strictEqual(source.aiBackground.mode, 'color');
+  assert.strictEqual(source.aiBackground.backgroundColor, '#123456');
+  assert.strictEqual(source.aiBackground.postProcessing.foregroundBrightness, 1.2);
+  assert.strictEqual(source.aiBackground.foregroundFilter, undefined);
+  assert.strictEqual(mixer._config.hasAiBackground, true);
   assert.strictEqual(mixer._config.forceMainThreadRenderer, false);
   assert.strictEqual(mixer._config.forceMain2DRenderer, false);
 
@@ -106,7 +106,7 @@ async function testSetSourceAiVirtualBackgroundLifecycle()
 
   mixer.appendStream(createStream(), 0);
 
-  const config = mixer.setSourceAiVirtualBackground(0, {
+  const config = mixer.setAiBackground(0, {
     enabled    : true,
     mode       : 'blur',
     blurRadius : 9
@@ -114,11 +114,11 @@ async function testSetSourceAiVirtualBackgroundLifecycle()
 
   assert.strictEqual(config.mode, 'blur');
   assert.strictEqual(config.blurRadius, 9);
-  assert.strictEqual(mixer.getSourceAiVirtualBackground(0).mode, 'blur');
+  assert.strictEqual(mixer.getAiBackground(0).mode, 'blur');
 
-  mixer.clearSourceAiVirtualBackground(0);
+  mixer.clearAiBackground(0);
 
-  assert.strictEqual(mixer.getSourceAiVirtualBackground(0), null);
+  assert.strictEqual(mixer.getAiBackground(0), null);
 
   mixer.stop();
 }
@@ -141,7 +141,7 @@ async function testSetSourceAiVirtualBackgroundKeepsMainWebGL2Renderer()
 
   assert.strictEqual(mixer.getRenderInfo().actualMode, 'main-webgl2');
 
-  mixer.setSourceAiVirtualBackground(0, {
+  mixer.setAiBackground(0, {
     enabled    : true,
     mode       : 'blur',
     blurRadius : 8
@@ -172,7 +172,7 @@ async function testSetSourceAiVirtualBackgroundKeepsWorkerRenderer()
 
   assert.strictEqual(mixer.getRenderInfo().actualMode, 'worker-init');
 
-  mixer.setSourceAiVirtualBackground(0, {
+  mixer.setAiBackground(0, {
     enabled  : true,
     mode     : 'image',
     imageUrl : 'background.png'
@@ -231,7 +231,7 @@ async function testOutputMirrorDoesNotPreloadAiVBBackgroundImage()
     mixer.getVideoStream();
     mixer._drawVideosToCanvas(undefined, true);
 
-    mixer.setSourceAiVirtualBackground(0, {
+    mixer.setAiBackground(0, {
       enabled  : true,
       mode     : 'image',
       imageUrl : 'background.png'
@@ -281,7 +281,7 @@ async function testMainCanvas2DAiVirtualBackgroundUsesMaskFramePair()
   const mask = new MockCanvasElement();
   const state = {};
   const renderer = new MainCanvas2DRenderer({
-    aiVirtualBackgroundManager : {
+    aiVBManager : {
       getRenderableState()
       {
         return {
@@ -297,12 +297,12 @@ async function testMainCanvas2DAiVirtualBackgroundUsesMaskFramePair()
   });
 
   renderer.init(outputCanvas);
-  renderer._drawAiVirtualBackgroundItem({
-    source              : source,
-    video               : liveVideo,
-    draw                : { x: 0, y: 0, width: 320, height: 180 },
-    mirrorX             : false,
-    aiVirtualBackground : { enabled: true, mode: 'color' }
+  renderer._drawAiVBItem({
+    source       : source,
+    video        : liveVideo,
+    draw         : { x: 0, y: 0, width: 320, height: 180 },
+    mirrorX      : false,
+    aiBackground : { enabled: true, mode: 'color' }
   }, false, 320);
 
   const workDraws = state.workCanvas._context2d.operations.filter((operation) => operation.type === 'drawImage');
@@ -326,7 +326,7 @@ async function testMainWebGL2AiVirtualBackgroundComposesMaskAndSkipsFinalMirror(
   const state = {};
   const drawCalls = [];
   const renderer = new MainWebGL2Renderer({
-    aiVirtualBackgroundManager : {
+    aiVBManager : {
       getRenderableState()
       {
         return {
@@ -353,12 +353,12 @@ async function testMainWebGL2AiVirtualBackgroundComposesMaskAndSkipsFinalMirror(
     outputMirrorX   : true,
     backgroundColor : '#000000',
     items           : [ {
-      id                  : 'source-0',
-      source              : source,
-      video               : liveVideo,
-      draw                : { x: 20, y: 0, width: 100, height: 80 },
-      mirrorX             : false,
-      aiVirtualBackground : { enabled: true, mode: 'color' }
+      id           : 'source-0',
+      source       : source,
+      video        : liveVideo,
+      draw         : { x: 20, y: 0, width: 100, height: 80 },
+      mirrorX      : false,
+      aiBackground : { enabled: true, mode: 'color' }
     } ],
     sourceWatermarks : [],
     outputWatermarks : []
@@ -392,8 +392,8 @@ async function testMainWebGL2AiVirtualBackgroundUsesMainThreadManager()
     renderMode : 'main-webgl2',
     sources    : [
       {
-        slot                : 0,
-        aiVirtualBackground : {
+        slot         : 0,
+        aiBackground : {
           enabled  : true,
           mode     : 'image',
           imageUrl : 'background.png'

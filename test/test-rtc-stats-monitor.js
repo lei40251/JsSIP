@@ -157,7 +157,7 @@ function createDiagnosticStats(timestamp, badSample)
 
 async function testTimestampDeltaAndCompatibility()
 {
-  const monitor = new RTCStatsMonitor(createPc([ createStats(1000, 1), createStats(3000, 2) ]), { autoStart: false, transitionGraceSamples: 0 });
+  const monitor = new RTCStatsMonitor(createPc([ createStats(1000, 1), createStats(3000, 2) ]), { autoStart: false, transitionSamples: 0 });
   const first = await monitor._collect();
   const second = await monitor._collect();
 
@@ -173,11 +173,11 @@ async function testTimestampDeltaAndCompatibility()
 
 async function testDetailedLogUsesCompactSummary()
 {
-  const monitor = new RTCStatsMonitor(createPc([ createStats(1000, 1), createStats(3000, 2) ]), { autoStart: false, transitionGraceSamples: 0 });
+  const monitor = new RTCStatsMonitor(createPc([ createStats(1000, 1), createStats(3000, 2) ]), { autoStart: false, transitionSamples: 0 });
 
   await monitor._collect();
   const detailed = await monitor._collect();
-  const summary = monitor._createDetailedLogReport(detailed);
+  const summary = monitor._createLogReport(detailed);
 
   assert.deepStrictEqual(Object.keys(summary), [
     'compatibility',
@@ -209,12 +209,12 @@ async function testDetailedLogUsesCompactSummary()
 
 async function testLegacyEventShape()
 {
-  const monitor = new RTCStatsMonitor(createPc([ createStats(1000, 1), createStats(3000, 2) ]), { autoStart: false, transitionGraceSamples: 0 });
+  const monitor = new RTCStatsMonitor(createPc([ createStats(1000, 1), createStats(3000, 2) ]), { autoStart: false, transitionSamples: 0 });
 
   await monitor._collect();
   const detailed = await monitor._collect();
   const report = monitor._createLegacyReport(detailed);
-  const network = monitor._createNetworkQuality(detailed);
+  const network = monitor._createQualityReport(detailed);
   const audioUp = report.upStreams.find((stream) => stream.type === 'audio');
   const videoUp = report.upStreams.find((stream) => stream.type === 'video');
   const audioDown = report.downStreams.find((stream) => stream.type === 'audio');
@@ -263,7 +263,7 @@ async function testUsesCurrentMediaRttAndWorstLoss()
   third.get('in-a').packetsLost = 10;
   third.get('in-v').packetsLost = 20;
 
-  const monitor = new RTCStatsMonitor(createPc([ first, second, third ]), { autoStart: false, transitionGraceSamples: 0 });
+  const monitor = new RTCStatsMonitor(createPc([ first, second, third ]), { autoStart: false, transitionSamples: 0 });
 
   await monitor._collect();
   const degraded = await monitor._collect();
@@ -280,7 +280,7 @@ async function testUsesCurrentMediaRttAndWorstLoss()
   delete third.get('remote-in-v').roundTripTime;
   third.get('pair').currentRoundTripTime = 0.123;
 
-  const fallback = new RTCStatsMonitor(createPc([ third ]), { autoStart: false, transitionGraceSamples: 0 });
+  const fallback = new RTCStatsMonitor(createPc([ third ]), { autoStart: false, transitionSamples: 0 });
   const fallbackReport = await fallback._collect();
 
   assert.strictEqual(fallbackReport.quality.RTT, 123);
@@ -317,7 +317,7 @@ async function testKeepsEachRtpStreamAndFallsBackToTrackSettings()
     }
   } ];
 
-  const monitor = new RTCStatsMonitor(pc, { autoStart: false, transitionGraceSamples: 0 });
+  const monitor = new RTCStatsMonitor(pc, { autoStart: false, transitionSamples: 0 });
 
   await monitor._collect();
   const detailed = await monitor._collect();
@@ -339,20 +339,20 @@ async function testDefaultCadenceIsTwoSeconds()
   const monitor = new RTCStatsMonitor(createPc([ createStats(1000, 1) ]), { autoStart: false });
 
   assert.strictEqual(monitor._options.sampleIntervalMs, 2000);
-  assert.strictEqual(monitor._options.legacyReportIntervalMs, 2000);
-  assert.strictEqual(monitor._options.backgroundSampleIntervalMs, 2000);
-  assert.strictEqual(monitor._options.getStatsTimeoutMs, 5000);
-  assert.strictEqual(monitor._options.enableRawStatsLog, true);
-  assert.strictEqual(monitor._options.rawStatsLogIntervalMs, 10000);
+  assert.strictEqual(monitor._options.reportIntervalMs, 2000);
+  assert.strictEqual(monitor._options.bgIntervalMs, 2000);
+  assert.strictEqual(monitor._options.timeoutMs, 5000);
+  assert.strictEqual(monitor._options.rawStatsLog, true);
+  assert.strictEqual(monitor._options.rawLogIntervalMs, 10000);
 }
 
 async function testEventsAndSamplingCadence()
 {
   const monitor = new RTCStatsMonitor(createPc([ createStats(1000, 1), createStats(1500, 2), createStats(2000, 3) ]), {
-    autoStart              : false,
-    sampleIntervalMs       : 500,
-    legacyReportIntervalMs : 1000,
-    transitionGraceSamples : 0
+    autoStart         : false,
+    sampleIntervalMs  : 500,
+    reportIntervalMs  : 1000,
+    transitionSamples : 0
   });
   const detailedReports = [];
   const legacyReports = [];
@@ -398,13 +398,13 @@ async function testEventsAndSamplingCadence()
   ]);
   assert.ok(!Object.prototype.hasOwnProperty.call(detailedReports[2].outbound[0], 'bytesSent'));
   assert.ok(!Object.prototype.hasOwnProperty.call(detailedReports[2].inbound[0], 'bytesReceived'));
-  assert.ok(monitor.getLatestReport().performance);
-  assert.ok(monitor.getLatestReport().compatibility);
+  assert.ok(monitor.getReport().performance);
+  assert.ok(monitor.getReport().compatibility);
   assert.deepStrictEqual(eventOrder.slice(-3), [ 'detailed-report', 'report', 'network-quality' ]);
   assert.strictEqual(legacyReports[0].RTT, detailedReports[2].quality.RTT);
   assert.strictEqual(networkReports[0].RTT, detailedReports[2].quality.RTT);
-  assert.strictEqual(networkReports[0].uplinkLoss, monitor.getLatestReport().quality.uplinkLoss);
-  assert.strictEqual(networkReports[0].downlinkLoss, monitor.getLatestReport().quality.downlinkLoss);
+  assert.strictEqual(networkReports[0].uplinkLoss, monitor.getReport().quality.uplinkLoss);
+  assert.strictEqual(networkReports[0].downlinkLoss, monitor.getReport().quality.downlinkLoss);
   assert.strictEqual(networkReports[0].uplinkNetworkQuality, detailedReports[2].quality.uplinkNetworkQuality);
   assert.strictEqual(networkReports[0].downlinkNetworkQuality, detailedReports[2].quality.downlinkNetworkQuality);
   monitor.stop();
@@ -431,14 +431,14 @@ async function testAutomaticDegradation()
   assert.strictEqual(partial.compatibility.level, 'partial');
   const normalized = legacy._normalize(legacyRaw);
 
-  legacy._updateCompatibility(normalized.reports, normalized.format);
+  legacy._updateCompat(normalized.reports, normalized.format);
   assert.strictEqual(legacy.compatibility.level, 'legacy-basic');
   assert.strictEqual(normalized.reports[0].type, 'outbound-rtp');
 }
 
 async function testCounterResetDoesNotCreateNegativeRate()
 {
-  const monitor = new RTCStatsMonitor(createPc([ createStats(1000, 2), createStats(2000, 1) ]), { autoStart: false, transitionGraceSamples: 0 });
+  const monitor = new RTCStatsMonitor(createPc([ createStats(1000, 2), createStats(2000, 1) ]), { autoStart: false, transitionSamples: 0 });
 
   await monitor._collect();
   const report = await monitor._collect();
@@ -534,7 +534,7 @@ async function testGetStatsTimeoutEmitsErrorAndReleasesSamplingLock()
     // 模拟异常 WebView：既不返回 Promise，也不调用 callback。
   };
 
-  const monitor = new RTCStatsMonitor(silentPc, { autoStart: false, getStatsTimeoutMs: 100 });
+  const monitor = new RTCStatsMonitor(silentPc, { autoStart: false, timeoutMs: 100 });
   const errors = [];
 
   monitor._schedule = () => {};
@@ -579,8 +579,8 @@ async function testPromiseFailureFallsBackToCallbackGetStats()
 async function testListenerFailureDoesNotPolluteSamplingAndLatestReportIsIsolated()
 {
   const monitor = new RTCStatsMonitor(createPc([ createStats(1000, 1) ]), {
-    autoStart              : false,
-    transitionGraceSamples : 0
+    autoStart         : false,
+    transitionSamples : 0
   });
   const errors = [];
 
@@ -597,12 +597,12 @@ async function testListenerFailureDoesNotPolluteSamplingAndLatestReportIsIsolate
 
   assert.strictEqual(errors.length, 0);
   assert.strictEqual(monitor._consecutiveErrors, 0);
-  const firstSnapshot = monitor.getLatestReport();
+  const firstSnapshot = monitor.getReport();
 
   firstSnapshot.connection.connectionState = 'mutated';
   firstSnapshot.outbound.length = 0;
-  assert.strictEqual(monitor.getLatestReport().connection.connectionState, 'connected');
-  assert.strictEqual(monitor.getLatestReport().outbound.length, 2);
+  assert.strictEqual(monitor.getReport().connection.connectionState, 'connected');
+  assert.strictEqual(monitor.getReport().outbound.length, 2);
   monitor.stop();
 }
 
@@ -624,7 +624,7 @@ async function testStopAndImmediateRestartDuringInFlightSample()
     return Promise.resolve(createStats(3000, 2));
   };
 
-  const monitor = new RTCStatsMonitor(pc, { autoStart: false, transitionGraceSamples: 0 });
+  const monitor = new RTCStatsMonitor(pc, { autoStart: false, transitionSamples: 0 });
   const scheduled = [];
   const detailedReports = [];
 
@@ -649,7 +649,7 @@ async function testStopAndImmediateRestartDuringInFlightSample()
 
   await monitor._sample();
   assert.strictEqual(detailedReports.length, 1);
-  assert.strictEqual(monitor.getLatestReport().phase, 'warming-up');
+  assert.strictEqual(monitor.getReport().phase, 'warming-up');
   monitor.stop();
 }
 
@@ -661,12 +661,12 @@ async function testTransitionGraceSamplesReturnToActive()
     createStats(5000, 3),
     createStats(7000, 4),
     createStats(9000, 5)
-  ]), { autoStart: false, transitionGraceSamples: 2 });
+  ]), { autoStart: false, transitionSamples: 2 });
 
   await monitor._collect();
   const active = await monitor._collect();
 
-  monitor.markTransition('test-media-change');
+  monitor.markChange('test-media-change');
 
   const firstTransition = await monitor._collect();
   const secondTransition = await monitor._collect();
@@ -709,7 +709,7 @@ async function testDetailedFieldsAndAutomaticDiagnostics()
   const monitor = new RTCStatsMonitor(createPc([
     createDiagnosticStats(1000, false),
     createDiagnosticStats(3000, true)
-  ]), { autoStart: false, transitionGraceSamples: 0 });
+  ]), { autoStart: false, transitionSamples: 0 });
 
   await monitor._collect();
   const report = await monitor._collect();

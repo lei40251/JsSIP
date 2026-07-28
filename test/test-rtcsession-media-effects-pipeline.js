@@ -19,10 +19,10 @@ async function testApplyMediaEffectsComposerOnSdkGumStreamUsesCtorOptions()
   const sourceAudio = new MockMediaStreamTrack('audio');
   const sourceStream = new MockMediaStream([ sourceVideo, sourceAudio ]);
   const mixed = await session._mediaPipeline.applyMediaEffectsComposerOnSdkGumStream(sourceStream, {
-    sourceMirror     : true,
-    mirror           : true,
-    enableInsertable : true,
-    watermarks       : [
+    sourceMirror : true,
+    mirror       : true,
+    insertable   : true,
+    watermarks   : [
       { id: 'out', target: 'output', type: 'text', text: 'ok' },
       { id: 'src', target: 'source', type: 'text', text: 'skip' },
       { id: 'none', type: 'text', text: 'keep' }
@@ -45,7 +45,7 @@ async function testApplyMediaEffectsComposerOnSdkGumStreamUsesCtorOptions()
   assert.strictEqual(ctorOptions.fps, 30);
   assert.strictEqual(ctorOptions.sourceMirror, true);
   assert.strictEqual(ctorOptions.mirror, true);
-  assert.strictEqual(ctorOptions.enableInsertable, true);
+  assert.strictEqual(ctorOptions.insertable, true);
   assert.strictEqual(ctorOptions.watermarks.length, 3);
   assert.strictEqual(ctorOptions.watermarks[0].id, 'out');
   assert.strictEqual(ctorOptions.watermarks[1].id, 'src');
@@ -121,8 +121,8 @@ async function testGetUserMediaPipelineAppliesSessionAiNoiseSuppression()
   const processedStream = new MockMediaStream([ processedAudioTrack ]);
 
   session._sessionAiNSOptions = {
-    enabled             : true,
-    noiseReductionLevel : 92
+    enabled : true,
+    level   : 92
   };
 
   MockAiNSEngine.transform = () => processedStream;
@@ -132,7 +132,7 @@ async function testGetUserMediaPipelineAppliesSessionAiNoiseSuppression()
 
   assert.strictEqual(stream, processedStream);
   assert.strictEqual(MockAiNSEngine.instances.length, 1);
-  assert.strictEqual(MockAiNSEngine.instances[0].options.noiseReductionLevel, 92);
+  assert.strictEqual(MockAiNSEngine.instances[0].options.level, 92);
   assert.strictEqual(MockAiNSEngine.instances[0].processCalls[0], sourceStream);
   assert.strictEqual(session.getAiNoiseSuppression(), MockAiNSEngine.instances[0]);
 }
@@ -149,7 +149,7 @@ async function testGetUserMediaPipelineAppliesSessionAiVirtualBackground()
     mediaEffectsComposer : {
       sources : [
         {
-          aiVirtualBackground : {
+          aiBackground : {
             enabled    : true,
             mode       : 'blur',
             blurRadius : 18,
@@ -168,8 +168,8 @@ async function testGetUserMediaPipelineAppliesSessionAiVirtualBackground()
   const effect = session.getAiVirtualBackground();
 
   assert.strictEqual(MockMixer.instances.length, 1);
-  assert.strictEqual(MockMixer.instances[0].options.sources[0].aiVirtualBackground.mode, 'blur');
-  assert.strictEqual(MockMixer.instances[0].options.sources[0].aiVirtualBackground.blurRadius, 18);
+  assert.strictEqual(MockMixer.instances[0].options.sources[0].aiBackground.mode, 'blur');
+  assert.strictEqual(MockMixer.instances[0].options.sources[0].aiBackground.blurRadius, 18);
   assert.strictEqual(effect.mode, 'blur');
   assert.strictEqual(effect.blurRadius, 18);
   assert.strictEqual(stream.getVideoTracks()[0], MockMixer.instances[0].outputTrack);
@@ -188,7 +188,7 @@ async function testGetUserMediaPipelineAcceptsComposerSourcesArray()
     mediaEffectsComposer : {
       sources : [
         {
-          aiVirtualBackground : {
+          aiBackground : {
             enabled  : true,
             mode     : 'image',
             imageUrl : 'https://example.com/bg-a.png'
@@ -205,7 +205,7 @@ async function testGetUserMediaPipelineAcceptsComposerSourcesArray()
   );
 
   assert.strictEqual(MockMixer.instances.length, 1);
-  assert.strictEqual(MockMixer.instances[0].options.sources[0].aiVirtualBackground.imageUrl, 'https://example.com/bg-a.png');
+  assert.strictEqual(MockMixer.instances[0].options.sources[0].aiBackground.imageUrl, 'https://example.com/bg-a.png');
   assert.strictEqual(session.getAiVirtualBackground().imageUrl, 'https://example.com/bg-a.png');
   assert.strictEqual(stream.getVideoTracks()[0], MockMixer.instances[0].outputTrack);
   assert.strictEqual(stream.getAudioTracks()[0], MockMixer.instances[0].outputAudioTrack);
@@ -312,7 +312,7 @@ async function testCloseStopsSessionComposerWithAiVirtualBackground()
   await session._mediaPipeline.applyMediaEffectsComposerOnSdkGumStream(sourceStream, {
     sources : [
       {
-        aiVirtualBackground : {
+        aiBackground : {
           enabled : true,
           mode    : 'color',
           color   : '#123456'

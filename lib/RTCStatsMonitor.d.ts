@@ -18,13 +18,13 @@ declare class RTCStatsMonitor extends EventEmitter {
   /** 保持运行状态不变，清空旧计数器并重建增量基线。 */
   reset(): void
   /** 显式标记换轨/重协商等媒体变化，过渡期内暂缓瞬时质量告警。 */
-  markTransition(reason?: string): void
+  markChange(reason?: string): void
   /** 获取最近一次完整诊断报告，不会主动触发采样。 */
-  getLatestReport(): RTCStatsMonitor.DetailedReport | null
+  getReport(): RTCStatsMonitor.DetailedReport | null
   /** 获取最近一次兼容 report。 */
-  getLatestLegacyReport(): RTCStatsMonitor.LegacyReport | null
+  getLegacyReport(): RTCStatsMonitor.LegacyReport | null
   /** 获取最近一次兼容 network-quality。 */
-  getLatestNetworkQuality(): RTCStatsMonitor.NetworkQualityReport | null
+  getNetworkQuality(): RTCStatsMonitor.NetworkQualityReport | null
 
   on(event: 'detailed-report', listener: (report: RTCStatsMonitor.DetailedReportEvent) => void): this
   on(event: 'report', listener: (report: RTCStatsMonitor.LegacyReport) => void): this
@@ -54,19 +54,19 @@ declare namespace RTCStatsMonitor {
     /** 前台采样间隔，默认 2000ms，最小 500ms。 */
     sampleIntervalMs?: number
     /** report/network-quality 输出间隔，默认 2000ms。 */
-    legacyReportIntervalMs?: number
+    reportIntervalMs?: number
     /** 页面进入后台后的采样间隔，默认 2000ms。 */
-    backgroundSampleIntervalMs?: number
+    bgIntervalMs?: number
     /** 媒体变化后跳过瞬时诊断的样本数量，默认 2。 */
-    transitionGraceSamples?: number
+    transitionSamples?: number
     /** 是否记录常用诊断摘要并发送 detailed-report 事件，默认 true。 */
-    enableDetailedReport?: boolean
+    detailedReport?: boolean
     /** 是否限频记录脱敏后的原始 RTCStatsReport，默认 true。 */
-    enableRawStatsLog?: boolean
+    rawStatsLog?: boolean
     /** 原始报告日志最小间隔，默认 10000ms。 */
-    rawStatsLogIntervalMs?: number
+    rawLogIntervalMs?: number
     /** 单次 getStats 超时时间，默认 5000ms，最小 100ms。 */
-    getStatsTimeoutMs?: number
+    timeoutMs?: number
     /** 构造完成后是否立即开始采样，默认 true。 */
     autoStart?: boolean
     /** 提供 mode/hold/mute/sharedMid 等会话上下文，用于解释质量问题。 */
@@ -439,7 +439,7 @@ declare namespace RTCStatsMonitor {
     issues: Array<Pick<QualityIssue, 'code' | 'severity'>>
   }
 
-  /** getLatestReport() 返回的完整诊断报告；普通 logger 只输出其中的常用摘要。 */
+  /** getReport() 返回的完整诊断报告；普通 logger 只输出其中的常用摘要。 */
   interface DetailedReport {
     /** 本次报告中最大的浏览器统计时间戳，单位毫秒。 */
     timestamp: number

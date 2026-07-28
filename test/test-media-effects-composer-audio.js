@@ -119,11 +119,11 @@ async function testNewPublicApiConfigAndOutputs()
   mixer.addSource(sourceB, 1);
 
   const config = await mixer.setConfig({
-    outputMirror               : true,
-    sourceMirror               : true,
-    sourceMirrorOverrides      : { 0: false, 1: true },
-    mirrorWatermarksWithOutput : false,
-    watermarks                 : [
+    outputMirror          : true,
+    sourceMirror          : true,
+    sourceMirrorOverrides : { 0: false, 1: true },
+    mirrorWatermarks      : false,
+    watermarks            : [
       { id: 'brand', target: 'output', text: 'CRTC' }
     ]
   });
@@ -131,13 +131,13 @@ async function testNewPublicApiConfigAndOutputs()
   assert.strictEqual(config.outputMirror, true);
   assert.strictEqual(config.sourceMirror, true);
   assert.deepStrictEqual(config.sourceMirrorOverrides, { '0': false, '1': true });
-  assert.strictEqual(config.mirrorWatermarksWithOutput, false);
+  assert.strictEqual(config.mirrorWatermarks, false);
   assert.strictEqual(config.watermarks.length, 1);
 
   let state = mixer.getState();
 
   assert.strictEqual(state.config.outputMirror, true);
-  assert.strictEqual(state.config.mirrorWatermarksWithOutput, false);
+  assert.strictEqual(state.config.mirrorWatermarks, false);
   assert.deepStrictEqual(state.config.sourceMirrorOverrides, { '0': false, '1': true });
 
   const videoOutput = await mixer.getOutput({ type: 'video' });
@@ -585,13 +585,13 @@ async function testReleaseIsolatedSubmixAudioStreamClosesContext()
   assert.strictEqual(MockAudioContext.instances.length, 1);
   assert.strictEqual(MockAudioContext.instances[0].closed, false);
 
-  const released = mixer.releaseSubmixAudioStream({ slots: [ 1, 0 ], isolated: true });
+  const released = mixer.releaseSubmixStream({ slots: [ 1, 0 ], isolated: true });
 
   assert.strictEqual(released, true);
   assert.strictEqual(MockAudioContext.instances[0].closed, true);
   assert.strictEqual(mixer.getAudioInfo().busCount, 0);
   assert.strictEqual(mixer.getAudioInfo().isolatedSubmixCount, 0);
-  assert.strictEqual(mixer.releaseSubmixAudioStream({ slots: [ 0, 1 ], isolated: true }), false);
+  assert.strictEqual(mixer.releaseSubmixStream({ slots: [ 0, 1 ], isolated: true }), false);
 
   mixer.stop();
 }
@@ -685,7 +685,7 @@ async function testFullCapacityAllowsSameSlotReplacementAndStateIsIsolated()
   {
     assert.strictEqual(mixer.addSource(createStream(), {
       slot,
-      aiVirtualBackground : slot === 3 ? {
+      aiBackground : slot === 3 ? {
         enabled        : true,
         mode           : 'blur',
         postProcessing : { foregroundBrightness: 1.2 }
@@ -695,8 +695,8 @@ async function testFullCapacityAllowsSameSlotReplacementAndStateIsIsolated()
 
   const snapshot = mixer.getState();
 
-  snapshot.sources[3].aiVirtualBackground.postProcessing.foregroundBrightness = 0;
-  assert.strictEqual(mixer.getState().sources[3].aiVirtualBackground.postProcessing.foregroundBrightness, 1.2);
+  snapshot.sources[3].aiBackground.postProcessing.foregroundBrightness = 0;
+  assert.strictEqual(mixer.getState().sources[3].aiBackground.postProcessing.foregroundBrightness, 1.2);
 
   const replacement = createStream();
 

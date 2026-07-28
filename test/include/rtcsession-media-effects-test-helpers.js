@@ -79,20 +79,20 @@ class MockMixer
       options.sources[0] :
       null;
 
-    this.sourceAiVirtualBackground = options &&
+    this.aiBackground = options &&
       primarySourceOptions &&
-      primarySourceOptions.aiVirtualBackground ?
-      primarySourceOptions.aiVirtualBackground :
+      primarySourceOptions.aiBackground ?
+      primarySourceOptions.aiBackground :
       null;
     this.sourceMirrorState = primarySourceOptions && typeof primarySourceOptions.sourceMirror === 'boolean' ?
       primarySourceOptions.sourceMirror :
       false;
     this.configState = {
-      outputMirror               : Boolean(options && options.mirror),
-      sourceMirror               : Boolean(options && options.sourceMirror),
-      sourceMirrorOverrides      : {},
-      mirrorWatermarksWithOutput : options && Object.prototype.hasOwnProperty.call(options, 'mirrorWatermarksWithOutput') ?
-        Boolean(options.mirrorWatermarksWithOutput) :
+      outputMirror          : Boolean(options && options.mirror),
+      sourceMirror          : Boolean(options && options.sourceMirror),
+      sourceMirrorOverrides : {},
+      mirrorWatermarks      : options && Object.prototype.hasOwnProperty.call(options, 'mirrorWatermarks') ?
+        Boolean(options.mirrorWatermarks) :
         true,
       watermarks : options && options.watermarks ? [].concat(options.watermarks) : []
     };
@@ -138,9 +138,9 @@ class MockMixer
   {
     this.appended = stream;
     this.appendedOptions = options || null;
-    if (options && Object.prototype.hasOwnProperty.call(options, 'aiVirtualBackground'))
+    if (options && Object.prototype.hasOwnProperty.call(options, 'aiBackground'))
     {
-      this.sourceAiVirtualBackground = options.aiVirtualBackground;
+      this.aiBackground = options.aiBackground;
     }
     if (options && typeof options.sourceMirror === 'boolean')
     {
@@ -154,21 +154,21 @@ class MockMixer
     }
   }
 
-  getSourceAiVirtualBackground()
+  getAiBackground()
   {
-    return this.sourceAiVirtualBackground;
+    return this.aiBackground;
   }
 
-  setSourceAiVirtualBackground(slotOrTarget, options)
+  setAiBackground(slotOrTarget, options)
   {
-    this.sourceAiVirtualBackground = options;
+    this.aiBackground = options;
 
-    return this.sourceAiVirtualBackground;
+    return this.aiBackground;
   }
 
-  clearSourceAiVirtualBackground()
+  clearAiBackground()
   {
-    this.sourceAiVirtualBackground = null;
+    this.aiBackground = null;
   }
 
   getSourceMirror(slot)
@@ -202,9 +202,9 @@ class MockMixer
       this.configState.outputMirror = Boolean(patch.outputMirror);
     }
 
-    if (Object.prototype.hasOwnProperty.call(patch, 'mirrorWatermarksWithOutput'))
+    if (Object.prototype.hasOwnProperty.call(patch, 'mirrorWatermarks'))
     {
-      this.configState.mirrorWatermarksWithOutput = Boolean(patch.mirrorWatermarksWithOutput);
+      this.configState.mirrorWatermarks = Boolean(patch.mirrorWatermarks);
     }
 
     if (Object.prototype.hasOwnProperty.call(patch, 'watermarks'))
@@ -220,17 +220,17 @@ class MockMixer
     return {
       sources : [
         {
-          slot                : 0,
-          sourceMirror        : this.sourceMirrorState,
-          aiVirtualBackground : this.sourceAiVirtualBackground
+          slot         : 0,
+          sourceMirror : this.sourceMirrorState,
+          aiBackground : this.aiBackground
         }
       ],
       config : {
-        outputMirror               : this.configState.outputMirror,
-        sourceMirror               : this.configState.sourceMirror,
-        sourceMirrorOverrides      : Object.assign({}, this.configState.sourceMirrorOverrides),
-        mirrorWatermarksWithOutput : this.configState.mirrorWatermarksWithOutput,
-        watermarks                 : this.configState.watermarks.slice()
+        outputMirror          : this.configState.outputMirror,
+        sourceMirror          : this.configState.sourceMirror,
+        sourceMirrorOverrides : Object.assign({}, this.configState.sourceMirrorOverrides),
+        mirrorWatermarks      : this.configState.mirrorWatermarks,
+        watermarks            : this.configState.watermarks.slice()
       }
     };
   }
@@ -288,7 +288,7 @@ class MockAiNSEngine
     return stream;
   }
 
-  async replaceAudioTrack(stream)
+  async replaceTrack(stream)
   {
     this.replaceAudioTrackCalls.push(stream);
 

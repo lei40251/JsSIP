@@ -369,8 +369,8 @@ async function testOutputMirrorCanDisableWatermarkMirroring()
 
   mixer.getVideoStream();
   mixer.setMirror(true);
-  mixer.setMirrorWatermarksWithOutput(false);
-  assert.strictEqual(mixer.getMirrorWatermarksWithOutput(), false);
+  mixer.setWatermarkMirror(false);
+  assert.strictEqual(mixer.getWatermarkMirror(), false);
 
   mixer._canvas._context2d.operations = [];
   mixer._drawVideosToCanvas(undefined, true);
@@ -432,7 +432,7 @@ async function testCapabilityReportExposesRenderAndAudioRoute()
   await mixer.getAudioStream();
   mixer.getVideoStream();
 
-  const report = mixer.getCapabilityReport();
+  const report = mixer.getCapabilities();
 
   assert.strictEqual(report.limits.maxSources, ComposerConfig.getMaxSources());
   assert.strictEqual(report.features.multiSource, true);

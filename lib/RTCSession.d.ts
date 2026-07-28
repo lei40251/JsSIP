@@ -83,7 +83,7 @@ export interface MediaEffectsComposerSourceOptions {
   slot?: number;
   gain?: number;
   sourceMirror?: boolean;
-  aiVirtualBackground?: AiVBOptions | null;
+  aiBackground?: AiVBOptions | null;
   [key: string]: any;
 }
 
@@ -93,7 +93,7 @@ export interface MediaEffectsComposerSourceState {
   slot: number | null;
   gain: number;
   sourceMirror: boolean | null;
-  aiVirtualBackground: AiVBOptions | null;
+  aiBackground: AiVBOptions | null;
   hasAudio: boolean;
   hasVideo: boolean;
 }
@@ -111,16 +111,16 @@ export interface MediaEffectsComposerRenderState {
   width: number | null;
   height: number | null;
   outputMode?: string;
-  captureFrameControlMode?: string;
+  frameControlMode?: string;
   insertableActive?: boolean;
-  insertableEnabledByConfig?: boolean;
+  insertableConfigured?: boolean;
   insertableSupported?: boolean;
-  insertableGeneratorType?: string;
-  insertableSupportReason?: string;
-  insertableWriteFailures?: number;
-  insertableHasGeneratorTrack?: boolean;
-  outputHasCapturedStream?: boolean;
-  activeCaptureSinkAttached?: boolean;
+  generatorType?: string;
+  insertableReason?: string;
+  writeFailures?: number;
+  hasGeneratorTrack?: boolean;
+  hasCaptureStream?: boolean;
+  captureSinkActive?: boolean;
 }
 
 export interface MediaEffectsComposerAudioState {
@@ -159,7 +159,7 @@ export interface MediaEffectsComposerConfigState {
   /**
    * 当 outputMirror=true 时，输出级水印是否一起翻转。
    */
-  mirrorWatermarksWithOutput: boolean;
+  mirrorWatermarks: boolean;
   watermarks: MediaEffectsComposerWatermarkState[];
 }
 
@@ -189,12 +189,12 @@ export interface MediaEffectsComposerCapabilityReport {
   };
   features: {
     multiSource: boolean;
-    sourceAiVirtualBackground: boolean;
-    sourceAiVirtualBackgroundSupported: boolean;
-    sourceAiVirtualBackgroundEnabled: boolean;
+    aiBackground: boolean;
+    aiBackgroundSupported: boolean;
+    aiBackgroundEnabled: boolean;
     outputMirror: boolean;
     audioSubmix: boolean;
-    insertableStreamsConfigured: boolean;
+    insertableConfigured: boolean;
   };
   render: MediaEffectsComposerRenderState;
   audio: MediaEffectsComposerAudioState;
@@ -208,12 +208,14 @@ export interface MediaEffectsComposerSessionOptions {
   audioGain?: number;
   renderMode?: string;
   workerUrl?: string;
-  dropFrameWhenBusy?: boolean;
+  dropBusyFrames?: boolean;
   maxFrameQueue?: number;
-  preserveDrawingBuffer?: boolean;
+  keepDrawingBuffer?: boolean;
+  insertable?: boolean;
+  manualFrameControl?: boolean;
   mirror?: boolean;
   sourceMirror?: boolean;
-  mirrorWatermarksWithOutput?: boolean;
+  mirrorWatermarks?: boolean;
   watermarks?: MediaEffectsComposerWatermarkOptions[] | MediaEffectsComposerWatermarkOptions | null;
   sources?: MediaEffectsComposerSourceOptions[] | null;
   [key: string]: any;
@@ -253,7 +255,7 @@ export interface MediaEffectsComposerOutputRequest {
 export interface MediaEffectsComposerConfigPatch {
   outputMirror?: boolean;
   mirror?: boolean;
-  mirrorWatermarksWithOutput?: boolean;
+  mirrorWatermarks?: boolean;
   sourceMirror?: boolean;
   sourceMirrorOverrides?: Record<string, boolean | null>;
   clearSourceMirrorOverrides?: boolean;
@@ -303,27 +305,27 @@ export interface MediaEffectsComposerInstance {
   getSourceMirror(slot: number): MediaEffectsComposerSlotMirrorState;
   setSourceMirror(slotOrEnabled: number | boolean, enabled?: boolean): Promise<MediaEffectsComposerConfigState>;
   clearSourceMirror(slot?: number): Promise<MediaEffectsComposerConfigState>;
-  getMirrorWatermarksWithOutput(): boolean;
-  setMirrorWatermarksWithOutput(enabled: boolean): Promise<MediaEffectsComposerConfigState>;
+  getWatermarkMirror(): boolean;
+  setWatermarkMirror(enabled: boolean): Promise<MediaEffectsComposerConfigState>;
   setWatermarks(
     watermarks: MediaEffectsComposerWatermarkOptions[] | MediaEffectsComposerWatermarkOptions | null
   ): Promise<MediaEffectsComposerWatermarkState[]>;
   clearWatermarks(filter?: MediaEffectsComposerWatermarkFilter): Promise<MediaEffectsComposerConfigState>;
   getWatermarks(): MediaEffectsComposerWatermarkState[];
-  setSourceAiVirtualBackground(slotOrTarget: number | string | MediaStream | HTMLVideoElement, options: boolean | AiVBOptions | null): AiVBOptions | null;
-  getSourceAiVirtualBackground(slotOrTarget: number | string | MediaStream | HTMLVideoElement): AiVBOptions | null;
-  clearSourceAiVirtualBackground(slotOrTarget: number | string | MediaStream | HTMLVideoElement): void;
+  setAiBackground(slotOrTarget: number | string | MediaStream | HTMLVideoElement, options: boolean | AiVBOptions | null): AiVBOptions | null;
+  getAiBackground(slotOrTarget: number | string | MediaStream | HTMLVideoElement): AiVBOptions | null;
+  clearAiBackground(slotOrTarget: number | string | MediaStream | HTMLVideoElement): void;
   setConfig(patch: MediaEffectsComposerConfigPatch): Promise<MediaEffectsComposerConfigState>;
   getRenderInfo(): MediaEffectsComposerRenderState;
   getAudioInfo(): MediaEffectsComposerAudioState;
-  getCapabilityReport(): MediaEffectsComposerCapabilityReport;
+  getCapabilities(): MediaEffectsComposerCapabilityReport;
   getOutput(options?: MediaEffectsComposerOutputRequest | 'mixed' | 'video' | 'audio'): Promise<MediaStream | null>;
   getMixedStream(): Promise<MediaStream>;
   getVideoStream(): MediaStream;
   getAudioStream(options?: { slots?: number[]; isolated?: boolean; audioContext?: 'shared' | 'isolated'; recreate?: boolean } | number[]): Promise<MediaStream | null>;
-  getIsolatedSubmixAudioStream(options?: { slots?: number[] } | number[]): Promise<MediaStream | null>;
+  getSubmixStream(options?: { slots?: number[] } | number[]): Promise<MediaStream | null>;
   releaseOutput(options: MediaEffectsComposerOutputRequest): boolean;
-  releaseSubmixAudioStream(options?: { slots?: number[]; isolated?: boolean } | number[]): boolean;
+  releaseSubmixStream(options?: { slots?: number[]; isolated?: boolean } | number[]): boolean;
   stop(): void;
 }
 
@@ -372,7 +374,7 @@ export interface AiVBOptions {
 
 export interface AiNoiseSuppressionController {
   setEnabled(enable: boolean): Promise<boolean>;
-  setSuppressionLevel(level: number): void;
+  setLevel(level: number): void;
   setOutputGain(value: number): number;
   isEnabled(): boolean;
 }
