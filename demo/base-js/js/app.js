@@ -1590,7 +1590,7 @@ function onSession(e)
       rtcOfferConstraints  : { offerToReceiveAudio: true },
       extraFeatures        : features,
       mediaEffectsComposer : getFxOpts(),
-      nsMode               : getNsOpts()
+      aiNoiseSuppression   : getNsOpts()
     });
 
     setStatus('audio answer');
@@ -1613,7 +1613,7 @@ function onSession(e)
       rtcOfferConstraints  : { offerToReceiveAudio: true, offerToReceiveVideo: true },
       extraFeatures        : features,
       mediaEffectsComposer : getFxOpts(),
-      nsMode               : getNsOpts()
+      aiNoiseSuppression   : getNsOpts()
     });
 
     setStatus('video answer');
@@ -2318,7 +2318,7 @@ async function call(type, direction, mediaStream)
 
     // 呼叫前读取页面当前选择的媒体效果和降噪参数。
     options.mediaEffectsComposer = getFxOpts();
-    options.nsMode = getNsOpts();
+    options.aiNoiseSuppression = getNsOpts();
 
     remoteNo = number;
 

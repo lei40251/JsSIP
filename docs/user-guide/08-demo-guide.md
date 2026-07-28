@@ -317,7 +317,7 @@ document.querySelector('#videoHint').onchange = function()
 
 | 控件 | 值/范围 | 生效时机 |
 | --- | --- | --- |
-| Ai 降噪 | 空 / `AiNS` | 是否在下一次呼叫/接听传 `nsMode` |
+| Ai 降噪 | 空 / `AiNS` | 是否在下一次呼叫/接听传 `aiNoiseSuppression` |
 | 强度 | 整数 `0～100` | 当前会话已启用时调用 `setLevel()`；否则下次生效 |
 
 关闭下拉并不代表当前通话一定会动态销毁已有 AiNS；Demo 重点展示初始启用和强度热更新。需要运行时开关时应按产品设计明确其生命周期。
@@ -527,7 +527,7 @@ else
 }
 
 options.mediaEffectsComposer = getFxOpts();
-options.nsMode = getNsOpts();
+options.aiNoiseSuppression = getNsOpts();
 
 remoteNo = number;
 
@@ -564,7 +564,7 @@ document.querySelector('#answer').onclick = function()
     rtcOfferConstraints  : { offerToReceiveAudio: true },
     extraFeatures        : extraFeatures,
     mediaEffectsComposer : getFxOpts(),
-    nsMode   : getNsOpts()
+    aiNoiseSuppression   : getNsOpts()
   });
 };
 
@@ -580,7 +580,7 @@ document.querySelector('#answerVideo').onclick = function()
     rtcOfferConstraints  : { offerToReceiveAudio: true, offerToReceiveVideo: true },
     extraFeatures        : extraFeatures,
     mediaEffectsComposer : getFxOpts(),
-    nsMode   : getNsOpts()
+    aiNoiseSuppression   : getNsOpts()
   });
 };
 ```

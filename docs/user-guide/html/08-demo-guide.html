@@ -481,7 +481,7 @@ pcConfig[&#39;bundlePolicy&#39;] = &#39;max-compat&#39;;
 <tbody><tr>
 <td>Ai 降噪</td>
 <td>空 / <code>AiNS</code></td>
-<td>是否在下一次呼叫/接听传 <code>nsMode</code></td>
+<td>是否在下一次呼叫/接听传 <code>aiNoiseSuppression</code></td>
 </tr>
 <tr>
 <td>强度</td>
@@ -739,7 +739,7 @@ else
 }
 
 options.mediaEffectsComposer = getFxOpts();
-options.nsMode = getNsOpts();
+options.aiNoiseSuppression = getNsOpts();
 
 remoteNo = number;
 
@@ -779,7 +779,7 @@ const session = await ua.call(`${number}@${sipDomain}`, options);
     rtcOfferConstraints  : { offerToReceiveAudio: true },
     extraFeatures        : extraFeatures,
     mediaEffectsComposer : getFxOpts(),
-    nsMode   : getNsOpts()
+    aiNoiseSuppression   : getNsOpts()
   });
 };
 
@@ -795,7 +795,7 @@ document.querySelector(&#39;#answerVideo&#39;).onclick = function()
     rtcOfferConstraints  : { offerToReceiveAudio: true, offerToReceiveVideo: true },
     extraFeatures        : extraFeatures,
     mediaEffectsComposer : getFxOpts(),
-    nsMode   : getNsOpts()
+    aiNoiseSuppression   : getNsOpts()
   });
 };
 </code></pre>

@@ -24,8 +24,8 @@ const VB_ROOT = './assets/aivb';
 
 // 演示页内置背景图 key -> URL 映射
 const vbImgs = {
-  img1 : './virtual-background/backgrounds/office.png',
-  img2 : './virtual-background/backgrounds/sky.jpg'
+  img1 : './imgs/office.png',
+  img2 : './imgs/sky.jpg'
 };
 
 // 当前是否启用了 AiNS。演示里只处理 '' 和 'AiNS' 两种值。

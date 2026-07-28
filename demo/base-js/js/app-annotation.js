@@ -75,6 +75,15 @@ function getInkUser()
   return 'demo';
 }
 
+function getAnnotUserLabel()
+{
+  const displayName = typeof ua !== 'undefined' && ua && ua.configuration ?
+    ua.configuration.display_name : '';
+  const label = displayName === undefined || displayName === null ? '' : String(displayName);
+
+  return cleanId(label, 32) || getInkUser();
+}
+
 function cleanId(value, maxLength)
 {
   return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
@@ -117,7 +126,7 @@ function makeOp(action, boardId, payload)
     boardId,
     operationId : `${senderId}-${Date.now()}-${opSeq}`,
     senderId,
-    senderLabel : senderId,
+    senderLabel : getAnnotUserLabel(),
     sequence    : opSeq,
     payload     : payload || {}
   };
@@ -1084,6 +1093,11 @@ function closeBoard(notify)
     refreshShare();
   }
 
+  drawing = false;
+  if (draftNode) draftNode.destroy();
+  draftNode = null;
+  draftShape = null;
+  resetBoard('whiteboard');
   boardUserId = '';
 
   const oldMode = prevMode;

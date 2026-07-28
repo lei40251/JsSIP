@@ -574,7 +574,7 @@ options[&#39;mediaConstraints&#39;] = {
 };
 
 options.mediaEffectsComposer = getFxOpts();
-options.nsMode = getNsOpts();
+options.aiNoiseSuppression = getNsOpts();
 
 const session = await ua.call(`${number}@${sipDomain}`, options);
 </code></pre>
@@ -592,7 +592,7 @@ const session = await ua.call(`${number}@${sipDomain}`, options);
     rtcOfferConstraints  : { offerToReceiveAudio: true, offerToReceiveVideo: true },
     extraFeatures        : extraFeatures,
     mediaEffectsComposer : getFxOpts(),
-    nsMode   : getNsOpts()
+    aiNoiseSuppression   : getNsOpts()
   });
 
   setStatus(&#39;video answer&#39;);
@@ -650,7 +650,7 @@ ua.on(&#39;connected&#39;, function()
 <td>需要明确接收音频/视频方向时</td>
 </tr>
 <tr>
-<td><code>nsMode</code></td>
+<td><code>aiNoiseSuppression</code></td>
 <td><code>object</code></td>
 <td>开启 AiNS 时</td>
 </tr>

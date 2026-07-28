@@ -525,6 +525,43 @@ module.exports = {
     test.done();
   },
 
+  'demo passes AiNS with the RTCSession option name' : function(test)
+  {
+    const source = fs.readFileSync(path.join(__dirname, '../demo/base-js/js/app.js'), 'utf8');
+    const conferenceSource = fs.readFileSync(path.join(__dirname, '../demo/base-js/js/app-conference.js'), 'utf8');
+
+    test.strictEqual((source.match(/aiNoiseSuppression\s*:\s*getNsOpts\(\)/g) || []).length, 2);
+    test.strictEqual((source.match(/options\.aiNoiseSuppression\s*=\s*getNsOpts\(\)/g) || []).length, 1);
+    test.strictEqual(/\bnsMode\s*:/.test(source), false);
+    test.strictEqual((conferenceSource.match(/options\.aiNoiseSuppression\s*=\s*getNsOpts\(\)/g) || []).length, 4);
+    test.strictEqual(/options\.nsMode\b/.test(conferenceSource), false);
+    test.done();
+  },
+
+  'MetaHuman demo uses the renamed media APIs and valid bundled assets' : function(test)
+  {
+    const appSource = fs.readFileSync(path.join(__dirname, '../samples/base-js-mh/js/app.js'), 'utf8');
+    const effectsSource = fs.readFileSync(path.join(__dirname, '../samples/base-js-mh/js/app-media-effects.js'), 'utf8');
+    const metaHumanSource = fs.readFileSync(path.join(__dirname, '../samples/base-js-mh/js/app.metahuman.js'), 'utf8');
+    const oldNames = /getLatestReport|noiseReductionLevel|setSuppressionLevel|setSourceAiVirtualBackground|clearSourceAiVirtualBackground|enableInsertable|aiVirtualBackground\s*:/;
+
+    test.strictEqual(oldNames.test(`${appSource}\n${effectsSource}\n${metaHumanSource}`), false);
+    test.strictEqual((appSource.match(/aiNoiseSuppression\s*:\s*buildCallAiNsOptions\(\)/g) || []).length, 2);
+    test.ok(/options\.aiNoiseSuppression\s*=/.test(appSource));
+    test.ok(/aiBackground\s*:\s*aiVBOptions/.test(effectsSource));
+    test.ok(/composerOptions\.insertable\s*=\s*true/.test(effectsSource));
+    test.ok(/sessionComposer\.setAiBackground\(0, aiVBOptions\)/.test(effectsSource));
+    test.ok(/sessionComposer\.clearAiBackground\(0\)/.test(effectsSource));
+    test.ok(/\blevel\s*:\s*getCurrentAiNsLevel\(\)/.test(effectsSource));
+    test.ok(/\.setLevel\(/.test(effectsSource));
+    test.ok(/\.setLevel\(/.test(metaHumanSource));
+    test.ok(effectsSource.includes("img1 : '../../demo/base-js/imgs/office.png'"));
+    test.ok(effectsSource.includes("img2 : '../../demo/base-js/imgs/sky.jpg'"));
+    test.ok(fs.existsSync(path.join(__dirname, '../demo/base-js/imgs/office.png')));
+    test.ok(fs.existsSync(path.join(__dirname, '../demo/base-js/imgs/sky.jpg')));
+    test.done();
+  },
+
   'conference assigns B then C by slot instead of SIP role headers' : function(test)
   {
     const context = loadConferenceDemo();

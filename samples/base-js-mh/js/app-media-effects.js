@@ -24,8 +24,8 @@ const AI_VB_TASKS_ROOT = './assets/aivb';
 
 // 演示页内置背景图 key -> URL 映射
 const virtualBackgroundImgs = {
-  img1 : './virtual-background/backgrounds/office.png',
-  img2 : './virtual-background/backgrounds/sky.jpg'
+  img1 : '../../demo/base-js/imgs/office.png',
+  img2 : '../../demo/base-js/imgs/sky.jpg'
 };
 
 // 当前是否启用了 AiNS。演示里只处理 '' 和 'AiNS' 两种值。
@@ -772,10 +772,10 @@ function buildCallAiNsOptions()
   }
 
   return {
-    enabled             : true,
-    level : getCurrentAiNsLevel(),
-    outputGain          : getCurrentAiNsOutputGain(),
-    assetConfig         : { cdnUrl: AI_NOISE_ASSET_ROOT }
+    enabled     : true,
+    level       : getCurrentAiNsLevel(),
+    outputGain  : getCurrentAiNsOutputGain(),
+    assetConfig : { cdnUrl: AI_NOISE_ASSET_ROOT }
   };
 }
 

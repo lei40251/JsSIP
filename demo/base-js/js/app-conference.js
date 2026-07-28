@@ -389,7 +389,7 @@ function buildCallOpts(role, cOutput)
       offerToReceiveVideo : true
     };
     options.mediaEffectsComposer = buildMixOpts();
-    options.nsMode = getNsOpts();
+    options.aiNoiseSuppression = getNsOpts();
 
     return options;
   }
@@ -408,7 +408,7 @@ function buildCallOpts(role, cOutput)
     offerToReceiveAudio : true,
     offerToReceiveVideo : true
   };
-  options.nsMode = getNsOpts();
+  options.aiNoiseSuppression = getNsOpts();
 
   return options;
 }
@@ -444,7 +444,7 @@ function getAnswerOpts(leg, cOutput)
       video : getVideoOpts()
     };
     options.mediaEffectsComposer = buildMixOpts();
-    options.nsMode = getNsOpts();
+    options.aiNoiseSuppression = getNsOpts();
   }
   else
   {
@@ -467,7 +467,7 @@ function getAnswerOpts(leg, cOutput)
       options.mediaStream = cOutput.mediaStream;
       options.mediaConstraints = { audio: true, video: true };
     }
-    options.nsMode = getNsOpts();
+    options.aiNoiseSuppression = getNsOpts();
   }
 
   return options;

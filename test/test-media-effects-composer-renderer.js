@@ -305,6 +305,17 @@ async function testWorkerWatermarkFrameFlipYOnlyForWebGL2()
 }
 
 
+async function testWorkerScriptInjectsAiVBSegmentationHelpersWithoutQuoteMarker()
+{
+  resetMockState();
+  const script = workerScript.createWorkerScript();
+
+  assert.strictEqual(script.includes('__SEGMENTATION_COMMON_INJECT__'), false);
+  assert.ok(script.includes('resolveRuntimeOptions'));
+  assert.ok(script.includes('createSegmenterOptions'));
+}
+
+
 async function testWorkerVideoFrameDoesNotUseImageBitmapFlipY()
 {
   resetMockState();
@@ -1239,6 +1250,7 @@ const TESTS = [
   { name: 'testAutoRendererFallbackEndsAtMain2D', fn: testAutoRendererFallbackEndsAtMain2D },
   { name: 'testWorkerRendererCarriesWatermarkPayload', fn: testWorkerRendererCarriesWatermarkPayload },
   { name: 'testWorkerWatermarkFrameFlipYOnlyForWebGL2', fn: testWorkerWatermarkFrameFlipYOnlyForWebGL2 },
+  { name: 'testWorkerScriptInjectsAiVBSegmentationHelpersWithoutQuoteMarker', fn: testWorkerScriptInjectsAiVBSegmentationHelpersWithoutQuoteMarker },
   { name: 'testWorkerVideoFrameDoesNotUseImageBitmapFlipY', fn: testWorkerVideoFrameDoesNotUseImageBitmapFlipY },
   { name: 'testWorkerWebGL2AiVBUsesNonFlippedUploadForBothRawAndCompositedSurface', fn: testWorkerWebGL2AiVBUsesNonFlippedUploadForBothRawAndCompositedSurface },
   { name: 'testWorkerWebGL2WatermarkUploadUsesFlipY', fn: testWorkerWebGL2WatermarkUploadUsesFlipY },

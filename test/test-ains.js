@@ -1,5 +1,6 @@
 /* eslint-disable no-console */
 const assert = require('assert');
+const vm = require('vm');
 
 let nextTrackId = 1;
 
@@ -261,6 +262,29 @@ function loadEngine()
   });
 
   return require('../lib/AiNoiseSuppression/AiNSEngine');
+}
+
+async function testGeneratedWorkletSourceIsSelfContained()
+{
+  const createWorkletCode = require('../lib/AiNoiseSuppression/AiNSWorkletSource');
+  const registered = [];
+  const sandbox = {
+    AudioWorkletProcessor : class
+    {
+      constructor()
+      {
+        this.port = { postMessage() {} };
+      }
+    },
+    console,
+    registerProcessor : (name, Processor) => registered.push({ name, Processor })
+  };
+
+  vm.runInNewContext(createWorkletCode(), sandbox);
+
+  assert.strictEqual(registered.length, 1);
+  assert.strictEqual(registered[0].name, 'ai-noise-suppression-audio-processor');
+  assert.strictEqual(typeof registered[0].Processor, 'function');
 }
 
 function createInputStream()
@@ -544,6 +568,7 @@ async function run()
   let failed = 0;
   const failures = [];
   const TESTS = [
+    { name: 'testGeneratedWorkletSourceIsSelfContained', fn: testGeneratedWorkletSourceIsSelfContained },
     { name: 'testCapabilityReportListsMissingRequirements', fn: testCapabilityReportListsMissingRequirements },
     { name: 'testProcessBuildsProcessedStreamAndPreservesVideoTrack', fn: testProcessBuildsProcessedStreamAndPreservesVideoTrack },
     { name: 'testReplaceAudioTrackPreservesVideoTrack', fn: testReplaceAudioTrackPreservesVideoTrack },

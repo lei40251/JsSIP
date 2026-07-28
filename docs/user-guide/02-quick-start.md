@@ -437,7 +437,7 @@ options['mediaConstraints'] = {
 };
 
 options.mediaEffectsComposer = getFxOpts();
-options.nsMode = getNsOpts();
+options.aiNoiseSuppression = getNsOpts();
 
 const session = await ua.call(`${number}@${sipDomain}`, options);
 ```
@@ -459,7 +459,7 @@ document.querySelector('#answerVideo').onclick = function()
     rtcOfferConstraints  : { offerToReceiveAudio: true, offerToReceiveVideo: true },
     extraFeatures        : extraFeatures,
     mediaEffectsComposer : getFxOpts(),
-    nsMode   : getNsOpts()
+    aiNoiseSuppression   : getNsOpts()
   });
 
   setStatus('video answer');
@@ -498,7 +498,7 @@ ua.on('connected', function()
 | `mediaStream` | `MediaStream` | 使用业务已创建的自定义流时 |
 | `extraHeaders` | `string[]` | 服务端要求随路数据时 |
 | `rtcOfferConstraints` | `RTCOfferOptions` | 需要明确接收音频/视频方向时 |
-| `nsMode` | `object` | 开启 AiNS 时 |
+| `aiNoiseSuppression` | `object` | 开启 AiNS 时 |
 | `mediaEffectsComposer` | `object` | 开启虚拟背景、混流、镜像或水印时 |
 
 `mediaStream` 与 `mediaConstraints` 不要随意同时传。使用自定义流时先检查所需音频/视频 tracks 是否存在且 `readyState === 'live'`。

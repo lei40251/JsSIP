@@ -135,7 +135,7 @@ AiNS 有两个使用层级：
 ```js
 rtcSession.answer({
   mediaConstraints : { audio: true, video: false },
-  nsMode : {
+  aiNoiseSuppression : {
     enabled     : true,
     level       : 80,
     outputGain  : 1,

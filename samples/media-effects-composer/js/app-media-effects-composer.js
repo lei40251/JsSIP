@@ -8,8 +8,8 @@ Object.assign(window.app, {
 
   aiVirtualBackgroundAssetsBaseUrl : '../../demo/base-js/assets/aivb',
   aiVirtualBackgroundImages        : {
-    office : '../../demo/base-js/virtual-background/backgrounds/office.png',
-    sky    : '../../demo/base-js/virtual-background/backgrounds/sky.jpg'
+    office : '../../demo/base-js/imgs/office.png',
+    sky    : '../../demo/base-js/imgs/sky.jpg'
   },
 
   // ==========================================================
@@ -40,14 +40,14 @@ Object.assign(window.app, {
     const ctorOutputWatermarkMirror = document.getElementById('cfg-ctor-output-watermark-mirror');
     const ctorWatermarks = document.getElementById('cfg-ctor-watermarks');
     const options = {
-      width                      : w,
-      height                     : h,
-      fps                        : fps,
-      renderMode                 : renderMode,
-      onIssue                    : this.createComposerIssueHandler('MainComposer'),
-      mirror                     : ctorOutputMirror && ctorOutputMirror.value === 'on',
+      width            : w,
+      height           : h,
+      fps              : fps,
+      renderMode       : renderMode,
+      onIssue          : this.createComposerIssueHandler('MainComposer'),
+      mirror           : ctorOutputMirror && ctorOutputMirror.value === 'on',
       mirrorWatermarks : !ctorOutputWatermarkMirror || ctorOutputWatermarkMirror.value === 'on',
-      watermarks                 : []
+      watermarks       : []
     };
 
     if (ctorWatermarks && ctorWatermarks.checked)
@@ -74,9 +74,11 @@ Object.assign(window.app, {
 	    {
 	      // 启动阶段仅获取视频输出流，避免默认拉起完整音频混流
 	      const outStream = await this.composer.getOutput({ type: 'video' });
+
 	      console.info('[MediaEffectsComposerDemo] getOutput() 完成，视频轨:', outStream.getVideoTracks().length);
 
 	      const info = this.composer.getRenderInfo();
+
 	      console.info('[MediaEffectsComposerDemo] 渲染信息:', JSON.stringify({
 	        requestedMode  : info.requestedMode,
 	        actualMode     : info.actualMode,
