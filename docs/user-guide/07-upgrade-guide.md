@@ -16,7 +16,7 @@ removeStream
 clearStreams
 getMixedStream
 getVideoStream
-aiVirtualBackground
+aiBackground
 aiVB
 getAiVBEngine
 ```
@@ -40,15 +40,15 @@ getAiVBEngine
 
 | 旧位置 | 当前位置 |
 | --- | --- |
-| `options.aiVirtualBackground` | `options.mediaEffectsComposer.sources[0].aiVirtualBackground` |
-| `options.aiVB` | `options.mediaEffectsComposer.sources[0].aiVirtualBackground` |
+| `options.aiBackground` | `options.mediaEffectsComposer.sources[0].aiBackground` |
+| `options.aiVB` | `options.mediaEffectsComposer.sources[0].aiBackground` |
 
 旧写法：
 
 ```js
 ua.call(target, {
   mediaConstraints : { audio: true, video: true },
-  aiVirtualBackground : {
+  aiBackground : {
     mode       : 'blur',
     blurRadius : 16
   }
@@ -67,7 +67,7 @@ await ua.call(target, {
     sources : [
       {
         slot : 0,
-        aiVirtualBackground : {
+        aiBackground : {
           mode         : 'blur',
           blurRadius   : 16,
           assetConfig : { cdnUrl: './assets/aivb' }
@@ -85,15 +85,15 @@ await ua.call(target, {
 | 旧写法 | 当前写法 |
 | --- | --- |
 | `session.getAiVBEngine()` | `session.getMediaEffectsComposer()` |
-| 直接操作独立背景实例 | `composer.setSourceAiVirtualBackground(0, options)` |
-| 关闭/销毁独立背景实例 | `composer.clearSourceAiVirtualBackground(0)` |
+| 直接操作独立背景实例 | `composer.setAiBackground(0, options)` |
+| 关闭/销毁独立背景实例 | `composer.clearAiBackground(0)` |
 
 ```js
 const composer = session.getMediaEffectsComposer();
 
 if (composer)
 {
-  composer.setSourceAiVirtualBackground(0, {
+  composer.setAiBackground(0, {
     mode  : 'color',
     color : '#1f2937'
   });
@@ -103,7 +103,7 @@ if (composer)
 清除：
 
 ```js
-composer && composer.clearSourceAiVirtualBackground(0);
+composer && composer.clearAiBackground(0);
 ```
 
 Base JS Demo 将“更新”和“清除”收敛到同一个通话中函数，这样页面下拉框切换到空值时不会遗留上一个背景：
@@ -120,11 +120,11 @@ const aiVBOptions = getVbOpts();
 
 if (!aiVBOptions)
 {
-  fx.clearSourceAiVirtualBackground(0);
+  fx.clearAiBackground(0);
 }
 else
 {
-  fx.setSourceAiVirtualBackground(0, aiVBOptions);
+  fx.setAiBackground(0, aiVBOptions);
 }
 ```
 

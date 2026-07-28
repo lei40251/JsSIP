@@ -679,7 +679,7 @@ ua.on('newRTCSession', function(e)
     }
 
     // 事件只提供浮层使用的摘要；完整报告由 SDK logger 输出，也可通过
-    // e.session.statsMonitor.getLatestReport() 获取。
+    // e.session.statsMonitor.getReport() 获取。
     const quality = report.quality;
     const issueText = quality.issues.map((issue) =>
     {

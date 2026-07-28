@@ -8,7 +8,7 @@
 
 该日志默认约每 2 秒输出一次，只保留与 Demo 通话浮层接近的状态、链路、上下行媒体、质量和采样性能字段。它不再包含候选 IP、端口、轨道标识、累计字节/包/帧计数和完整关联对象，因此日志量明显低于完整报告。
 
-需要深度排障时，调用 `session.statsMonitor.getLatestReport()` 获取最近一份完整诊断对象，并参考[完整报告内部培训手册](./RTCStatsMonitor-internal-training-guide.md)。
+需要深度排障时，调用 `session.statsMonitor.getReport()` 获取最近一份完整诊断对象，并参考[完整报告内部培训手册](./RTCStatsMonitor-internal-training-guide.md)。
 
 ## 1. 摘要结构
 

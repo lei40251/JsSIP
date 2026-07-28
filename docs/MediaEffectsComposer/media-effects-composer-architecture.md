@@ -6,7 +6,7 @@
 
 镜像语义上，这个模块只处理“源级镜像”“合成输出镜像”“输出级水印是否跟随镜像”三件事，不负责页面层本地预览的 CSS 镜像。
 
-命名约定：目录名优先使用完整能力名并统一写成 `AI`（如 `AiVirtualBackground/`、`AiNoiseSuppression/`）；文件名和标识符优先使用缩写形式 `Ai` / `ai`（如 `AiVBConfig.js`、`AiNSCore.js`、`AiNSEngine`、`aiVirtualBackground`）。
+命名约定：目录名优先使用完整能力名并统一写成 `AI`（如 `AiVirtualBackground/`、`AiNoiseSuppression/`）；文件名和标识符优先使用缩写形式 `Ai` / `ai`（如 `AiVBConfig.js`、`AiNSCore.js`、`AiNSEngine`、`aiBackground`）。
 
 这一版对外 API 已经收敛为 8 个主方法：
 
@@ -134,7 +134,7 @@ constructor(videos, options)
 | `setConfig(patch)` | 动态修改镜像/水印等配置 | 更新 `_config` / `_slotMirrorOv` / `Watermark` / 强制重绘 |
 | `getState()` | 读取统一状态快照 | `Sources + _getConfigStateSnapshot() + RenderLoop + AudioMixer` |
 | `getOutput(options)` | 获取 `mixed` / `video` / `audio` 输出 | `_getVideoOutputSync()` / `_getMixedOutput()` / `AudioMixer` |
-| `releaseOutput(options)` | 释放音频子混音 | `AudioMixer.releaseSubmixAudioStream()` |
+| `releaseOutput(options)` | 释放音频子混音 | `AudioMixer.releaseSubmixStream()` |
 | `stop()` | 销毁实例 | `RenderLoop.stop() -> clearSources() -> AudioMixer.stop() -> RenderLoop.destroy() -> OutputStream.stop()` |
 
 ### 兼容旧方法实现方式
@@ -177,7 +177,7 @@ async getMixedStream() {
 1. 检查实例是否已 `stop()`
 2. 标准化单个源或数组源
 3. 限制最多 9 路
-4. 归一化 `slot/gain/sourceMirror/aiVirtualBackground`
+4. 归一化 `slot/gain/sourceMirror/aiBackground`
 5. 交给 `Sources.add()`
 6. 若音频链路已经建立，则异步刷新音频连接
 7. 刷新镜像 / 效果渲染策略
@@ -236,7 +236,7 @@ clearStreams()
 `setConfig()` 是新的运行时配置中心，负责统一处理：
 
 - `outputMirror`
-- `mirrorWatermarksWithOutput`
+- `mirrorWatermarks`
 - `sourceMirror`
 - `sourceMirrorOverrides`
 - `clearSourceMirrorOverrides`
@@ -256,7 +256,7 @@ clearStreams()
 
 - `sourceMirror` / `sourceMirrorOverrides` 作用在单路 source 进入布局之前
 - `outputMirror` 作用在最终合成输出
-- `mirrorWatermarksWithOutput` 只影响输出级水印是否跟着 `outputMirror` 一起翻转
+- `mirrorWatermarks` 只影响输出级水印是否跟着 `outputMirror` 一起翻转
 
 调用链：
 
@@ -273,7 +273,7 @@ setConfig(patch)
 
 ```js
 setMirror(enabled)
-setMirrorWatermarksWithOutput(enabled)
+setWatermarkMirror(enabled)
 setSourceMirror(...)
 clearSourceMirror(...)
 setWatermarks(watermarks)
@@ -362,7 +362,7 @@ await composer.getOutput({ type: 'audio', slots: [0, 2] })
 
 ```
 getOutput({ type: 'audio', ... })
-  ├─ isolated=true/audioContext=isolated -> AudioMixer.getIsolatedSubmixAudioStream()
+  ├─ isolated=true/audioContext=isolated -> AudioMixer.getSubmixStream()
   └─ shared slots bus -> AudioMixer.getAudioStream()
 ```
 
@@ -372,7 +372,7 @@ getOutput({ type: 'audio', ... })
 getMixedStream()
 getVideoStream()
 getAudioStream()
-getIsolatedSubmixAudioStream()
+getSubmixStream()
 ```
 
 ### `releaseOutput()`
@@ -381,13 +381,13 @@ getIsolatedSubmixAudioStream()
 
 ```
 releaseOutput({ type: 'audio', slots })
-  └─ AudioMixer.releaseSubmixAudioStream()
+  └─ AudioMixer.releaseSubmixStream()
 ```
 
 旧方法对应：
 
 ```js
-releaseSubmixAudioStream(...)
+releaseSubmixStream(...)
 ```
 
 ---
@@ -504,7 +504,7 @@ getState()
 
 ```
 RenderLoop.renderFrame()
-  ├─ AudioMixer.syncExternalSourceAudio()
+  ├─ AudioMixer.syncSourceAudio()
   ├─ LayoutEngine.createRenderPayload()
   ├─ createRenderer.ensureRenderer()
   ├─ renderer.render(payload)
@@ -526,7 +526,7 @@ getOutput({ type: 'mixed' })
   │   ├─ _refreshAudioConnections()
   │   └─ 返回 audio destination stream（即使无源也创建静音轨）
   │
-  └─ addAudioTracksToStream(videoStream, audioStream)
+  └─ addAudioTracks(videoStream, audioStream)
 ```
 
 ### `setConfig()` 完整流程

@@ -395,9 +395,9 @@ const monitor = currentSession && currentSession.statsMonitor;
 
 if (monitor)
 {
-  const quality = monitor.getLatestNetworkQuality();
-  const legacy = monitor.getLatestLegacyReport();
-  const detailed = monitor.getLatestReport();
+  const quality = monitor.getNetworkQuality();
+  const legacy = monitor.getLegacyReport();
+  const detailed = monitor.getReport();
 
   console.log(quality, legacy, detailed);
 }
@@ -405,9 +405,9 @@ if (monitor)
 
 | 方法 | 返回值 | 是否主动采样 |
 | --- | --- | --- |
-| `getLatestNetworkQuality()` | 最近兼容网络质量或 `null` | 否 |
-| `getLatestLegacyReport()` | 最近兼容流报告或 `null` | 否 |
-| `getLatestReport()` | 最近完整诊断报告或 `null` | 否 |
+| `getNetworkQuality()` | 最近兼容网络质量或 `null` | 否 |
+| `getLegacyReport()` | 最近兼容流报告或 `null` | 否 |
+| `getReport()` | 最近完整诊断报告或 `null` | 否 |
 
 页面常规展示使用 `stats:detailed-report` 即可。问题上报时只选取排障需要的字段，并按产品安全要求脱敏。
 
@@ -426,9 +426,9 @@ function readStats()
   }
 
   return {
-    networkQuality : monitor.getLatestNetworkQuality(),
-    legacyReport   : monitor.getLatestLegacyReport(),
-    detailedReport : monitor.getLatestReport()
+    networkQuality : monitor.getNetworkQuality(),
+    legacyReport   : monitor.getLegacyReport(),
+    detailedReport : monitor.getReport()
   };
 }
 
@@ -444,7 +444,7 @@ window.readStats = readStats;
 ```js
 const monitor = new CRTC.RTCStatsMonitor(peerConnection, {
   sampleIntervalMs     : 2000,
-  enableDetailedReport : true,
+  detailedReport : true,
   autoStart            : true
 });
 
@@ -458,7 +458,7 @@ monitor.stop();
 | 参数 | 类型 | 默认值 | 有效范围/说明 |
 | --- | --- | ---: | --- |
 | `sampleIntervalMs` | `number` | `2000` | 前台采样间隔，最小 `500` |
-| `enableDetailedReport` | `boolean` | `true` | 是否发送详细摘要事件 |
+| `detailedReport` | `boolean` | `true` | 是否发送详细摘要事件 |
 | `autoStart` | `boolean` | `true` | 构造后是否立即采样 |
 
 ## 5.14 Demo 面板逐项对照

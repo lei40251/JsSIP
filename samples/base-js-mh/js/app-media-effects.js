@@ -299,7 +299,7 @@ function buildCurrentWatermarks()
  * @property {MediaEffectsComposerSourceOptions[]} [sources]
  *   — 输入源配置数组，每个元素：
  *     @property {number}   [slot]               — 槽位索引
- *     @property {AiVBOptions} [aiVirtualBackground]
+ *     @property {AiVBOptions} [aiBackground]
  *       — 该源的 AI 虚拟背景配置，详见 buildCurrentAiVBOptions 上方 JSDoc
  */
 
@@ -340,14 +340,14 @@ function buildCallComposerOptions()
     // 这里把所有源配置放在第一个槽位（index 0）。
     composerOptions.sources = [
       {
-        aiVirtualBackground : aiVBOptions
+        aiBackground : aiVBOptions
       }
     ];
   }
 
   if (hasComposerEffects)
   {
-    composerOptions.enableInsertable = true;
+    composerOptions.insertable = true;
   }
 
   if (!hasComposerEffects)
@@ -380,7 +380,7 @@ function buildCallComposerOptions()
  *     filter: { id }
  *
  * AI 虚拟背景：
- *   setSourceAiVirtualBackground(slotOrTarget, options)
+ *   setAiBackground(slotOrTarget, options)
  *     slotOrTarget: number — 槽位索引（如 0）
  *     options: AiVBOptions
  * 
@@ -393,7 +393,7 @@ function buildCallComposerOptions()
  * rtcSession.getMediaEffectsComposer()
  *   - 返回: MediaEffectsComposerInstance | null
  *   - 说明: 仅在通话建立且 mediaEffectsComposer 已启用时返回实例，
- *           否则返回 null（需在 call/answer 时传入 enableInsertable: true）
+ *           否则返回 null（需在 call/answer 时传入 insertable: true）
  *   - 返回的实例上可用方法见本区块顶部注释
  *
  * @returns {{ sessionComposer: Object|null }}
@@ -650,14 +650,14 @@ async function clearCurrentImageWatermarkFromSession()
  * 把当前虚拟背景应用到当前通话。
  *
  * ========== SDK 调用 ==========
- * sessionComposer.setSourceAiVirtualBackground(slotOrTarget, options)
+ * sessionComposer.setAiBackground(slotOrTarget, options)
  *   - slotOrTarget: number | string
  *     - number: 槽位索引（如 0=第一个输入源）
  *   - options: AiVBOptions | null
  *     - 传 null 等同于 clear（但建议用下面的 clear 方法）
  *     - 参数结构详见 buildCurrentAiVBOptions 上方 JSDoc
  *
- * sessionComposer.clearSourceAiVirtualBackground(slotOrTarget)
+ * sessionComposer.clearAiBackground(slotOrTarget)
  *   - slotOrTarget: number | string — 同上
  *   - 作用: 清除指定源的 AI 虚拟背景效果
  */
@@ -674,21 +674,21 @@ async function applyCurrentVirtualBackgroundToSession()
 
   try
   {
-    if (sessionComposer && typeof sessionComposer.setSourceAiVirtualBackground === 'function')
+    if (sessionComposer && typeof sessionComposer.setAiBackground === 'function')
     {
       const aiVBOptions = buildCurrentAiVBOptions();
 
       if (!aiVBOptions)
       {
-        // SDK: clearSourceAiVirtualBackground(0)
+        // SDK: clearAiBackground(0)
         // 没选虚拟背景 → 清除槽位 0 的 AI 虚拟背景效果
-        sessionComposer.clearSourceAiVirtualBackground(0);
+        sessionComposer.clearAiBackground(0);
       }
       else
       {
-        // SDK: setSourceAiVirtualBackground(0, AiVBOptions)
+        // SDK: setAiBackground(0, AiVBOptions)
         // 将虚拟背景配置应用到槽位 0（第一个输入源）
-        sessionComposer.setSourceAiVirtualBackground(0, aiVBOptions);
+        sessionComposer.setAiBackground(0, aiVBOptions);
       }
     }
   }
@@ -746,7 +746,7 @@ async function handleVirtualBackgroundChange(selectEl)
  * @property {boolean} [enabled] — 是否启用 AI 降噪（默认 true）
  *   设为 false 可暂时关闭而不销毁管线
  *
- * @property {number} [noiseReductionLevel] — 降噪强度（0~100，默认 80）
+ * @property {number} [level] — 降噪强度（0~100，默认 80）
  *   - 0   = 不降噪
  *   - 100 = 最大降噪强度
  *   - 值越高噪声抑制越强，但语音可能稍有失真
@@ -773,7 +773,7 @@ function buildCallAiNsOptions()
 
   return {
     enabled             : true,
-    noiseReductionLevel : getCurrentAiNsLevel(),
+    level : getCurrentAiNsLevel(),
     outputGain          : getCurrentAiNsOutputGain(),
     assetConfig         : { cdnUrl: AI_NOISE_ASSET_ROOT }
   };
@@ -797,7 +797,7 @@ function applyAiNsLevelToCurrentCall(level)
     return false;
   }
 
-  aiNsEngine.setSuppressionLevel(level);
+  aiNsEngine.setLevel(level);
 
   return true;
 }

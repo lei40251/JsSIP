@@ -43,7 +43,7 @@ const mixer = new CRTC.MediaEffectsComposer([], {
   workerUrl: './mixer.worker.js',
 
   // worker 忙时丢帧策略
-  dropFrameWhenBusy: true,
+  dropBusyFrames: true,
   maxFrameQueue: 1
 });
 ```
@@ -184,7 +184,7 @@ createImageBitmap(video)  →  transferable，有拷贝
 
 ```js
 // 主线程
-if (dropFrameWhenBusy && workerBusy) {
+if (dropBusyFrames && workerBusy) {
   droppedFrames++;
   return; // 跳过本帧
 }

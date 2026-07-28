@@ -463,14 +463,14 @@ const app = {
   {
     const source = this.getSelectedSource();
     const hasWatermark = this.hasSlotWatermark(this.currentSlot);
-    const aiVirtualBackground = typeof this.getCurrentSlotAiVirtualBackground === 'function' ?
+    const aiBackground = typeof this.getCurrentSlotAiVirtualBackground === 'function' ?
       this.getCurrentSlotAiVirtualBackground() :
       null;
     const mirrorState = this.getCurrentSlotMirrorState();
     const sourceState = source ? `已占用 · ${source.id}` : '无源';
     const watermarkState = hasWatermark ? '已设置 slot 水印' : '无 slot 水印';
     const aiVirtualBackgroundState = typeof this.describeAiVirtualBackground === 'function' ?
-      this.describeAiVirtualBackground(aiVirtualBackground) :
+      this.describeAiVirtualBackground(aiBackground) :
       '无虚拟背景';
     const mirrorText = mirrorState.effective ? '镜像开启' : '镜像关闭';
     const slotLabel = this.formatSlotLabel(this.currentSlot);
@@ -495,7 +495,7 @@ const app = {
     }
     if (this.ui.slotAiVirtualBackgroundMode && typeof this.getAiVirtualBackgroundModeValue === 'function')
     {
-      this.ui.slotAiVirtualBackgroundMode.value = this.getAiVirtualBackgroundModeValue(aiVirtualBackground);
+      this.ui.slotAiVirtualBackgroundMode.value = this.getAiVirtualBackgroundModeValue(aiBackground);
     }
     this.refreshMirrorDemoUI();
   },
@@ -834,9 +834,9 @@ const app = {
       `worker=${Boolean(info.isWorker)} webgl2=${Boolean(info.isWebGL2)} fallback=${Boolean(info.isFallback)} ` +
       `dropped=${info.droppedFrames || 0} rendered=${info.renderedFrames || 0} reason=${info.reason || '-'} ` +
       `outputMode=${info.outputMode || '-'} insertableActive=${Boolean(info.insertableActive)} ` +
-      `insertableSupported=${Boolean(info.insertableSupported)} generator=${info.insertableGeneratorType || '-'} ` +
-      `supportReason=${info.insertableSupportReason || '-'} writeFailures=${info.insertableWriteFailures || 0} ` +
-      `captureFrameControl=${info.captureFrameControlMode || '-'}`
+      `insertableSupported=${Boolean(info.insertableSupported)} generator=${info.generatorType || '-'} ` +
+      `supportReason=${info.insertableReason || '-'} writeFailures=${info.writeFailures || 0} ` +
+      `captureFrameControl=${info.frameControlMode || '-'}`
     );
   },
 
@@ -847,15 +847,15 @@ const app = {
     const mode = info.outputMode || '-';
     const active = info.insertableActive ? 'active' : 'inactive';
     const supported = info.insertableSupported ? 'supported' : 'unsupported';
-    const generator = info.insertableGeneratorType || '-';
-    const reason = info.insertableSupportReason || '-';
+    const generator = info.generatorType || '-';
+    const reason = info.insertableReason || '-';
 
     if (mode === 'insertable')
     {
       return `${mode} | ${active} | ${generator}`;
     }
 
-    return `${mode} | ${info.captureFrameControlMode || '-'} | ${supported} | ${reason}`;
+    return `${mode} | ${info.frameControlMode || '-'} | ${supported} | ${reason}`;
   },
 
   startRenderInfoLoop()

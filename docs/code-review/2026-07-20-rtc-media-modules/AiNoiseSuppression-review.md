@@ -25,7 +25,7 @@ stateDiagram-v2
     GraphBuilding --> Running: source -> worklet -> gain -> destination
     Running --> Bypass: setEnabled(false)
     Bypass --> Running: setEnabled(true)
-    Running --> Rebuilding: replaceAudioTrack
+    Running --> Rebuilding: replaceTrack
     Rebuilding --> Running: connect new source
     Running --> Suspended: suspend / browser policy
     Suspended --> Running: resume success
@@ -64,7 +64,7 @@ RTCSession/MediaPipeline
 → new AudioContext({sampleRate})
 → audioContext.resume() reject
 → catch: reportIssue(warn)，不 throw
-→ initialize worklet / connect graph / rebuildProcessedStream()
+→ initialize worklet / connect graph / rebuildStream()
 → 返回 processedStream
 → RTCRtpSender 收到 live 但可能无采样的 destination track
 ```
@@ -112,7 +112,7 @@ if (audioContext.state !== 'running') {
 | 严重级别 | P1 |
 | 可信度 | 高 |
 | 影响范围 | 快速设备切换、重复更新 AiNS、呼叫结束与初始化并发 |
-| 主要证据 | [`init()`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L148)、[`replaceAudioTrack()`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L195)、[`ensureGraph()`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L433)、[`AiNSWorkletRuntime.initialize()`](../../../lib/AiNoiseSuppression/AiNSWorkletRuntime.js#L179) |
+| 主要证据 | [`init()`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L148)、[`replaceTrack()`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L195)、[`ensureGraph()`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L433)、[`AiNSWorkletRuntime.initialize()`](../../../lib/AiNoiseSuppression/AiNSWorkletRuntime.js#L179) |
 
 **竞争链**
 
@@ -164,7 +164,7 @@ RTCSession 同样保存 request token；只有最新 token 可写 `_sessionAiNSE
 |---|---|
 | 严重级别 | P1 |
 | 可信度 | 确认 |
-| 主要证据 | [`DeepFilterAudioProcessor.process()`](../../../lib/AiNoiseSuppression/AiNSWorkletSource.js#L536)、[`createAudioWorkletNode()`](../../../lib/AiNoiseSuppression/AiNSWorkletRuntime.js#L244) |
+| 主要证据 | [`DeepFilterAudioProcessor.process()`](../../../lib/AiNoiseSuppression/AiNSWorkletSource.js#L536)、[`createNode()`](../../../lib/AiNoiseSuppression/AiNSWorkletRuntime.js#L244) |
 
 `ans_process_frame()`没有 try/catch。主线程只处理 port 上的 `INIT_FAILED`和 `UNSUPPORTED_CHANNEL_LAYOUT`，没有设置 `workletNode.onprocessorerror`。模型运行期异常可能终止 processor，但 destination track 仍保持 live。
 
@@ -269,7 +269,7 @@ timeout 与 `fetch(url)`竞争，Response 返回后清 timer，然后才 `respon
 |---|---|
 | 严重级别 | P2 |
 | 可信度 | 高 |
-| 主要证据 | [`setInput()`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L360)、[`rebuildProcessedStream()`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L500) |
+| 主要证据 | [`setInput()`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L360)、[`rebuildStream()`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L500) |
 
 Engine 不监听 original track 的 `ended`/mute。原麦克风轨结束后，WebAudio destination track 可能继续 `live`并输出静音，sender 和 RTCSession 无法通过输出 track 状态感知设备已经丢失。
 
@@ -298,26 +298,26 @@ Engine 不监听 original track 的 `ended`/mute。原麦克风轨结束后，We
 | [`getIssues()`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L128) | 公 | 诊断 | map clone | clone 可能受异常值影响 | AINS-009；已覆盖 |
 | [`getLastIssue()`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L134) | 公 | 诊断 | clone 最后一项 | 无资源 | AINS-009；已覆盖 |
 | [`init(params)`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L148) | 公/异步 | process/用户 | setInput→ensureGraph→提交 outputStream | 无操作 token | AINS-001/002；部分 |
-| [`getOutputStream()`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L173) | 公 | 用户 | 返回 outputStream 引用 | 可返回旧/已静音流 | AINS-002/008；已覆盖 |
+| [`getOutput()`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L173) | 公 | 用户 | 返回 outputStream 引用 | 可返回旧/已静音流 | AINS-002/008；已覆盖 |
 | [`process(inputStream)`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L183) | 公/异步 | MediaPipeline | 兼容处理器接口→init | 并发共享字段 | AINS-002；部分 |
-| [`replaceAudioTrack(input)`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L195) | 公/异步 | MediaPipeline 切麦 | 解析 track→改 original→ensureGraph→提交 | await 前已改共享状态 | AINS-002/008；部分 |
-| [`getProcessor()`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L227) | 公/unstable | 调试/用户 | 返回 WorkletRuntime 内部实例 | 暴露内部控制对象 | -；已覆盖 |
+| [`replaceTrack(input)`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L195) | 公/异步 | MediaPipeline 切麦 | 解析 track→改 original→ensureGraph→提交 | await 前已改共享状态 | AINS-002/008；部分 |
+| [`getRuntime()`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L227) | 公/unstable | 调试/用户 | 返回 WorkletRuntime 内部实例 | 暴露内部控制对象 | -；已覆盖 |
 | [`setEnabled(enable)`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L241) | 公 | 用户/ensureGraph | normalize→runtime.setNsEnabled | 返回 resolved Promise | AINS-005；已覆盖 |
-| [`setSuppressionLevel(level)`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L254) | 公 | 用户 | normalize→runtime port | Worklet 尚未就绪时只更新 config | -；已覆盖 |
+| [`setLevel(level)`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L254) | 公 | 用户 | normalize→runtime port | Worklet 尚未就绪时只更新 config | -；已覆盖 |
 | [`setOutputGain(value)`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L269) | 公 | 用户 | normalize→gain.value | 即时跳变可能有轻微 click | -；已覆盖 |
 | [`isEnabled()`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L284) | 公 | 用户/report | 返回 enabled | 无资源 | -；已覆盖 |
 | [`suspend()`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L290) | 公/异步 | 用户 | context.suspend | rejection 直传 | AINS-001；部分 |
 | [`resume()`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L300) | 公/异步 | 用户 | context.resume | rejection 直传；ensureGraph 路径却吞错 | AINS-001；部分 |
-| [`getCapabilityReport()`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L313) | 公 | 用户 | capability + runtime issues | 克隆 issues | AINS-006/009；已覆盖 |
+| [`getCapabilities()`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L313) | 公 | 用户 | capability + runtime issues | 克隆 issues | AINS-006/009；已覆盖 |
 | [`static isSupported()`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L327) | 公 | MetaHuman/用户 | `isAiNSSupported()` | 假阳性 | AINS-006；已覆盖 |
-| [`static getCapabilityReport()`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L332) | 公 | 用户 | 无实例 capability | 不能证明资源可加载 | AINS-006；已覆盖 |
+| [`static getCapabilities()`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L332) | 公 | 用户 | 无实例 capability | 不能证明资源可加载 | AINS-006；已覆盖 |
 | [`destroy()`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L345) | 公/异步 | MediaPipeline/用户 | teardown→runtime.destroy→清输入输出 | 无 destroyed guard | AINS-002/004；部分 |
 | [`setInput(input)`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L360) | 内部公开 | init/用户 | 校验 MediaStream/track；写 original | 不绑定 ended | AINS-008；已覆盖普通 |
 | [`_getInputAudioTrack(input)`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L390) | 私 | set/replace | 取首音轨 | 多音轨只取第一个 | -；已覆盖 |
 | [`_getInputType(input)`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L404) | 私 | 日志 | 返回诊断字符串 | 无资源 | -；间接 |
 | [`_buildReplacedAudioStream(track)`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L412) | 私 | replace | 新音轨 + 原非音轨→新 MediaStream | 不停止旧轨 | AINS-002；已覆盖 |
 | [`ensureGraph()`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L433) | 内部/异步 | init/replace | Context→runtime→node→gain→destination→source→stream | resume 吞错；并发建图 | AINS-001/002；部分 |
-| [`rebuildProcessedStream()`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L500) | 私 | ensureGraph | destination 音轨 + 可选非音轨→processedStream | 输出轨所有权未记录 | AINS-004/008；已覆盖 |
+| [`rebuildStream()`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L500) | 私 | ensureGraph | destination 音轨 + 可选非音轨→processedStream | 输出轨所有权未记录 | AINS-004/008；已覆盖 |
 | [`teardownGraph()`](../../../lib/AiNoiseSuppression/AiNSEngine.js#L530) | 私/异步 | destroy | disconnect nodes→close context→清 processed | 单一 try；未 stop destination track | AINS-004；部分 |
 
 ## 5. AiNSWorkletRuntime 方法覆盖矩阵
@@ -330,10 +330,10 @@ Engine 不监听 original track 的 `ended`/mute。原麦克风轨结束后，We
 | [`constructor(config)`](../../../lib/AiNoiseSuppression/AiNSWorkletRuntime.js#L122) | Engine | 配置、asset/node/init flags | 无资源 | AINS-002；已覆盖 |
 | [`_reportIssue(issue)`](../../../lib/AiNoiseSuppression/AiNSWorkletRuntime.js#L163) | runtime 错误 | onIssue，回调有保护 | 无历史存储 | -；已覆盖 |
 | [`initialize()`](../../../lib/AiNoiseSuppression/AiNSWorkletRuntime.js#L179) | ensureGraph | 并行 fetch→保存 assets→isInitialized | 无 in-flight Promise；部分失败结果由 Promise.all 丢弃 | AINS-002/007；部分 |
-| [`createAudioWorkletNode(context)`](../../../lib/AiNoiseSuppression/AiNSWorkletRuntime.js#L244) | ensureGraph | register→new node→port.onmessage | 覆盖 `workletNode`；无 processorerror | AINS-002/003；部分 |
-| [`setSuppressionLevel(level)`](../../../lib/AiNoiseSuppression/AiNSWorkletRuntime.js#L350) | Engine | config→port SET_LEVEL | 节点未就绪时延迟 | -；已覆盖 |
+| [`createNode(context)`](../../../lib/AiNoiseSuppression/AiNSWorkletRuntime.js#L244) | ensureGraph | register→new node→port.onmessage | 覆盖 `workletNode`；无 processorerror | AINS-002/003；部分 |
+| [`setLevel(level)`](../../../lib/AiNoiseSuppression/AiNSWorkletRuntime.js#L350) | Engine | config→port SET_LEVEL | 节点未就绪时延迟 | -；已覆盖 |
 | [`setNsEnabled(enabled)`](../../../lib/AiNoiseSuppression/AiNSWorkletRuntime.js#L379) | Engine | bypass flag→port SET_BYPASS | 不清 processor ring buffer | AINS-005；部分 |
-| [`isNoiseSuppressionEnabled()`](../../../lib/AiNoiseSuppression/AiNSWorkletRuntime.js#L404) | report/用户 | `!bypassEnabled` | 不证明 processor 正常 | AINS-003；已覆盖 |
+| [`isEnabled()`](../../../lib/AiNoiseSuppression/AiNSWorkletRuntime.js#L404) | report/用户 | `!bypassEnabled` | 不证明 processor 正常 | AINS-003；已覆盖 |
 | [`destroy()`](../../../lib/AiNoiseSuppression/AiNSWorkletRuntime.js#L414) | Engine.destroy | disconnect node→清 assets/init | disconnect 可抛；未清 handler | AINS-004；部分 |
 | [`ensureInitialized()`](../../../lib/AiNoiseSuppression/AiNSWorkletRuntime.js#L433) | create node | 检查 flag，否则 throw | 只检查 flag，不验证 assets 内容 | AINS-002；已覆盖 |
 
@@ -344,7 +344,7 @@ Engine 不监听 original track 的 `ended`/mute。原麦克风轨结束后，We
 | [`create(options)`](../../../lib/AiNoiseSuppression/AiNSConfig.js#L74) | Engine constructor | 汇总 enabled/preserve/sampleRate/level/gain/assets | 已覆盖 |
 | [`normalizeBoolean()`](../../../lib/AiNoiseSuppression/AiNSConfig.js#L104) | create/setEnabled/runtime | 仅严格 boolean，否则 fallback | 已覆盖 |
 | [`normalizePositiveInteger()`](../../../lib/AiNoiseSuppression/AiNSConfig.js#L136) | create | 正整数，否则 sample rate fallback 值 | 注释承诺 Context fallback，但 Engine 未实现；AINS-001 |
-| [`normalizeSuppressionLevel()`](../../../lib/AiNoiseSuppression/AiNSConfig.js#L174) | create/set level | floor 并 clamp 0～100 | 已覆盖 |
+| [`normalizeLevel()`](../../../lib/AiNoiseSuppression/AiNSConfig.js#L174) | create/set level | floor 并 clamp 0～100 | 已覆盖 |
 | [`normalizeOutputGain()`](../../../lib/AiNoiseSuppression/AiNSConfig.js#L203) | create/set gain | clamp 0～4 | 已覆盖 |
 | [`normalizeAssetConfig()`](../../../lib/AiNoiseSuppression/AiNSConfig.js#L234) | create | 仅保留非空 cdnUrl | 已覆盖 |
 
@@ -369,8 +369,8 @@ Engine 不监听 original track 的 `ended`/mute。原麦克风轨结束后，We
 | [`__wbg_finalize_init()`](../../../lib/AiNoiseSuppression/AiNSWorkletSource.js#L331) | initSync | 保存 exports/memory，启动 wasm | 初始化资源 | 已覆盖 fake |
 | [`initSync()`](../../../lib/AiNoiseSuppression/AiNSWorkletSource.js#L343) | Processor constructor | WebAssembly.Module/Instance | 失败上报 INIT_FAILED | 已覆盖失败 |
 | [`DeepFilterAudioProcessor.constructor()`](../../../lib/AiNoiseSuppression/AiNSWorkletSource.js#L391) | AudioWorklet runtime | 初始化 wasm/model/ring/temp/port | frameLength/handle 缺少强校验 | AINS-003；部分 |
-| [`passthroughInputChannels()`](../../../lib/AiNoiseSuppression/AiNSWorkletSource.js#L451) | process/error fallback | 复制输入，缺输入填 0 | 无持久资源 | 已覆盖 |
-| [`reportUnsupportedChannelLayout()`](../../../lib/AiNoiseSuppression/AiNSWorkletSource.js#L480) | process | 只报告一次并 port.postMessage | postMessage 有 try/catch | 已覆盖 |
+| [`passInput()`](../../../lib/AiNoiseSuppression/AiNSWorkletSource.js#L451) | process/error fallback | 复制输入，缺输入填 0 | 无持久资源 | 已覆盖 |
+| [`reportBadChannels()`](../../../lib/AiNoiseSuppression/AiNSWorkletSource.js#L480) | process | 只报告一次并 port.postMessage | postMessage 有 try/catch | 已覆盖 |
 | [`handleMessage()`](../../../lib/AiNoiseSuppression/AiNSWorkletSource.js#L509) | port.onmessage | SET_LEVEL/SET_BYPASS | bypass 不清缓冲 | AINS-005；部分 |
 | [`getInputAvailable()`](../../../lib/AiNoiseSuppression/AiNSWorkletSource.js#L526) | process | 环形缓冲可读输入数 | bufferSize/frameLength 错误会破坏运算 | AINS-003；间接 |
 | [`getOutputAvailable()`](../../../lib/AiNoiseSuppression/AiNSWorkletSource.js#L531) | process | 环形缓冲可读输出数 | 同上 | AINS-003；间接 |
@@ -397,7 +397,7 @@ processSdkGumStream()
 switchDevice / replace audio
 → replaceAudioTrackWithSessionAiNoiseSuppression(newStream)
   ├─ engine 不存在 → 完整 apply
-  ├─ await engine.replaceAudioTrack(newStream)
+  ├─ await engine.replaceTrack(newStream)
   ├─ close previous _aiNSInputStream
   └─ 失败 → stop old engine → 完整 apply
 ```

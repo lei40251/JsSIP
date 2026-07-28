@@ -37,7 +37,7 @@
 | `AudioWorklet internal initialization failed` | `AiNSWorkletRuntime` | AudioWorklet 内部初始化失败，但 worklet 没有给出更细的错误文本时，会落到这个兜底文案。 | 关闭 AiNS，继续原始音频。 | 结合 logger 看 worklet 端初始化消息；常见原因是浏览器兼容性、脚本加载异常、底层 wasm 初始化失败。 |
 | `Processor not initialized. Call initialize() first.` | `AiNSWorkletRuntime` | 在 runtime 尚未 `initialize()` 完成前就开始处理。属于调用时序错误或前置初始化失败后仍继续使用。 | 上层不要重试当前实例，重新初始化 AiNS 或直接关闭功能。 | 检查调用链是否在初始化 Promise 完成前就触发处理。 |
 | `AiNoiseSuppression.init: failed to create processed MediaStream` | `AiNoiseSuppression` | 降噪处理图构建完成后，没有成功产出新的处理后音频流。 | 回退原始音频，提示降噪不可用。 | 看 logger 中更早的 graph 创建、destination、track 生成日志。 |
-| `AiNoiseSuppression.replaceAudioTrack: failed to create processed MediaStream` | `AiNoiseSuppression` | 替换输入音轨时，新的处理后音频流未生成成功。 | 保留旧音轨或回退原始音频，不要继续强切换。 | 检查设备切换时输入流是否合法，是否在切换过程中拿到了空轨。 |
+| `AiNoiseSuppression.replaceTrack: failed to create processed MediaStream` | `AiNoiseSuppression` | 替换输入音轨时，新的处理后音频流未生成成功。 | 保留旧音轨或回退原始音频，不要继续强切换。 | 检查设备切换时输入流是否合法，是否在切换过程中拿到了空轨。 |
 | `AiNoiseSuppression: input stream has no audio track` | `AiNoiseSuppression` | 传入流里没有音频轨。常见于纯视频流、采集失败或业务误传。 | 不要启用 AiNS；可静默跳过或提示“当前没有可降噪音频”。 | 检查 `getUserMedia`/屏幕流输入是否包含音频。 |
 | `AiNoiseSuppression: input track must be audio` | `AiNoiseSuppression` | 传入的单轨不是音频轨。属于业务调用错误。 | 直接关闭 AiNS；无需重试同一入参。 | 检查调用方是否误把视频轨或其他轨道传入。 |
 | `AiNoiseSuppression: replacement input has no audio track` | `AiNoiseSuppression` | 替换音轨时的新流没有音频轨。 | 保持旧音频或退回原始音频。 | 排查切麦/切设备时的新流生成逻辑。 |

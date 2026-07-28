@@ -299,7 +299,7 @@ function getMarks()
  * @property {MediaEffectsComposerSourceOptions[]} [sources]
  *   — 输入源配置数组，每个元素：
  *     @property {number}   [slot]               — 槽位索引
- *     @property {AiVBOptions} [aiVirtualBackground]
+ *     @property {AiVBOptions} [aiBackground]
  *       — 该源的 AI 虚拟背景配置，详见 getVbOpts 上方 JSDoc
  */
 
@@ -340,14 +340,14 @@ function getFxOpts()
     // 这里把所有源配置放在第一个槽位（index 0）。
     opts.sources = [
       {
-        aiVirtualBackground : vbOpts
+        aiBackground : vbOpts
       }
     ];
   }
 
   if (hasFx)
   {
-    opts.enableInsertable = true;
+    opts.insertable = true;
   }
 
   if (!hasFx)
@@ -380,7 +380,7 @@ function getFxOpts()
  *     filter: { id }
  *
  * AI 虚拟背景：
- *   setSourceAiVirtualBackground(slotOrTarget, options)
+ *   setAiBackground(slotOrTarget, options)
  *     slotOrTarget: number — 槽位索引（如 0）
  *     options: AiVBOptions
  * 
@@ -393,7 +393,7 @@ function getFxOpts()
  * rtcSession.getMediaEffectsComposer()
  *   - 返回: MediaEffectsComposerInstance | null
  *   - 说明: 仅在通话建立且 mediaEffectsComposer 已启用时返回实例，
- *           否则返回 null（需在 call/answer 时传入 enableInsertable: true）
+ *           否则返回 null（需在 call/answer 时传入 insertable: true）
  *   - 返回的实例上可用方法见本区块顶部注释
  *
  * @returns {Object|null} 当前通话使用的合成器
@@ -658,14 +658,14 @@ async function clearImgMark()
  * 把当前虚拟背景应用到当前通话。
  *
  * ========== SDK 调用 ==========
- * fx.setSourceAiVirtualBackground(slotOrTarget, options)
+ * fx.setAiBackground(slotOrTarget, options)
  *   - slotOrTarget: number | string
  *     - number: 槽位索引（如 0=第一个输入源）
  *   - options: AiVBOptions | null
  *     - 传 null 等同于 clear（但建议用下面的 clear 方法）
  *     - 参数结构详见 getVbOpts 上方 JSDoc
  *
- * fx.clearSourceAiVirtualBackground(slotOrTarget)
+ * fx.clearAiBackground(slotOrTarget)
  *   - slotOrTarget: number | string — 同上
  *   - 作用: 清除指定源的 AI 虚拟背景效果
  */
@@ -682,21 +682,21 @@ async function setVb()
 
   try
   {
-    if (fx && typeof fx.setSourceAiVirtualBackground === 'function')
+    if (fx && typeof fx.setAiBackground === 'function')
     {
       const vbOpts = getVbOpts();
 
       if (!vbOpts)
       {
-        // SDK: clearSourceAiVirtualBackground(0)
+        // SDK: clearAiBackground(0)
         // 没选虚拟背景 → 清除槽位 0 的 AI 虚拟背景效果
-        fx.clearSourceAiVirtualBackground(0);
+        fx.clearAiBackground(0);
       }
       else
       {
-        // SDK: setSourceAiVirtualBackground(0, AiVBOptions)
+        // SDK: setAiBackground(0, AiVBOptions)
         // 将虚拟背景配置应用到槽位 0（第一个输入源）
-        fx.setSourceAiVirtualBackground(0, vbOpts);
+        fx.setAiBackground(0, vbOpts);
       }
     }
   }
@@ -754,7 +754,7 @@ async function changeVb(selectEl)
  * @property {boolean} [enabled] — 是否启用 AI 降噪（默认 true）
  *   设为 false 可暂时关闭而不销毁管线
  *
- * @property {number} [noiseReductionLevel] — 降噪强度（0~100，默认 80）
+ * @property {number} [level] — 降噪强度（0~100，默认 80）
  *   - 0   = 不降噪
  *   - 100 = 最大降噪强度
  *   - 值越高噪声抑制越强，但语音可能稍有失真
@@ -780,10 +780,10 @@ function getNsOpts()
   }
 
   return {
-    enabled             : true,
-    noiseReductionLevel : getNsLevel(),
-    outputGain          : 1,
-    assetConfig         : { cdnUrl: NS_ROOT }
+    enabled     : true,
+    level       : getNsLevel(),
+    outputGain  : 1,
+    assetConfig : { cdnUrl: NS_ROOT }
   };
 }
 
@@ -805,7 +805,7 @@ function setNsLevel(level)
     return false;
   }
 
-  ns.setSuppressionLevel(level);
+  ns.setLevel(level);
 
   return true;
 }

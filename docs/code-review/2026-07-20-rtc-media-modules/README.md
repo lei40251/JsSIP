@@ -45,7 +45,7 @@
 flowchart LR
     APP["业务调用 / RTCSession"] --> GUM["getUserMedia / 外部 MediaStream"]
     GUM --> PIPE["RTCSession.MediaPipeline"]
-    PIPE --> AINS["AiNoiseSuppressionEngine"]
+    PIPE --> AINS["AiNSEngine"]
     AINS --> AOUT["处理后音频轨或原始音频回退"]
     AOUT --> MEC["MediaEffectsComposer"]
     MEC --> SRC["Sources + AiVBState"]

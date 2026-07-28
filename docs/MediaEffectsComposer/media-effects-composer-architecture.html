@@ -65,7 +65,7 @@
 <tr><td data-label="追踪目标">单帧视频渲染流程</td><td data-label="起点"><code>RenderLoop.renderFrame()</code></td><td data-label="继续查看"><code>LayoutEngine.createRenderPayload()</code>、当前 renderer 的 <code>render()</code></td></tr>
 <tr><td data-label="追踪目标">渲染后端选择和降级规则</td><td data-label="起点"><code>createRenderer()</code></td><td data-label="继续查看"><code>WorkerRenderer.init()</code>、<code>MainWebGL2Renderer.init()</code>、<code>MainCanvas2DRenderer.init()</code></td></tr>
 <tr><td data-label="追踪目标">输出 <code>MediaStream</code> 的创建流程</td><td data-label="起点"><code>MediaEffectsComposer.getMixedStream()</code></td><td data-label="继续查看"><code>OutputStream.getVideoStream()</code>、<code>AudioMixer.getAudioStream()</code></td></tr>
-<tr><td data-label="追踪目标">后续添加的音频源如何补进已返回的 mixed stream</td><td data-label="起点"><code>AudioMixer._connectSource()</code></td><td data-label="继续查看"><code>OutputStream.ensureMixedStreamAudioTrack()</code></td></tr>
+<tr><td data-label="追踪目标">后续添加的音频源如何补进已返回的 mixed stream</td><td data-label="起点"><code>AudioMixer._connectSource()</code></td><td data-label="继续查看"><code>OutputStream.ensureMixedAudio()</code></td></tr>
 <tr><td data-label="追踪目标">移除输入源时的资源清理流程</td><td data-label="起点"><code>MediaEffectsComposer.removeSource()</code></td><td data-label="继续查看"><code>Sources.remove()</code>、<code>AudioMixer.disconnectSource()</code>、<code>RenderLoop.removeSource()</code></td></tr>
 <tr><td data-label="追踪目标">停止混流器时释放的资源</td><td data-label="起点"><code>MediaEffectsComposer.stop()</code></td><td data-label="继续查看"><code>AudioMixer.stop()</code>、<code>RenderLoop.destroy()</code>、<code>OutputStream.stop()</code></td></tr>
 <tr><td data-label="追踪目标">黑屏、无声、渲染降级的排查入口</td><td data-label="起点"><code>getRenderInfo()</code> / <code>getAudioInfo()</code></td><td data-label="继续查看"><code>RenderLoop._handleRendererInfo()</code>、<code>AudioMixer._updateAudioInfo()</code></td></tr>
@@ -174,7 +174,7 @@
 <tr><td data-label="方法"><code>addSource(videos, options?)</code></td><td data-label="功能">添加输入源</td><td data-label="调用链路">→ Sources.add() → _scheduleAudioRefresh() → RenderLoop.start()</td></tr>
 <tr><td data-label="方法"><code>removeSource(streamOrId)</code></td><td data-label="功能">移除一路源</td><td data-label="调用链路">→ Sources.find() → Sources.remove()</td></tr>
 <tr><td data-label="方法"><code>clearSources()</code></td><td data-label="功能">移除所有源</td><td data-label="调用链路">→ 遍历 Sources.remove()</td></tr>
-<tr><td data-label="方法"><code>getMixedStream()</code></td><td data-label="功能">获取完整混合流（视频+音频）</td><td data-label="调用链路">→ getVideoStream() → setMixedStream() → getStableAudioStream() → addAudioTracksToStream()</td></tr>
+<tr><td data-label="方法"><code>getMixedStream()</code></td><td data-label="功能">获取完整混合流（视频+音频）</td><td data-label="调用链路">→ getVideoStream() → setMixedStream() → getStableAudioStream() → addAudioTracks()</td></tr>
 <tr><td data-label="方法"><code>getVideoStream()</code></td><td data-label="功能">仅获取视频流</td><td data-label="调用链路">→ OutputStream.getVideoStream() → 启动 RenderLoop</td></tr>
 <tr><td data-label="方法"><code>getAudioStream()</code></td><td data-label="功能">仅获取音频流</td><td data-label="调用链路">→ AudioMixer.getAudioStream()</td></tr>
 <tr><td data-label="方法"><code>getSources()</code></td><td data-label="功能">获取源快照</td><td data-label="调用链路">→ Sources.getSnapshot()</td></tr>
@@ -200,7 +200,7 @@
 <tr><td data-label="方法"><code>normalizeGain(value, fallback)</code></td><td data-label="功能">音量增益归一化</td><td data-label="归一化规则">≥0，允许放大（&gt;1）</td></tr>
 <tr><td data-label="方法"><code>normalizeSourceOptions(optionsOrSlot, index, defaultGain)</code></td><td data-label="功能">appendStream 参数归一化</td><td data-label="归一化规则">支持 <code>(stream, 3)</code> 和 <code>(stream, {slot, gain})</code> 两种调用形式</td></tr>
 </tbody></table></div>
-<p><strong>默认配置</strong>: width=1280, height=720, fps=15, backgroundColor='#000', audioGain=0.8, renderMode='auto', dropFrameWhenBusy=true, maxFrameQueue=1, preserveDrawingBuffer=true</p>
+<p><strong>默认配置</strong>: width=1280, height=720, fps=15, backgroundColor='#000', audioGain=0.8, renderMode='auto', dropBusyFrames=true, maxFrameQueue=1, keepDrawingBuffer=true</p>
 <hr>
 <h4 id="lib-sources-js-—-输入源注册表"><a href="../../lib/MediaEffectsComposer/Sources.js">lib/MediaEffectsComposer/Sources.js</a> — 输入源注册表</h4>
 <p><strong>职责</strong>: 管理所有参与混流的输入源生命周期。</p>
@@ -251,17 +251,17 @@ onAfterRemove(source)
 <ul>
 <li><strong>延迟创建</strong>: <code>AudioContext</code> 在调用 <code>getAudioStream()</code> 且存在 live 音频源时才初始化；没有 live 音频源时直接返回 <code>null</code></li>
 <li><strong>独立音量</strong>: 每路源独立 <code>GainNode</code>，通过 <code>source.gain</code> 控制</li>
-<li><strong>自动重连</strong>: <code>syncExternalSourceAudio()</code> 检测外部传入的 <code>HTMLMediaElement.srcObject</code> 换源</li>
+<li><strong>自动重连</strong>: <code>syncSourceAudio()</code> 检测外部传入的 <code>HTMLMediaElement.srcObject</code> 换源</li>
 <li><strong>刷新去抖</strong>: <code>scheduleRefresh()</code> 带 pending 标记，避免并发刷新</li>
 </ul>
-<p><strong>音频轨注入到视频流</strong>: <code>_connectSource()</code> 成功后调用 <code>onAudioTrackAvailable</code> → <code>OutputStream.ensureMixedStreamAudioTrack()</code>。</p>
+<p><strong>音频轨注入到视频流</strong>: <code>_connectSource()</code> 成功后调用 <code>onAudioTrackAvailable</code> → <code>OutputStream.ensureMixedAudio()</code>。</p>
 <hr>
 <h4 id="lib-outputstream-js-输出流管理"><a href="../../lib/MediaEffectsComposer/OutputStream.js">lib/MediaEffectsComposer/OutputStream.js</a> — 输出流管理</h4>
 <ul>
 <li><code>getVideoStream(drawFirstFrame)</code>: 先绘制首帧，再通过 <code>canvas.captureStream(fps)</code> 获取视频轨，并返回只含视频轨的新 <code>MediaStream</code></li>
 <li><code>setMixedStream(stream)</code>: 保存混合流引用，供后续音频补充</li>
-<li><code>ensureMixedStreamAudioTrack(audioStream)</code>: 将音频轨注入到已返回给调用方的流中（<strong>延迟音频</strong>关键设计）</li>
-<li><code>addAudioTracksToStream(target, audio)</code>: 通用去重音频注入</li>
+<li><code>ensureMixedAudio(audioStream)</code>: 将音频轨注入到已返回给调用方的流中（<strong>延迟音频</strong>关键设计）</li>
+<li><code>addAudioTracks(target, audio)</code>: 通用去重音频注入</li>
 <li><code>hasLiveVideoStream()</code>: 检测 video stream 是否仍有 live 轨</li>
 <li><code>stop()</code>: 停止所有 captured tracks</li>
 </ul>
@@ -275,7 +275,7 @@ renderFrame(timestamp, forceRender)
     │
     ├─ fps 节流检测 ── 未到间隔 → 跳过绘制
     │
-    ├─ syncExternalSourceAudio()    ← 同步外部换源
+    ├─ syncSourceAudio()    ← 同步外部换源
     │
     ├─ createRenderPayload()        ← LayoutEngine 计算布局
     │
@@ -378,8 +378,8 @@ Worker 线程（workerScript）
 <p><strong>帧抽取</strong>: 优先尝试 <code>createImageBitmap(video)</code>，失败后回退 <code>new VideoFrame(video)</code>。对于 <code>worker-webgl2</code> 路径，<code>createImageBitmap</code> 会传入 <code>{ imageOrientation: 'flipY' }</code> 补偿 WebGL 纹理翻转。</p>
 <p><strong>队列管理</strong>:</p>
 <ul>
-<li><code>dropFrameWhenBusy=true</code>: Worker 忙或正在抽帧时，只保留最新待处理 payload，并增加 droppedFrames（默认行为）</li>
-<li><code>dropFrameWhenBusy=false</code>: 追加到队列，超出 <code>maxFrameQueue</code> 时丢弃最早帧</li>
+<li><code>dropBusyFrames=true</code>: Worker 忙或正在抽帧时，只保留最新待处理 payload，并增加 droppedFrames（默认行为）</li>
+<li><code>dropBusyFrames=false</code>: 追加到队列，超出 <code>maxFrameQueue</code> 时丢弃最早帧</li>
 <li><code>maxFrameQueue&lt;=0</code>: 不排队，直接计为 dropped frame</li>
 </ul>
 <hr>
@@ -462,7 +462,7 @@ Worker 线程（workerScript）
     │
     ├─ fps 节流检测
     │
-    ├─ [AudioMixer] syncExternalSourceAudio()  ← 检测外部换源
+    ├─ [AudioMixer] syncSourceAudio()  ← 检测外部换源
     │
     ├─ [LayoutEngine] createRenderPayload()
     │     └─ 遍历 Sources.sources → 计算网格 → render payload
@@ -505,12 +505,12 @@ Worker 线程（workerScript）
       │     ├─ 即使无源也创建静音轨
       │     ├─ _ensureAudioSystem() → new AudioContext()
       │     ├─ _refreshAudioConnections()
-  │     │   ├─ Sources.hasAnyLiveAudioTrack()
+  │     │   ├─ Sources.hasLiveAudio()
   │     │   ├─ _connectSource() → createMediaStreamSource → GainNode → Destination
   │     │   └─ 返回 audioDestination.stream
   │     └─ 返回仅含音频轨的 MediaStream
   │
-  └─▶ OutputStream.addAudioTracksToStream(videoStream, audioStream)
+  └─▶ OutputStream.addAudioTracks(videoStream, audioStream)
         └─ 将音频轨去重添加到视频流</code></pre>
 <h3 id="addsource--完整流程">addSource() 完整流程</h3>
 <pre><code>MediaEffectsComposer.addSource(videos, optionsOrSlot)
@@ -520,7 +520,7 @@ Worker 线程（workerScript）
   ├─ 统一单源/多源输入，并按 ComposerConfig.getMaxSources() 限制最多 9 路
   │
   ├─▶ _normalizeSourceOptions(optionsOrSlot, index)
-  │     └─ ComposerConfig.normalizeSourceOptions() 处理 slot / gain / sourceMirror / aiVirtualBackground
+  │     └─ ComposerConfig.normalizeSourceOptions() 处理 slot / gain / sourceMirror / aiBackground
   │
   ├─▶ Sources.add(video, normalizedSourceOptions)
   │     ├─ _createSource() 创建内部 source / videoElement
@@ -587,7 +587,7 @@ Worker 线程（workerScript）
           │
           ├──▶ RenderLoop                      ──依赖──▶ createRenderer
           │                                              LayoutEngine (createRenderPayload)
-          │                                              AudioMixer (syncExternalSourceAudio)
+          │                                              AudioMixer (syncSourceAudio)
           │
           └──▶ OutputStream             ──依赖──▶ (无, 仅接收 canvas + config)
                                      
@@ -626,7 +626,7 @@ lib/MediaEffectsComposer/Renderers/
 <tr><td data-label="模式"><strong>Value Object（值对象）</strong></td><td data-label="使用位置">ComposerConfig</td><td data-label="说明">纯函数归一化配置参数，无副作用</td></tr>
 <tr><td data-label="模式"><strong>Registry（注册表）</strong></td><td data-label="使用位置">Sources</td><td data-label="说明">统一管理源对象的增删查</td></tr>
 <tr><td data-label="模式"><strong>Dependency Injection（依赖注入）</strong></td><td data-label="使用位置">所有模块的 constructor</td><td data-label="说明">每个模块通过构造参数接收依赖</td></tr>
-<tr><td data-label="模式"><strong>Queue + Drop（队列+丢帧）</strong></td><td data-label="使用位置">WorkerRenderer</td><td data-label="说明">Worker 忙时基于 <code>dropFrameWhenBusy</code> 策略丢帧</td></tr>
+<tr><td data-label="模式"><strong>Queue + Drop（队列+丢帧）</strong></td><td data-label="使用位置">WorkerRenderer</td><td data-label="说明">Worker 忙时基于 <code>dropBusyFrames</code> 策略丢帧</td></tr>
 </tbody></table></div>
 <hr>
 <h2 id="注意事项">注意事项</h2>

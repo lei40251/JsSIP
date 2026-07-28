@@ -62,7 +62,7 @@ getOutput("mixed")
 → mixedVideoStream = _getVideoOutputSync()
 → OutputStream.setMixedStream(mixedVideoStream)
 → AudioMixer.getStableAudioStream()
-→ addAudioTracksToStream(mixedVideoStream, audioStream)
+→ addAudioTracks(mixedVideoStream, audioStream)
 → 同一个对象也仍是 OutputStream._videoStream
 ```
 
@@ -76,7 +76,7 @@ getOutput("mixed")
 const videoStream = output.getVideoStream();
 const mixedStream = new MediaStream(videoStream.getVideoTracks());
 output.setMixedStream(mixedStream);
-output.addAudioTracksToStream(mixedStream, audioStream);
+output.addAudioTracks(mixedStream, audioStream);
 return mixedStream;
 ```
 
@@ -113,7 +113,7 @@ Worker postMessage({bitmap})
 
 `_closeFrameSource()`只用于替换 pending frame 和 teardown；它没有覆盖早退与成功写入。`new VideoFrame(bitmap)`不会移交 bitmap 的释放责任。
 
-**测试缺口**：Mock 没有对每帧 ImageBitmap 记录 close 次数，且没有组合“配置 enableInsertable=true、初始化回退 captureStream、Worker 仍返回 direct frameSource”的场景。
+**测试缺口**：Mock 没有对每帧 ImageBitmap 记录 close 次数，且没有组合“配置 insertable=true、初始化回退 captureStream、Worker 仍返回 direct frameSource”的场景。
 
 **最小修复伪代码**
 
@@ -390,7 +390,7 @@ URL 变化时清失败记录；显式 retry API 可选，不应按帧重试。
 | 严重级别/可信度 | P2 / 确认 |
 | 证据 | [`Sources.getSnapshot()`](../../../lib/MediaEffectsComposer/Sources.js#L203)、[`MediaEffectsComposer.getSources()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1521) |
 
-- **链路**：getSources→getSnapshot→`aiVirtualBackground: source.aiVirtualBackground`。
+- **链路**：getSources→getSnapshot→`aiBackground: source.aiBackground`。
 - **表现**：调用方直接改 mode/blur/assets，绕过 normalize、generation、runtime reset 和 issue。
 - **最小修复**：使用 AiVBState 的 snapshot clone 或专用递归 clone，禁止返回 DOM/MediaStream 内部对象以外的可变配置引用。
 - **测试/审查**：[ ] 修改返回对象不改变第二次 getSources；[ ] MediaStream identity 按公开契约保留或明确省略。
@@ -455,12 +455,12 @@ URL 变化时清失败记录；显式 retry API 可选，不应按帧重试。
 | 字段 | 内容 |
 |---|---|
 | 严重级别/可信度 | P2 / 确认 |
-| 证据 | [`normalizeConfig()`](../../../lib/MediaEffectsComposer/AiVirtualBackground/AiVBState.js#L139)、[`setSourceAiVirtualBackground()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1533) |
+| 证据 | [`normalizeConfig()`](../../../lib/MediaEffectsComposer/AiVirtualBackground/AiVBState.js#L139)、[`setAiBackground()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1533) |
 
 - **链路**：input=true→options={}→resolveMode 未找到 mode→`none`→isEffectEnabled=false→remove state。
 - **契约**：公开 JSDoc 描述 `true=启用默认效果`。
 - **建议**：明确 `true`映射为现有默认 blur 配置；`false/null`禁用。
-- **测试/审查**：[ ] true 后 `getSourceAiVirtualBackground()`返回 enabled blur；[ ] 默认参数不增加新的远程资源依赖之外行为。
+- **测试/审查**：[ ] true 后 `getAiBackground()`返回 enabled blur；[ ] 默认参数不增加新的远程资源依赖之外行为。
 
 <a id="aivb-005"></a>
 ### AIVB-005：顶层 blurRadius 绕过后处理钳位
@@ -523,7 +523,7 @@ URL 变化时清失败记录；显式 retry API 可选，不应按帧重试。
 | 字段 | 内容 |
 |---|---|
 | 严重级别/可信度 | P2 / 确认 |
-| 证据 | [`MediaEffectsComposerInstance`](../../../lib/RTCSession.d.ts#L260)、[`setSourceAiVirtualBackground()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1533) |
+| 证据 | [`MediaEffectsComposerInstance`](../../../lib/RTCSession.d.ts#L260)、[`setAiBackground()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1533) |
 
 运行时 target 可通过 `_resolveFxSource()`接受 MediaStream/内部可解析目标，并返回配置快照；`.d.ts`只声明 `number|string`且 setter/clear 返回 `void`。TypeScript 调用方无法表达真实用法，也会忽略实际返回值。
 
@@ -536,9 +536,9 @@ URL 变化时清失败记录；显式 retry API 可选，不应按帧重试。
 | 字段 | 内容 |
 |---|---|
 | 严重级别/可信度 | P2 / 确认 |
-| 证据 | [`MediaEffectsComposerState`](../../../lib/RTCSession.d.ts#L166)、[`getState()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1460)、[`getCapabilityReport()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1732) |
+| 证据 | [`MediaEffectsComposerState`](../../../lib/RTCSession.d.ts#L166)、[`getState()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1460)、[`getCapabilities()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1732) |
 
-运行时 state 含 `issues`，类型没有；`features.sourceAiVirtualBackground`实际读取“当前有 source 启用效果”，不是浏览器能力。
+运行时 state 含 `issues`，类型没有；`features.aiBackground`实际读取“当前有 source 启用效果”，不是浏览器能力。
 
 - **最小修复**：类型加入只读 issue 数组；capability 拆为 `supported/configured/enabled`中的明确字段，旧字段保留并注明 deprecated，避免直接改变历史语义。
 - **回归/审查**：[ ] capability 在未配置效果时仍能表达环境是否支持；[ ] 旧消费者字段不突然改变含义。
@@ -585,10 +585,10 @@ URL 变化时清失败记录；显式 retry API 可选，不应按帧重试。
 | [`_createSinkVideoElement()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L878) | 私 | capture stream 保活 | 创建隐藏 video，srcObject/play | DOM/播放资源 | MEC-004/009；部分 |
 | [`_disposeSinkVideoElement()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L890) | 私 | OutputStream teardown | pause/srcObject/remove | DOM 方法可抛 | MEC-009；未故障注入 |
 | [`_scheduleAudioRefresh()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L909) | 私 | source/config 变化 | AudioMixer.scheduleRefresh | timer/microtask 由 mixer 管 | MEC-007/008；已覆盖 |
-| [`_syncExternalSourceAudio()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L918) | 私 | RenderLoop 每帧 | AudioMixer.syncExternalSourceAudio | 检测 HTMLMediaElement 换源 | MEC-008；部分 |
+| [`_syncExternalSourceAudio()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L918) | 私 | RenderLoop 每帧 | AudioMixer.syncSourceAudio | 检测 HTMLMediaElement 换源 | MEC-008；部分 |
 | [`_disconnectAudio()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L932) | 私 | source remove | AudioMixer.disconnectSource | 节点释放 | MEC-008/009；部分 |
-| [`_ensureMixedAudio()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L948) | 私 | audio refresh | OutputStream.ensureMixedStreamAudioTrack | 向 mixed 容器注入音轨 | MEC-001；已覆盖部分 |
-| [`_addAudioTracksToStream()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L960) | 私 | mixed output | OutputStream.addAudioTracksToStream | addTrack 改变目标容器 | MEC-001；部分 |
+| [`_ensureMixedAudio()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L948) | 私 | audio refresh | OutputStream.ensureMixedAudio | 向 mixed 容器注入音轨 | MEC-001；已覆盖部分 |
+| [`_addAudioTracksToStream()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L960) | 私 | mixed output | OutputStream.addAudioTracks | addTrack 改变目标容器 | MEC-001；部分 |
 | [`_removeSourcesInternal()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L976) | 私 | remove/clear | find/遍历→Sources.remove→render/audio refresh | 循环中异常会中断剩余源 | MEC-009；部分 |
 | [`_getSourceMirrorLegacySnapshot()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1013) | 私 | getSourceMirror | 生成全局/slot 兼容结构 | 返回新对象 | 已覆盖 |
 | [`_collectRenderInfo()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1058) | 私 | state/capability/getRenderInfo | RenderLoop + OutputStream route | logger 序列化 | 已覆盖 |
@@ -606,28 +606,28 @@ URL 变化时清失败记录；显式 retry API 可选，不应按帧重试。
 | [`getOutput()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1473) | 公/异步 | 用户/RTCSession | type 分派 video/mixed/audio | mixed/audio 异步 | MEC-001/007；已覆盖普通 |
 | [`releaseOutput()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1499) | 公 | 用户 | AudioMixer.release submix；video/mixed 通常不释放 | 资源归属按 type | 已覆盖 |
 | [`getSources()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1521) | 公 | 用户 | Sources.getSnapshot | 嵌套 AiVB 内部引用 | MEC-010；未变异测试 |
-| [`setSourceAiVirtualBackground()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1533) | 公 | 用户/RTCSession | resolve source→AiVBState.set→policy/render | 返回 snapshot 与 d.ts 不同 | AIVB-002/004/TYPE-001；部分 |
-| [`getSourceAiVirtualBackground()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1552) | 公 | 用户 | resolve→AiVBState.get snapshot | 无资源 | TYPE-001；已覆盖 |
-| [`clearSourceAiVirtualBackground()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1566) | 公 | 用户 | resolve→AiVB clear→policy/render | runtime 异步 destroy fire-and-forget | AIVB-002/TYPE-001；部分 |
+| [`setAiBackground()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1533) | 公 | 用户/RTCSession | resolve source→AiVBState.set→policy/render | 返回 snapshot 与 d.ts 不同 | AIVB-002/004/TYPE-001；部分 |
+| [`getAiBackground()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1552) | 公 | 用户 | resolve→AiVBState.get snapshot | 无资源 | TYPE-001；已覆盖 |
+| [`clearAiBackground()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1566) | 公 | 用户 | resolve→AiVB clear→policy/render | runtime 异步 destroy fire-and-forget | AIVB-002/TYPE-001；部分 |
 | [`setMirror()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1581) | 公/异步 | 用户 | setConfig({mirror}) | 强制重绘 | 已覆盖 |
 | [`getMirror()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1588) | 公 | 用户 | 读 output mirror | 无资源 | 已覆盖 |
-| [`setMirrorWatermarksWithOutput()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1600) | 公/异步 | 用户 | setConfig | 改水印最终镜像 | 已覆盖 |
-| [`getMirrorWatermarksWithOutput()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1607) | 公 | 用户 | 读 config | 无资源 | 已覆盖 |
+| [`setWatermarkMirror()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1600) | 公/异步 | 用户 | setConfig | 改水印最终镜像 | 已覆盖 |
+| [`getWatermarkMirror()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1607) | 公 | 用户 | 读 config | 无资源 | 已覆盖 |
 | [`setSourceMirror()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1625) | 公/异步 | 用户 | 全局/slot patch→setConfig | 更新 override | AIVB-001；已覆盖主线程 |
 | [`getSourceMirror()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1641) | 公 | 用户 | legacy snapshot | 返回新对象 | 已覆盖 |
 | [`clearSourceMirror()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1658) | 公/异步 | 用户 | 清单 slot/全部 override→setConfig | 重绘 | 已覆盖 |
 | [`_resolveFxSource()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1682) | 私 | AiVB source API | slot/stream/id/video→source | 接受范围大于 d.ts | TYPE-001；已覆盖部分 |
 | [`getRenderInfo()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1705) | 公 | 用户 | `_collectRenderInfo()` | 诊断快照 | MEC-005/006；已覆盖 |
 | [`getAudioInfo()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1717) | 公 | 用户 | `_collectAudioInfo()` | 诊断快照 | MEC-007/008；已覆盖 |
-| [`getCapabilityReport()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1732) | 公 | 用户 | limits/features/render/audio/issues | feature 混合能力和启用状态 | TYPE-002；部分 |
+| [`getCapabilities()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1732) | 公 | 用户 | limits/features/render/audio/issues | feature 混合能力和启用状态 | TYPE-002；部分 |
 | [`setWatermarks()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1758) | 公/异步 | 用户 | setConfig→Watermark.set | 资源加载可 pending | MEC-013；已覆盖普通 |
 | [`clearWatermarks()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1769) | 公/异步 | 用户 | setConfig clear/filter | 移除 surface 引用 | MEC-013/014；已覆盖 |
 | [`getWatermarks()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1784) | 公 | 用户 | Watermark.getWatermarks | 返回配置快照 | 已覆盖 |
 | [`getMixedStream()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1800) | 兼容公/异步 | 用户 | getOutput mixed | video/mixed identity 问题 | MEC-001；已覆盖部分 |
 | [`getVideoStream()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1813) | 兼容公/同步 | 用户 | `_getVideoOutputSync()` | 必须保持同步历史行为 | MEC-001～004；已覆盖 |
 | [`getAudioStream()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1827) | 兼容公/异步 | 用户 | getOutput audio | shared/isolated request | MEC-007；已覆盖 |
-| [`getIsolatedSubmixAudioStream()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1844) | 兼容公/异步 | 用户 | AudioMixer isolated | 独立 Context 生命周期 | MEC-007/009；已覆盖 |
-| [`releaseSubmixAudioStream()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1860) | 兼容公 | 用户 | releaseOutput audio | stop owned destination | 已覆盖 |
+| [`getSubmixStream()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1844) | 兼容公/异步 | 用户 | AudioMixer isolated | 独立 Context 生命周期 | MEC-007/009；已覆盖 |
+| [`releaseSubmixStream()`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1860) | 兼容公 | 用户 | releaseOutput audio | stop owned destination | 已覆盖 |
 | [`get _sources`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1871) | internal getter | 旧测试/兼容 | 暴露 Sources array | 可变内部引用，仅 internal | 测试依赖 |
 | [`get _renderer`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1877) | internal getter | 旧测试/兼容 | RenderLoop.renderer | 内部对象 | 测试依赖 |
 | [`get _isStopDrawingFrames`](../../../lib/MediaEffectsComposer/MediaEffectsComposer.js#L1882) | internal getter | 旧兼容 | RenderLoop.isStopped | 无资源 | 测试依赖 |
@@ -666,7 +666,7 @@ URL 变化时清失败记录；显式 retry API 可选，不应按帧重试。
 | [`remove()`](../../../lib/MediaEffectsComposer/Sources.js#L148) | clear/Composer | before callback→删数组→pause/srcObject/remove→after callback | DOM 异常未逐项保护 | MEC-009；部分 |
 | [`getSnapshot()`](../../../lib/MediaEffectsComposer/Sources.js#L203) | getState/getSources | 映射 source 公开字段 | AiVB 嵌套引用未 clone | MEC-010；部分 |
 | [`getStream()`](../../../lib/MediaEffectsComposer/Sources.js#L231) | Audio/Layout | source.stream 或 video.srcObject | 返回原始对象 | 已覆盖 |
-| [`hasAnyLiveAudioTrack()`](../../../lib/MediaEffectsComposer/Sources.js#L249) | AudioMixer/Composer | some hasLiveAudioTrack | track 状态读取 | 已覆盖 |
+| [`hasLiveAudio()`](../../../lib/MediaEffectsComposer/Sources.js#L249) | AudioMixer/Composer | some hasLiveAudioTrack | track 状态读取 | 已覆盖 |
 | [`hasLiveAudioTrack()`](../../../lib/MediaEffectsComposer/Sources.js#L261) | audio policy | audio tracks some readyState live | ended 输入不参与 | 已覆盖 |
 | [`hasVideoTrack()`](../../../lib/MediaEffectsComposer/Sources.js#L279) | Layout/render policy | 检查 stream video tracks | 不代表 video element ready | 已覆盖 |
 | [`isRenderable()`](../../../lib/MediaEffectsComposer/Sources.js#L298) | Layout | video ready/track live/placeholder | 无资源 | 已覆盖 |
@@ -683,7 +683,7 @@ URL 变化时清失败记录；显式 retry API 可选，不应按帧重试。
 | [`constructor()`](../../../lib/MediaEffectsComposer/LayoutEngine.js#L21) | Composer | 保存 callbacks/config/cache | placeholder cache | 已覆盖 |
 | [`createRenderPayload()`](../../../lib/MediaEffectsComposer/LayoutEngine.js#L58) | Composer每帧 | `_calcLayout`→每源 draw/mirror/AiVB/placeholder | 创建 renderer payload | AIVB-001/006；已覆盖 |
 | [`_resolveMirror()`](../../../lib/MediaEffectsComposer/LayoutEngine.js#L165) | payload | callback/source/slot mirror | 无资源 | AIVB-001；已覆盖主线程 |
-| [`clearAudioPlaceholderCache()`](../../../lib/MediaEffectsComposer/LayoutEngine.js#L175) | source/config/stop | 清 Map | canvas 交 GC | MEC-009；已覆盖 |
+| [`clearAudioCache()`](../../../lib/MediaEffectsComposer/LayoutEngine.js#L175) | source/config/stop | 清 Map | canvas 交 GC | MEC-009；已覆盖 |
 | [`_getSourceStreamId()`](../../../lib/MediaEffectsComposer/LayoutEngine.js#L186) | payload | 读取 stream id | 无资源 | 已覆盖 |
 | [`_calcLayout()`](../../../lib/MediaEffectsComposer/LayoutEngine.js#L203) | payload | maxSlot→rows/columns/cells | 极大 slot 退化 | MEC-012；未边界覆盖 |
 | [`_calcDrawRect()`](../../../lib/MediaEffectsComposer/LayoutEngine.js#L290) | payload | video dimensions→contain rect | 未 ready 返回 null | 已覆盖 |
@@ -739,12 +739,12 @@ getAudioStream(request)
 | [`constructor()`](../../../lib/MediaEffectsComposer/AudioMixer.js#L24) | Composer constructor | 初始化 Context/destination/bus/submix/source/listener 状态和回调 | 已覆盖 |
 | [`_reportIssue()`](../../../lib/MediaEffectsComposer/AudioMixer.js#L116) | 所有音频异常路径 | normalize→onIssue，回调有保护 | 已覆盖 |
 | [`getAudioStream()`](../../../lib/MediaEffectsComposer/AudioMixer.js#L129) | Composer getOutput/getAudioStream | normalize→isolated 或 ensure shared→refresh→stream | 首次默认 destination 竞争 | MEC-007；部分 |
-| [`getIsolatedSubmixAudioStream()`](../../../lib/MediaEffectsComposer/AudioMixer.js#L187) | Composer兼容 API | 强制 isolated→`_createSubmixAudio` | 创建独立 Context/destination | MEC-007/009；已覆盖 |
+| [`getSubmixStream()`](../../../lib/MediaEffectsComposer/AudioMixer.js#L187) | Composer兼容 API | 强制 isolated→`_createSubmixAudio` | 创建独立 Context/destination | MEC-007/009；已覆盖 |
 | [`getStableAudioStream()`](../../../lib/MediaEffectsComposer/AudioMixer.js#L211) | Composer mixed output | default destination 请求，尽量复用稳定 track | destination ended 后健康恢复有限 | MEC-007；已覆盖普通 |
-| [`releaseSubmixAudioStream()`](../../../lib/MediaEffectsComposer/AudioMixer.js#L230) | Composer release | normalize key→shared bus/isolated submix disconnect | stop owned tracks/close Context | MEC-009；已覆盖 |
+| [`releaseSubmixStream()`](../../../lib/MediaEffectsComposer/AudioMixer.js#L230) | Composer release | normalize key→shared bus/isolated submix disconnect | stop owned tracks/close Context | MEC-009；已覆盖 |
 | [`scheduleRefresh()`](../../../lib/MediaEffectsComposer/AudioMixer.js#L281) | Composer源变化/track listener | 合并刷新请求→timer/microtask | 重复调用去重 | 已覆盖 |
 | [`_runScheduledRefresh()`](../../../lib/MediaEffectsComposer/AudioMixer.js#L308) | refresh callback | 清 scheduled→`_refreshRequestedState`→回调 | 异常报告后不中断主渲染 | 部分 |
-| [`syncExternalSourceAudio()`](../../../lib/MediaEffectsComposer/AudioMixer.js#L370) | RenderLoop每帧 | 对比 track signature→断旧/刷新 | HTMLMediaElement srcObject 换轨检测 | MEC-008；已覆盖 |
+| [`syncSourceAudio()`](../../../lib/MediaEffectsComposer/AudioMixer.js#L370) | RenderLoop每帧 | 对比 track signature→断旧/刷新 | HTMLMediaElement srcObject 换轨检测 | MEC-008；已覆盖 |
 | [`disconnectSource()`](../../../lib/MediaEffectsComposer/AudioMixer.js#L424) | Composer remove | `_destroySourceNode`并从所有 bus/submix 断开 | 多节点释放 | MEC-008/009；部分 |
 | [`_destroySourceNode()`](../../../lib/MediaEffectsComposer/AudioMixer.js#L434) | disconnect/stop/reconnect | unbind→disconnect source/gains→清字段 | 对部分提交节点的覆盖不完整 | MEC-008；部分 |
 | [`getInfo()`](../../../lib/MediaEffectsComposer/AudioMixer.js#L479) | Composer state/capability | clone `_audioInfo`并补计数 | 无资源 | 已覆盖 |
@@ -826,8 +826,8 @@ getAudioStream(request)
 | [`_createVideoFrame()`](../../../lib/MediaEffectsComposer/OutputStream.js#L675) | create frame | direct source→VideoFrame；canvas→createImageBitmap→VideoFrame | 自建 bitmap 会 close，direct 不 close | MEC-002；部分 |
 | [`_handleInsertableError()`](../../../lib/MediaEffectsComposer/OutputStream.js#L719) | write catch | fail count/issue；阈值关 active | 无真实轨 fallback | MEC-003；部分 |
 | [`setMixedStream()`](../../../lib/MediaEffectsComposer/OutputStream.js#L763) | Composer mixed | 保存 mixed 容器引用 | 当前传入 video 容器 | MEC-001；已覆盖部分 |
-| [`addAudioTracksToStream()`](../../../lib/MediaEffectsComposer/OutputStream.js#L781) | Composer mixed | 按 id 去重 addTrack | 修改目标容器 | MEC-001；已覆盖 |
-| [`ensureMixedStreamAudioTrack()`](../../../lib/MediaEffectsComposer/OutputStream.js#L811) | 后续 audio refresh | mixed 无音轨时注入 | 修改已返回流 | MEC-001；已覆盖 |
+| [`addAudioTracks()`](../../../lib/MediaEffectsComposer/OutputStream.js#L781) | Composer mixed | 按 id 去重 addTrack | 修改目标容器 | MEC-001；已覆盖 |
+| [`ensureMixedAudio()`](../../../lib/MediaEffectsComposer/OutputStream.js#L811) | 后续 audio refresh | mixed 无音轨时注入 | 修改已返回流 | MEC-001；已覆盖 |
 | [`stop()`](../../../lib/MediaEffectsComposer/OutputStream.js#L839) | Composer.stop | 清引用/sink→stop capture tracks→teardown insertable | capture track.stop 未逐项保护 | MEC-009；部分 |
 | [`_teardownInsertableState()`](../../../lib/MediaEffectsComposer/OutputStream.js#L877) | stop/init failure | close pending source/writer/lock/track→清字段 | writer close fire-and-forget | MEC-002/003；部分 |
 | [`_closeFrameSource()`](../../../lib/MediaEffectsComposer/OutputStream.js#L928) | pending replace/teardown | 调 frameSource.close | 缺早退/成功路径调用 | MEC-002；部分 |
@@ -858,9 +858,9 @@ getAudioStream(request)
 | [`renderFrame()`](../../../lib/MediaEffectsComposer/RenderLoop.js#L400) | rAF/强制首帧 | throttle→sync audio→payload→ensure renderer→render→health→schedule | 同步错误 `_handleRenderError` | MEC-005/006；已覆盖普通 |
 | [`destroy()`](../../../lib/MediaEffectsComposer/RenderLoop.js#L457) | Composer.stop | stop→renderer.destroy→null | renderer destroy throw 可阻断置 null | MEC-009；部分 |
 | [`fallbackRenderer()`](../../../lib/MediaEffectsComposer/RenderLoop.js#L485) | Worker fatal/render error | 检 info→destroy current→MainWebGL/Worker2D/Main2D | 拒绝 MainWebGL2 runtime fallback；先销毁 | MEC-005；部分 |
-| [`fallbackRendererToMain2D()`](../../../lib/MediaEffectsComposer/RenderLoop.js#L536) | fallback/Composer | 可销毁 current→new/init→commit | init 无完整 rollback | MEC-005；部分 |
-| [`fallbackRendererToMainThread()`](../../../lib/MediaEffectsComposer/RenderLoop.js#L575) | Composer/Worker fatal | destroy→try MainWebGL→Main2D | context 模式冲突 | MEC-005；部分 |
-| [`fallbackRendererToWorker2D()`](../../../lib/MediaEffectsComposer/RenderLoop.js#L605) | Composer | destroy→`_tryFallbackToWorker2D` | candidate 失败后旧 renderer 已销毁 | MEC-005/006；部分 |
+| [`fallbackMain2D()`](../../../lib/MediaEffectsComposer/RenderLoop.js#L536) | fallback/Composer | 可销毁 current→new/init→commit | init 无完整 rollback | MEC-005；部分 |
+| [`fallbackMain()`](../../../lib/MediaEffectsComposer/RenderLoop.js#L575) | Composer/Worker fatal | destroy→try MainWebGL→Main2D | context 模式冲突 | MEC-005；部分 |
+| [`fallbackWorker2D()`](../../../lib/MediaEffectsComposer/RenderLoop.js#L605) | Composer | destroy→`_tryFallbackToWorker2D` | candidate 失败后旧 renderer 已销毁 | MEC-005/006；部分 |
 | [`_tryFallbackToMainWebGL2()`](../../../lib/MediaEffectsComposer/RenderLoop.js#L622) | fallback | new MainWebGL2→init→commit；catch issue | 同 canvas 已绑定 2D | MEC-005；mock 隐藏 |
 | [`_tryFallbackToWorker2D()`](../../../lib/MediaEffectsComposer/RenderLoop.js#L678) | fallback | new WorkerRenderer(force2d)→init→commit | info 带 fallback reason 被误判 | MEC-006；部分 |
 | [`_scheduleNextFrame()`](../../../lib/MediaEffectsComposer/RenderLoop.js#L743) | start/render finally | 条件→requestAnimationFrame | rAF id 所有权 | MEC-009；已覆盖 |
@@ -886,7 +886,7 @@ getAudioStream(request)
 | [`createRendererBase()`](../../../lib/MediaEffectsComposer/Renderers/RendererBase.js#L9) | 三个 renderer constructor | 创建 info/config/callback mixin | 返回可变基础对象 | 已覆盖间接 |
 | [`getInfo()`](../../../lib/MediaEffectsComposer/Renderers/RendererBase.js#L29) | RenderLoop/state | 浅复制 `_info` | 嵌套字段当前均标量 | 已覆盖 |
 | [`_updateInfo()`](../../../lib/MediaEffectsComposer/Renderers/RendererBase.js#L31) | WorkerRenderer 消息 | Object.assign info | 历史 reason/fallback 状态 | MEC-006；已覆盖 |
-| [`setFramePresentedCallback()`](../../../lib/MediaEffectsComposer/Renderers/RendererBase.js#L33) | RenderLoop bind | 保存 callback/null | 跨到 OutputStream 的资源所有权 | MEC-002；部分 |
+| [`setFrameCallback()`](../../../lib/MediaEffectsComposer/Renderers/RendererBase.js#L33) | RenderLoop bind | 保存 callback/null | 跨到 OutputStream 的资源所有权 | MEC-002；部分 |
 | [`_emitFramePresented()`](../../../lib/MediaEffectsComposer/Renderers/RendererBase.js#L38) | renderer.render/worker message | 同步调用 callback | callback 异常可反向进入 render error | MEC-002/005；部分 |
 
 ### 11.2 MainCanvas2DRenderer

@@ -499,7 +499,7 @@ session.sendInfo(
 
 | 方法 | 参数 | 返回值 | 说明 |
 | --- | --- | --- | --- |
-| `setSuppressionLevel(level)` | `number`，`0～100` | `void` | 修改降噪强度 |
+| `setLevel(level)` | `number`，`0～100` | `void` | 修改降噪强度 |
 | `setOutputGain(value)` | `number`，`0～4` | 实际应用值 | 修改输出增益 |
 
 ```js
@@ -507,7 +507,7 @@ const aiNS = session.getAiNoiseSuppression();
 
 if (aiNS)
 {
-  aiNS.setSuppressionLevel(70);
+  aiNS.setLevel(70);
   const gain = aiNS.setOutputGain(1.1);
   console.log('实际增益：', gain);
 }
@@ -547,13 +547,13 @@ if (aiNS)
 
 位置可选值：`top-left`、`top-center`、`top-right`、`center`、`bottom-left`、`bottom-center`、`bottom-right`。
 
-### `setSourceAiVirtualBackground(slot, options): void`
+### `setAiBackground(slot, options): void`
 
 会话集成时通常使用 `slot: 0` 表示本地摄像头。`options.mode` 可为 `none/blur/image/color`，完整参数见第 4 章。
 
-### `clearSourceAiVirtualBackground(slot): void`
+### `clearAiBackground(slot): void`
 
-清除对应输入源的虚拟背景。本地摄像头通常使用 `clearSourceAiVirtualBackground(0)`。
+清除对应输入源的虚拟背景。本地摄像头通常使用 `clearAiBackground(0)`。
 
 Base JS Demo 在调用这些方法前先判断当前会话是否真的创建了 composer。以下是 [`app-media-effects.js`](../../demo/base-js/js/app-media-effects.js) 的运行时镜像更新节选：
 
@@ -584,16 +584,16 @@ const monitor = session.statsMonitor;
 
 if (monitor)
 {
-  console.log(monitor.getLatestNetworkQuality());
-  console.log(monitor.getLatestReport());
+  console.log(monitor.getNetworkQuality());
+  console.log(monitor.getReport());
 }
 ```
 
 | 方法 | 返回值 | 说明 |
 | --- | --- | --- |
-| `getLatestNetworkQuality()` | 网络质量或 `null` | 不主动采样 |
-| `getLatestLegacyReport()` | 兼容报告或 `null` | 不主动采样 |
-| `getLatestReport()` | 完整报告或 `null` | 不主动采样 |
+| `getNetworkQuality()` | 网络质量或 `null` | 不主动采样 |
+| `getLegacyReport()` | 兼容报告或 `null` | 不主动采样 |
+| `getReport()` | 完整报告或 `null` | 不主动采样 |
 
 该对象随当前会话可用，客户页面直接读取最近结果即可。
 

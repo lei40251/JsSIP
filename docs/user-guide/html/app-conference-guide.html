@@ -445,14 +445,14 @@ flowchart TB
     → 设置 conferencePendingOutgoing
     → buildCallOpts(&#39;B&#39;)
       → 使用页面选中的麦克风/摄像头约束
-      → mediaEffectsComposer.enableInsertable = true
+      → mediaEffectsComposer.insertable = true
       → 配置 AiNS（如果页面启用）
       → 从 extraFeatures 移除 BFCP
     → ua.call(&#39;号码@域&#39;, callOptions)
     → newRTCSession
     → pending 参数转成 B leg
 </code></pre>
-</div><p>强制 <code>enableInsertable = true</code> 的原因是：即使页面没有选择任何媒体特效，B 会话也必须提前拥有 composer，后续 C 加入时才能动态追加 B/C 远端源。</p>
+</div><p>强制 <code>insertable = true</code> 的原因是：即使页面没有选择任何媒体特效，B 会话也必须提前拥有 composer，后续 C 加入时才能动态追加 B/C 远端源。</p>
 <h3 id="6-2-添加普通-c">6.2 添加普通 C<a class="heading-anchor" href="#6-2-添加普通-c" aria-label="链接到本节">#</a></h3>
 <p>C 的外呼比 B 多出“信令前准备媒体”阶段：</p>
 <div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">callConf({ role: &#39;C&#39; })
@@ -1120,7 +1120,7 @@ flowchart TB
 <td>创建给 B/C 的定制音频子混音</td>
 </tr>
 <tr>
-<td><code>composer.releaseSubmixAudioStream()</code></td>
+<td><code>composer.releaseSubmixStream()</code></td>
 <td>释放对应 slots 的音频输出资源</td>
 </tr>
 <tr>
@@ -1624,7 +1624,7 @@ flowchart TB
     SYNC --&gt; MAIN_SYNC[&quot;showMain()&quot;]
     SYNC --&gt; UI[&quot;updateConfUi()&quot;]
     RESTORE_ALL --&gt; RESTORE_ONE_SYNC[&quot;restoreMedia()&quot;]
-    RELEASE -.-&gt;|&quot;SDK&quot;| SUBMIX[&quot;外部：releaseSubmixAudioStream()&quot;]
+    RELEASE -.-&gt;|&quot;SDK&quot;| SUBMIX[&quot;外部：releaseSubmixStream()&quot;]
     SOURCE_SYNC -.-&gt;|&quot;SDK&quot;| ADDREMOVE_SYNC[&quot;外部：composer.addSource/removeSource&quot;]
     MAIN_SYNC --&gt; BYROLE_MAIN[&quot;getLegByRole()&quot;]
     MAIN_SYNC --&gt; PREVIEW[&quot;bindPreview()&quot;]

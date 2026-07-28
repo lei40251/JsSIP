@@ -3,15 +3,15 @@
 本文面向内部研发、测试、技术支持和交付人员，专门解释以下接口返回的完整诊断对象：
 
 ```js
-const fullReport = session.statsMonitor.getLatestReport();
+const fullReport = session.statsMonitor.getReport();
 ```
 
 普通 SDK 日志中的 `detailed-report:` 已改为常用摘要，不再持续打印完整对象。几种输出的区别如下：
 
 - 日志中的 `detailed-report:`：面向日常观察的摘要，字段说明见[摘要日志内部培训简洁版](./RTCStatsMonitor-summary-training-guide.md)。
 - `stats:detailed-report` 事件：面向 Demo 和常规监控的稳定摘要事件。
-- `session.statsMonitor.getLatestReport()`：返回最近一份完整报告，包含连接路径、候选地址、媒体源、所有 RTP 明细、质量诊断、浏览器兼容性和采样性能，是本文解释的对象。
-- `raw stats:`：浏览器原始 `getStats()` 报告，默认每 10 秒限频输出并脱敏地址等隐私字段；可通过 `enableRawStatsLog: false` 关闭，不是本文解释的对象。
+- `session.statsMonitor.getReport()`：返回最近一份完整报告，包含连接路径、候选地址、媒体源、所有 RTP 明细、质量诊断、浏览器兼容性和采样性能，是本文解释的对象。
+- `raw stats:`：浏览器原始 `getStats()` 报告，默认每 10 秒限频输出并脱敏地址等隐私字段；可通过 `rawStatsLog: false` 关闭，不是本文解释的对象。
 
 > 完整报告可能包含本地/远端 IP、端口、TURN 地址和轨道标识，只应在授权的内部排障环境中收集、传输和保存。
 

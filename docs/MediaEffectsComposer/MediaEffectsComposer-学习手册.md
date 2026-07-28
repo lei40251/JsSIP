@@ -462,14 +462,14 @@ sequenceDiagram
         CRT->>AM: getStableAudioStream()
         Note over AM: ① 延迟创建 AudioContext<br/>② 连接所有源<br/>③ 即使无源也建静音轨
         AM-->>CRT: audioStream
-        CRT->>OM: addAudioTracksToStream(video, audio)
+        CRT->>OM: addAudioTracks(video, audio)
         CRT-->>App: mixedStream(视频+音频)
     end
 ```
 
 **两个值得注意的设计**:
 - **`getStableAudioStream`** 保证了即使首次取流时还没有音频源,也会先创建一条"稳定的静音 destination track",后续新增源只更新 WebAudio graph,**不再向已返回的流追加第二条音轨**(避免下游混乱,`AudioMixer.js:219`)。
-- **`ensureMixedStreamAudioTrack`** 处理"先取流、后加源"的延迟场景(`OutputStream.js:818`)。
+- **`ensureMixedAudio`** 处理"先取流、后加源"的延迟场景(`OutputStream.js:818`)。
 
 ### 7.2 流程②:渲染一帧(每 fps 一次)
 
@@ -486,7 +486,7 @@ sequenceDiagram
 
     RAF->>RL: renderFrame(timestamp)
     RL->>RL: 检查 _stopped / fps 节流
-    RL->>AM: syncExternalSourceAudio()<br/>(检测外部换源)
+    RL->>AM: syncSourceAudio()<br/>(检测外部换源)
     RL->>CRT: createRenderPayload()
     CRT->>LE: createRenderPayload()
     LE->>LE: _calcLayout()(算网格)
@@ -590,7 +590,7 @@ config:
 ---
 graph TD
     START["getVideoStream()"]
-    Q1{"enableInsertable?"}
+    Q1{"insertable?"}
     Q2{"浏览器支持?<br/>TrackGenerator+VideoFrame"}
     INS["Insertable Streams<br/>writer.write(VideoFrame)"]
     Q3{"captureStream(0)+<br/>requestFrame 可用?"}
@@ -647,7 +647,7 @@ classDiagram
         +stop()
         +setConfig(patch) Promise
         +getState() Object
-        +setSourceAiVirtualBackground(target, opts)
+        +setAiBackground(target, opts)
         +setMirror(enabled)
         +setWatermarks(list) Promise
     }
@@ -688,7 +688,7 @@ classDiagram
         +destroy()
         +getInfo() Object
         #_updateInfo(info)
-        +setFramePresentedCallback(cb)
+        +setFrameCallback(cb)
         #_emitFramePresented(meta)
     }
 
@@ -757,7 +757,7 @@ classDiagram
         +slot : number
         +gain : number
         +mirrorX : boolean
-        +aiVirtualBackground : Object
+        +aiBackground : Object
         +audioSourceNode : AudioNode
         +masterGainNode : GainNode
         +gainNode : GainNode
@@ -796,7 +796,7 @@ sequenceDiagram
 
     Note over App,MEC: 🔵 阶段3:运行期动态调整
     App->>MEC: addSource(remoteStream)
-    App->>MEC: setSourceAiVirtualBackground(0, {mode:'blur'})
+    App->>MEC: setAiBackground(0, {mode:'blur'})
     Note over MEC: 切到主线程渲染器
     App->>MEC: setConfig({outputMirror:true})
 
@@ -993,7 +993,7 @@ MediaPipe 运行时通过 `<script type=module>` 注入,挂在 `window.CRTCAiVBV
 
 ### 11.8 ⚠️ `MediaEffectsComposer` 与子模块双向回调耦合
 
-**现象**:Runtime 向子模块注入大量回调(`getSources`、`createRenderPayload`、`syncExternalSourceAudio`、`prepareCanvas`、`resizeRenderer`、`createWatermarkItems`、`resolveMirrorX`……),子模块也向 Runtime 注入回调(`onBeforeRemove`、`onAfterRemove`、`onFramePresented`、`onIssue`……)。
+**现象**:Runtime 向子模块注入大量回调(`getSources`、`createRenderPayload`、`syncSourceAudio`、`prepareCanvas`、`resizeRenderer`、`createWatermarkItems`、`resolveMirrorX`……),子模块也向 Runtime 注入回调(`onBeforeRemove`、`onAfterRemove`、`onFramePresented`、`onIssue`……)。
 
 **影响**:
 - 双向依赖虽然没形成循环(都是 Runtime 主动注入),但回调接口多,改动一个子模块签名要在 Runtime 同步改。
@@ -1025,7 +1025,7 @@ MediaPipe 运行时通过 `<script type=module>` 注入,挂在 `window.CRTCAiVBV
 - **"现在走了哪条渲染路径?"** → `composer.getRenderInfo()`,看 `actualMode`/`isFallback`/`reason`。
 - **"出问题了吗?"** → `composer.getIssues()` 或监听 session 的 `mediaEffectsIssue` 事件。
 - **"整体状态快照"** → `composer.getState()`,含 sources/render/audio/config/issues。
-- **"能力报告"** → `composer.getCapabilityReport()`,看支持的功能和限制。
+- **"能力报告"** → `composer.getCapabilities()`,看支持的功能和限制。
 
 ### 12.3 改动时的检查清单
 

@@ -37,8 +37,8 @@ const stats = new CRTC.RTCStatsMonitor(pc);
 ~~~js
 const stats = new CRTC.RTCStatsMonitor(pc, {
   sampleIntervalMs           : 2000,
-  legacyReportIntervalMs     : 2000,
-  backgroundSampleIntervalMs : 2000
+  reportIntervalMs     : 2000,
+  bgIntervalMs : 2000
 });
 ~~~
 
@@ -57,12 +57,12 @@ new CRTC.getStats(pc, delay, interval);
 ~~~js
 new CRTC.getStats(pc, {
   sampleIntervalMs           : 2000,
-  legacyReportIntervalMs     : 2000,
-  backgroundSampleIntervalMs : 2000,
-  transitionGraceSamples     : 2,
-  getStatsTimeoutMs          : 5000,
-  enableDetailedReport       : true,
-  enableRawStatsLog          : true
+  reportIntervalMs     : 2000,
+  bgIntervalMs : 2000,
+  transitionSamples     : 2,
+  timeoutMs          : 5000,
+  detailedReport       : true,
+  rawStatsLog          : true
 });
 ~~~
 
@@ -73,12 +73,12 @@ new CRTC.getStats(pc, {
 | 配置项 | 默认值 | 说明 |
 | --- | ---: | --- |
 | sampleIntervalMs | 2000 | 前台基础采样间隔，最小 500ms |
-| legacyReportIntervalMs | 2000 | report 和 network-quality 输出间隔 |
-| backgroundSampleIntervalMs | 2000 | 页面进入后台后的采样间隔 |
-| transitionGraceSamples | 2 | 媒体变化后暂缓瞬时质量告警的样本数 |
-| getStatsTimeoutMs | 5000 | 单次 getStats() 超时时间，最小 100ms |
-| enableDetailedReport | true | 是否输出完整 `detailed-report:` 日志并发送同轮摘要事件 |
-| enableRawStatsLog | true | 是否每 10 秒限频记录一份脱敏后的浏览器原始 `getStats()` 报告；可显式设为 `false` 关闭 |
+| reportIntervalMs | 2000 | report 和 network-quality 输出间隔 |
+| bgIntervalMs | 2000 | 页面进入后台后的采样间隔 |
+| transitionSamples | 2 | 媒体变化后暂缓瞬时质量告警的样本数 |
+| timeoutMs | 5000 | 单次 getStats() 超时时间，最小 100ms |
+| detailedReport | true | 是否输出完整 `detailed-report:` 日志并发送同轮摘要事件 |
+| rawStatsLog | true | 是否每 10 秒限频记录一份脱敏后的浏览器原始 `getStats()` 报告；可显式设为 `false` 关闭 |
 
 ## 4. 事件兼容与新增事件
 
@@ -115,11 +115,11 @@ stats.on('network-quality', function(quality)
 - 上下行丢包率
 - 上下行网络质量等级
 
-**getLatestReport().connection.rttMs** 表示 candidate-pair RTT；**detailed-report.quality.RTT** 优先使用当前媒体 RTP 反馈 RTT，缺失时再回退 candidate-pair RTT。丢包率同样使用当前样本中的最大值，不做多样本平均。
+**getReport().connection.rttMs** 表示 candidate-pair RTT；**detailed-report.quality.RTT** 优先使用当前媒体 RTP 反馈 RTT，缺失时再回退 candidate-pair RTT。丢包率同样使用当前样本中的最大值，不做多样本平均。
 
 ### 4.2 新增事件
 
-**detailed-report** 事件只提供 Demo 和常规监控需要的连接、上下行流和质量摘要。启用 `enableDetailedReport` 时，同一轮完整诊断报告会以 **detailed-report:** 写入 SDK logger；无论是否启用事件和日志，都可以通过 **getLatestReport()** 读取最近一份完整报告：
+**detailed-report** 事件只提供 Demo 和常规监控需要的连接、上下行流和质量摘要。启用 `detailedReport` 时，同一轮完整诊断报告会以 **detailed-report:** 写入 SDK logger；无论是否启用事件和日志，都可以通过 **getReport()** 读取最近一份完整报告：
 
 ~~~js
 stats.on('detailed-report', function(report)
@@ -130,7 +130,7 @@ stats.on('detailed-report', function(report)
   console.log(report.quality);
 });
 
-const fullReport = stats.getLatestReport();
+const fullReport = stats.getReport();
 
 if (fullReport)
 {
@@ -147,11 +147,11 @@ stats.on('stats-error', function(error)
 });
 ~~~
 
-非致命错误会在后续采样周期继续重试。异常浏览器或 WebView 的 **getStats()** 如果静默不返回，会在 **getStatsTimeoutMs** 后释放采样锁并发送错误事件。
+非致命错误会在后续采样周期继续重试。异常浏览器或 WebView 的 **getStats()** 如果静默不返回，会在 **timeoutMs** 后释放采样锁并发送错误事件。
 
 ### 4.3 完整报告与自动诊断
 
-TypeScript 中 **DetailedReportEvent** 对应事件摘要，**DetailedReport** 对应 logger 和 **getLatestReport()** 使用的完整报告。连接、候选地址、媒体源、编解码器、上下行 RTP、远端反馈、质量问题和性能数据均有明确类型。质量等级统一为数字：**0 表示暂无有效样本，1 最佳，6 最差**。
+TypeScript 中 **DetailedReportEvent** 对应事件摘要，**DetailedReport** 对应 logger 和 **getReport()** 使用的完整报告。连接、候选地址、媒体源、编解码器、上下行 RTP、远端反馈、质量问题和性能数据均有明确类型。质量等级统一为数字：**0 表示暂无有效样本，1 最佳，6 最差**。
 
 自动诊断除丢包、RTT、抖动和卡顿外，还会结合发送队列、重传比例、编解码耗时、抖动缓冲、FEC、发送丢弃、可用带宽、传输停滞和 ICE 路径变化生成 issues。缺字段不会当作 0，也不会只凭低码率直接判定故障。
 
@@ -203,10 +203,10 @@ window.CRTCStats = 'stop';
 发生音视频模式切换、换轨、设备切换或重协商时，可以通知模块进入过渡保护期：
 
 ~~~js
-stats.markTransition('session-mode-changed');
+stats.markChange('session-mode-changed');
 ~~~
 
-**markTransition()** 不会停止采样，也不会强制指定媒体类型。
+**markChange()** 不会停止采样，也不会强制指定媒体类型。
 
 ## 6. RTCSession 自动接入
 
@@ -220,7 +220,7 @@ session.on('stats:stats-error', handleStatsError);
 const stats = session.statsMonitor;
 ~~~
 
-RTCSession 会在设备切换、共享开始/停止、音视频模式变化和重协商时自动调用 **markTransition()**。接入方通常不需要手动管理统计生命周期；单独监控其他 PeerConnection 时仍可直接构造 **RTCStatsMonitor**。
+RTCSession 会在设备切换、共享开始/停止、音视频模式变化和重协商时自动调用 **markChange()**。接入方通常不需要手动管理统计生命周期；单独监控其他 PeerConnection 时仍可直接构造 **RTCStatsMonitor**。
 
 ## 7. 浏览器兼容降级
 
@@ -244,7 +244,7 @@ RTCSession 会在设备切换、共享开始/停止、音视频模式变化和�
 - 会话结束或失败后清空统计界面；
 - 统计实例的创建、启动和释放全部由 RTCSession 管理。
 
-**samples/base-js-mh/** 中原有的 **setMode()** 调用已改为 **markTransition('session-mode-changed')**。
+**samples/base-js-mh/** 中原有的 **setMode()** 调用已改为 **markChange('session-mode-changed')**。
 
 ## 9. 验证结果
 

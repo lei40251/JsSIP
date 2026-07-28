@@ -99,7 +99,7 @@ const mixedStream = await composer.getOutput({ type: 'mixed' });
           <h3>2. 运行时更新配置</h3>
 <pre><code>await composer.setConfig({
   outputMirror: true,
-  mirrorWatermarksWithOutput: true,
+  mirrorWatermarks: true,
   sourceMirrorOverrides: {
     0: true,
     1: false
@@ -445,7 +445,7 @@ console.log(info.actualMode);
             <td data-label="说明">获取全量音频流或指定 <code>slots</code> 的子混音。支持 <code>isolated / audioContext / recreate</code> 选项。</td>
           </tr>
           <tr>
-            <td data-label="方法"><code>getIsolatedSubmixAudioStream(options)</code></td>
+            <td data-label="方法"><code>getSubmixStream(options)</code></td>
             <td data-label="返回"><code>Promise&lt;MediaStream | null&gt;</code></td>
             <td data-label="说明">独立 <code>AudioContext</code> 的子混音输出。</td>
           </tr>
@@ -503,17 +503,17 @@ console.log(info.actualMode);
             <td data-label="说明">支持按 <code>id / target / slot / sourceId / streamId</code> 过滤清理。</td>
           </tr>
           <tr>
-            <td data-label="方法"><code>setSourceAiVirtualBackground(slotOrTarget, options)</code></td>
+            <td data-label="方法"><code>setAiBackground(slotOrTarget, options)</code></td>
             <td data-label="返回"><code>AiVBConfig | null</code></td>
             <td data-label="说明">对某一路源设置虚拟背景。</td>
           </tr>
           <tr>
-            <td data-label="方法"><code>getSourceAiVirtualBackground(slotOrTarget)</code></td>
+            <td data-label="方法"><code>getAiBackground(slotOrTarget)</code></td>
             <td data-label="返回"><code>AiVBConfig | null</code></td>
             <td data-label="说明">读取某一路源当前 AiVB 配置快照。</td>
           </tr>
           <tr>
-            <td data-label="方法"><code>clearSourceAiVirtualBackground(slotOrTarget)</code></td>
+            <td data-label="方法"><code>clearAiBackground(slotOrTarget)</code></td>
             <td data-label="返回"><code>void</code></td>
             <td data-label="说明">清理对应源的虚拟背景配置。</td>
           </tr>
@@ -561,7 +561,7 @@ console.log(info.actualMode);
           </tr>
           <tr>
             <td data-label="你想做什么">给某一路开虚拟背景</td>
-            <td data-label="优先看什么"><code>sources[].aiVirtualBackground</code></td>
+            <td data-label="优先看什么"><code>sources[].aiBackground</code></td>
             <td data-label="原因">AiVB 是 source 级能力，不是全局输出能力。</td>
           </tr>
         </tbody>
@@ -608,7 +608,7 @@ console.log(info.actualMode);
             <td data-label="说明">可选外部 Worker 脚本地址。不传时通常走 Blob Worker。</td>
           </tr>
           <tr>
-            <td data-label="字段"><code>dropFrameWhenBusy</code></td>
+            <td data-label="字段"><code>dropBusyFrames</code></td>
             <td data-label="类型"><code>boolean</code></td>
             <td data-label="说明">Worker 忙时是否丢帧，默认 <code>true</code>。</td>
           </tr>
@@ -618,7 +618,7 @@ console.log(info.actualMode);
             <td data-label="说明">保留的最大帧队列，当前默认 <code>1</code>。</td>
           </tr>
           <tr>
-            <td data-label="字段"><code>preserveDrawingBuffer</code></td>
+            <td data-label="字段"><code>keepDrawingBuffer</code></td>
             <td data-label="类型"><code>boolean</code></td>
             <td data-label="说明">默认 <code>true</code>。</td>
           </tr>
@@ -633,7 +633,7 @@ console.log(info.actualMode);
             <td data-label="说明">所有源的默认镜像策略，内部字段名是 <code>mirrorX</code>。</td>
           </tr>
           <tr>
-            <td data-label="字段"><code>mirrorWatermarksWithOutput</code></td>
+            <td data-label="字段"><code>mirrorWatermarks</code></td>
             <td data-label="类型"><code>boolean</code></td>
             <td data-label="说明">当输出镜像时，输出级水印是否一起翻转。</td>
           </tr>
@@ -672,7 +672,7 @@ console.log(info.actualMode);
             <td data-label="说明">这一路源的镜像覆盖值。</td>
           </tr>
           <tr>
-            <td data-label="字段"><code>aiVirtualBackground</code></td>
+            <td data-label="字段"><code>aiBackground</code></td>
             <td data-label="说明">这一路源的 AiVB 配置。</td>
           </tr>
         </tbody>
@@ -728,7 +728,7 @@ console.log(info.actualMode);
     {
       slot: 0,
       sourceMirror: true,
-      aiVirtualBackground: {
+      aiBackground: {
         mode: 'blur',
         blurRadius: 18
       }
@@ -765,7 +765,7 @@ const publishStream = await composer.getOutput({ type: 'mixed' });
     },
     sources: [
       {
-        aiVirtualBackground: {
+        aiBackground: {
           mode: 'image',
           imageUrl: '/assets/backgrounds/office.png'
         }
@@ -778,11 +778,11 @@ const publishStream = await composer.getOutput({ type: 'mixed' });
       <h3>4. 通话中热更新</h3>
 <pre><code>await rtcSession.updateMediaEffectsComposer({
   mirror: true,
-  mirrorWatermarksWithOutput: true,
+  mirrorWatermarks: true,
   sources: [
     {
       sourceMirror: true,
-      aiVirtualBackground: {
+      aiBackground: {
         mode: 'color',
         color: '#00ff00'
       }
@@ -855,7 +855,7 @@ const publishStream = await composer.getOutput({ type: 'mixed' });
           <tr><td data-label="API / 场景">新增源</td><td data-label="当前入口"><code>addSource</code></td><td data-label="核心调用链"><code>_normalizeSourceOptions</code> -> <code>Sources.add</code> -> audio refresh -> render loop start</td></tr>
           <tr><td data-label="API / 场景">视频输出</td><td data-label="当前入口"><code>getOutput({type:'video'})</code></td><td data-label="核心调用链"><code>_getVideoOutputSync</code> -> <code>OutputStream.getVideoStream</code> -> <code>RenderLoop.renderFrame</code></td></tr>
           <tr><td data-label="API / 场景">混合输出</td><td data-label="当前入口"><code>getOutput({type:'mixed'})</code></td><td data-label="核心调用链"><code>_getMixedOutput</code> -> video stream -> <code>AudioMixer.getStableAudioStream</code> -> add audio tracks</td></tr>
-          <tr><td data-label="API / 场景">AiVB</td><td data-label="当前入口"><code>setSourceAiVirtualBackground</code></td><td data-label="核心调用链"><code>AiVBState.setSourceConfig</code> -> refresh policy -> force render</td></tr>
+          <tr><td data-label="API / 场景">AiVB</td><td data-label="当前入口"><code>setAiBackground</code></td><td data-label="核心调用链"><code>AiVBState.setSourceConfig</code> -> refresh policy -> force render</td></tr>
           <tr><td data-label="API / 场景">会话集成</td><td data-label="当前入口"><code>MediaPipeline.getUserMediaWithSessionPipeline</code></td><td data-label="核心调用链">GUM -> 外部处理器 -> AiNS -> Composer</td></tr>
           <tr><td data-label="API / 场景">通话中更新</td><td data-label="当前入口"><code>RTCSession.updateMediaEffectsComposer</code></td><td data-label="核心调用链">resolve options -> patch or rebuild -> setConfig / replace track</td></tr>
         </tbody>

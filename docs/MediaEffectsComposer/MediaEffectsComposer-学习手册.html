@@ -412,13 +412,13 @@ graph TD
         CRT-&gt;&gt;AM: getStableAudioStream()
         Note right of AM: ① 延迟创建&lt;br/&gt;AudioContext&lt;br/&gt;② 连接所有源&lt;br/&gt;③ 无源也建静音轨
         AM--&gt;&gt;CRT: audioStream
-        CRT-&gt;&gt;OM: addAudioTracksToStream(video, audio)
+        CRT-&gt;&gt;OM: addAudioTracks(video, audio)
         CRT--&gt;&gt;App: mixedStream(视频+音频)
     end</pre>
 <p><strong>两个值得注意的设计</strong>:</p>
 <ul>
   <li><strong>`getStableAudioStream`</strong> 保证了即使首次取流时还没有音频源,也会先创建一条&quot;稳定的静音 destination track&quot;,后续新增源只更新 WebAudio graph,<strong>不再向已返回的流追加第二条音轨</strong>(避免下游混乱,`AudioMixer.js:219`)。</li>
-  <li><strong>`ensureMixedStreamAudioTrack`</strong> 处理&quot;先取流、后加源&quot;的延迟场景(`OutputStream.js:818`)。</li>
+  <li><strong>`ensureMixedAudio`</strong> 处理&quot;先取流、后加源&quot;的延迟场景(`OutputStream.js:818`)。</li>
 </ul>
 <h3>7.2 流程②:渲染一帧(每 fps 一次)</h3>
 <pre class="mermaid">sequenceDiagram
@@ -433,7 +433,7 @@ graph TD
 
     RAF-&gt;&gt;RL: renderFrame(timestamp)
     RL-&gt;&gt;RL: 检查 _stopped / fps 节流
-    RL-&gt;&gt;AM: syncExternalSourceAudio()&lt;br/&gt;(检测外部换源)
+    RL-&gt;&gt;AM: syncSourceAudio()&lt;br/&gt;(检测外部换源)
     RL-&gt;&gt;CRT: createRenderPayload()
     CRT-&gt;&gt;LE: createRenderPayload()
     LE-&gt;&gt;LE: _calcLayout()(算网格)
@@ -522,7 +522,7 @@ config:
 ---
 graph TD
     START[&quot;getVideoStream()&quot;]
-    Q1{&quot;enableInsertable?&quot;}
+    Q1{&quot;insertable?&quot;}
     Q2{&quot;浏览器支持?&lt;br/&gt;TrackGenerator+VideoFrame&quot;}
     INS[&quot;Insertable Streams&lt;br/&gt;writer.write(VideoFrame)&quot;]
     Q3{&quot;captureStream(0)+&lt;br/&gt;requestFrame 可用?&quot;}
@@ -574,7 +574,7 @@ classDiagram
         +stop()
         +setConfig(patch) Promise
         +getState() Object
-        +setSourceAiVirtualBackground(target, opts)
+        +setAiBackground(target, opts)
         +setMirror(enabled)
         +setWatermarks(list) Promise
     }
@@ -611,7 +611,7 @@ classDiagram
         +destroy()
         +getInfo() Object
         #_updateInfo(info)
-        +setFramePresentedCallback(cb)
+        +setFrameCallback(cb)
         #_emitFramePresented(meta)
     }
 
@@ -676,7 +676,7 @@ classDiagram
         +slot : number
         +gain : number
         +mirrorX : boolean
-        +aiVirtualBackground : Object
+        +aiBackground : Object
         +audioSourceNode : AudioNode
         +masterGainNode : GainNode
         +gainNode : GainNode
@@ -709,7 +709,7 @@ classDiagram
 
     Note over App,MEC: 🔵 阶段3:运行期动态调整
     App-&gt;&gt;MEC: addSource(remoteStream)
-    App-&gt;&gt;MEC: setSourceAiVirtualBackground(0, {mode:&#39;blur&#39;})
+    App-&gt;&gt;MEC: setAiBackground(0, {mode:&#39;blur&#39;})
     Note over MEC: 切到主线程渲染器
     App-&gt;&gt;MEC: setConfig({outputMirror:true})
 
@@ -870,7 +870,7 @@ classDiagram
 </ul>
 <p><strong>建议</strong>:把所有&quot;浏览器兼容补丁&quot;集中到一个 `BrowserCompat` 模块并打上版本/UA 标注,定期清理。对这个具体补丁,加一个特性探测(检测是否真的会降质)而非无脑启用。</p>
 <h3>11.8 ⚠️ `MediaEffectsComposer` 与子模块双向回调耦合</h3>
-<p><strong>现象</strong>:Runtime 向子模块注入大量回调(`getSources`、`createRenderPayload`、`syncExternalSourceAudio`、`prepareCanvas`、`resizeRenderer`、`createWatermarkItems`、`resolveMirrorX`……),子模块也向 Runtime 注入回调(`onBeforeRemove`、`onAfterRemove`、`onFramePresented`、`onIssue`……)。</p>
+<p><strong>现象</strong>:Runtime 向子模块注入大量回调(`getSources`、`createRenderPayload`、`syncSourceAudio`、`prepareCanvas`、`resizeRenderer`、`createWatermarkItems`、`resolveMirrorX`……),子模块也向 Runtime 注入回调(`onBeforeRemove`、`onAfterRemove`、`onFramePresented`、`onIssue`……)。</p>
 <p><strong>影响</strong>:</p>
 <ul>
   <li>双向依赖虽然没形成循环(都是 Runtime 主动注入),但回调接口多,改动一个子模块签名要在 Runtime 同步改。</li>
@@ -900,7 +900,7 @@ classDiagram
   <li><strong>&quot;现在走了哪条渲染路径?&quot;</strong> → `composer.getRenderInfo()`,看 `actualMode`/`isFallback`/`reason`。</li>
   <li><strong>&quot;出问题了吗?&quot;</strong> → `composer.getIssues()` 或监听 session 的 `mediaEffectsIssue` 事件。</li>
   <li><strong>&quot;整体状态快照&quot;</strong> → `composer.getState()`,含 sources/render/audio/config/issues。</li>
-  <li><strong>&quot;能力报告&quot;</strong> → `composer.getCapabilityReport()`,看支持的功能和限制。</li>
+  <li><strong>&quot;能力报告&quot;</strong> → `composer.getCapabilities()`,看支持的功能和限制。</li>
 </ul>
 <h3>12.3 改动时的检查清单</h3>
 <p>修改本模块代码时,自问以下问题:</p>

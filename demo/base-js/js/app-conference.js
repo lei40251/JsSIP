@@ -138,7 +138,7 @@ function buildMixOpts()
   const options = Object.assign({}, getFxOpts() || {});
 
   // 即使页面没有选择特效，主会话也必须创建 composer，供三方动态加源。
-  options.enableInsertable = true;
+  options.insertable = true;
 
   return options;
 }
@@ -332,9 +332,9 @@ async function undoCOutput(hostLeg, output)
 
   if (composer)
   {
-    try { composer.releaseSubmixAudioStream({ slots: [ 0, 2 ] }); }
+    try { composer.releaseSubmixStream({ slots: [ 0, 2 ] }); }
     catch (error) {}
-    try { composer.releaseSubmixAudioStream({ slots: [ 0, 1 ] }); }
+    try { composer.releaseSubmixStream({ slots: [ 0, 1 ] }); }
     catch (error) {}
   }
 
@@ -1854,11 +1854,11 @@ function releaseMixer()
 {
   if (confMixer)
   {
-    try { confMixer.releaseSubmixAudioStream({ slots: [ 0, 2 ] }); }
+    try { confMixer.releaseSubmixStream({ slots: [ 0, 2 ] }); }
     catch (error) {}
-    try { confMixer.releaseSubmixAudioStream({ slots: [ 0 ] }); }
+    try { confMixer.releaseSubmixStream({ slots: [ 0 ] }); }
     catch (error) {}
-    try { confMixer.releaseSubmixAudioStream({ slots: [ 0, 1 ] }); }
+    try { confMixer.releaseSubmixStream({ slots: [ 0, 1 ] }); }
     catch (error) {}
   }
 

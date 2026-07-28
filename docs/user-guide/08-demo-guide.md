@@ -311,14 +311,14 @@ document.querySelector('#videoHint').onchange = function()
 | `img1` / `img2` | `mode: 'image'` | 使用 Demo 图片资源 |
 | `blur` | `mode: 'blur'` | 背景模糊 |
 
-选择会同时影响下一次呼叫/接听；当前会话已有 composer 时也会调用 `setSourceAiVirtualBackground(0, options)` 或清除方法立即更新。
+选择会同时影响下一次呼叫/接听；当前会话已有 composer 时也会调用 `setAiBackground(0, options)` 或清除方法立即更新。
 
 ### AiNS
 
 | 控件 | 值/范围 | 生效时机 |
 | --- | --- | --- |
 | Ai 降噪 | 空 / `AiNS` | 是否在下一次呼叫/接听传 `nsMode` |
-| 强度 | 整数 `0～100` | 当前会话已启用时调用 `setSuppressionLevel()`；否则下次生效 |
+| 强度 | 整数 `0～100` | 当前会话已启用时调用 `setLevel()`；否则下次生效 |
 
 关闭下拉并不代表当前通话一定会动态销毁已有 AiNS；Demo 重点展示初始启用和强度热更新。需要运行时开关时应按产品设计明确其生命周期。
 
@@ -353,7 +353,7 @@ if (aiVBOptions)
 {
   composerOptions.sources = [
     {
-      aiVirtualBackground : aiVBOptions
+      aiBackground : aiVBOptions
     }
   ];
 }
@@ -364,7 +364,7 @@ AiNS 则使用独立顶层配置：
 ```js
 return {
   enabled             : true,
-  noiseReductionLevel : getNsLevel(),
+  level : getNsLevel(),
   outputGain          : 1,
   assetConfig         : { cdnUrl: NS_ROOT }
 };

@@ -877,9 +877,9 @@ function formatQuality(level)
 
 if (monitor)
 {
-  const quality = monitor.getLatestNetworkQuality();
-  const legacy = monitor.getLatestLegacyReport();
-  const detailed = monitor.getLatestReport();
+  const quality = monitor.getNetworkQuality();
+  const legacy = monitor.getLegacyReport();
+  const detailed = monitor.getReport();
 
   console.log(quality, legacy, detailed);
 }
@@ -893,17 +893,17 @@ if (monitor)
 </tr>
 </thead>
 <tbody><tr>
-<td><code>getLatestNetworkQuality()</code></td>
+<td><code>getNetworkQuality()</code></td>
 <td>最近兼容网络质量或 <code>null</code></td>
 <td>否</td>
 </tr>
 <tr>
-<td><code>getLatestLegacyReport()</code></td>
+<td><code>getLegacyReport()</code></td>
 <td>最近兼容流报告或 <code>null</code></td>
 <td>否</td>
 </tr>
 <tr>
-<td><code>getLatestReport()</code></td>
+<td><code>getReport()</code></td>
 <td>最近完整诊断报告或 <code>null</code></td>
 <td>否</td>
 </tr>
@@ -921,9 +921,9 @@ if (monitor)
   }
 
   return {
-    networkQuality : monitor.getLatestNetworkQuality(),
-    legacyReport   : monitor.getLatestLegacyReport(),
-    detailedReport : monitor.getLatestReport()
+    networkQuality : monitor.getNetworkQuality(),
+    legacyReport   : monitor.getLegacyReport(),
+    detailedReport : monitor.getReport()
   };
 }
 
@@ -934,7 +934,7 @@ window.readStats = readStats;
 <p>只有监控不属于 <code>RTCSession</code> 的 PeerConnection 时才直接创建：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const monitor = new CRTC.RTCStatsMonitor(peerConnection, {
   sampleIntervalMs     : 2000,
-  enableDetailedReport : true,
+  detailedReport : true,
   autoStart            : true
 });
 
@@ -960,7 +960,7 @@ monitor.stop();
 <td>前台采样间隔，最小 <code>500</code></td>
 </tr>
 <tr>
-<td><code>enableDetailedReport</code></td>
+<td><code>detailedReport</code></td>
 <td><code>boolean</code></td>
 <td align="right"><code>true</code></td>
 <td>是否发送详细摘要事件</td>

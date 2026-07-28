@@ -51,9 +51,9 @@ function readStats()
   }
 
   return {
-    networkQuality : monitor.getLatestNetworkQuality(),
-    legacyReport   : monitor.getLatestLegacyReport(),
-    detailedReport : monitor.getLatestReport()
+    networkQuality : monitor.getNetworkQuality(),
+    legacyReport   : monitor.getLegacyReport(),
+    detailedReport : monitor.getReport()
   };
 }
 

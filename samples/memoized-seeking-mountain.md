@@ -70,7 +70,7 @@ generator.writable 写出的帧            → 输出 track
 
 RenderLoop 中仅做连线，不在 `renderer.render(payload)` 调用点直接触发：
 ```js
-renderer.setFramePresentedCallback((frameCtx) => {
+renderer.setFrameCallback((frameCtx) => {
     if (typeof this._onFramePresented === 'function') {
         this._onFramePresented(frameCtx || {});
     }

@@ -87,7 +87,7 @@
 <tr>
 <td>AI 虚拟背景</td>
 <td><code>slot 0</code> 本地摄像头画面</td>
-<td><code>mediaEffectsComposer.sources[].aiVirtualBackground</code></td>
+<td><code>mediaEffectsComposer.sources[].aiBackground</code></td>
 <td><code>session.getMediaEffectsComposer()</code></td>
 </tr>
 <tr>
@@ -127,7 +127,7 @@ function buildMediaOptions()
     },
     aiNoiseSuppression : {
       enabled             : true,
-      noiseReductionLevel : 80,
+      level : 80,
       outputGain          : 1,
       assetConfig         : { cdnUrl: &#39;./assets/ains&#39; }
     },
@@ -138,7 +138,7 @@ function buildMediaOptions()
       sources : [
         {
           slot : 0,
-          aiVirtualBackground : {
+          aiBackground : {
             mode         : &#39;blur&#39;,
             blurRadius   : 16,
             assetConfig : { cdnUrl: &#39;./assets/aivb&#39; }
@@ -183,7 +183,7 @@ function answerVideoCall()
 <td>是否启用</td>
 </tr>
 <tr>
-<td><code>noiseReductionLevel</code></td>
+<td><code>level</code></td>
 <td><code>number</code></td>
 <td align="right"><code>80</code></td>
 <td><code>0~100</code></td>
@@ -201,7 +201,7 @@ function answerVideoCall()
 <td>正整数</td>
 </tr>
 <tr>
-<td><code>preserveOtherTracks</code></td>
+<td><code>keepOtherTracks</code></td>
 <td><code>boolean</code></td>
 <td align="right"><code>true</code></td>
 <td>是否保留输入流中的非音频轨道</td>
@@ -229,7 +229,7 @@ ans_onnx.tar.gz
     return;
   }
 
-  controller.setSuppressionLevel(level);
+  controller.setLevel(level);
   const appliedGain = controller.setOutputGain(gain);
 
   console.log(&#39;实际应用增益：&#39;, appliedGain);
@@ -255,7 +255,7 @@ ans_onnx.tar.gz
 
   return {
     enabled             : true,
-    noiseReductionLevel : getNsLevel(),
+    level : getNsLevel(),
     outputGain          : 1,
     assetConfig         : { cdnUrl: AI_NOISE_ASSET_ROOT }
   };
@@ -276,7 +276,7 @@ ans_onnx.tar.gz
     return false;
   }
 
-  aiNsEngine.setSuppressionLevel(level);
+  aiNsEngine.setLevel(level);
 
   return true;
 }
@@ -406,7 +406,7 @@ selfie_segmenter_landscape.tflite
     return;
   }
 
-  composer.setSourceAiVirtualBackground(0, {
+  composer.setAiBackground(0, {
     mode : &#39;image&#39;,
     imageUrl,
     assetConfig : { cdnUrl: &#39;./assets/aivb&#39; }
@@ -418,7 +418,7 @@ function clearVirtualBackground()
   const composer = currentSession &amp;&amp;
     currentSession.getMediaEffectsComposer();
 
-  composer &amp;&amp; composer.clearSourceAiVirtualBackground(0);
+  composer &amp;&amp; composer.clearAiBackground(0);
 }
 </code></pre>
 </div><p>调用示例：<code>useImageBackground(&#39;https://static.example.com/meeting-room.jpg&#39;)</code>。</p>
@@ -461,11 +461,11 @@ aiVBOptions.imageUrl = imageUrl;
 
 if (!aiVBOptions)
 {
-  sessionComposer.clearSourceAiVirtualBackground(0);
+  sessionComposer.clearAiBackground(0);
 }
 else
 {
-  sessionComposer.setSourceAiVirtualBackground(0, aiVBOptions);
+  sessionComposer.setAiBackground(0, aiVBOptions);
 }
 </code></pre>
 </div><p>这样初始呼叫和通话中切换不会出现两套背景参数解析规则。</p>
@@ -494,14 +494,14 @@ else
   {
     composerOptions.sources = [
       {
-        aiVirtualBackground : aiVBOptions
+        aiBackground : aiVBOptions
       }
     ];
   }
 
   if (hasComposerEffects)
   {
-    composerOptions.enableInsertable = true;
+    composerOptions.insertable = true;
   }
 
   if (!hasComposerEffects)
@@ -560,7 +560,7 @@ else
 <td>最终输出是否镜像</td>
 </tr>
 <tr>
-<td><code>mirrorWatermarksWithOutput</code></td>
+<td><code>mirrorWatermarks</code></td>
 <td><code>boolean</code></td>
 <td align="right"><code>false</code></td>
 <td>输出镜像时水印是否一起镜像</td>
@@ -603,7 +603,7 @@ else
 <td>覆盖该路输入镜像</td>
 </tr>
 <tr>
-<td><code>aiVirtualBackground</code></td>
+<td><code>aiBackground</code></td>
 <td>AiVB 配置或 <code>null</code></td>
 <td>该路视频的虚拟背景</td>
 </tr>
@@ -862,7 +862,7 @@ catch (error)
 <tbody><tr>
 <td>AiNS 强度</td>
 <td>是</td>
-<td><code>setSuppressionLevel()</code></td>
+<td><code>setLevel()</code></td>
 </tr>
 <tr>
 <td>AiNS 输出增益</td>
@@ -872,12 +872,12 @@ catch (error)
 <tr>
 <td>虚拟背景模式/图片/颜色</td>
 <td>是</td>
-<td><code>setSourceAiVirtualBackground(0, options)</code></td>
+<td><code>setAiBackground(0, options)</code></td>
 </tr>
 <tr>
 <td>清除虚拟背景</td>
 <td>是</td>
-<td><code>clearSourceAiVirtualBackground(0)</code></td>
+<td><code>clearAiBackground(0)</code></td>
 </tr>
 <tr>
 <td>输出镜像</td>

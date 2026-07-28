@@ -273,7 +273,7 @@ flowchart TD
     → 设置 conferencePendingOutgoing
     → buildCallOpts('B')
       → 使用页面选中的麦克风/摄像头约束
-      → mediaEffectsComposer.enableInsertable = true
+      → mediaEffectsComposer.insertable = true
       → 配置 AiNS（如果页面启用）
       → 从 extraFeatures 移除 BFCP
     → ua.call('号码@域', callOptions)
@@ -281,7 +281,7 @@ flowchart TD
     → pending 参数转成 B leg
 ```
 
-强制 `enableInsertable = true` 的原因是：即使页面没有选择任何媒体特效，B 会话也必须提前拥有 composer，后续 C 加入时才能动态追加 B/C 远端源。
+强制 `insertable = true` 的原因是：即使页面没有选择任何媒体特效，B 会话也必须提前拥有 composer，后续 C 加入时才能动态追加 B/C 远端源。
 
 ### 6.2 添加普通 C
 
@@ -862,7 +862,7 @@ B 结束后，`restoreMedia(C, endedBId)` 使用克隆轨替换 C sender，使 A
 | `composer.addSource/removeSource()` | 动态加入/移除 B、C 远端流 |
 | `composer.getVideoStream()` | 取得稳定的合成视频轨 |
 | `composer.getAudioStream({ slots })` | 创建给 B/C 的定制音频子混音 |
-| `composer.releaseSubmixAudioStream()` | 释放对应 slots 的音频输出资源 |
+| `composer.releaseSubmixStream()` | 释放对应 slots 的音频输出资源 |
 | `sender.replaceTrack()` | 切换混音或 fallback 轨；共享 sender 由 SDK 管理 |
 | `session.share('screen', { mode: 'auxiliary' })` | 向一条会话发送独立屏幕辅流 |
 | `session.unShare()` | 停止该会话的共享，保留可复用 m-line |
@@ -1240,7 +1240,7 @@ flowchart TB
     SYNC --> MAIN_SYNC["showMain()"]
     SYNC --> UI["updateConfUi()"]
     RESTORE_ALL --> RESTORE_ONE_SYNC["restoreMedia()"]
-    RELEASE -.->|"SDK"| SUBMIX["外部：releaseSubmixAudioStream()"]
+    RELEASE -.->|"SDK"| SUBMIX["外部：releaseSubmixStream()"]
     SOURCE_SYNC -.->|"SDK"| ADDREMOVE_SYNC["外部：composer.addSource/removeSource"]
     MAIN_SYNC --> BYROLE_MAIN["getLegByRole()"]
     MAIN_SYNC --> PREVIEW["bindPreview()"]

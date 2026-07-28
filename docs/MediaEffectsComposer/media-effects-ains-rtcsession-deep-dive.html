@@ -112,7 +112,7 @@
   -> switchDevice('camera')
      -> 如果当前会话正在使用 composer, 优先在同一个 composer 内 remove old source + add new source
   -> switchDevice('audio')
-     -> 如果当前会话正在使用 AiNS, 优先复用现有 AiNS engine 做 replaceAudioTrack()</pre>
+     -> 如果当前会话正在使用 AiNS, 优先复用现有 AiNS engine 做 replaceTrack()</pre>
 
       <div class="section-grid">
         <div class="card">
@@ -199,7 +199,7 @@
           </tr>
           <tr>
             <td>Effects</td>
-            <td><code>Watermark.js</code>、<code>aiVirtualBackground/*</code></td>
+            <td><code>Watermark.js</code>、<code>aiBackground/*</code></td>
             <td>水印、AiVB 的配置与运行时状态</td>
             <td>效果本身会继续扩展，适合独立模块化</td>
           </tr>
@@ -299,7 +299,7 @@
           <tr><td data-label="方法"><code>normalizeGain()</code></td><td data-label="行号">147-159</td><td data-label="用途">处理音量增益。</td></tr>
           <tr><td data-label="方法"><code>normalizeMirrorX()</code></td><td data-label="行号">169-182</td><td data-label="用途">处理镜像布尔参数，非法时回退默认值。</td></tr>
           <tr><td data-label="方法"><code>getMaxSources()</code></td><td data-label="行号">199-202</td><td data-label="用途">暴露 source 上限。</td></tr>
-          <tr><td data-label="方法"><code>normalizeSourceOptions()</code></td><td data-label="行号">204-237</td><td data-label="用途">把 <code>slot/gain/sourceMirror/aiVirtualBackground</code> 规范化。</td></tr>
+          <tr><td data-label="方法"><code>normalizeSourceOptions()</code></td><td data-label="行号">204-237</td><td data-label="用途">把 <code>slot/gain/sourceMirror/aiBackground</code> 规范化。</td></tr>
         </tbody>
       </table></div>
 
@@ -332,7 +332,7 @@
           <tr><td data-label="字段"><code>slot</code></td><td data-label="来源">显式指定或自动分配</td><td data-label="作用">布局依据。</td></tr>
           <tr><td data-label="字段"><code>gain</code></td><td data-label="来源">options / default</td><td data-label="作用">该路音频默认增益。</td></tr>
           <tr><td data-label="字段"><code>mirrorX</code></td><td data-label="来源">sourceMirror</td><td data-label="作用">该路镜像策略。</td></tr>
-          <tr><td data-label="字段"><code>aiVirtualBackground</code></td><td data-label="来源">source options</td><td data-label="作用">该路 AiVB 配置快照。</td></tr>
+          <tr><td data-label="字段"><code>aiBackground</code></td><td data-label="来源">source options</td><td data-label="作用">该路 AiVB 配置快照。</td></tr>
           <tr><td data-label="字段"><code>audioSourceNode/masterGainNode/gainNode</code></td><td data-label="来源">AudioMixer</td><td data-label="作用">WebAudio 连接句柄。</td></tr>
           <tr><td data-label="字段"><code>audioTrackSignature</code></td><td data-label="来源">AudioMixer</td><td data-label="作用">识别“音频轨是否真的换了”。</td></tr>
           <tr><td data-label="字段"><code>ownedVideo</code></td><td data-label="来源">_createSource()</td><td data-label="作用">标记 video 是否由 composer 内部创建，决定 remove 时要不要回收。</td></tr>
@@ -356,7 +356,7 @@
           <tr><td data-label="方法"><code>remove()</code></td><td data-label="行号">148-195</td><td data-label="解释">触发音频断开、视频销毁、数组移除、后置清理。</td></tr>
           <tr><td data-label="方法"><code>getSnapshot()</code></td><td data-label="行号">203-220</td><td data-label="解释">给外部返回稳定快照而不是内部对象引用。</td></tr>
           <tr><td data-label="方法"><code>getStream()</code></td><td data-label="行号">231-242</td><td data-label="解释">如果是外部 video，会同步 <code>srcObject</code> 最新值。</td></tr>
-          <tr><td data-label="方法"><code>hasAnyLiveAudioTrack()</code></td><td data-label="行号">249-252</td><td data-label="解释">全局是否存在活跃音频。</td></tr>
+          <tr><td data-label="方法"><code>hasLiveAudio()</code></td><td data-label="行号">249-252</td><td data-label="解释">全局是否存在活跃音频。</td></tr>
           <tr><td data-label="方法"><code>hasLiveAudioTrack()</code></td><td data-label="行号">261-270</td><td data-label="解释">某一路是否有 live 音轨。</td></tr>
           <tr><td data-label="方法"><code>hasVideoTrack()</code></td><td data-label="行号">279-288</td><td data-label="解释">某一路是否有视频轨。</td></tr>
           <tr><td data-label="方法"><code>isRenderable()</code></td><td data-label="行号">298-307</td><td data-label="解释">该路是否能进入布局与绘制。</td></tr>
@@ -393,7 +393,7 @@
           <tr><td data-label="方法"><code>constructor()</code></td><td data-label="行号">21-48</td><td data-label="作用">接入 sourceRegistry、canvas、prepareCanvas、resizeRenderer、水印工厂。</td></tr>
           <tr><td data-label="方法"><code>createRenderPayload()</code></td><td data-label="行号">58-163</td><td data-label="作用">每帧生成完整 payload，是 LayoutEngine 的核心。</td></tr>
           <tr><td data-label="方法"><code>_resolveMirror()</code></td><td data-label="行号">165-173</td><td data-label="作用">把 source/slot 的镜像策略变成最终布尔值。</td></tr>
-          <tr><td data-label="方法"><code>clearAudioPlaceholderCache()</code></td><td data-label="行号">175-178</td><td data-label="作用">清除纯音频占位画布缓存。</td></tr>
+          <tr><td data-label="方法"><code>clearAudioCache()</code></td><td data-label="行号">175-178</td><td data-label="作用">清除纯音频占位画布缓存。</td></tr>
           <tr><td data-label="方法"><code>_getSourceStreamId()</code></td><td data-label="行号">186-191</td><td data-label="作用">给 source watermark 过滤提供 stream.id。</td></tr>
           <tr><td data-label="方法"><code>_calcLayout()</code></td><td data-label="行号">203-277</td><td data-label="作用">按 source 数量与画布方向计算网格行列。</td></tr>
           <tr><td data-label="方法"><code>_calcDrawRect()</code></td><td data-label="行号">290-316</td><td data-label="作用">计算等比缩放后的目标矩形。</td></tr>
@@ -409,7 +409,7 @@
         <li>先 <code>prepareCanvas()</code> 和 <code>resizeRenderer()</code>，保证本帧输出尺寸已同步。</li>
         <li>算出网格行列，再得到每个 cell 的宽高。</li>
         <li>遍历 source：有视频就按视频画；没视频但有音频就给它一个占位画布；两者都没有就跳过。</li>
-        <li>把 <code>outputMirrorX</code>、<code>mirrorWatermarksWithOutput</code>、水印项一起放进 payload。</li>
+        <li>把 <code>outputMirrorX</code>、<code>mirrorWatermarks</code>、水印项一起放进 payload。</li>
       </ol>
 
       <h3>4.5 <code>lib/MediaEffectsComposer/AudioMixer.js</code></h3>
@@ -457,12 +457,12 @@
         </thead>
         <tbody>
           <tr><td data-label="方法"><code>getAudioStream()</code></td><td data-label="行号">100-149</td><td data-label="一句话解释">获取默认混音或 slot 子混音。</td></tr>
-          <tr><td data-label="方法"><code>getIsolatedSubmixAudioStream()</code></td><td data-label="行号">158-173</td><td data-label="一句话解释">强制走独立 AudioContext 的子混音。</td></tr>
+          <tr><td data-label="方法"><code>getSubmixStream()</code></td><td data-label="行号">158-173</td><td data-label="一句话解释">强制走独立 AudioContext 的子混音。</td></tr>
           <tr><td data-label="方法"><code>getStableAudioStream()</code></td><td data-label="行号">182-192</td><td data-label="一句话解释">即使当前没音频源，也先建稳定 destination，避免后续动态加第二条音轨。</td></tr>
-          <tr><td data-label="方法"><code>releaseSubmixAudioStream()</code></td><td data-label="行号">201-245</td><td data-label="一句话解释">回收子混音请求和资源。</td></tr>
+          <tr><td data-label="方法"><code>releaseSubmixStream()</code></td><td data-label="行号">201-245</td><td data-label="一句话解释">回收子混音请求和资源。</td></tr>
           <tr><td data-label="方法"><code>scheduleRefresh()</code></td><td data-label="行号">252-277</td><td data-label="一句话解释">异步排队刷新音频连接。</td></tr>
           <tr><td data-label="方法"><code>_runScheduledRefresh()</code></td><td data-label="行号">279-324</td><td data-label="一句话解释">串行执行刷新，处理 pending refresh。</td></tr>
-          <tr><td data-label="方法"><code>syncExternalSourceAudio()</code></td><td data-label="行号">333-375</td><td data-label="一句话解释">检测外部 video 换源并重连音频。</td></tr>
+          <tr><td data-label="方法"><code>syncSourceAudio()</code></td><td data-label="行号">333-375</td><td data-label="一句话解释">检测外部 video 换源并重连音频。</td></tr>
           <tr><td data-label="方法"><code>disconnectSource()</code></td><td data-label="行号">387-395</td><td data-label="一句话解释">断开某一路音频。</td></tr>
           <tr><td data-label="方法"><code>_destroySourceNode()</code></td><td data-label="行号">397-434</td><td data-label="一句话解释">把该路 source 的所有默认/子混音连接句柄都清掉。</td></tr>
           <tr><td data-label="方法"><code>getInfo()</code></td><td data-label="行号">442-447</td><td data-label="一句话解释">返回音频状态快照。</td></tr>
@@ -544,8 +544,8 @@
           <tr><td data-label="方法"><code>onFramePresented()</code></td><td data-label="行号">511-555</td><td data-label="解释">每当 renderLoop 真正输出一帧后，驱动 capture/requestFrame 或写 Insertable。</td></tr>
           <tr><td data-label="方法"><code>_writePresentedFrame()</code></td><td data-label="行号">589-615</td><td data-label="解释">把渲染结果写入 generator。</td></tr>
           <tr><td data-label="方法"><code>setMixedStream()</code></td><td data-label="行号">702-718</td><td data-label="解释">记录外部混合流引用。</td></tr>
-          <tr><td data-label="方法"><code>addAudioTracksToStream()</code></td><td data-label="行号">720-748</td><td data-label="解释">把音频轨加进目标流。</td></tr>
-          <tr><td data-label="方法"><code>ensureMixedStreamAudioTrack()</code></td><td data-label="行号">750-775</td><td data-label="解释">如果 mixed stream 之前没音频，现在补进去。</td></tr>
+          <tr><td data-label="方法"><code>addAudioTracks()</code></td><td data-label="行号">720-748</td><td data-label="解释">把音频轨加进目标流。</td></tr>
+          <tr><td data-label="方法"><code>ensureMixedAudio()</code></td><td data-label="行号">750-775</td><td data-label="解释">如果 mixed stream 之前没音频，现在补进去。</td></tr>
           <tr><td data-label="方法"><code>stop()</code></td><td data-label="行号">777-809</td><td data-label="解释">停掉 Insertable / captureStream / sink / track。</td></tr>
           <tr><td data-label="方法"><code>getOutputRouteInfo()</code></td><td data-label="行号">874-...</td><td data-label="解释">对外报告当前输出走的是哪条路径。</td></tr>
         </tbody>
@@ -581,9 +581,9 @@
           <tr><td data-label="方法"><code>renderFrame()</code></td><td data-label="行号">236-287</td><td data-label="作用">rAF 主入口。</td></tr>
           <tr><td data-label="方法"><code>destroy()</code></td><td data-label="行号">293-308</td><td data-label="作用">销毁 render loop 和 renderer。</td></tr>
           <tr><td data-label="方法"><code>fallbackRenderer()</code></td><td data-label="行号">321-363</td><td data-label="作用">自动模式下的运行时降级总入口。</td></tr>
-          <tr><td data-label="方法"><code>fallbackRendererToMain2D()</code></td><td data-label="行号">365-402</td><td data-label="作用">最终兜底。</td></tr>
-          <tr><td data-label="方法"><code>fallbackRendererToMainThread()</code></td><td data-label="行号">404-432</td><td data-label="作用">强制退回主线程。</td></tr>
-          <tr><td data-label="方法"><code>fallbackRendererToWorker2D()</code></td><td data-label="行号">434-449</td><td data-label="作用">尝试退回 worker 2d。</td></tr>
+          <tr><td data-label="方法"><code>fallbackMain2D()</code></td><td data-label="行号">365-402</td><td data-label="作用">最终兜底。</td></tr>
+          <tr><td data-label="方法"><code>fallbackMain()</code></td><td data-label="行号">404-432</td><td data-label="作用">强制退回主线程。</td></tr>
+          <tr><td data-label="方法"><code>fallbackWorker2D()</code></td><td data-label="行号">434-449</td><td data-label="作用">尝试退回 worker 2d。</td></tr>
           <tr><td data-label="方法"><code>_handleRendererInfo()</code></td><td data-label="行号">554-578</td><td data-label="作用">检查 worker 是否坏掉，连续错误到阈值后降级。</td></tr>
           <tr><td data-label="方法"><code>_shouldRenderPayload()</code></td><td data-label="行号">588-...</td><td data-label="作用">空 payload 且没 renderer 时跳过，避免构造期过早起 Worker/WebGL。</td></tr>
         </tbody>
@@ -651,19 +651,19 @@
           <tr><td data-label="方法"><code>getOutput()</code></td><td data-label="行号">1158-1182</td><td data-label="要点">统一输出入口：video/audio/mixed。</td></tr>
           <tr><td data-label="方法"><code>releaseOutput()</code></td><td data-label="行号">1184-1197</td><td data-label="要点">目前主要用于释放 audio 子混音请求。</td></tr>
           <tr><td data-label="方法"><code>getSources()</code></td><td data-label="行号">1206-1209</td><td data-label="要点">sources 快照。</td></tr>
-          <tr><td data-label="方法"><code>set/get/clearSourceAiVirtualBackground()</code></td><td data-label="行号">1211-1238</td><td data-label="要点">按 source / slot 操作 AiVB。</td></tr>
+          <tr><td data-label="方法"><code>set/get/clearAiBackground()</code></td><td data-label="行号">1211-1238</td><td data-label="要点">按 source / slot 操作 AiVB。</td></tr>
           <tr><td data-label="方法"><code>set/getMirror()</code></td><td data-label="行号">1240-1250</td><td data-label="要点">输出整体镜像。</td></tr>
-          <tr><td data-label="方法"><code>set/getMirrorWatermarksWithOutput()</code></td><td data-label="行号">1252-1262</td><td data-label="要点">输出镜像时水印是否一起镜像。</td></tr>
+          <tr><td data-label="方法"><code>set/getWatermarkMirror()</code></td><td data-label="行号">1252-1262</td><td data-label="要点">输出镜像时水印是否一起镜像。</td></tr>
           <tr><td data-label="方法"><code>set/get/clearSourceMirror()</code></td><td data-label="行号">1264-1300</td><td data-label="要点">全局 source 镜像或 slot 级覆盖。</td></tr>
           <tr><td data-label="方法"><code>getRenderInfo()</code></td><td data-label="行号">1326-1331</td><td data-label="要点">只读渲染状态。</td></tr>
           <tr><td data-label="方法"><code>getAudioInfo()</code></td><td data-label="行号">1338-1343</td><td data-label="要点">只读音频状态。</td></tr>
-          <tr><td data-label="方法"><code>getCapabilityReport()</code></td><td data-label="行号">1353-1371</td><td data-label="要点">对外稳定报告当前能力与降级路径。</td></tr>
+          <tr><td data-label="方法"><code>getCapabilities()</code></td><td data-label="行号">1353-1371</td><td data-label="要点">对外稳定报告当前能力与降级路径。</td></tr>
           <tr><td data-label="方法"><code>set/clear/getWatermarks()</code></td><td data-label="行号">1379-1408</td><td data-label="要点">水印操作。</td></tr>
           <tr><td data-label="方法"><code>getMixedStream()</code></td><td data-label="行号">1421-1426</td><td data-label="要点">完整音视频输出。</td></tr>
           <tr><td data-label="方法"><code>getVideoStream()</code></td><td data-label="行号">1434-1440</td><td data-label="要点">仅视频输出。</td></tr>
           <tr><td data-label="方法"><code>getAudioStream()</code></td><td data-label="行号">1448-1457</td><td data-label="要点">仅音频输出。</td></tr>
-          <tr><td data-label="方法"><code>getIsolatedSubmixAudioStream()</code></td><td data-label="行号">1465-1473</td><td data-label="要点">隔离子混音。</td></tr>
-          <tr><td data-label="方法"><code>releaseSubmixAudioStream()</code></td><td data-label="行号">1481-1489</td><td data-label="要点">释放子混音。</td></tr>
+          <tr><td data-label="方法"><code>getSubmixStream()</code></td><td data-label="行号">1465-1473</td><td data-label="要点">隔离子混音。</td></tr>
+          <tr><td data-label="方法"><code>releaseSubmixStream()</code></td><td data-label="行号">1481-1489</td><td data-label="要点">释放子混音。</td></tr>
         </tbody>
       </table></div>
 
@@ -678,7 +678,7 @@
         <tbody>
           <tr><td data-label="代码范围"><code>1061-1064</code></td><td data-label="解释">先声明 3 个布尔标记：是否要刷新镜像策略、是否要强制重绘、是否要预加载 AiVB 资源。</td></tr>
           <tr><td data-label="代码范围"><code>1065-1070</code></td><td data-label="解释">如果 patch 里有 <code>outputMirror</code>，更新 config 并标记强制重绘。</td></tr>
-          <tr><td data-label="代码范围"><code>1072-1076</code></td><td data-label="解释">处理 <code>mirrorWatermarksWithOutput</code>。</td></tr>
+          <tr><td data-label="代码范围"><code>1072-1076</code></td><td data-label="解释">处理 <code>mirrorWatermarks</code>。</td></tr>
           <tr><td data-label="代码范围"><code>1078-1084</code></td><td data-label="解释">处理全局 <code>sourceMirror</code>，这会影响 AiVB 预热策略，所以也置 <code>shouldPreloadAiVBRenderAssets</code>。</td></tr>
           <tr><td data-label="代码范围"><code>1086-1092</code></td><td data-label="解释">支持清空所有 slot 级镜像覆盖。</td></tr>
           <tr><td data-label="代码范围"><code>1094-1120</code></td><td data-label="解释">逐个处理 <code>sourceMirrorOverrides</code>，slot 非法直接抛错；传 <code>null</code> 表示删除 override。</td></tr>
@@ -695,7 +695,7 @@
         因为 <code>setWatermarks()</code> 可能需要加载图片、<code>setConfig()</code> 可能需要触发异步资源准备。
         如果继续伪装成同步返回值，调用方会拿不到真正“效果已经应用后的状态”。因此现在
         <code>setMirror()</code>、<code>setSourceMirror()</code>、<code>clearSourceMirror()</code>、
-        <code>setMirrorWatermarksWithOutput()</code>、<code>clearWatermarks()</code>
+        <code>setWatermarkMirror()</code>、<code>clearWatermarks()</code>
         最终都走 Promise 化的 <code>setConfig()</code>。
       </p>
 
@@ -703,10 +703,10 @@
       <ul>
         <li><code>video</code> 输出会先确保 render loop 已经 resumed，再创建或复用视频轨。</li>
         <li><code>mixed</code> 输出会先拿视频，再把 AudioMixer 提供的稳定音频轨加进去。</li>
-        <li>如果早期拿到 mixed stream 时还没有音频，后续音频源加入时会由 <code>ensureMixedStreamAudioTrack()</code> 补轨。</li>
+        <li>如果早期拿到 mixed stream 时还没有音频，后续音频源加入时会由 <code>ensureMixedAudio()</code> 补轨。</li>
       </ul>
 
-      <h3>4.9 AiVB 相关：<code>lib/MediaEffectsComposer/aiVirtualBackground/AiVBState.js</code></h3>
+      <h3>4.9 AiVB 相关：<code>lib/MediaEffectsComposer/aiBackground/AiVBState.js</code></h3>
       <p>
         这个类的职责是“按 source 管理 AiVB 运行时状态”，尤其值得注意的是：
         <span class="em">内部状态现在放在 <code>WeakMap</code> 里，不再写到 <code>source.__aiVirtualBackgroundState</code> 上</span>。
@@ -852,12 +852,12 @@
         </thead>
         <tbody>
           <tr><td data-label="常量 / 方法"><code>DEFAULT_SAMPLE_RATE</code></td><td data-label="行号">28</td><td data-label="解释">默认 48000，跟模型预期采样率一致。</td></tr>
-          <tr><td data-label="常量 / 方法"><code>DEFAULT_SUPPRESSION_LEVEL</code></td><td data-label="行号">37</td><td data-label="解释">默认 80，在降噪强度与语音自然度间折中。</td></tr>
+          <tr><td data-label="常量 / 方法"><code>DEFAULT_LEVEL</code></td><td data-label="行号">37</td><td data-label="解释">默认 80，在降噪强度与语音自然度间折中。</td></tr>
           <tr><td data-label="常量 / 方法"><code>DEFAULT_CDN_URL</code></td><td data-label="行号">46</td><td data-label="解释">默认资源目录。</td></tr>
           <tr><td data-label="常量 / 方法"><code>create()</code></td><td data-label="行号">71-86</td><td data-label="解释">生成标准化配置。</td></tr>
           <tr><td data-label="常量 / 方法"><code>normalizeBoolean()</code></td><td data-label="行号">99-112</td><td data-label="解释">严格按 boolean 处理，避免字符串 <code>"false"</code> 被当真值。</td></tr>
           <tr><td data-label="常量 / 方法"><code>normalizePositiveInteger()</code></td><td data-label="行号">124-139</td><td data-label="解释">处理 sampleRate。</td></tr>
-          <tr><td data-label="常量 / 方法"><code>normalizeSuppressionLevel()</code></td><td data-label="行号">156-171</td><td data-label="解释">把降噪强度钳到 0~100。</td></tr>
+          <tr><td data-label="常量 / 方法"><code>normalizeLevel()</code></td><td data-label="行号">156-171</td><td data-label="解释">把降噪强度钳到 0~100。</td></tr>
           <tr><td data-label="常量 / 方法"><code>normalizeAssetConfig()</code></td><td data-label="行号">185-209</td><td data-label="解释">只接受有效的 <code>cdnUrl</code>。</td></tr>
         </tbody>
       </table></div>
@@ -878,20 +878,20 @@
         <tbody>
           <tr><td data-label="方法"><code>constructor()</code></td><td data-label="行号">42-50</td><td data-label="解释">创建 Processor，保留 input/output 引用。</td></tr>
           <tr><td data-label="方法"><code>init()</code></td><td data-label="行号">58-72</td><td data-label="解释">显式引擎初始化入口。</td></tr>
-          <tr><td data-label="方法"><code>getOutputStream()</code></td><td data-label="行号">79-82</td><td data-label="解释">拿最近一次 init 的输出流。</td></tr>
+          <tr><td data-label="方法"><code>getOutput()</code></td><td data-label="行号">79-82</td><td data-label="解释">拿最近一次 init 的输出流。</td></tr>
           <tr><td data-label="方法"><code>process()</code></td><td data-label="行号">90-95</td><td data-label="解释">兼容 RTCSession 的处理器接口，本质上转调 <code>init()</code>。</td></tr>
-          <tr><td data-label="方法"><code>replaceAudioTrack()</code></td><td data-label="行号">103-110</td><td data-label="解释">复用现有处理链替换输入音轨。</td></tr>
-          <tr><td data-label="方法"><code>getProcessor()</code></td><td data-label="行号">119-122</td><td data-label="解释">调试逃生口。</td></tr>
+          <tr><td data-label="方法"><code>replaceTrack()</code></td><td data-label="行号">103-110</td><td data-label="解释">复用现有处理链替换输入音轨。</td></tr>
+          <tr><td data-label="方法"><code>getRuntime()</code></td><td data-label="行号">119-122</td><td data-label="解释">调试逃生口。</td></tr>
           <tr><td data-label="方法"><code>setEnabled()</code></td><td data-label="行号">130-135</td><td data-label="解释">动态开关。</td></tr>
-          <tr><td data-label="方法"><code>getCapabilityReport()</code></td><td data-label="行号">137-140</td><td data-label="解释">当前实例能力与状态。</td></tr>
-          <tr><td data-label="方法"><code>setSuppressionLevel()</code></td><td data-label="行号">147-152</td><td data-label="解释">动态调降噪强度。</td></tr>
+          <tr><td data-label="方法"><code>getCapabilities()</code></td><td data-label="行号">137-140</td><td data-label="解释">当前实例能力与状态。</td></tr>
+          <tr><td data-label="方法"><code>setLevel()</code></td><td data-label="行号">147-152</td><td data-label="解释">动态调降噪强度。</td></tr>
           <tr><td data-label="方法"><code>destroy()</code></td><td data-label="行号">157-163</td><td data-label="解释">销毁。</td></tr>
           <tr><td data-label="方法"><code>static isSupported()</code></td><td data-label="行号">168-171</td><td data-label="解释">静态能力检查。</td></tr>
-          <tr><td data-label="方法"><code>static getCapabilityReport()</code></td><td data-label="行号">173-176</td><td data-label="解释">静态报告，不依赖实例。</td></tr>
+          <tr><td data-label="方法"><code>static getCapabilities()</code></td><td data-label="行号">173-176</td><td data-label="解释">静态报告，不依赖实例。</td></tr>
         </tbody>
       </table></div>
 
-      <h4>为什么要有 <code>getCapabilityReport()</code></h4>
+      <h4>为什么要有 <code>getCapabilities()</code></h4>
       <p>
         这和 Composer 一样，是为了让业务层不用读 debug 日志也能知道：
       </p>
@@ -911,7 +911,7 @@
   -> AudioWorkletNode
   -> MediaStreamDestination
   -> 取 destination 里的处理后音轨
-  -> 如果 preserveOtherTracks=true, 再把原始视频轨等非音频轨拼回去</pre>
+  -> 如果 keepOtherTracks=true, 再把原始视频轨等非音频轨拼回去</pre>
 
       <h4>关键字段</h4>
       <div class="table-wrap"><table class="table-stack table-wrap-target">
@@ -927,7 +927,7 @@
           <tr><td data-label="字段"><code>audioContext / sourceNode / workletNode / destination</code></td><td data-label="行号">42-45</td><td data-label="作用">音频图核心节点。</td></tr>
           <tr><td data-label="字段"><code>enabled</code></td><td data-label="行号">46</td><td data-label="作用">逻辑开关。</td></tr>
           <tr><td data-label="字段"><code>originalTrack / originalStream</code></td><td data-label="行号">47-48</td><td data-label="作用">当前输入源。</td></tr>
-          <tr><td data-label="字段"><code>preserveOtherTracks</code></td><td data-label="行号">49</td><td data-label="作用">是否把原始视频轨等非音频轨带回输出流。</td></tr>
+          <tr><td data-label="字段"><code>keepOtherTracks</code></td><td data-label="行号">49</td><td data-label="作用">是否把原始视频轨等非音频轨带回输出流。</td></tr>
           <tr><td data-label="字段"><code>processor</code></td><td data-label="行号">51-55</td><td data-label="作用">AiNSWorkletRuntime 实例。</td></tr>
         </tbody>
       </table></div>
@@ -944,9 +944,9 @@
         <tbody>
           <tr><td data-label="方法"><code>init()</code></td><td data-label="行号">81-93</td><td data-label="解释">设置输入并确保 graph 存在。</td></tr>
           <tr><td data-label="方法"><code>restart()</code></td><td data-label="行号">103-113</td><td data-label="解释">重启处理链。</td></tr>
-          <tr><td data-label="方法"><code>replaceAudioTrack()</code></td><td data-label="行号">124-147</td><td data-label="解释">复用 graph 替换音频输入。</td></tr>
+          <tr><td data-label="方法"><code>replaceTrack()</code></td><td data-label="行号">124-147</td><td data-label="解释">复用 graph 替换音频输入。</td></tr>
           <tr><td data-label="方法"><code>setEnabled()</code></td><td data-label="行号">155-162</td><td data-label="解释">转成 bypass 消息，不重建图。</td></tr>
-          <tr><td data-label="方法"><code>setSuppressionLevel()</code></td><td data-label="行号">164-171</td><td data-label="解释">更新 config，并通知 worklet。</td></tr>
+          <tr><td data-label="方法"><code>setLevel()</code></td><td data-label="行号">164-171</td><td data-label="解释">更新 config，并通知 worklet。</td></tr>
           <tr><td data-label="方法"><code>suspend()</code></td><td data-label="行号">181-189</td><td data-label="解释">挂起 AudioContext。</td></tr>
           <tr><td data-label="方法"><code>resume()</code></td><td data-label="行号">194-202</td><td data-label="解释">恢复 AudioContext。</td></tr>
           <tr><td data-label="方法"><code>destroy()</code></td><td data-label="行号">212-219</td><td data-label="解释">彻底销毁。</td></tr>
@@ -954,7 +954,7 @@
           <tr><td data-label="方法"><code>_resolveInputAudioTrack()</code></td><td data-label="行号">256-269</td><td data-label="解释">抽取音轨。</td></tr>
           <tr><td data-label="方法"><code>_buildStreamWithReplacedAudioTrack()</code></td><td data-label="行号">286-304</td><td data-label="解释">保留非音频轨，仅替换音频轨。</td></tr>
           <tr><td data-label="方法"><code>ensureGraph()</code></td><td data-label="行号">317-363</td><td data-label="解释">真正建图。</td></tr>
-          <tr><td data-label="方法"><code>rebuildProcessedStream()</code></td><td data-label="行号">372-403</td><td data-label="解释">用 destination 产物重建最终输出流。</td></tr>
+          <tr><td data-label="方法"><code>rebuildStream()</code></td><td data-label="行号">372-403</td><td data-label="解释">用 destination 产物重建最终输出流。</td></tr>
           <tr><td data-label="方法"><code>teardownGraph()</code></td><td data-label="行号">410-447</td><td data-label="解释">拆图。</td></tr>
         </tbody>
       </table></div>
@@ -1000,10 +1000,10 @@
           <tr><td data-label="对象 / 方法"><code>registerInlineWorkletModule()</code></td><td data-label="行号">45-58</td><td data-label="解释">把 worklet 源码塞进 Blob，再注册到 audioWorklet。</td></tr>
           <tr><td data-label="对象 / 方法"><code>constructor()</code></td><td data-label="行号">80-96</td><td data-label="解释">存 config、assetLoader、资源状态、bypass 状态。</td></tr>
           <tr><td data-label="对象 / 方法"><code>initialize()</code></td><td data-label="行号">107-134</td><td data-label="解释">预加载 wasm/model 二进制。</td></tr>
-          <tr><td data-label="对象 / 方法"><code>createAudioWorkletNode()</code></td><td data-label="行号">147-170</td><td data-label="解释">注册 worklet 模块并创建 node。</td></tr>
-          <tr><td data-label="对象 / 方法"><code>setSuppressionLevel()</code></td><td data-label="行号">177-196</td><td data-label="解释">通过 port 发消息动态调强度。</td></tr>
+          <tr><td data-label="对象 / 方法"><code>createNode()</code></td><td data-label="行号">147-170</td><td data-label="解释">注册 worklet 模块并创建 node。</td></tr>
+          <tr><td data-label="对象 / 方法"><code>setLevel()</code></td><td data-label="行号">177-196</td><td data-label="解释">通过 port 发消息动态调强度。</td></tr>
           <tr><td data-label="对象 / 方法"><code>setNoiseSuppressionEnabled()</code></td><td data-label="行号">206-224</td><td data-label="解释">通过 bypass 开关实现启停。</td></tr>
-          <tr><td data-label="对象 / 方法"><code>isNoiseSuppressionEnabled()</code></td><td data-label="行号">226-229</td><td data-label="解释">读取状态。</td></tr>
+          <tr><td data-label="对象 / 方法"><code>isEnabled()</code></td><td data-label="行号">226-229</td><td data-label="解释">读取状态。</td></tr>
           <tr><td data-label="对象 / 方法"><code>destroy()</code></td><td data-label="行号">236-248</td><td data-label="解释">只清 runtime 级资源，不关 AudioContext。</td></tr>
           <tr><td data-label="对象 / 方法"><code>ensureInitialized()</code></td><td data-label="行号">253-260</td><td data-label="解释">防止业务忘记先调用 <code>initialize()</code>。</td></tr>
         </tbody>
@@ -1086,7 +1086,7 @@
       </p>
       <ul>
         <li>缓存输出层配置，比如 <code>mirror</code>、<code>watermarks</code>。</li>
-        <li>缓存 source 0 的配置，比如 <code>sourceMirror</code>、<code>aiVirtualBackground</code>。</li>
+        <li>缓存 source 0 的配置，比如 <code>sourceMirror</code>、<code>aiBackground</code>。</li>
         <li>缓存重建 composer 需要的构造参数，比如 <code>width/height/fps/renderMode</code>。</li>
         <li><strong>不缓存</strong> 你在运行中的 composer 实例上后来 <code>addSource()</code> 的那些动态多源状态。</li>
       </ul>
@@ -1109,13 +1109,13 @@ height
 fps
 renderMode
 workerUrl
-dropFrameWhenBusy
+dropBusyFrames
 maxFrameQueue
-preserveDrawingBuffer
+keepDrawingBuffer
 backgroundColor
 audioGain
-enableInsertable
-manualCaptureFrameControl
+insertable
+manualFrameControl
 forceNoSwapWH</pre>
       <p>
         原因很直接：这些字段本质上是 <strong>构造时决定 renderer / output / capture 路径的“硬配置”</strong>。
@@ -1137,7 +1137,7 @@ forceNoSwapWH</pre>
       <h3>7.7 <code>replaceAudioTrackWithSessionAiNoiseSuppression()</code>（519-550）</h3>
       <p>
         这个方法是“切麦克风优化路径”的关键。与其每次切麦克风都重建整个 AiNS 处理链，
-        它优先复用现有 <code>_sessionAiNSEngine</code> 做 <code>replaceAudioTrack()</code>。
+        它优先复用现有 <code>_sessionAiNSEngine</code> 做 <code>replaceTrack()</code>。
       </p>
       <p>
         只有在两种情况下才退化成完整初始化：
@@ -1203,7 +1203,7 @@ forceNoSwapWH</pre>
           <tr><td data-label="代码范围"><code>361-378</code></td><td data-label="解释">传 <code>null</code> 或解析后为空，表示关闭 composer：清缓存，停实例。</td></tr>
           <tr><td data-label="代码范围"><code>381-485</code></td><td data-label="解释">如果当前没有可 patch 的 composer，就重建。</td></tr>
           <tr><td data-label="代码范围"><code>487-489</code></td><td data-label="解释">如果已有 composer，先把 session shape 转成 runtime patch，再 <code>await composer.setConfig(patch)</code>。</td></tr>
-          <tr><td data-label="代码范围"><code>491-518</code></td><td data-label="解释">再逐个处理 <code>sources</code> 数组中的 source 级 patch，目前主要支持 <code>sourceMirror</code> 与 <code>aiVirtualBackground</code>。</td></tr>
+          <tr><td data-label="代码范围"><code>491-518</code></td><td data-label="解释">再逐个处理 <code>sources</code> 数组中的 source 级 patch，目前主要支持 <code>sourceMirror</code> 与 <code>aiBackground</code>。</td></tr>
           <tr><td data-label="代码范围"><code>521-526</code></td><td data-label="解释">更新 session cache，并返回 composer 最新状态。</td></tr>
         </tbody>
       </table></div>
@@ -1381,7 +1381,7 @@ this._sessionAiNSOptions = null;</pre>
     {
       slot: 0,
       sourceMirror: true,
-      aiVirtualBackground: {
+      aiBackground: {
         mode: 'blur',
         assetConfig: { cdnUrl: './assets/aivb' }
       }
@@ -1411,7 +1411,7 @@ const mixed = await composer.getOutput({ type: 'mixed' });</pre>
   sources: [
     {
       sourceMirror: true,
-      aiVirtualBackground: {
+      aiBackground: {
         mode: 'image',
         imageUrl: '/bg/office.png'
       }
@@ -1528,7 +1528,7 @@ composer.addSource(screenStream, { slot: 2 });</pre>
           <tr><td data-label="API / 场景">新增源</td><td data-label="当前入口"><code>addSource</code></td><td data-label="核心调用链"><code>_normalizeSourceOptions</code> -> <code>Sources.add</code> -> audio refresh -> render loop start</td></tr>
           <tr><td data-label="API / 场景">视频输出</td><td data-label="当前入口"><code>getOutput({type:'video'})</code></td><td data-label="核心调用链"><code>_getVideoOutputSync</code> -> <code>OutputStream.getVideoStream</code> -> <code>RenderLoop.renderFrame</code></td></tr>
           <tr><td data-label="API / 场景">混合输出</td><td data-label="当前入口"><code>getOutput({type:'mixed'})</code></td><td data-label="核心调用链"><code>_getMixedOutput</code> -> video stream -> <code>AudioMixer.getStableAudioStream</code> -> add audio tracks</td></tr>
-          <tr><td data-label="API / 场景">AiVB</td><td data-label="当前入口"><code>setSourceAiVirtualBackground</code></td><td data-label="核心调用链"><code>AiVBState.setSourceConfig</code> -> refresh policy -> force render</td></tr>
+          <tr><td data-label="API / 场景">AiVB</td><td data-label="当前入口"><code>setAiBackground</code></td><td data-label="核心调用链"><code>AiVBState.setSourceConfig</code> -> refresh policy -> force render</td></tr>
           <tr><td data-label="API / 场景">会话集成</td><td data-label="当前入口"><code>MediaPipeline.getUserMediaWithSessionPipeline</code></td><td data-label="核心调用链">GUM -> 外部处理器 -> AiNS -> Composer</td></tr>
           <tr><td data-label="API / 场景">通话中更新</td><td data-label="当前入口"><code>RTCSession.updateMediaEffectsComposer</code></td><td data-label="核心调用链">resolve options -> patch or rebuild -> setConfig / replace track</td></tr>
         </tbody>

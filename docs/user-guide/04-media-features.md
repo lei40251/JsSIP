@@ -9,7 +9,7 @@
 | 能力 | 处理对象 | 初始入口 | 通话中入口 |
 | --- | --- | --- | --- |
 | AiNS | 本地麦克风音频 | `options.aiNoiseSuppression` | `session.getAiNoiseSuppression()` |
-| AI 虚拟背景 | `slot 0` 本地摄像头画面 | `mediaEffectsComposer.sources[].aiVirtualBackground` | `session.getMediaEffectsComposer()` |
+| AI 虚拟背景 | `slot 0` 本地摄像头画面 | `mediaEffectsComposer.sources[].aiBackground` | `session.getMediaEffectsComposer()` |
 | 音视频混流 | 摄像头、屏幕或其他 `MediaStream` | `options.mediaEffectsComposer` | `session.getMediaEffectsComposer()` |
 
 虚拟背景是混流器某一路视频源的效果，因此它放在 `mediaEffectsComposer.sources` 中，而不是独立的会话顶层参数。
@@ -46,7 +46,7 @@ function buildMediaOptions()
     },
     aiNoiseSuppression : {
       enabled             : true,
-      noiseReductionLevel : 80,
+      level : 80,
       outputGain          : 1,
       assetConfig         : { cdnUrl: './assets/ains' }
     },
@@ -57,7 +57,7 @@ function buildMediaOptions()
       sources : [
         {
           slot : 0,
-          aiVirtualBackground : {
+          aiBackground : {
             mode         : 'blur',
             blurRadius   : 16,
             assetConfig : { cdnUrl: './assets/aivb' }
@@ -97,10 +97,10 @@ AiNS 处理本地麦克风轨道。建议请求 `48000Hz` 单声道，并避免�
 | 参数 | 类型 | 默认值 | 范围或说明 |
 | --- | --- | ---: | --- |
 | `enabled` | `boolean` | `true` | 是否启用 |
-| `noiseReductionLevel` | `number` | `80` | `0~100` |
+| `level` | `number` | `80` | `0~100` |
 | `outputGain` | `number` | `1` | `0~4` |
 | `sampleRate` | `number` | `48000` | 正整数 |
-| `preserveOtherTracks` | `boolean` | `true` | 是否保留输入流中的非音频轨道 |
+| `keepOtherTracks` | `boolean` | `true` | 是否保留输入流中的非音频轨道 |
 | `assetConfig.cdnUrl` | `string` | `./static` | AiNS 资源目录 |
 
 `cdnUrl` 目录应包含：
@@ -124,7 +124,7 @@ function updateAiNS(level, gain)
     return;
   }
 
-  controller.setSuppressionLevel(level);
+  controller.setLevel(level);
   const appliedGain = controller.setOutputGain(gain);
 
   console.log('实际应用增益：', appliedGain);
@@ -157,7 +157,7 @@ function getNsOpts()
 
   return {
     enabled             : true,
-    noiseReductionLevel : getNsLevel(),
+    level : getNsLevel(),
     outputGain          : 1,
     assetConfig         : { cdnUrl: AI_NOISE_ASSET_ROOT }
   };
@@ -181,7 +181,7 @@ function setNsLevel(level)
     return false;
   }
 
-  aiNsEngine.setSuppressionLevel(level);
+  aiNsEngine.setLevel(level);
 
   return true;
 }
@@ -264,7 +264,7 @@ function useImageBackground(imageUrl)
     return;
   }
 
-  composer.setSourceAiVirtualBackground(0, {
+  composer.setAiBackground(0, {
     mode : 'image',
     imageUrl,
     assetConfig : { cdnUrl: './assets/aivb' }
@@ -276,7 +276,7 @@ function clearVirtualBackground()
   const composer = currentSession &&
     currentSession.getMediaEffectsComposer();
 
-  composer && composer.clearSourceAiVirtualBackground(0);
+  composer && composer.clearAiBackground(0);
 }
 ```
 
@@ -327,11 +327,11 @@ const aiVBOptions = getVbOpts();
 
 if (!aiVBOptions)
 {
-  sessionComposer.clearSourceAiVirtualBackground(0);
+  sessionComposer.clearAiBackground(0);
 }
 else
 {
-  sessionComposer.setSourceAiVirtualBackground(0, aiVBOptions);
+  sessionComposer.setAiBackground(0, aiVBOptions);
 }
 ```
 
@@ -366,14 +366,14 @@ function getFxOpts()
   {
     composerOptions.sources = [
       {
-        aiVirtualBackground : aiVBOptions
+        aiBackground : aiVBOptions
       }
     ];
   }
 
   if (hasComposerEffects)
   {
-    composerOptions.enableInsertable = true;
+    composerOptions.insertable = true;
   }
 
   if (!hasComposerEffects)
@@ -397,7 +397,7 @@ function getFxOpts()
 | `audioGain` | `number` | `0.8` | 输入源默认音频增益 |
 | `sourceMirror` | `boolean` | `false` | 输入源默认镜像 |
 | `mirror` | `boolean` | `false` | 最终输出是否镜像 |
-| `mirrorWatermarksWithOutput` | `boolean` | `false` | 输出镜像时水印是否一起镜像 |
+| `mirrorWatermarks` | `boolean` | `false` | 输出镜像时水印是否一起镜像 |
 | `watermarks` | 对象、数组或 `null` | `[]` | 初始水印配置 |
 | `sources` | 数组或 `null` | `null` | 各输入源的 slot、增益、镜像和虚拟背景 |
 
@@ -408,7 +408,7 @@ function getFxOpts()
 | `slot` | 非负整数 | 输入槽位；通话摄像头通常为 `0` |
 | `gain` | `number` | 该路音频增益；未传使用 `audioGain` |
 | `sourceMirror` | `boolean` | 覆盖该路输入镜像 |
-| `aiVirtualBackground` | AiVB 配置或 `null` | 该路视频的虚拟背景 |
+| `aiBackground` | AiVB 配置或 `null` | 该路视频的虚拟背景 |
 
 ### 添加屏幕作为第二路源
 
@@ -556,10 +556,10 @@ session.on('mediaEffectsIssue', function(event)
 
 | 参数/操作 | 通话中可更新 | 推荐入口 |
 | --- | --- | --- |
-| AiNS 强度 | 是 | `setSuppressionLevel()` |
+| AiNS 强度 | 是 | `setLevel()` |
 | AiNS 输出增益 | 是 | `setOutputGain()` |
-| 虚拟背景模式/图片/颜色 | 是 | `setSourceAiVirtualBackground(0, options)` |
-| 清除虚拟背景 | 是 | `clearSourceAiVirtualBackground(0)` |
+| 虚拟背景模式/图片/颜色 | 是 | `setAiBackground(0, options)` |
+| 清除虚拟背景 | 是 | `clearAiBackground(0)` |
 | 输出镜像 | 是 | `setMirror(boolean)` |
 | 水印列表 | 是 | `setWatermarks()` |
 | composer 宽、高、FPS | 否，下一通配置 | `call/answer` 的 `mediaEffectsComposer` |

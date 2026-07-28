@@ -46,7 +46,7 @@ Object.assign(window.app, {
       renderMode                 : renderMode,
       onIssue                    : this.createComposerIssueHandler('MainComposer'),
       mirror                     : ctorOutputMirror && ctorOutputMirror.value === 'on',
-      mirrorWatermarksWithOutput : !ctorOutputWatermarkMirror || ctorOutputWatermarkMirror.value === 'on',
+      mirrorWatermarks : !ctorOutputWatermarkMirror || ctorOutputWatermarkMirror.value === 'on',
       watermarks                 : []
     };
 
@@ -161,14 +161,14 @@ Object.assign(window.app, {
   {
     const source = this.getSelectedSource();
 
-    if (source && source.aiVirtualBackground)
+    if (source && source.aiBackground)
     {
-      return source.aiVirtualBackground;
+      return source.aiBackground;
     }
 
     const item = this.getSelectedLocalStreamItem();
 
-    return item && item.aiVirtualBackground ? item.aiVirtualBackground : null;
+    return item && item.aiBackground ? item.aiBackground : null;
   },
 
   getAiVirtualBackgroundModeValue(config)
@@ -303,8 +303,8 @@ Object.assign(window.app, {
 
     try
     {
-      this.composer.setSourceAiVirtualBackground(this.currentSlot, config);
-      item.aiVirtualBackground = this.composer.getSourceAiVirtualBackground(this.currentSlot) || config;
+      this.composer.setAiBackground(this.currentSlot, config);
+      item.aiBackground = this.composer.getAiBackground(this.currentSlot) || config;
       this.refreshSelectedSlotSummary();
       this.updateStats();
 
@@ -328,7 +328,7 @@ Object.assign(window.app, {
 
     if (item)
     {
-      item.aiVirtualBackground = null;
+      item.aiBackground = null;
     }
 
     if (!source)
@@ -341,7 +341,7 @@ Object.assign(window.app, {
 
     try
     {
-      this.composer.clearSourceAiVirtualBackground(this.currentSlot);
+      this.composer.clearAiBackground(this.currentSlot);
     }
     catch (e)
     {
@@ -490,9 +490,7 @@ Object.assign(window.app, {
    */
   getOutputWatermarkMirror()
   {
-    const state = this.getComposerState();
-
-    return state ? Boolean(state.config.mirrorWatermarksWithOutput) : true;
+    return this.composer ? this.composer.getWatermarkMirror() : true;
   },
 
   /**
@@ -533,7 +531,7 @@ Object.assign(window.app, {
   async setOutputWatermarkMirror(enabled)
   {
     if (!this.composer) return false;
-    await this.composer.setConfig({ mirrorWatermarksWithOutput: Boolean(enabled) });
+    await this.composer.setWatermarkMirror(Boolean(enabled));
 
     return true;
   },
@@ -941,9 +939,9 @@ Object.assign(window.app, {
     {
       const sourceOptions = { slot: index };
 
-      if (item.aiVirtualBackground)
+      if (item.aiBackground)
       {
-        sourceOptions.aiVirtualBackground = item.aiVirtualBackground;
+        sourceOptions.aiBackground = item.aiBackground;
       }
 
       this.composer.addSource(item.stream, sourceOptions);
@@ -1007,7 +1005,7 @@ Object.assign(window.app, {
       stream,
       slot,
       label,
-      aiVirtualBackground : null
+      aiBackground : null
     });
     // 添加缩略图到界面
     this.addThumb(stream, label, slot);

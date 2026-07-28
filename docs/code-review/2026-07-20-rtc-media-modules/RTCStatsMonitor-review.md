@@ -200,7 +200,7 @@ if (isThenable(result)) {
    └─ 由总 getStats timeout 兜底
 ```
 
-探测超时应明显短于 `getStatsTimeoutMs`，且同一轮只允许一个结果提交。
+探测超时应明显短于 `timeoutMs`，且同一轮只允许一个结果提交。
 
 **回归测试**
 
@@ -265,7 +265,7 @@ raw log 失败不应改变采样成功状态。若确需完整地址，应增加
 
 - [ ] candidate address/port 默认脱敏。
 - [ ] BigInt 和循环引用不触发 `GET_STATS_FAILED`。
-- [ ] `rawStatsLogIntervalMs`非法值被规范化。
+- [ ] `rawLogIntervalMs`非法值被规范化。
 
 <a id="stat-006"></a>
 ### STAT-006：latest getter 暴露可变内部对象
@@ -274,7 +274,7 @@ raw log 失败不应改变采样成功状态。若确需完整地址，应增加
 |---|---|
 | 严重级别 | P3 |
 | 可信度 | 确认 |
-| 主要证据 | [`getLatestReport()`](../../../lib/RTCStatsMonitor.js#L232) |
+| 主要证据 | [`getReport()`](../../../lib/RTCStatsMonitor.js#L232) |
 
 三个 getter 直接返回内部对象。接入方对嵌套字段的修改会污染之后的诊断读取。它不会改变 `_previous` counter baseline，因此风险低于状态快照泄漏，但与“报告快照”的直觉不一致。
 
@@ -304,12 +304,12 @@ raw log 失败不应改变采样成功状态。若确需完整地址，应增加
 | [`get compatibility`](../../../lib/RTCStatsMonitor.js#L135) | 公 | capability 查询 | `_compatibilitySnapshot()` | 返回新快照 | - | 已覆盖 |
 | [`start()`](../../../lib/RTCStatsMonitor.js#L146) | 公 | constructor、RTCSession、用户 | runId++；在途采样时设置 restartPending；否则 `_schedule(0)` | 建立 timer | STAT-004 | 已覆盖 |
 | [`stop()`](../../../lib/RTCStatsMonitor.js#L174) | 公 | RTCSession、关闭 PC、用户 | runId++；clearTimeout；`_clearSamplingBaseline()` | 无法取消在途 getStats，以 runId 丢弃 | STAT-004 | 已覆盖 |
-| [`reset()`](../../../lib/RTCStatsMonitor.js#L201) | 公 | 用户 | `_clearSamplingBaseline()`→`markTransition('reset')` | 保持 timer 运行 | STAT-004 | 部分 |
+| [`reset()`](../../../lib/RTCStatsMonitor.js#L201) | 公 | 用户 | `_clearSamplingBaseline()`→`markChange('reset')` | 保持 timer 运行 | STAT-004 | 部分 |
 | [`_clearSamplingBaseline()`](../../../lib/RTCStatsMonitor.js#L213) | 私 | stop/reset/失效采样 | 清 previous、sample count、topology、transition | 未清 errors/raw timestamp | STAT-004 | 部分 |
-| [`markTransition(reason)`](../../../lib/RTCStatsMonitor.js#L226) | 公 | RTCSession 媒体变化、reset、用户 | 写 transition reason/count | 后续质量诊断宽限 | - | 已覆盖 |
-| [`getLatestReport()`](../../../lib/RTCStatsMonitor.js#L232) | 公 | 用户/诊断 | 返回 `_latestDetailedReport` | 暴露内部引用 | STAT-006 | 未覆盖变异 |
-| [`getLatestLegacyReport()`](../../../lib/RTCStatsMonitor.js#L237) | 公 | 用户/诊断 | 返回 `_latestLegacyReport` | 暴露内部引用 | STAT-006 | 未覆盖变异 |
-| [`getLatestNetworkQuality()`](../../../lib/RTCStatsMonitor.js#L242) | 公 | 用户/诊断 | 返回 `_latestNetworkQuality` | 暴露内部引用 | STAT-006/007 | 未覆盖变异 |
+| [`markChange(reason)`](../../../lib/RTCStatsMonitor.js#L226) | 公 | RTCSession 媒体变化、reset、用户 | 写 transition reason/count | 后续质量诊断宽限 | - | 已覆盖 |
+| [`getReport()`](../../../lib/RTCStatsMonitor.js#L232) | 公 | 用户/诊断 | 返回 `_latestDetailedReport` | 暴露内部引用 | STAT-006 | 未覆盖变异 |
+| [`getLegacyReport()`](../../../lib/RTCStatsMonitor.js#L237) | 公 | 用户/诊断 | 返回 `_latestLegacyReport` | 暴露内部引用 | STAT-006 | 未覆盖变异 |
+| [`getNetworkQuality()`](../../../lib/RTCStatsMonitor.js#L242) | 公 | 用户/诊断 | 返回 `_latestNetworkQuality` | 暴露内部引用 | STAT-006/007 | 未覆盖变异 |
 | [`_canGetStats()`](../../../lib/RTCStatsMonitor.js#L247) | 私 | constructor、sample | 检查 `pc.getStats` | 无副作用 | - | 已覆盖 |
 | [`_schedule(timeoutMs)`](../../../lib/RTCStatsMonitor.js#L252) | 私 | start、sample finally | `setTimeout(() => _sample())` | timer 回调不接 Promise rejection | STAT-001 | 部分 |
 | [`_sample()`](../../../lib/RTCStatsMonitor.js#L271) | 私/异步 | timer、测试 | `_collect()`→提交状态→emit→重调度 | 单一 try/catch 包住用户事件 | STAT-001/004 | 部分 |

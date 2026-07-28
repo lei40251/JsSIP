@@ -67,7 +67,7 @@ const composer = new CRTC.MediaEffectsComposer(
     backgroundColor: '#000',
     sourceMirror: false,
     mirror: false,
-    mirrorWatermarksWithOutput: false,
+    mirrorWatermarks: false,
     watermarks: []
   }
 );
@@ -81,7 +81,7 @@ const composer = new CRTC.MediaEffectsComposer(localStream, {
   height: 720,
   sources: [
     {
-      aiVirtualBackground: {
+      aiBackground: {
         enabled: true,
         mode: 'blur',
         blurRadius: 16
@@ -113,23 +113,23 @@ const composer = new CRTC.MediaEffectsComposer(localStream, {
 | `audioGain` | `number` | `0.8` | 全局默认音量增益 |
 | `renderMode` | `string` | `'auto'` | 渲染后端。`auto` 创建期按 `worker-webgl2 → main-webgl2 → main-2d` 尝试，运行期降级链为 `worker-webgl2 → main-webgl2 → worker-2d → main-2d` |
 | `workerUrl` | `string \| null` | `null` | 外部 Worker 脚本地址；不传时默认走 Blob Worker |
-| `dropFrameWhenBusy` | `boolean` | `true` | Worker 忙时是否丢弃当前帧，避免延迟累积 |
+| `dropBusyFrames` | `boolean` | `true` | Worker 忙时是否丢弃当前帧，避免延迟累积 |
 | `maxFrameQueue` | `number` | `1` | 预留帧队列长度，当前默认只保留 1 帧 |
-| `enableInsertable` | `boolean` | `false` | 是否优先使用 Insertable Streams 导出视频 |
-| `manualCaptureFrameControl` | `boolean` | `true` | captureStream 路径下是否优先使用 `captureStream(0)+requestFrame` |
+| `insertable` | `boolean` | `false` | 是否优先使用 Insertable Streams 导出视频 |
+| `manualFrameControl` | `boolean` | `true` | captureStream 路径下是否优先使用 `captureStream(0)+requestFrame` |
 | `sourceMirror` | `boolean` | `false` | 所有源默认镜像，属于源级处理，发生在布局进入最终输出前 |
 | `mirror` | `boolean` | `false` | 构造期整体输出镜像，影响最终合成输出流，不等同于本地预览 CSS 镜像 |
-| `mirrorWatermarksWithOutput` | `boolean` | `false` | 当整体输出镜像开启时，输出级水印是否跟随一起翻转 |
+| `mirrorWatermarks` | `boolean` | `false` | 当整体输出镜像开启时，输出级水印是否跟随一起翻转 |
 | `watermarks` | `Array<Object>` | `[]` | 初始水印配置 |
-| `preserveDrawingBuffer` | `boolean` | `true` | 是否保留 WebGL 绘图缓冲，用于 `toDataURL` 截图等场景 |
-| `sources` | `Array<Object> \| null` | `null` | 初始源配置数组，按输入源顺序对应，如 `sourceMirror`、`aiVirtualBackground` |
+| `keepDrawingBuffer` | `boolean` | `true` | 是否保留 WebGL 绘图缓冲，用于 `toDataURL` 截图等场景 |
+| `sources` | `Array<Object> \| null` | `null` | 初始源配置数组，按输入源顺序对应，如 `sourceMirror`、`aiBackground` |
 
 镜像语义建议按这 4 层理解：
 
 - 本地预览镜像：通常只是页面层 `video` 的 CSS 效果，不属于 `MediaEffectsComposer`
 - 源级镜像：`sourceMirror` / `setSourceMirror()`，对某一路输入源做镜像
 - 合成输出镜像：`mirror` / `setMirror()`，对最终输出画面做整体镜像
-- 水印跟随输出镜像：`mirrorWatermarksWithOutput`，仅控制输出级水印是否跟着整体翻转
+- 水印跟随输出镜像：`mirrorWatermarks`，仅控制输出级水印是否跟着整体翻转
 
 ---
 
@@ -145,7 +145,7 @@ composer.addSource(stream, 2);
 composer.addSource(stream, { slot: 1, gain: 0.5, sourceMirror: true });
 composer.addSource(stream, {
   slot: 0,
-  aiVirtualBackground: {
+  aiBackground: {
     enabled: true,
     mode: 'blur',
     blurRadius: 16
@@ -157,7 +157,7 @@ composer.addSource([streamA, streamB], 3);
 | 参数 | 类型 | 说明 |
 |------|------|------|
 | `videos` | `MediaStream \| HTMLVideoElement \| Array` | 必传 |
-| `optionsOrSlot` | `number \| Object` | `slot` 或 `{ slot, gain, sourceMirror, aiVirtualBackground }` |
+| `optionsOrSlot` | `number \| Object` | `slot` 或 `{ slot, gain, sourceMirror, aiBackground }` |
 
 | 返回值 | 说明 |
 |--------|------|
@@ -174,32 +174,32 @@ composer.addSource([streamA, streamB], 3);
 composer.appendStream(stream, 2);
 ```
 
-### `setSourceAiVirtualBackground(slotOrTarget, options)`
+### `setAiBackground(slotOrTarget, options)`
 
 给某一路源开启或更新虚拟背景。
 
 ```js
-composer.setSourceAiVirtualBackground(0, {
+composer.setAiBackground(0, {
   enabled: true,
   mode: 'image',
   imageUrl: '/assets/bg.png'
 });
 ```
 
-### `getSourceAiVirtualBackground(slotOrTarget)`
+### `getAiBackground(slotOrTarget)`
 
 读取某一路源当前的虚拟背景配置快照。
 
 ```js
-const effect = composer.getSourceAiVirtualBackground(0);
+const effect = composer.getAiBackground(0);
 ```
 
-### `clearSourceAiVirtualBackground(slotOrTarget)`
+### `clearAiBackground(slotOrTarget)`
 
 清除某一路源的虚拟背景效果。
 
 ```js
-composer.clearSourceAiVirtualBackground(0);
+composer.clearAiBackground(0);
 ```
 
 ### `removeSource(target)`
@@ -252,7 +252,7 @@ composer.clearStreams();
 ```js
 await composer.setConfig({
   outputMirror: true,
-  mirrorWatermarksWithOutput: true
+  mirrorWatermarks: true
 });
 
 await composer.setConfig({
@@ -280,7 +280,7 @@ await composer.setConfig({
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `outputMirror` | `boolean` | 设置整体输出镜像，影响最终输出流 |
-| `mirrorWatermarksWithOutput` | `boolean` | 设置输出级水印是否跟随整体输出镜像 |
+| `mirrorWatermarks` | `boolean` | 设置输出级水印是否跟随整体输出镜像 |
 | `sourceMirror` | `boolean` | 设置所有源默认镜像，属于源级处理 |
 | `sourceMirrorOverrides` | `Object` | 槽位级镜像覆盖，如 `{ 0: true, 1: null }` |
 | `clearSourceMirrorOverrides` | `boolean` | 清空全部槽位镜像覆盖 |
@@ -323,7 +323,7 @@ await composer.setConfig({
 await composer.setWatermarks(watermarks);
 composer.clearWatermarks({ target: 'output' });
 composer.setMirror(true);
-composer.setMirrorWatermarksWithOutput(true);
+composer.setWatermarkMirror(true);
 composer.setSourceMirror(0, true);
 composer.clearSourceMirror(0);
 ```
@@ -352,7 +352,7 @@ console.log(state.audio);
       slot: 0,
       gain: 0.8,
       sourceMirror: false,
-      aiVirtualBackground: null,   // 该源的 AiVB 配置，无则为 null
+      aiBackground: null,   // 该源的 AiVB 配置，无则为 null
       hasAudio: true,
       hasVideo: true
     }
@@ -361,7 +361,7 @@ console.log(state.audio);
     outputMirror: false,
     sourceMirror: false,
     sourceMirrorOverrides: {},
-    mirrorWatermarksWithOutput: false,
+    mirrorWatermarks: false,
     watermarks: []
   },
   render: {
@@ -406,7 +406,7 @@ composer.getRenderInfo();
 composer.getAudioInfo();
 composer.getWatermarks();
 composer.getMirror();
-composer.getMirrorWatermarksWithOutput();
+composer.getWatermarkMirror();
 composer.getSourceMirror();
 ```
 
@@ -460,7 +460,7 @@ const isolatedSubmix = await composer.getOutput({ type: 'audio', slots: [0, 1], 
 await composer.getMixedStream();
 composer.getVideoStream();
 await composer.getAudioStream();
-await composer.getIsolatedSubmixAudioStream({ slots: [0, 1] });
+await composer.getSubmixStream({ slots: [0, 1] });
 ```
 
 ### `releaseOutput(options)`
@@ -482,7 +482,7 @@ composer.releaseOutput({ type: 'audio', slots: [2, 3] });
 **旧写法兼容：**
 
 ```js
-composer.releaseSubmixAudioStream({ slots: [0, 1], isolated: true });
+composer.releaseSubmixStream({ slots: [0, 1], isolated: true });
 ```
 
 ### `stop()`
@@ -505,8 +505,8 @@ composer.stop();
 | `getSources()` | `getState().sources` |
 | `setMirror(enabled)` | `await setConfig({ outputMirror: enabled })` |
 | `getMirror()` | `getState().config.outputMirror` |
-| `setMirrorWatermarksWithOutput(enabled)` | `await setConfig({ mirrorWatermarksWithOutput: enabled })` |
-| `getMirrorWatermarksWithOutput()` | `getState().config.mirrorWatermarksWithOutput` |
+| `setWatermarkMirror(enabled)` | `await setConfig({ mirrorWatermarks: enabled })` |
+| `getWatermarkMirror()` | `getState().config.mirrorWatermarks` |
 | `setSourceMirror(true)` | `await setConfig({ sourceMirror: true })` |
 | `setSourceMirror(slot, enabled)` | `await setConfig({ sourceMirrorOverrides: { [slot]: enabled } })` |
 | `clearSourceMirror()` | `await setConfig({ clearSourceMirrorOverrides: true })` |
@@ -519,8 +519,8 @@ composer.stop();
 | `getMixedStream()` | `await getOutput({ type: 'mixed' })` |
 | `getVideoStream()` | `getOutput({ type: 'video' })` |
 | `getAudioStream(options)` | `await getOutput({ type: 'audio', ...options })` |
-| `getIsolatedSubmixAudioStream(options)` | `await getOutput({ type: 'audio', isolated: true, ...options })` |
-| `releaseSubmixAudioStream(options)` | `releaseOutput({ type: 'audio', ...options })` |
+| `getSubmixStream(options)` | `await getOutput({ type: 'audio', isolated: true, ...options })` |
+| `releaseSubmixStream(options)` | `releaseOutput({ type: 'audio', ...options })` |
 
 兼容说明：
 - 旧方法当前仍可调用，内部实现已经转调到新控制路径
@@ -569,7 +569,7 @@ console.log('audio', state.audio);
 ```js
 await composer.setConfig({
   outputMirror: true,
-  mirrorWatermarksWithOutput: false,
+  mirrorWatermarks: false,
   sourceMirrorOverrides: {
     0: true
   },
@@ -601,13 +601,13 @@ composer.releaseOutput({
 ### 示例 5：运行时切换虚拟背景
 
 ```js
-composer.setSourceAiVirtualBackground(0, {
+composer.setAiBackground(0, {
   enabled: true,
   mode: 'image',
   imageUrl: '/assets/office.png'
 });
 
-composer.clearSourceAiVirtualBackground(0);
+composer.clearAiBackground(0);
 ```
 
 ---

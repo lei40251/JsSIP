@@ -76,7 +76,7 @@ AiNoiseSuppression / AiNSWorkletRuntime
             <tr><td><code>AudioWorklet internal initialization failed</code></td><td><code>AiNSWorkletRuntime</code></td><td>Worklet 初始化失败。</td><td>回退原始音频。</td></tr>
             <tr><td><code>Processor not initialized. Call initialize() first.</code></td><td><code>AiNSWorkletRuntime</code></td><td>初始化时序不对或前置失败。</td><td>重建实例或关闭 AiNS。</td></tr>
             <tr><td><code>AiNoiseSuppression.init: failed to create processed MediaStream</code></td><td><code>AiNoiseSuppression</code></td><td>初始化后没有输出处理流。</td><td>回退原始音频。</td></tr>
-            <tr><td><code>AiNoiseSuppression.replaceAudioTrack: failed to create processed MediaStream</code></td><td><code>AiNoiseSuppression</code></td><td>切麦后没有输出新处理流。</td><td>重建 AiNS 或回退原始音频。</td></tr>
+            <tr><td><code>AiNoiseSuppression.replaceTrack: failed to create processed MediaStream</code></td><td><code>AiNoiseSuppression</code></td><td>切麦后没有输出新处理流。</td><td>重建 AiNS 或回退原始音频。</td></tr>
             <tr><td><code>AiNoiseSuppression: input stream has no audio track</code></td><td><code>AiNoiseSuppression</code></td><td>输入流没有音轨。</td><td>跳过 AiNS。</td></tr>
             <tr><td><code>AiNoiseSuppression: input track must be audio</code></td><td><code>AiNoiseSuppression</code></td><td>传入非音频轨。</td><td>修正调用方入参。</td></tr>
             <tr><td><code>AiNoiseSuppression: replacement input has no audio track</code></td><td><code>AiNoiseSuppression</code></td><td>切麦新流没有音轨。</td><td>保留当前音轨或回退原始音频。</td></tr>
@@ -158,7 +158,7 @@ AiNoiseSuppression / AiNSWorkletRuntime
           <tr><td data-label="API / 场景">新增源</td><td data-label="当前入口"><code>addSource</code></td><td data-label="核心调用链"><code>_normalizeSourceOptions</code> -> <code>Sources.add</code> -> audio refresh -> render loop start</td></tr>
           <tr><td data-label="API / 场景">视频输出</td><td data-label="当前入口"><code>getOutput({type:'video'})</code></td><td data-label="核心调用链"><code>_getVideoOutputSync</code> -> <code>OutputStream.getVideoStream</code> -> <code>RenderLoop.renderFrame</code></td></tr>
           <tr><td data-label="API / 场景">混合输出</td><td data-label="当前入口"><code>getOutput({type:'mixed'})</code></td><td data-label="核心调用链"><code>_getMixedOutput</code> -> video stream -> <code>AudioMixer.getStableAudioStream</code> -> add audio tracks</td></tr>
-          <tr><td data-label="API / 场景">AiVB</td><td data-label="当前入口"><code>setSourceAiVirtualBackground</code></td><td data-label="核心调用链"><code>AiVBState.setSourceConfig</code> -> refresh policy -> force render</td></tr>
+          <tr><td data-label="API / 场景">AiVB</td><td data-label="当前入口"><code>setAiBackground</code></td><td data-label="核心调用链"><code>AiVBState.setSourceConfig</code> -> refresh policy -> force render</td></tr>
           <tr><td data-label="API / 场景">会话集成</td><td data-label="当前入口"><code>MediaPipeline.getUserMediaWithSessionPipeline</code></td><td data-label="核心调用链">GUM -> 外部处理器 -> AiNS -> Composer</td></tr>
           <tr><td data-label="API / 场景">通话中更新</td><td data-label="当前入口"><code>RTCSession.updateMediaEffectsComposer</code></td><td data-label="核心调用链">resolve options -> patch or rebuild -> setConfig / replace track</td></tr>
         </tbody>

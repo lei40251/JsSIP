@@ -253,7 +253,7 @@ function applyCurrentAiNsToMetaHuman()
 
   if (enabled)
   {
-    aiNsEngine.setSuppressionLevel(getCurrentAiNsLevel());
+    aiNsEngine.setLevel(getCurrentAiNsLevel());
     aiNsEngine.setOutputGain(getCurrentAiNsOutputGain());
   }
 

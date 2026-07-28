@@ -468,7 +468,7 @@ pcConfig[&#39;bundlePolicy&#39;] = &#39;max-compat&#39;;
 <td>背景模糊</td>
 </tr>
 </tbody></table></div>
-<p>选择会同时影响下一次呼叫/接听；当前会话已有 composer 时也会调用 <code>setSourceAiVirtualBackground(0, options)</code> 或清除方法立即更新。</p>
+<p>选择会同时影响下一次呼叫/接听；当前会话已有 composer 时也会调用 <code>setAiBackground(0, options)</code> 或清除方法立即更新。</p>
 <h3 id="ains">AiNS<a class="heading-anchor" href="#ains" aria-label="链接到本节">#</a></h3>
 <div class="table-wrap"><table>
 <thead>
@@ -486,7 +486,7 @@ pcConfig[&#39;bundlePolicy&#39;] = &#39;max-compat&#39;;
 <tr>
 <td>强度</td>
 <td>整数 <code>0～100</code></td>
-<td>当前会话已启用时调用 <code>setSuppressionLevel()</code>；否则下次生效</td>
+<td>当前会话已启用时调用 <code>setLevel()</code>；否则下次生效</td>
 </tr>
 </tbody></table></div>
 <p>关闭下拉并不代表当前通话一定会动态销毁已有 AiNS；Demo 重点展示初始启用和强度热更新。需要运行时开关时应按产品设计明确其生命周期。</p>
@@ -519,7 +519,7 @@ if (aiVBOptions)
 {
   composerOptions.sources = [
     {
-      aiVirtualBackground : aiVBOptions
+      aiBackground : aiVBOptions
     }
   ];
 }
@@ -527,7 +527,7 @@ if (aiVBOptions)
 </div><p>AiNS 则使用独立顶层配置：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">return {
   enabled             : true,
-  noiseReductionLevel : getNsLevel(),
+  level : getNsLevel(),
   outputGain          : 1,
   assetConfig         : { cdnUrl: NS_ROOT }
 };
