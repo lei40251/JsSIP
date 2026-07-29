@@ -444,7 +444,7 @@ function setMedia(el, stream)
  */
 function openShareBox(mode)
 {
-  const dialog = document.querySelector('#shareBox');
+  const dialog = document.querySelector('#crtcMediaDialog');
   const restore = document.querySelector('#shareRestore');
   const local = document.querySelector('#screen');
   const remote = document.querySelector('#shareVid');
@@ -488,7 +488,7 @@ function openShareBox(mode)
  */
 function minShareBox()
 {
-  const dialog = document.querySelector('#shareBox');
+  const dialog = document.querySelector('#crtcMediaDialog');
   const restore = document.querySelector('#shareRestore');
 
   if (dialog) dialog.classList.add('hide');
@@ -502,7 +502,7 @@ function minShareBox()
  */
 function closeShareBox(mode)
 {
-  const dialog = document.querySelector('#shareBox');
+  const dialog = document.querySelector('#crtcMediaDialog');
   const restore = document.querySelector('#shareRestore');
 
   if (!dialog || (mode && dialog.dataset.mode && dialog.dataset.mode !== mode))

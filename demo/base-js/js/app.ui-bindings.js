@@ -32,7 +32,7 @@ initInk();
 document.querySelector('#shareClose').onclick = minShareBox;
 document.querySelector('#shareRestore').onclick = function()
 {
-  const dialog = document.querySelector('#shareBox');
+  const dialog = document.querySelector('#crtcMediaDialog');
 
   if (dialog && dialog.dataset.mode)
   {

@@ -820,6 +820,38 @@ body {
   word-break: break-word;
 }
 
+.rtc-stats-toggle {
+  pointer-events: auto;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: #ffffff;
+  font-weight: 700;
+  list-style: none;
+  user-select: none;
+}
+
+.rtc-stats-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.rtc-stats-toggle::before {
+  content: "▸";
+  color: #9fc4f4;
+  transition: transform 0.15s ease;
+}
+
+.video-stats-overlay[open] > .rtc-stats-toggle::before {
+  transform: rotate(90deg);
+}
+
+.video-stats-overlay[open] > .rtc-stats-toggle {
+  margin-bottom: 0.2rem;
+  padding-bottom: 0.18rem;
+  border-bottom: 1px solid rgba(159, 196, 244, 0.3);
+}
+
 .rtc-stats-main {
   color: #dbeafe;
 }

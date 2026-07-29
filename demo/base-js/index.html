@@ -64,7 +64,7 @@
         <!-- 屏幕共享浮层（模态对话框）：点对点和三方模式共用。
              本端共享用 #screen，远端共享用 #shareVid。
              "最小化"按钮隐藏浮层并显示右下角"打开屏幕共享"恢复按钮。 -->
-        <section class="screen-share-dialog hide" id="shareBox" role="dialog" aria-modal="true"
+        <section class="screen-share-dialog hide" id="crtcMediaDialog" role="dialog" aria-modal="true"
           aria-labelledby="shareTitle">
           <div class="screen-share-dialog-panel">
             <header class="screen-share-dialog-header">
@@ -158,7 +158,8 @@
         </section>
         <button class="btn btn-primary screen-share-dialog-restore hide" id="shareRestore"
           type="button">打开屏幕共享</button>
-        <div class="video-stats-overlay">
+        <details class="video-stats-overlay">
+          <summary class="rtc-stats-toggle">通话统计</summary>
           <div class="rtc-stats-main">
             <!-- 统计展示取自 RTCSession 转发的 stats:detailed-report 事件。 -->
             <!-- 当前统计对象：点对点模式显示"点对点 PeerConnection"；三方模式显示"A-B PeerConnection"等 -->
@@ -187,7 +188,7 @@
               <div id="statsIssues">无</div>
             </div>
           </div>
-        </div>
+        </details>
       </section>
 
       <section class="control-stage row g-2" id="ele">
