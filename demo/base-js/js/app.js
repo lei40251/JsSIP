@@ -1,3 +1,4 @@
+/* Demo 基础通话：UA、点对点会话、通话控制和媒体状态。 */
 /* eslint-disable no-unused-vars */
 /* eslint-disable prefer-const */
 /* eslint-disable max-len */
@@ -100,16 +101,10 @@ let confirmed = false;
 let handleStop = false;
 // 断网原因标记：'BROWSER'（浏览器离线）、'UA'（信令断开）
 let endBy = null;
-// eslint-disable-next-line no-unused-vars
-// 断网提示 UI 是否已显示
-let offlineUi = false;
-
 // =============================================================================
 // 通话模式与媒体流变量
 // =============================================================================
 
-// 混音/混流实例（预留）
-let mix;
 // 是否纯视频模式（不采集麦克风）
 let videoOnly = false;
 
@@ -129,13 +124,11 @@ let isRefer = false;
 let recorder;
 // 浏览器系统通知实例，用于来电弹窗
 let callNotice = null;
-// 浏览器是否不支持系统通知（只记录一次，避免重复日志）
-let noticeOnce = false;
+// 浏览器是否已提示过“不支持系统通知”，避免重复日志
+let noticeWarned = false;
 
 // 通话附加扩展特性列表（如 BP720P、BFCP 等）
 const features = [];
-
-// let payload;
 
 // =============================================================================
 // DOM 元素引用
@@ -295,9 +288,6 @@ function bindUa()
     if (!endBy)
     {
       endBy = 'BROWSER';
-
-      // 显示断网提示 UI
-      offlineUi = true;
     }
   });
 
@@ -316,9 +306,6 @@ function bindUa()
     if (endBy === 'BROWSER')
     {
       endBy = null;
-
-      // 关闭断网提示 UI
-      offlineUi = false;
     }
   });
 
@@ -327,16 +314,13 @@ function bindUa()
    *
    * @fires 与信令服务器 WebSocket 连接建立时触发
    *
-   * 处理逻辑：清除所有断网状态，关闭断网提示。
+   * 处理逻辑：清除断网状态并开始注册。
    * 此事件表示传输层已就绪，但尚未完成 SIP 注册。
    */
   ua.on('connected', function()
   {
     // 信令连接成功后清除所有断网标记
     endBy = null;
-
-    // 关闭断网提示 UI
-    offlineUi = false;
 
     // 连接成功后进入注册中状态，更新页面标签
     regState = 'registering';
@@ -371,11 +355,6 @@ function bindUa()
       return;
     }
 
-    // 首次被动断开时显示断网提示
-    if (!endBy)
-    {
-      offlineUi = true;
-    }
     endBy = 'UA';
   });
 
@@ -406,7 +385,7 @@ function bindUa()
    * @type {object}
    * @property {object} response - SIP 注册响应实例
    *
-   * 处理逻辑：输出注册成功信息。后续可在此自动发起呼叫（已注释）。
+   * 处理逻辑：输出注册成功信息并更新页面状态。
    */
   ua.on('registered', function(data)
   {
@@ -414,11 +393,6 @@ function bindUa()
     // 注册成功后更新状态标签为"已注册"（绿色）
     regState = 'registered';
     updateMode();
-    // 注册成功后自动发起呼叫（测试用，已注释）
-    // setTimeout(() =>
-    // {
-    //   call('callnull');
-    // }, 1000);
   });
 
   /**
@@ -1110,7 +1084,7 @@ function onSession(e)
    * @property {string} cause - 失败原因码/描述
    *
    * 处理逻辑：
-   * - 清理通知、重置状态、停止混流
+   * - 清理通知和通话状态
    * - 停止录音和统计
    * - 清理自定义流和 AiNS 验证器
    */
@@ -1119,12 +1093,6 @@ function onSession(e)
     closeNotice();
     videoOnly = false;
     remoteNo = undefined;
-    // 停止混流实例（如果存在）
-    if (mix)
-    {
-      mix.stop();
-      mix = null;
-    }
     setStatus(`通话建立失败: ${d.cause}`);
 
     // 重置会话引用
@@ -1196,7 +1164,7 @@ function onSession(e)
    * @property {string} cause - 结束原因
    *
    * 处理逻辑：
-   * - 清理通知、状态、混流、录音
+   * - 清理通知、状态和录音
    * - 如果有排队的临时会话（tmpSession），则切换到该会话
    * - 否则完全清理通话状态
    */
@@ -1205,12 +1173,6 @@ function onSession(e)
     closeNotice();
     videoOnly = false;
     remoteNo = undefined;
-    // 停止混流实例
-    if (mix)
-    {
-      mix.stop();
-      mix = null;
-    }
     setStatus(`通话结束: ${d.cause}`);
 
     // 停止并清理录音数据
@@ -1794,7 +1756,7 @@ function onSession(e)
     e.session.upgradeToVideo({ useUpdate: useUpdate, videoStream: tmpStream }, () => { setStatus('切换视频模式完成') + curMode; });
   };
 
-  // 摄像头和麦克风的切换已统一在 app.ui-bindings.js 中处理，
+  // 摄像头和麦克风的切换已统一在 app-ui-binding.js 中处理，
   // 避免同一个元素被多次 addEventListener 导致重复绑定。
 
   /**
@@ -2135,7 +2097,7 @@ function onSession(e)
   {
     const canvas = document.getElementById('captureView');
     const ctx = canvas.getContext('2d');
-    const videoEl = $('#remoteVid')[0];
+    const videoEl = document.querySelector('#remoteVid');
     // 优先取实际视频分辨率，回退到 CSS 尺寸，最后回退到默认值
     const frameW = videoEl.videoWidth || videoEl.clientWidth || 640;
     const frameH = videoEl.videoHeight || videoEl.clientHeight || 360;
@@ -2402,13 +2364,13 @@ async function call(type, direction, mediaStream)
 /**
  * 页面初始化
  *
- * 页面加载时只做两件事：
+ * 页面加载时只做三件事：
  * 1. 输出 SDK 版本号
  * 2. 预采集一次媒体权限以填充设备列表
  * 3. 提示用户选择"点对点"或"三方"模式
  *
  * UA 的创建、信令连接和注册在用户点击模式按钮后由 initMode() 执行。
- * 按钮绑定、设备变化监听等在 app.ui-bindings.js 中统一管理。
+ * 按钮绑定、设备选择等在 app-ui-binding.js 中统一管理。
  */
 function initPage()
 {
@@ -2557,7 +2519,6 @@ function initMode(mode)
   // 重置断网状态（每次新建 UA 时都从干净状态开始）
   handleStop = false;
   endBy = null;
-  offlineUi = false;
   // 刷新页面 UI：禁用模式选择按钮、展开/收起会议面板等
   updateMode();
   setStatus(`正在注册${mode === 'conference' ? '三方' : '点对点'}模式`);

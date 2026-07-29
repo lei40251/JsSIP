@@ -88,11 +88,11 @@
 <td>UA 配置与事件、<code>newRTCSession</code>、呼叫/接听、通话中控制、共享和统计展示</td>
 </tr>
 <tr>
-<td><a href="../../../demo/base-js/js/app.sdk-helper.js"><code>app.sdk-helper.js</code></a></td>
+<td><a href="../../../demo/base-js/js/app-sdk-helper.js"><code>app-sdk-helper.js</code></a></td>
 <td>URL 参数、设备列表、选中设备约束、本地/远端媒体渲染</td>
 </tr>
 <tr>
-<td><a href="../../../demo/base-js/js/app.ui-bindings.js"><code>app.ui-bindings.js</code></a></td>
+<td><a href="../../../demo/base-js/js/app-ui-binding.js"><code>app-ui-binding.js</code></a></td>
 <td>主动注册/注销、外呼按钮、设备下拉框和媒体效果控件绑定</td>
 </tr>
 <tr>
@@ -291,7 +291,7 @@ ua.on(&#39;registered&#39;, function(data)
 </div><p>只看到“信令连接成功”时还不能呼叫，必须继续等待 <code>registered</code>。</p>
 <h3 id="主动注销与重新注册">主动注销与重新注册<a class="heading-anchor" href="#主动注销与重新注册" aria-label="链接到本节">#</a></h3>
 <p>初始化后 Demo 固定自动注册。注册控制区仍保留主动注销和重新注册，用于验证注册生命周期。</p>
-<p>注册控制区对应代码位于 <a href="../../../demo/base-js/js/app.ui-bindings.js"><code>app.ui-bindings.js</code></a>：</p>
+<p>注册控制区对应代码位于 <a href="../../../demo/base-js/js/app-ui-binding.js"><code>app-ui-binding.js</code></a>：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">document.querySelector(&#39;#regUa&#39;).onclick = function()
 {
   if (ua.isConnected() &amp;&amp; !ua.isRegistered())
@@ -339,7 +339,7 @@ pcConfig[&#39;bundlePolicy&#39;] = &#39;max-compat&#39;;
 <li>无通话：保存 deviceId，标准呼叫/接听通过 <code>getAudioOpts()</code>、<code>getVideoOpts()</code> 写入 <code>deviceId.exact</code>。</li>
 <li>通话中：立即调用 <code>session.switchDevice(&#39;camera&#39;/&#39;audio&#39;, deviceId)</code>。</li>
 </ul>
-<p>代码位置：设备枚举和约束构建在 <a href="../../../demo/base-js/js/app.sdk-helper.js"><code>app.sdk-helper.js</code></a>，下拉框 <code>change</code> 事件在 <a href="../../../demo/base-js/js/app.ui-bindings.js"><code>app.ui-bindings.js</code></a>。标准接听和视频升级也复用相同的视频约束，避免呼出、接听使用不同设备。</p>
+<p>代码位置：设备枚举和约束构建在 <a href="../../../demo/base-js/js/app-sdk-helper.js"><code>app-sdk-helper.js</code></a>，下拉框 <code>change</code> 事件在 <a href="../../../demo/base-js/js/app-ui-binding.js"><code>app-ui-binding.js</code></a>。标准接听和视频升级也复用相同的视频约束，避免呼出、接听使用不同设备。</p>
 <p>约束构建函数会在已选设备时写入 <code>deviceId.exact</code>：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function getVideoOpts()
 {
@@ -375,7 +375,7 @@ pcConfig[&#39;bundlePolicy&#39;] = &#39;max-compat&#39;;
   setStatus(`${rtcSession ? &#39;switchDevice&#39; : &#39;select camera&#39;} ${this.options[this.selectedIndex].innerText}`);
 });
 </code></pre>
-</div><p>两段代码分别取自 <a href="../../../demo/base-js/js/app.sdk-helper.js"><code>app.sdk-helper.js</code></a> 和 <a href="../../../demo/base-js/js/app.ui-bindings.js"><code>app.ui-bindings.js</code></a>。麦克风的处理相同，只把设备类型替换为 <code>&#39;audio&#39;</code>。</p>
+</div><p>两段代码分别取自 <a href="../../../demo/base-js/js/app-sdk-helper.js"><code>app-sdk-helper.js</code></a> 和 <a href="../../../demo/base-js/js/app-ui-binding.js"><code>app-ui-binding.js</code></a>。麦克风的处理相同，只把设备类型替换为 <code>&#39;audio&#39;</code>。</p>
 <h3 id="更新方式">更新方式<a class="heading-anchor" href="#更新方式" aria-label="链接到本节">#</a></h3>
 <div class="table-wrap"><table>
 <thead>
@@ -396,7 +396,7 @@ pcConfig[&#39;bundlePolicy&#39;] = &#39;max-compat&#39;;
 <td>使用 re-INVITE 方式</td>
 </tr>
 </tbody></table></div>
-<p>下拉框在 <a href="../../../demo/base-js/js/app.ui-bindings.js"><code>app.ui-bindings.js</code></a> 更新 <code>useUpdate</code>；<code>#toAudio</code>、<code>#toVideo</code> 和 <code>#toVideoSend</code> 在 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a> 把该值传给升级/降级方法。必须由服务端和对端共同支持，默认联调先使用现网已验证的方式。</p>
+<p>下拉框在 <a href="../../../demo/base-js/js/app-ui-binding.js"><code>app-ui-binding.js</code></a> 更新 <code>useUpdate</code>；<code>#toAudio</code>、<code>#toVideo</code> 和 <code>#toVideoSend</code> 在 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a> 把该值传给升级/降级方法。必须由服务端和对端共同支持，默认联调先使用现网已验证的方式。</p>
 <h3 id="画质偏好">画质偏好<a class="heading-anchor" href="#画质偏好" aria-label="链接到本节">#</a></h3>
 <p>调用 <code>session.setVideoContentHint(value)</code>：</p>
 <div class="table-wrap"><table>
@@ -600,7 +600,7 @@ if (aiVBOptions)
 </tr>
 </tbody></table></div>
 <p>“应用”读取当前控件并调用 <code>setWatermarks()</code>；“清空”移除对应水印。<code>getMediaEffectsComposer()</code> 返回 <code>null</code> 时表示本通电话没有启用 composer，按钮不能改变当前发送画面。</p>
-<p>代码位置：水印输入读取、合并和更新位于 <a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a> 的 <code>getTextMark() / getImageMark()</code>、<code>mergeMarks()</code>、<code>setTextMark() / setImageMark()</code>；按钮绑定位于 <a href="../../../demo/base-js/js/app.ui-bindings.js"><code>app.ui-bindings.js</code></a>。</p>
+<p>代码位置：水印输入读取、合并和更新位于 <a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a> 的 <code>getTextMark() / getImageMark()</code>、<code>mergeMarks()</code>、<code>setTextMark() / setImageMark()</code>；按钮绑定位于 <a href="../../../demo/base-js/js/app-ui-binding.js"><code>app-ui-binding.js</code></a>。</p>
 <p>文字水印的构造函数会保留 SDK 默认值，只写入用户真正填写的可选字段：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function getTextMark()
 {
@@ -695,7 +695,7 @@ if (aiVBOptions)
 <li><code>await ua.call()</code>。</li>
 <li>在 session 上处理远端媒体和通话事件。</li>
 </ol>
-<p>页面级按钮位于 <a href="../../../demo/base-js/js/app.ui-bindings.js"><code>app.ui-bindings.js</code></a>，最终统一进入 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a> 的 <code>call(type, direction, mediaStream)</code>。该函数先检查注册状态，再组合设备、媒体效果、<code>pcConfig</code> 和媒体流，最后执行 <code>await ua.call()</code>。</p>
+<p>页面级按钮位于 <a href="../../../demo/base-js/js/app-ui-binding.js"><code>app-ui-binding.js</code></a>，最终统一进入 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a> 的 <code>call(type, direction, mediaStream)</code>。该函数先检查注册状态，再组合设备、媒体效果、<code>pcConfig</code> 和媒体流，最后执行 <code>await ua.call()</code>。</p>
 <p>标准音频和视频按钮只负责传入呼叫类型：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">document.querySelector(&#39;#call&#39;).onclick = function()
 {
@@ -745,7 +745,7 @@ remoteNo = number;
 
 const session = await ua.call(`${number}@${sipDomain}`, options);
 </code></pre>
-</div><p>两段均取自 Demo 当前的 <a href="../../../demo/base-js/js/app.ui-bindings.js"><code>app.ui-bindings.js</code></a> 和 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>。完整 <code>call()</code> 还包含屏幕外呼、占位轨道、单向视频和 iOS OPTIONS 保活；学习标准接入时先掌握上面的主路径。</p>
+</div><p>两段均取自 Demo 当前的 <a href="../../../demo/base-js/js/app-ui-binding.js"><code>app-ui-binding.js</code></a> 和 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>。完整 <code>call()</code> 还包含屏幕外呼、占位轨道、单向视频和 iOS OPTIONS 保活；学习标准接入时先掌握上面的主路径。</p>
 <p>需要使用自定义 SIP 头时，其名称、编码和服务端处理规则必须由双方约定；无明确要求时不要添加。</p>
 <h2 id="8-10-接听按钮">8.10 接听按钮<a class="heading-anchor" href="#8-10-接听按钮" aria-label="链接到本节">#</a></h2>
 <p>收到远端 INVITE 后，<code>newRTCSession.originator === &#39;remote&#39;</code>，Demo 显示来电信息并等待选择：</p>
@@ -891,7 +891,7 @@ document.querySelector(&#39;#toVideoSend&#39;).onclick = function()
 </tr>
 </tbody></table></div>
 <p>保持状态以 <code>hold/unhold</code> 事件为准。<code>originator: &#39;local&#39;</code> 表示本端操作，<code>remote</code> 表示对端保持。</p>
-<p>代码位置：设备下拉框绑定在 <a href="../../../demo/base-js/js/app.ui-bindings.js"><code>app.ui-bindings.js</code></a>；静音、前后摄像头切换和保持按钮，以及 <code>muted/unmuted</code>、<code>cameraChanged</code>、<code>hold/unhold</code> 事件在 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a> 的 <code>newRTCSession</code> 回调中。</p>
+<p>代码位置：设备下拉框绑定在 <a href="../../../demo/base-js/js/app-ui-binding.js"><code>app-ui-binding.js</code></a>；静音、前后摄像头切换和保持按钮，以及 <code>muted/unmuted</code>、<code>cameraChanged</code>、<code>hold/unhold</code> 事件在 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a> 的 <code>newRTCSession</code> 回调中。</p>
 <p>麦克风和摄像头使用独立的 mute 参数：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">document.querySelector(&#39;#muteMic&#39;).onclick = function()
 {
@@ -1332,7 +1332,7 @@ start();
 initFx();
 </code></pre>
 </div><p>这段代码取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>。预采集只为了请求权限和获取带名称的设备列表，因此成功后立即停止这些 tracks。</p>
-<p>页面退出时的 UA 清理位于 <a href="../../../demo/base-js/js/app.ui-bindings.js"><code>app.ui-bindings.js</code></a>：</p>
+<p>页面退出时的 UA 清理位于 <a href="../../../demo/base-js/js/app-ui-binding.js"><code>app-ui-binding.js</code></a>：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">window.onbeforeunload = function()
 {
   handleStop = true;

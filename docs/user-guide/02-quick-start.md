@@ -137,7 +137,7 @@ const mediaConstraints = {
 
 第一版接入建议先使用 Demo 的 `640×480@15fps`，基础通话稳定后再提高分辨率和帧率。约束越严格，设备不支持时越容易产生 `OverconstrainedError`。
 
-Demo 将设备选择收敛成两个构造函数，呼出、接听和视频升级都复用它们。代码取自 [`app.sdk-helper.js`](../../demo/base-js/js/app.sdk-helper.js)：
+Demo 将设备选择收敛成两个构造函数，呼出、接听和视频升级都复用它们。代码取自 [`app-sdk-helper.js`](../../demo/base-js/js/app-sdk-helper.js)：
 
 ```js
 function getAudioOpts()

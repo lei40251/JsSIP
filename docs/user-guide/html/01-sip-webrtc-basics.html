@@ -487,7 +487,7 @@ cusMediaStream = new MediaStream();
 </div><p>这个规则适用于页面自行采集的屏幕流、自定义流和预览流；会话内部管理的流仍交给 SDK 会话生命周期。</p>
 <h2 id="1-12-本地预览和实际发送不是同一件事">1.12 本地预览和实际发送不是同一件事<a class="heading-anchor" href="#1-12-本地预览和实际发送不是同一件事" aria-label="链接到本节">#</a></h2>
 <p><code>localVideo.srcObject = stream</code> 只是把某个流显示在页面，不代表该流一定已经发送。实际发送取决于当前会话配置、媒体方向和 track 状态。</p>
-<p>Demo 通过 <a href="../../../demo/base-js/js/app.sdk-helper.js"><code>app.sdk-helper.js</code></a> 从 PeerConnection 读取 SDK 正在使用的流，再绑定到页面元素：</p>
+<p>Demo 通过 <a href="../../../demo/base-js/js/app-sdk-helper.js"><code>app-sdk-helper.js</code></a> 从 PeerConnection 读取 SDK 正在使用的流，再绑定到页面元素：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const localStream = CRTC.Utils.getStreams(pc, &#39;local&#39;);
 const remoteStream = CRTC.Utils.getStreams(pc, &#39;remote&#39;);
 
@@ -543,34 +543,20 @@ Promise.all([ localVideo.play(), remoteAudio.play(), remoteVideo.play() ])
 <td>提供“点击播放/恢复播放”按钮</td>
 </tr>
 </tbody></table></div>
-<p>Demo 的摄像头检查同时处理“没有设备”和“用户拒绝权限”，代码取自 <a href="../../../demo/base-js/js/app.sdk-helper.js"><code>app.sdk-helper.js</code></a>：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">try
-{
-  await navigator.mediaDevices.getUserMedia({ video: true }).then(async(mediastream) =&gt;
+<p>Demo 初始化时先请求一次音视频权限，再通过 <a href="../../../demo/base-js/js/app-sdk-helper.js"><code>app-sdk-helper.js</code></a> 的 <code>loadDevices()</code> 读取设备。无论预采集成功还是失败，都会尝试刷新设备列表：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+  .then(async(stream) =&gt;
   {
-    mediastream &amp;&amp; mediastream.getTracks().forEach((t) =&gt; t.stop());
+    await loadDevices();
+    CRTC.Utils.closeMediaStream(stream);
+  })
+  .catch(async(error) =&gt;
+  {
+    await loadDevices();
+    setStatus(`预采集失败: ${error.name || error.message}`);
   });
-  haveACamera = true;
-
-  return &#39;摄像头可以正常使用&#39;;
-}
-catch (error)
-{
-  if (error.name === &#39;NotFoundError&#39; || error.name === &#39;DevicesNotFoundError&#39;)
-  {
-    return &#39;系统没有摄像头&#39;;
-  }
-  else if (error.name === &#39;NotAllowedError&#39; || error.name === &#39;PermissionDeniedError&#39;)
-  {
-    return &#39;用户拒绝了摄像头权限&#39;;
-  }
-  else
-  {
-    return `摄像头错误: ${error.name}`;
-  }
-}
 </code></pre>
-</div><p>这段检查创建的 track 只用于验证权限和设备，因此成功后立即停止，不会与后续通话争用摄像头。</p>
+</div><p>预采集成功后立即关闭临时媒体流，不会与后续通话争用设备。权限失败时设备 label 可能为空，但页面仍会展示浏览器能够枚举到的设备。</p>
 <h2 id="1-14-ains-虚拟背景-混流与通话的关系">1.14 AiNS、虚拟背景、混流与通话的关系<a class="heading-anchor" href="#1-14-ains-虚拟背景-混流与通话的关系" aria-label="链接到本节">#</a></h2>
 <div class="table-wrap"><table>
 <thead>

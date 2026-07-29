@@ -1,3 +1,4 @@
+/* Demo 媒体效果：虚拟背景、镜像、水印和 AI 降噪配置。 */
 /* eslint-disable prefer-const */
 /* eslint-disable no-unused-vars */
 /* eslint-disable max-len */
@@ -806,31 +807,6 @@ function setNsLevel(level)
   }
 
   ns.setLevel(level);
-
-  return true;
-}
-
-/**
- * 通话中动态调整 AiNS 输出增益，不会重建处理链或替换音轨。
- *
- * @param {number} value — 输出增益，范围 0~4；1 表示不额外放大
- * @returns {boolean} 当前通话存在 AiNS 实例时返回 true
- */
-function setNsGain(value)
-{
-  if (aiNsType !== 'AiNS' || !rtcSession)
-  {
-    return false;
-  }
-
-  const ns = rtcSession.getAiNoiseSuppression();
-
-  if (!ns)
-  {
-    return false;
-  }
-
-  ns.setOutputGain(value);
 
   return true;
 }

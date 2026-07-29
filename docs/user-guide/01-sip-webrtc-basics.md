@@ -301,7 +301,7 @@ cusMediaStream = new MediaStream();
 
 `localVideo.srcObject = stream` 只是把某个流显示在页面，不代表该流一定已经发送。实际发送取决于当前会话配置、媒体方向和 track 状态。
 
-Demo 通过 [`app.sdk-helper.js`](../../demo/base-js/js/app.sdk-helper.js) 从 PeerConnection 读取 SDK 正在使用的流，再绑定到页面元素：
+Demo 通过 [`app-sdk-helper.js`](../../demo/base-js/js/app-sdk-helper.js) 从 PeerConnection 读取 SDK 正在使用的流，再绑定到页面元素：
 
 ```js
 const localStream = CRTC.Utils.getStreams(pc, 'local');
@@ -336,37 +336,23 @@ video { transform: scaleX(-1); }
 | 设备 label 为空 | 尚未授权媒体权限 | 先请求一次权限后重新枚举 |
 | `play()` reject | 浏览器自动播放限制 | 提供“点击播放/恢复播放”按钮 |
 
-Demo 的摄像头检查同时处理“没有设备”和“用户拒绝权限”，代码取自 [`app.sdk-helper.js`](../../demo/base-js/js/app.sdk-helper.js)：
+Demo 初始化时先请求一次音视频权限，再通过 [`app-sdk-helper.js`](../../demo/base-js/js/app-sdk-helper.js) 的 `loadDevices()` 读取设备。无论预采集成功还是失败，都会尝试刷新设备列表：
 
 ```js
-try
-{
-  await navigator.mediaDevices.getUserMedia({ video: true }).then(async(mediastream) =>
+navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+  .then(async(stream) =>
   {
-    mediastream && mediastream.getTracks().forEach((t) => t.stop());
+    await loadDevices();
+    CRTC.Utils.closeMediaStream(stream);
+  })
+  .catch(async(error) =>
+  {
+    await loadDevices();
+    setStatus(`预采集失败: ${error.name || error.message}`);
   });
-  haveACamera = true;
-
-  return '摄像头可以正常使用';
-}
-catch (error)
-{
-  if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError')
-  {
-    return '系统没有摄像头';
-  }
-  else if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError')
-  {
-    return '用户拒绝了摄像头权限';
-  }
-  else
-  {
-    return `摄像头错误: ${error.name}`;
-  }
-}
 ```
 
-这段检查创建的 track 只用于验证权限和设备，因此成功后立即停止，不会与后续通话争用摄像头。
+预采集成功后立即关闭临时媒体流，不会与后续通话争用设备。权限失败时设备 label 可能为空，但页面仍会展示浏览器能够枚举到的设备。
 
 ## 1.14 AiNS、虚拟背景、混流与通话的关系
 

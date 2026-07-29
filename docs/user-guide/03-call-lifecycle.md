@@ -460,7 +460,7 @@ function bindPeerConnection(pc)
 
 还可以在 `confirmed` 后通过 `CRTC.Utils.getStreams(session.connection, 'local'/'remote')` 获取已聚合的本地或远端流。`ontrack` 仍应保留，因为远端可能在早期媒体、重协商或共享时新增轨道。
 
-Base JS Demo 把本地音频/视频和远端聚合流分开处理。以下是 [`app.sdk-helper.js`](../../demo/base-js/js/app.sdk-helper.js) 的核心节选：
+Base JS Demo 把本地音频/视频和远端聚合流分开处理。以下是 [`app-sdk-helper.js`](../../demo/base-js/js/app-sdk-helper.js) 的核心节选：
 
 ```js
 function getStreams(pc)
@@ -568,7 +568,7 @@ function disposeCallPage()
 
 如果 `UA` 是整个应用共享的单例，组件卸载时只清理组件拥有的会话和 DOM，不要停止其他页面仍在使用的 UA。只有退出账号、关闭通信模块或整个页面卸载时才调用 `ua.stop()`。
 
-Base JS Demo 的页面卸载处理位于 [`app.ui-bindings.js`](../../demo/base-js/js/app.ui-bindings.js)：
+Base JS Demo 的页面卸载处理位于 [`app-ui-binding.js`](../../demo/base-js/js/app-ui-binding.js)：
 
 ```js
 window.onbeforeunload = function()

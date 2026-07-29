@@ -787,7 +787,7 @@ e.session.on('stats:stats-error', function(error)
 
 设备项常见字段：`kind`、`label`、`deviceId`。未授权前 `label` 可能为空。
 
-Base JS Demo 在获得权限后用 SDK Utils 填充摄像头下拉框。以下代码取自 [`app.sdk-helper.js`](../../demo/base-js/js/app.sdk-helper.js)：
+Base JS Demo 在获得权限后用 SDK Utils 填充摄像头下拉框。以下代码取自 [`app-sdk-helper.js`](../../demo/base-js/js/app-sdk-helper.js)：
 
 ```js
 await CRTC.Utils.getCameras()

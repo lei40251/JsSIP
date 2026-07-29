@@ -1,3 +1,6 @@
+/* B2B 请求辅助函数，由 app-ui-binding.js 的外呼按钮调用。 */
+/* eslint-disable no-unused-vars */
+
 // ===== 工具函数 =====
 
 // 生成随机 requestId

@@ -1,3 +1,4 @@
+/* Demo 共享白板与屏幕标注：绘制、同步和白板生命周期。 */
 /* eslint-disable no-unused-vars */
 /* eslint-disable max-len */
 /* eslint-disable no-console */

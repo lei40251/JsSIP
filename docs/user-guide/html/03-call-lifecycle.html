@@ -619,7 +619,7 @@ session.connection.ontrack = function(event)
 }
 </code></pre>
 </div><p>还可以在 <code>confirmed</code> 后通过 <code>CRTC.Utils.getStreams(session.connection, &#39;local&#39;/&#39;remote&#39;)</code> 获取已聚合的本地或远端流。<code>ontrack</code> 仍应保留，因为远端可能在早期媒体、重协商或共享时新增轨道。</p>
-<p>Base JS Demo 把本地音频/视频和远端聚合流分开处理。以下是 <a href="../../../demo/base-js/js/app.sdk-helper.js"><code>app.sdk-helper.js</code></a> 的核心节选：</p>
+<p>Base JS Demo 把本地音频/视频和远端聚合流分开处理。以下是 <a href="../../../demo/base-js/js/app-sdk-helper.js"><code>app-sdk-helper.js</code></a> 的核心节选：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function getStreams(pc)
 {
   const localStream = CRTC.Utils.getStreams(pc, &#39;local&#39;);
@@ -724,7 +724,7 @@ cusMediaStream = new MediaStream();
 }
 </code></pre>
 </div><p>如果 <code>UA</code> 是整个应用共享的单例，组件卸载时只清理组件拥有的会话和 DOM，不要停止其他页面仍在使用的 UA。只有退出账号、关闭通信模块或整个页面卸载时才调用 <code>ua.stop()</code>。</p>
-<p>Base JS Demo 的页面卸载处理位于 <a href="../../../demo/base-js/js/app.ui-bindings.js"><code>app.ui-bindings.js</code></a>：</p>
+<p>Base JS Demo 的页面卸载处理位于 <a href="../../../demo/base-js/js/app-ui-binding.js"><code>app-ui-binding.js</code></a>：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">window.onbeforeunload = function()
 {
   handleStop = true;

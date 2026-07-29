@@ -487,15 +487,10 @@
                         class="btn btn-success">8</button>
                       <button class="btn btn-success">9</button><button class="btn btn-success">*</button><button
                         class="btn btn-success">#</button>
-                      <button class="btn btn-primary hide" id="testBtn">测试值</button>
                     </div>
                   </div>
                 </div>
 
-                <div class="btn-group hide mt-2">
-                  <button class="btn btn-primary" id="addAudio">添加音频</button>
-                  <button class="btn btn-success" id="addVideo">添加视频</button>
-                </div>
               </div>
             </details>
           </section>
@@ -521,34 +516,8 @@
       src="https://pro.vsbc.com/rtc/uat/crtc/1280.mp4" loop muted style="height: 100%"></video>
   </div>
 
-  <!-- <script>
-    /* 对日志的处理 */
-    window.CLog = console;
-    let consoleHolder = window.CLog;
-
-    function debug(bool) {
-      if (!bool) {
-        consoleHolder = window.CLog;
-        window.CLog = {};
-        Object.keys(consoleHolder).forEach(function (key) {
-          window.CLog[key] = function () {
-            // 这里可以写自己方法上传到服务器等
-            // eslint-disable-next-line prefer-rest-params
-            console.log(...arguments);
-          };
-        });
-      }
-      else {
-        window.CLog = consoleHolder;
-      }
-    }
-
-    debug(false);
-    // 结束
-  </script> -->
   <script src="./js/eruda.js"></script>
   <script>eruda.init();</script>
-  <script src="./js/jquery-3.3.1.min.js"></script>
   <script src="./js/html2canvas.min.js"></script>
   <script src="./js/b2b.js"></script>
   <script src="./js/MediaStreamRecorder.min.js"></script>
@@ -558,12 +527,12 @@
   <script src="../../dist/CRTC.min.js"></script>
   <script src="../config.js"></script>
   <script src="./js/app-media-effects.js"></script>
-  <script src="./js/app.sdk-helper.js"></script>
+  <script src="./js/app-sdk-helper.js"></script>
   <script src="./js/app.js"></script>
   <!-- 三方会议模块：在 app.js 之后加载，向全局作用域公开 onConfSession 等接口 -->
   <script src="./js/app-conference.js"></script>
   <script src="./js/app-annotation.js"></script>
-  <script src="./js/app.ui-bindings.js"></script>
+  <script src="./js/app-ui-binding.js"></script>
 </body>
 
 </html>

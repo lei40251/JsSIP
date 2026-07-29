@@ -16,8 +16,8 @@ Base JS Demo 是一份可运行的 SDK 接入示例，覆盖模式初始化、�
 | --- | --- |
 | [`index.html`](../../demo/base-js/index.html) | 页面控件、按钮 ID、音视频元素和脚本加载顺序 |
 | [`app.js`](../../demo/base-js/js/app.js) | UA 配置与事件、`newRTCSession`、呼叫/接听、通话中控制、共享和统计展示 |
-| [`app.sdk-helper.js`](../../demo/base-js/js/app.sdk-helper.js) | URL 参数、设备列表、选中设备约束、本地/远端媒体渲染 |
-| [`app.ui-bindings.js`](../../demo/base-js/js/app.ui-bindings.js) | 主动注册/注销、外呼按钮、设备下拉框和媒体效果控件绑定 |
+| [`app-sdk-helper.js`](../../demo/base-js/js/app-sdk-helper.js) | URL 参数、设备列表、选中设备约束、本地/远端媒体渲染 |
+| [`app-ui-binding.js`](../../demo/base-js/js/app-ui-binding.js) | 主动注册/注销、外呼按钮、设备下拉框和媒体效果控件绑定 |
 | [`app-media-effects.js`](../../demo/base-js/js/app-media-effects.js) | composer、虚拟背景、水印和 AiNS 参数构建及通话中更新 |
 | [`config.js`](../../demo/config.js) | Demo 环境选择；客户必须替换为自己的交付配置 |
 
@@ -156,7 +156,7 @@ ua.on('registered', function(data)
 
 初始化后 Demo 固定自动注册。注册控制区仍保留主动注销和重新注册，用于验证注册生命周期。
 
-注册控制区对应代码位于 [`app.ui-bindings.js`](../../demo/base-js/js/app.ui-bindings.js)：
+注册控制区对应代码位于 [`app-ui-binding.js`](../../demo/base-js/js/app-ui-binding.js)：
 
 ```js
 document.querySelector('#regUa').onclick = function()
@@ -221,7 +221,7 @@ await ua.call(`${number}@${sipDomain}`, options);
 - 无通话：保存 deviceId，标准呼叫/接听通过 `getAudioOpts()`、`getVideoOpts()` 写入 `deviceId.exact`。
 - 通话中：立即调用 `session.switchDevice('camera'/'audio', deviceId)`。
 
-代码位置：设备枚举和约束构建在 [`app.sdk-helper.js`](../../demo/base-js/js/app.sdk-helper.js)，下拉框 `change` 事件在 [`app.ui-bindings.js`](../../demo/base-js/js/app.ui-bindings.js)。标准接听和视频升级也复用相同的视频约束，避免呼出、接听使用不同设备。
+代码位置：设备枚举和约束构建在 [`app-sdk-helper.js`](../../demo/base-js/js/app-sdk-helper.js)，下拉框 `change` 事件在 [`app-ui-binding.js`](../../demo/base-js/js/app-ui-binding.js)。标准接听和视频升级也复用相同的视频约束，避免呼出、接听使用不同设备。
 
 约束构建函数会在已选设备时写入 `deviceId.exact`：
 
@@ -264,7 +264,7 @@ document.querySelector('#cameras').addEventListener('change', function()
 });
 ```
 
-两段代码分别取自 [`app.sdk-helper.js`](../../demo/base-js/js/app.sdk-helper.js) 和 [`app.ui-bindings.js`](../../demo/base-js/js/app.ui-bindings.js)。麦克风的处理相同，只把设备类型替换为 `'audio'`。
+两段代码分别取自 [`app-sdk-helper.js`](../../demo/base-js/js/app-sdk-helper.js) 和 [`app-ui-binding.js`](../../demo/base-js/js/app-ui-binding.js)。麦克风的处理相同，只把设备类型替换为 `'audio'`。
 
 ### 更新方式
 
@@ -273,7 +273,7 @@ document.querySelector('#cameras').addEventListener('change', function()
 | `useUpdate` | `true` | 音视频升级/降级时使用 UPDATE 方式 |
 | `useReInvite` | `false` | 使用 re-INVITE 方式 |
 
-下拉框在 [`app.ui-bindings.js`](../../demo/base-js/js/app.ui-bindings.js) 更新 `useUpdate`；`#toAudio`、`#toVideo` 和 `#toVideoSend` 在 [`app.js`](../../demo/base-js/js/app.js) 把该值传给升级/降级方法。必须由服务端和对端共同支持，默认联调先使用现网已验证的方式。
+下拉框在 [`app-ui-binding.js`](../../demo/base-js/js/app-ui-binding.js) 更新 `useUpdate`；`#toAudio`、`#toVideo` 和 `#toVideoSend` 在 [`app.js`](../../demo/base-js/js/app.js) 把该值传给升级/降级方法。必须由服务端和对端共同支持，默认联调先使用现网已验证的方式。
 
 ### 画质偏好
 
@@ -395,7 +395,7 @@ return {
 
 “应用”读取当前控件并调用 `setWatermarks()`；“清空”移除对应水印。`getMediaEffectsComposer()` 返回 `null` 时表示本通电话没有启用 composer，按钮不能改变当前发送画面。
 
-代码位置：水印输入读取、合并和更新位于 [`app-media-effects.js`](../../demo/base-js/js/app-media-effects.js) 的 `getTextMark() / getImageMark()`、`mergeMarks()`、`setTextMark() / setImageMark()`；按钮绑定位于 [`app.ui-bindings.js`](../../demo/base-js/js/app.ui-bindings.js)。
+代码位置：水印输入读取、合并和更新位于 [`app-media-effects.js`](../../demo/base-js/js/app-media-effects.js) 的 `getTextMark() / getImageMark()`、`mergeMarks()`、`setTextMark() / setImageMark()`；按钮绑定位于 [`app-ui-binding.js`](../../demo/base-js/js/app-ui-binding.js)。
 
 文字水印的构造函数会保留 SDK 默认值，只写入用户真正填写的可选字段：
 
@@ -477,7 +477,7 @@ function mergeMarks(nextItems, idsToReplace)
 7. `await ua.call()`。
 8. 在 session 上处理远端媒体和通话事件。
 
-页面级按钮位于 [`app.ui-bindings.js`](../../demo/base-js/js/app.ui-bindings.js)，最终统一进入 [`app.js`](../../demo/base-js/js/app.js) 的 `call(type, direction, mediaStream)`。该函数先检查注册状态，再组合设备、媒体效果、`pcConfig` 和媒体流，最后执行 `await ua.call()`。
+页面级按钮位于 [`app-ui-binding.js`](../../demo/base-js/js/app-ui-binding.js)，最终统一进入 [`app.js`](../../demo/base-js/js/app.js) 的 `call(type, direction, mediaStream)`。该函数先检查注册状态，再组合设备、媒体效果、`pcConfig` 和媒体流，最后执行 `await ua.call()`。
 
 标准音频和视频按钮只负责传入呼叫类型：
 
@@ -534,7 +534,7 @@ remoteNo = number;
 const session = await ua.call(`${number}@${sipDomain}`, options);
 ```
 
-两段均取自 Demo 当前的 [`app.ui-bindings.js`](../../demo/base-js/js/app.ui-bindings.js) 和 [`app.js`](../../demo/base-js/js/app.js)。完整 `call()` 还包含屏幕外呼、占位轨道、单向视频和 iOS OPTIONS 保活；学习标准接入时先掌握上面的主路径。
+两段均取自 Demo 当前的 [`app-ui-binding.js`](../../demo/base-js/js/app-ui-binding.js) 和 [`app.js`](../../demo/base-js/js/app.js)。完整 `call()` 还包含屏幕外呼、占位轨道、单向视频和 iOS OPTIONS 保活；学习标准接入时先掌握上面的主路径。
 
 需要使用自定义 SIP 头时，其名称、编码和服务端处理规则必须由双方约定；无明确要求时不要添加。
 
@@ -636,7 +636,7 @@ document.querySelector('#toVideoSend').onclick = function()
 
 保持状态以 `hold/unhold` 事件为准。`originator: 'local'` 表示本端操作，`remote` 表示对端保持。
 
-代码位置：设备下拉框绑定在 [`app.ui-bindings.js`](../../demo/base-js/js/app.ui-bindings.js)；静音、前后摄像头切换和保持按钮，以及 `muted/unmuted`、`cameraChanged`、`hold/unhold` 事件在 [`app.js`](../../demo/base-js/js/app.js) 的 `newRTCSession` 回调中。
+代码位置：设备下拉框绑定在 [`app-ui-binding.js`](../../demo/base-js/js/app-ui-binding.js)；静音、前后摄像头切换和保持按钮，以及 `muted/unmuted`、`cameraChanged`、`hold/unhold` 事件在 [`app.js`](../../demo/base-js/js/app.js) 的 `newRTCSession` 回调中。
 
 麦克风和摄像头使用独立的 mute 参数：
 
@@ -1046,7 +1046,7 @@ initFx();
 
 这段代码取自 [`app.js`](../../demo/base-js/js/app.js)。预采集只为了请求权限和获取带名称的设备列表，因此成功后立即停止这些 tracks。
 
-页面退出时的 UA 清理位于 [`app.ui-bindings.js`](../../demo/base-js/js/app.ui-bindings.js)：
+页面退出时的 UA 清理位于 [`app-ui-binding.js`](../../demo/base-js/js/app-ui-binding.js)：
 
 ```js
 window.onbeforeunload = function()
