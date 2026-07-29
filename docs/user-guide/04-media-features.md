@@ -348,7 +348,13 @@ function getFxOpts()
 {
   const outputMirror = document.getElementById('fxMirror').value === 'on';
   const aiVBOptions = getVbOpts();
-  const watermarks = getMarks();
+  const watermarks = [];
+  const textMark = getTextMark();
+  const imageMark = getImageMark();
+
+  if (textMark) watermarks.push(textMark);
+  if (imageMark) watermarks.push(imageMark);
+
   const hasComposerEffects = outputMirror || watermarks.length || aiVBOptions;
   const composerOptions = {};
 

@@ -335,7 +335,13 @@ composer 初始配置的核心代码如下，取自 [`app-media-effects.js`](../
 ```js
 const outputMirror = document.getElementById('fxMirror').value === 'on';
 const aiVBOptions = getVbOpts();
-const watermarks = getMarks();
+const watermarks = [];
+const textMark = getTextMark();
+const imageMark = getImageMark();
+
+if (textMark) watermarks.push(textMark);
+if (imageMark) watermarks.push(imageMark);
+
 const hasComposerEffects = outputMirror || watermarks.length || aiVBOptions;
 const composerOptions = {};
 
@@ -447,7 +453,17 @@ function getTextMark()
 function mergeMarks(nextItems, idsToReplace)
 {
   const fx = getFx();
-  const current = getMarkState(fx);
+  let current = [];
+
+  if (fx && typeof fx.getWatermarks === 'function')
+  {
+    try
+    {
+      current = [].concat(fx.getWatermarks() || []);
+    }
+    catch (error)
+    {}
+  }
 
   return current
     .filter((item) => !idsToReplace.includes(item && item.id))

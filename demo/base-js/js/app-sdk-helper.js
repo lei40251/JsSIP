@@ -393,6 +393,20 @@ function setMedia(el, stream)
   return true;
 }
 
+/**
+ * 监听媒体轨结束事件；浏览器不支持事件监听时直接忽略。
+ *
+ * @param {MediaStreamTrack} track - 要监听的媒体轨
+ * @param {Function} listener - 轨结束时执行的回调
+ */
+function onTrackEnd(track, listener)
+{
+  if (track && track.addEventListener)
+  {
+    track.addEventListener('ended', listener, { once: true });
+  }
+}
+
 // =============================================================================
 // 共享画面与白板通用浮层
 // =============================================================================

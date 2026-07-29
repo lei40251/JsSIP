@@ -501,7 +501,13 @@ pcConfig[&#39;bundlePolicy&#39;] = &#39;max-compat&#39;;
 <p>composer 初始配置的核心代码如下，取自 <a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a>：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const outputMirror = document.getElementById(&#39;fxMirror&#39;).value === &#39;on&#39;;
 const aiVBOptions = getVbOpts();
-const watermarks = getMarks();
+const watermarks = [];
+const textMark = getTextMark();
+const imageMark = getImageMark();
+
+if (textMark) watermarks.push(textMark);
+if (imageMark) watermarks.push(imageMark);
+
 const hasComposerEffects = outputMirror || watermarks.length || aiVBOptions;
 const composerOptions = {};
 
@@ -646,7 +652,17 @@ if (aiVBOptions)
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function mergeMarks(nextItems, idsToReplace)
 {
   const fx = getFx();
-  const current = getMarkState(fx);
+  let current = [];
+
+  if (fx &amp;&amp; typeof fx.getWatermarks === &#39;function&#39;)
+  {
+    try
+    {
+      current = [].concat(fx.getWatermarks() || []);
+    }
+    catch (error)
+    {}
+  }
 
   return current
     .filter((item) =&gt; !idsToReplace.includes(item &amp;&amp; item.id))

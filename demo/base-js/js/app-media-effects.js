@@ -10,13 +10,14 @@
  *
  * 这里聚合 demo 页里和媒体效果相关的核心逻辑：
  * 1. 页面状态与效果资源
- * 2. MediaEffectsComposer 配置构建
- * 3. 当前通话中的增量效果更新
- * 4. 呼叫 / 接听时使用的 AI 降噪配置
+ * 2. 虚拟背景、水印与 MediaEffectsComposer 呼叫参数
+ * 3. 呼叫 / 接听时使用的 AI 降噪参数
+ * 4. 当前通话中的增量效果更新
+ * 5. 页面初始状态同步
  */
 
 // =============================================================================
-// 页面状态与资源
+// 1. 页面状态与资源
 // =============================================================================
 
 // 当前选中的虚拟背景类型：''、'none'、'blur'、'img1'、'img2'
@@ -38,7 +39,7 @@ const TEXT_MARK_ID = 'call-output-text-watermark';
 const IMAGE_MARK_ID = 'call-output-image-watermark';
 
 // =============================================================================
-// MediaEffectsComposer 配置构建
+// 2. 虚拟背景配置构建
 // =============================================================================
 
 /**
@@ -132,7 +133,7 @@ function getVbOpts()
 }
 
 // =============================================================================
-// 水印配置构建
+// 3. 水印配置构建
 // =============================================================================
 
 /**
@@ -260,22 +261,12 @@ function getImageMark()
   return mark;
 }
 
-/**
- * 收集当前页面上的所有输出水印配置（文字 + 图片）。
- *
- * @returns {Object[]} 水印配置数组
- */
-function getMarks()
-{
-  const marks = [];
-  const text = getTextMark();
-  const image = getImageMark();
-
-  text && marks.push(text);
-  image && marks.push(image);
-
-  return marks;
-}
+// =============================================================================
+// 4. MediaEffectsComposer 呼叫 / 接听参数汇总
+//
+// getFxOpts() 是 app.js 与会议模块共同使用的配置入口：按页面当前选择组合镜像、
+// 水印和 slot 0 虚拟背景。没有启用任何效果时返回 null，避免无意义地创建管线。
+// =============================================================================
 
 /**
  * ================================================================================
@@ -314,7 +305,13 @@ function getFxOpts()
 {
   const mirror = document.getElementById('fxMirror').value === 'on';
   const vbOpts = getVbOpts();
-  const watermarks = getMarks();
+  const watermarks = [];
+  const textMark = getTextMark();
+  const imageMark = getImageMark();
+
+  if (textMark) watermarks.push(textMark);
+  if (imageMark) watermarks.push(imageMark);
+
   const hasFx = mirror || watermarks.length || vbOpts;
 
   /**
@@ -360,7 +357,51 @@ function getFxOpts()
 }
 
 // =============================================================================
-// 当前会话更新辅助
+// 5. AI 降噪呼叫 / 接听参数构建
+//
+// 这里只返回 RTCSession.call()/answer() 使用的 aiNoiseSuppression 配置，不创建
+// AiNS 实例。实例由 SDK 随通话创建；通话建立后的强度更新由 setNsLevel() 完成。
+// =============================================================================
+
+/**
+ * =============================================================================
+ * === SDK: AI 降噪配置参数结构 ===
+ * =============================================================================
+ *
+ * @typedef {Object} AiNSOptions
+ *
+ * @property {boolean} [enabled] — 是否启用 AI 降噪（默认 true）
+ * @property {number} [level] — 降噪强度（0~100，默认 80）
+ * @property {number} [outputGain] — AiNS 输出增益（0~4，默认 1）
+ * @property {Object} [assetConfig] — AI 模型资源路径配置
+ * @property {string} [assetConfig.cdnUrl] — WASM 和模型文件所在根路径
+ */
+
+/**
+ * 构建呼叫 / 接听时要传给 SDK 的 AI 降噪配置。
+ *
+ * @returns {AiNSOptions|null} 启用了 AiNS 时返回配置对象，否则返回 null
+ */
+function getNsOpts()
+{
+  if (aiNsType !== 'AiNS')
+  {
+    return null;
+  }
+
+  return {
+    enabled     : true,
+    level       : getNsLevel(),
+    outputGain  : 1,
+    assetConfig : { cdnUrl: NS_ROOT }
+  };
+}
+
+// =============================================================================
+// 6. 当前会话实例与水印合并辅助
+//
+// 点对点模式从 rtcSession 取 composer；三方模式优先使用会议主 composer。
+// setWatermarks() 是全量替换，因此更新单类水印前必须先保留另一类水印。
 // =============================================================================
 
 /**
@@ -418,36 +459,6 @@ function getFx()
 }
 
 /**
- * 获取当前会话里已存在的水印快照；不可读时返回空数组。
- *
- * ========== SDK 调用 ==========
- * fx.getWatermarks()
- *   - 返回: MediaEffectsComposerWatermarkState[]
- *   - 说明: 返回当前已设置的水印配置数组（已归一化，含 SDK 填充的默认值）
- *   - WatermarkState 比 WatermarkOptions 多出:
- *     { status, reason, slot, sourceId, streamId } 等运行时字段
- *
- * @param {Object} fx — 当前会话的 MediaEffectsComposer 实例
- * @returns {Object[]} 水印配置数组，获取失败时返回空数组
- */
-function getMarkState(fx)
-{
-  if (!fx || typeof fx.getWatermarks !== 'function')
-  {
-    return [];
-  }
-
-  try
-  {
-    return [].concat(fx.getWatermarks() || []);
-  }
-  catch (error)
-  {}
-
-  return [];
-}
-
-/**
  * 以“先删旧 ID、再追加新项”的方式合并会话内水印。
  *
  * @param {Object[]} next — 要新增或更新的水印项
@@ -457,7 +468,17 @@ function getMarkState(fx)
 function mergeMarks(next, ids)
 {
   const fx = getFx();
-  const current = getMarkState(fx);
+  let current = [];
+
+  if (fx && typeof fx.getWatermarks === 'function')
+  {
+    try
+    {
+      current = [].concat(fx.getWatermarks() || []);
+    }
+    catch (error)
+    {}
+  }
 
   return current
     .filter((item) => !ids.includes(item && item.id))
@@ -465,7 +486,10 @@ function mergeMarks(next, ids)
 }
 
 // =============================================================================
-// 当前通话效果同步
+// 7. 当前通话效果同步
+//
+// 以下方法直接调用 SDK 的运行时更新 API，不重新发起呼叫或自行操作 sender。
+// 如果当前通话没有创建相应实例，会提示用户让配置在下一次通话生效。
 // =============================================================================
 
 /**
@@ -617,45 +641,6 @@ async function setImageMark()
 }
 
 /**
- * 清空页面上文字水印相关的输入控件值。
- */
-function resetTextMark()
-{
-  document.getElementById('textMarkText').value = '';
-  document.getElementById('textMarkSize').value = '';
-  document.getElementById('textMarkAlpha').value = '';
-}
-
-/**
- * 清空页面上图片水印相关的输入控件值。
- */
-function resetImgMark()
-{
-  document.getElementById('imgMarkUrl').value = '';
-  document.getElementById('imgMarkW').value = '';
-  document.getElementById('imgMarkH').value = '';
-  document.getElementById('imgMarkAlpha').value = '';
-}
-
-/**
- * 清空页面文字水印输入并同步清除当前通话中的文字水印。
- */
-async function clearTextMark()
-{
-  resetTextMark();
-  await setTextMark();
-}
-
-/**
- * 清空页面图片水印输入并同步清除当前通话中的图片水印。
- */
-async function clearImgMark()
-{
-  resetImgMark();
-  await setImageMark();
-}
-
-/**
  * 把当前虚拟背景应用到当前通话。
  *
  * ========== SDK 调用 ==========
@@ -741,53 +726,6 @@ async function changeVb(selectEl)
   await setVb();
 }
 
-// =============================================================================
-// AI 降噪呼叫参数构建
-// =============================================================================
-
-/**
- * =============================================================================
- * === SDK: AI 降噪配置参数结构 ===
- * =============================================================================
- *
- * @typedef {Object} AiNSOptions
- *
- * @property {boolean} [enabled] — 是否启用 AI 降噪（默认 true）
- *   设为 false 可暂时关闭而不销毁管线
- *
- * @property {number} [level] — 降噪强度（0~100，默认 80）
- *   - 0   = 不降噪
- *   - 100 = 最大降噪强度
- *   - 值越高噪声抑制越强，但语音可能稍有失真
- *
- * @property {number} [outputGain] — AiNS 处理后的输出增益（0~4，默认 1）
- *   大于 1 可补偿降噪后的音量，过高可能造成削波
- *
- * @property {Object} [assetConfig] — AI 模型资源路径配置
- * @property {string} [assetConfig.cdnUrl] — CDN 根路径（默认 './static'）
- *   SDK 会在该路径下查找 WASM 和模型文件
- */
-
-/**
- * 构建呼叫 / 接听时要传给 SDK 的 AI 降噪配置。
- *
- * @returns {AiNSOptions|null} 启用了 AiNS 时返回配置对象，否则返回 null
- */
-function getNsOpts()
-{
-  if (aiNsType !== 'AiNS')
-  {
-    return null;
-  }
-
-  return {
-    enabled     : true,
-    level       : getNsLevel(),
-    outputGain  : 1,
-    assetConfig : { cdnUrl: NS_ROOT }
-  };
-}
-
 /**
  * 把新的降噪强度应用到当前通话。
  * 仅当前会话已创建 AiNS 实例时返回 true。
@@ -810,6 +748,10 @@ function setNsLevel(level)
 
   return true;
 }
+
+// =============================================================================
+// 8. 页面状态初始化
+// =============================================================================
 
 /**
  * 初始化媒体效果表单状态，避免首次呼叫读到未同步的页面值。

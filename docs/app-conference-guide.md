@@ -82,7 +82,7 @@ flowchart TB
 | `app.js` | `localVid`、`remoteVid` | A 本地预览和 B/C 远端主画面 |
 | `app-media-effects.js` | `getFxOpts()`、`getNsOpts()`、`onFxIssue()` | 复用页面选择的镜像、水印、虚拟背景和 AiNS 配置 |
 | `app-sdk-helper.js` | `getAudioOpts()`、`getVideoOpts()` | 获取页面当前选择的麦克风和摄像头约束 |
-| `app-sdk-helper.js` | `setStatus()`、`setMedia()`、来电通知和共享弹窗函数 | 页面反馈和媒体渲染 |
+| `app-sdk-helper.js` | `setStatus()`、`setMedia()`、`onTrackEnd()`、来电通知和共享弹窗函数 | 页面反馈、媒体渲染和通用轨道生命周期监听 |
 | `app-annotation.js` | `bindInk()`、`sendSnapshot()`、`isBoardOpen()` | 标注会话绑定、白板成员状态和快照同步 |
 | CRTC SDK | `CRTC.UA`、`RTCSession`、`CRTC.Utils.getStreams()`、`closeMediaStream()` | SIP 会话、WebRTC 和资源释放 |
 | 浏览器 API | `MediaStream`、`RTCPeerConnection`、`RTCRtpSender`、`getDisplayMedia()` | 轨道组合、替换和屏幕采集 |
@@ -784,7 +784,7 @@ B 结束后，`restoreMedia(C, endedBId)` 使用克隆轨替换 C sender，使 A
 | A 接听普通 B/C | `X-Direction: sendrecv` |
 | A 接听静默 C | `X-Direction: sendonly` |
 
-`hasConfHeader()` 接受 `true`、`1`、`yes`，忽略大小写和分号后的参数。
+`getSessOpts()` 在读取 `X-Silent-Join` 后直接识别 `true`、`1`、`yes`，忽略大小写和分号后的参数。
 
 ### 13.2 屏幕共享 INFO
 
@@ -1047,7 +1047,7 @@ flowchart TB
 | `sendSnapshot` | 向指定白板目标同步当前画布状态 |
 | `closeBoard` | 仅允许发起方广播关闭白板 |
 | `removeLeg` | 单 leg 完整资源清理和降级 |
-| `endLeg` | 挂断指定成员 |
+| `updateConfUi` 中的成员挂断事件 | 直接调用目标会话的 `terminate()` |
 | `endConf` | 挂断全部成员并取消 pending |
 | `bindControls` | 让公共控制栏操作当前成员 |
 | `updateConfUi` | 统一刷新成员、接听、共享、REFER 等按钮 |
@@ -1072,7 +1072,7 @@ initMode（app.js）
 
 ## 22. `app-conference.js` 完整方法调用图
 
-本节先覆盖 `app-conference.js` 当前声明的全部 69 个函数，并补充它与 `app-annotation.js` 的跨文件调用关系。图中：
+本节覆盖 `app-conference.js` 当前声明的 37 个顶层函数，并补充它与 `app-sdk-helper.js`、`app-annotation.js` 的跨文件调用关系。图中：
 
 - 实线箭头表示函数直接调用另一个函数。
 - 虚线箭头表示页面绑定、SDK 事件或异步回调触发。
@@ -1091,8 +1091,7 @@ flowchart TD
   NEXT --> CALL["callConf()"]
 
   SILENT["外部：静默呼叫 A 按钮"] --> SCALL["callSilentC()"]
-  ANSWER["外部：接听来电按钮"] --> AP["answerConf()"]
-  AP --> ALEG["answerLeg()"]
+  ANSWER["外部：接听来电按钮"] --> ALEG["answerLeg()"]
   HANGALL["外部：全部挂断按钮"] --> TERMALL["endConf()"]
 
   STARTUI["外部：开始共享屏幕按钮"] --> START["shareConf()"]
@@ -1132,7 +1131,7 @@ flowchart TD
 
   RESOLVE --> NEXT["getNextRole()"]
   RESOLVE --> REQHEAD
-  RESOLVE --> ENABLED["hasConfHeader()"]
+  RESOLVE --> ENABLED["内联解析 X-Silent-Join"]
   RESOLVE --> REMOTE
   NEXT --> BYROLE
 
@@ -1148,7 +1147,7 @@ flowchart TD
   SILENT["callSilentC()"] --> EXTRA
   SILENT -.->|"ua.call()"| NEW
 
-  PENDING["answerConf()"] --> ANSWER
+  PENDING["接听按钮事件"] --> ANSWER
   ANSWER --> SELECTED["getSelLeg()"]
   ANSWER --> BYROLE
   ANSWER --> PREPARE
@@ -1215,7 +1214,7 @@ flowchart TB
     PREPARE --> HYDRATE_PREP["loadRemote()"]
     PREPARE --> SOURCE_PREP["setMixSource()"]
     PREPARE --> REMEMBER["saveMedia()"]
-    PREPARE --> OUTPUT["getMixStream()"]
+    PREPARE --> OUTPUT["new MediaStream()"]
     PREPARE -.->|"异常"| ROLLBACK["undoCOutput()"]
     ENSURE --> OPT["buildMixOpts()"]
     ENSURE --> LOCAL_PREP["showLocal()"]
@@ -1261,7 +1260,7 @@ flowchart TD
   UI --> DISPLAY["leg.role"]
   UI -.->|"成员按钮 onclick"| SELECT["selectLeg()"]
   UI -.->|"成员按钮 onclick"| MAIN["showMain()"]
-  UI -.->|"单成员挂断 onclick"| TERM["endLeg()"]
+  UI -.->|"单成员挂断 onclick"| TERM["session.terminate()"]
   UI --> NEXT["getNextRole()"]
   UI --> TARGETS["getShareLegs()"]
   UI --> BINDCTRL["bindControls()"]
@@ -1269,11 +1268,9 @@ flowchart TD
   UI -.->|"取消 REFER 按钮绑定"| CANCELREF["cancelRefer()"]
 
   NEXT --> BYROLE
-  SELECT --> PEERLABEL["showLegStats()"]
-  SELECT --> REPORT["renderStats()"]
   SELECT --> TEXT["setStats()"]
-  PEERLABEL --> DISPLAY
-  PEERLABEL --> TEXT
+  SELECT --> REPORT["renderStats()"]
+  TEXT --> DISPLAY
 
   BINDSTATS["bindLegStats()"] -.->|"stats:detailed-report"| REPORT
   BINDSTATS --> SELECT
@@ -1343,7 +1340,7 @@ flowchart TB
 
 ```mermaid
 flowchart TD
-  TERMONE["endLeg()"] -.->|"session.terminate → ended"| CLEAN["removeLeg()"]
+  TERMONE["成员挂断按钮：session.terminate()"] -.->|"ended"| CLEAN["removeLeg()"]
   TERMALL["endConf()"] -.->|"每个 session.terminate → ended"| CLEAN
   EVENTS["bindLegEvents()"] -.->|"failed / ended"| CLEAN
 

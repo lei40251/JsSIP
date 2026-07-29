@@ -45,6 +45,14 @@ let inkResize = null;
 let colorUserId = '';
 let boardUserId = '';
 
+// =============================================================================
+// 1. 画布状态、用户身份与基础取值
+//
+// 这一组函数只读取或规范化本地状态，不发送 SIP INFO，也不修改 RTCSession。
+// 用户标识同时用于操作去重、作者权限判断和稳定配色，接入方替换身份来源时应
+// 保证同一用户在一次白板会话中返回稳定值。
+// =============================================================================
+
 function clamp(value, min, max)
 {
   return Math.min(max, Math.max(min, value));
@@ -115,6 +123,13 @@ function setInkColor()
   colorUserId = senderId;
 }
 
+// =============================================================================
+// 2. 标注操作封装、目标会话选择与 SIP INFO 发送
+//
+// 所有本端操作都使用同一 operationId 规则，并在发送前序列化为 INK_TYPE。
+// 三方模式发送给全部有效 leg；共享白板可传入固定 targets 做定向同步。
+// =============================================================================
+
 function makeOp(action, boardId, payload)
 {
   opSeq++;
@@ -162,17 +177,6 @@ function getInkLegs()
   return [];
 }
 
-function getBoardLegs()
-{
-  if (typeof appMode !== 'undefined' && appMode === 'conference' &&
-    typeof getShareLegs === 'function')
-  {
-    return getShareLegs().map((leg) => leg.session);
-  }
-
-  return getInkLegs();
-}
-
 function isBoardOpen()
 {
   return inkMode === 'whiteboard' && boardLegs.size > 0;
@@ -192,6 +196,14 @@ function refreshShare()
   }
 }
 
+/**
+ * 把标注操作作为 SIP INFO 发送给目标会话。
+ *
+ * @param {object} op - 已由 makeOp() 构造且可 JSON 序列化的操作
+ * @param {object|null} except - 三方转发时需要排除的来源 RTCSession
+ * @param {object[]} [targets] - 指定目标；省略时使用当前有效标注会话
+ * @returns {boolean|undefined} 数据过大时返回 false，其余情况逐路尝试发送
+ */
 function sendOp(op, except, targets)
 {
   const body = JSON.stringify(op);
@@ -222,6 +234,13 @@ function sendOp(op, except, targets)
   });
 
 }
+
+// =============================================================================
+// 3. 远端数据校验与归一化
+//
+// SIP INFO 来自远端，不能直接交给 Konva。这里限制操作类型、字符串长度、
+// 点数量和归一化坐标范围，避免异常消息创建过多节点或越界图形。
+// =============================================================================
 
 function isNumber(value)
 {
@@ -281,6 +300,28 @@ function cleanShape(shape)
 
   return sanitized;
 }
+
+function validOp(op)
+{
+  const actions = [
+    'shape:add', 'shape:remove', 'author:clear', 'clear', 'snapshot', 'board:open', 'board:close'
+  ];
+
+  return op && typeof op === 'object' &&
+    op.event === 'annotation' &&
+    op.version === INK_VERSION &&
+    (op.boardId === 'screen' || op.boardId === 'whiteboard') &&
+    actions.indexOf(op.action) !== -1 &&
+    typeof op.operationId === 'string' && op.operationId.length <= 160 &&
+    op.payload && typeof op.payload === 'object';
+}
+
+// =============================================================================
+// 4. Konva 节点创建与画布渲染
+//
+// 协议层保存的是 0~1 的归一化坐标；只有渲染时才按当前舞台尺寸换算为像素。
+// 因此窗口缩放后可以直接重新 renderBoard()，无需改写已保存的 shape 数据。
+// =============================================================================
 
 function makeNode(shape, preview)
 {
@@ -446,6 +487,22 @@ function showInkUsers()
   });
 }
 
+// =============================================================================
+// 5. 远端操作应用、会话事件绑定与白板快照
+//
+// onInkInfo() 的顺序固定为“校验 → 去重 → 应用 → 必要时转发”。A 端在三方
+// 模式下负责把 B/C 的操作转发给其他目标，但会排除来源 session，避免回环。
+// =============================================================================
+
+/**
+ * 将一个已校验操作写入对应 board，并在当前画布受影响时重新渲染。
+ *
+ * 图形作者始终取 op.senderId，不能信任 payload.shape.authorId；删除和清空同样
+ * 受作者身份限制，因此参与者只能修改自己的标注。
+ *
+ * @param {object} op - 通过 validOp() 校验后的标注操作
+ * @returns {boolean} 操作已应用返回 true；非法、重复或越权操作返回 false
+ */
 function applyOp(op)
 {
   const board = getBoard(op.boardId);
@@ -525,21 +582,6 @@ function applyOp(op)
   return true;
 }
 
-function validOp(op)
-{
-  const actions = [
-    'shape:add', 'shape:remove', 'author:clear', 'clear', 'snapshot', 'board:open', 'board:close'
-  ];
-
-  return op && typeof op === 'object' &&
-    op.event === 'annotation' &&
-    op.version === INK_VERSION &&
-    (op.boardId === 'screen' || op.boardId === 'whiteboard') &&
-    actions.indexOf(op.action) !== -1 &&
-    typeof op.operationId === 'string' && op.operationId.length <= 160 &&
-    op.payload && typeof op.payload === 'object';
-}
-
 function onInkInfo(session, data)
 {
   if (!data || data.originator !== 'remote' || !data.info) return;
@@ -613,6 +655,15 @@ function onInkInfo(session, data)
   }
 }
 
+/**
+ * 为一条 RTCSession 绑定标注 INFO 和结束清理事件。
+ *
+ * WeakSet 保证同一会话只绑定一次；会话结束后从白板目标集合移除，最后一条
+ * 点对点会话结束时再重置本地标注状态。
+ *
+ * @param {object} session - SDK RTCSession 实例
+ * @returns {void}
+ */
 function bindInk(session)
 {
   if (!session || boundLegs.has(session)) return;
@@ -652,6 +703,13 @@ function sendSnapshot(session)
   sendOp(op, null, [ session ]);
 }
 
+// =============================================================================
+// 6. 指针绘制与本端操作提交
+//
+// pointermove 只更新本地预览节点；pointerup 才生成一次 shape:add 并通过
+// sendOp() 同步完整笔画，避免自由画笔产生高频 SIP INFO。
+// =============================================================================
+
 function getPointer()
 {
   if (!inkStage) return null;
@@ -666,25 +724,6 @@ function getPointer()
   ];
 }
 
-function getTool()
-{
-  const colorInput = document.querySelector('#inkColor');
-  const widthInput = document.querySelector('#inkWidth');
-  const minSize = Math.max(1, Math.min(inkStage.width(), inkStage.height()));
-
-  return {
-    color     : colorInput ? colorInput.value : '#ff3b30',
-    widthNorm : clamp(Number(widthInput ? widthInput.value : 4) / minSize, 0.001, 0.08)
-  };
-}
-
-function makeShapeId()
-{
-  opSeq++;
-
-  return `shape-${getInkUser()}-${Date.now()}-${opSeq}`;
-}
-
 function startDraw()
 {
   if (!inkStage || (inkMode !== 'whiteboard' && !inkOn)) return;
@@ -695,16 +734,21 @@ function startDraw()
 
   if (!point) return;
 
-  const config = getTool();
+  const colorInput = document.querySelector('#inkColor');
+  const widthInput = document.querySelector('#inkWidth');
+  const minSize = Math.max(1, Math.min(inkStage.width(), inkStage.height()));
+  const authorId = getInkUser();
+
+  opSeq++;
 
   drawing = true;
   draftShape = {
-    id          : makeShapeId(),
+    id          : `shape-${authorId}-${Date.now()}-${opSeq}`,
     type        : inkTool,
-    color       : config.color,
-    authorId    : getInkUser(),
+    color       : colorInput ? colorInput.value : '#ff3b30',
+    authorId,
     authorLabel : getAnnotUserLabel(),
-    widthNorm   : config.widthNorm,
+    widthNorm   : clamp(Number(widthInput ? widthInput.value : 4) / minSize, 0.001, 0.08),
     start       : point,
     end         : point
   };
@@ -765,19 +809,18 @@ function endDraw()
   draftNode = null;
   draftShape = null;
 
-  if (shape) addShape(shape);
-  else renderBoard();
-}
+  if (shape)
+  {
+    const boardId = getBoardId();
+    const board = getBoard(boardId);
 
-function addShape(shape)
-{
-  if (!shape) return;
-
-  const boardId = getBoardId();
-  const board = getBoard(boardId);
-
-  board.redo = [];
-  runOp('shape:add', { shape }, boardId);
+    board.redo = [];
+    runOp('shape:add', { shape }, boardId);
+  }
+  else
+  {
+    renderBoard();
+  }
 }
 
 // 本端绘制操作统一走“记录去重 → 更新画布 → SIP INFO 同步”。
@@ -788,6 +831,13 @@ function runOp(action, payload, boardId)
   rememberOp(op.operationId);
   if (applyOp(op)) sendOp(op);
 }
+
+// =============================================================================
+// 7. 撤销、重做与作者范围清理
+//
+// Demo 只允许用户撤销或清除自己创建的图形。redo 栈属于各自 board，新的绘制
+// 会清空该 board 的 redo，避免把另一条编辑分支重新插回画布。
+// =============================================================================
 
 function getOwnShape(board)
 {
@@ -824,15 +874,6 @@ function redoInk()
   runOp('shape:add', { shape }, boardId);
 }
 
-function askClear()
-{
-  const board = getBoard(getBoardId());
-
-  if (!getOwnShape(board)) return;
-
-  showClearBox(true);
-}
-
 function clearMine()
 {
   const boardId = getBoardId();
@@ -844,11 +885,12 @@ function clearMine()
   runOp('author:clear', {}, boardId);
 }
 
-function doClear()
-{
-  clearMine();
-  showClearBox(false);
-}
+// =============================================================================
+// 8. 白板工具栏、提示与自适应布局
+//
+// 这一组函数只负责 DOM/Konva 展示状态；SDK 调用仍集中在 sendOp()、bindInk()
+// 和白板生命周期函数中，方便从页面操作定位真实的 SDK 接入点。
+// =============================================================================
 
 function showClearBox(visible)
 {
@@ -986,6 +1028,13 @@ function resizeInk()
   }
 }
 
+// =============================================================================
+// 9. 标注模式、共享白板生命周期与初始化
+//
+// screen 模式依附本端/远端共享画面；whiteboard 模式使用独立画布并保存固定
+// 目标集合。只有共享白板发起方可以广播 board:close，防止参与方误关全局白板。
+// =============================================================================
+
 function setInkMode(mode)
 {
   inkMode = mode || '';
@@ -1033,6 +1082,13 @@ function toggleInk()
   updateInkUi();
 }
 
+/**
+ * 打开共享白板。
+ *
+ * @param {boolean} notify - true 表示本端发起并发送 board:open 与快照；false
+ *   表示响应远端通知，只更新本地页面，避免再次发送 INFO 形成回环
+ * @returns {void}
+ */
 function openBoard(notify)
 {
   if (notify !== false && (typeof appMode === 'undefined' || appMode !== 'conference'))
@@ -1042,7 +1098,10 @@ function openBoard(notify)
     return;
   }
 
-  const targets = notify === false ? [] : getBoardLegs();
+  const targets = notify === false ? [] :
+    (typeof appMode !== 'undefined' && appMode === 'conference' &&
+      typeof getShareLegs === 'function' ?
+      getShareLegs().map((leg) => leg.session) : getInkLegs());
 
   if (notify !== false && targets.length === 0)
   {
@@ -1074,6 +1133,13 @@ function openBoard(notify)
   }
 }
 
+/**
+ * 关闭共享白板。
+ *
+ * @param {boolean} notify - true 表示由白板发起方广播 board:close；false 表示
+ *   响应远端关闭通知。两种路径都会恢复之前的共享画面模式并清理目标集合。
+ * @returns {void}
+ */
 function closeBoard(notify)
 {
   if (inkMode !== 'whiteboard') return;
@@ -1134,6 +1200,15 @@ function resetInk()
   setInkMode('');
 }
 
+/**
+ * 初始化 Konva 舞台并绑定白板工具栏事件。
+ *
+ * 该函数只在页面脚本加载后调用一次。绘制事件使用 pointer 系列，同时兼容
+ * 鼠标、触控笔和触摸；ResizeObserver 不可用时退回 window.resize。
+ * SDK 会话事件不在这里绑定，而是在 newRTCSession 时调用 bindInk(session)。
+ *
+ * @returns {void}
+ */
 function initInk()
 {
   if (typeof Konva === 'undefined')
@@ -1172,8 +1247,15 @@ function initInk()
   document.querySelector('#boardClose').onclick = () => closeBoard(true);
   document.querySelector('#inkUndo').onclick = undoInk;
   document.querySelector('#inkRedo').onclick = redoInk;
-  document.querySelector('#inkClear').onclick = askClear;
-  document.querySelector('#inkClearOk').onclick = doClear;
+  document.querySelector('#inkClear').onclick = function()
+  {
+    if (getOwnShape(getBoard(getBoardId()))) showClearBox(true);
+  };
+  document.querySelector('#inkClearOk').onclick = function()
+  {
+    clearMine();
+    showClearBox(false);
+  };
   document.querySelector('#inkCancel').onclick = () =>
   {
     showClearBox(false);

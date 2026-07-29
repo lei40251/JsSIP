@@ -60,7 +60,10 @@ document.querySelector('#confSilent').onclick = function()
 };
 
 // "接听来电"：仅在有待接听的会议来电时可用
-document.querySelector('#confAnswer').onclick = answerConf;
+document.querySelector('#confAnswer').onclick = function()
+{
+  answerLeg().catch((error) => setStatus(`会议接听失败：${error.message || error}`));
+};
 document.querySelector('#confHangup').onclick = endConf;
 
 document.querySelector('#confShare').onclick = function()
@@ -403,7 +406,10 @@ document.querySelector('#textMarkSet').onclick = async function()
 
 document.querySelector('#textMarkClear').onclick = async function()
 {
-  await clearTextMark();
+  document.getElementById('textMarkText').value = '';
+  document.getElementById('textMarkSize').value = '';
+  document.getElementById('textMarkAlpha').value = '';
+  await setTextMark();
 };
 
 document.querySelector('#imgMarkSet').onclick = async function()
@@ -413,5 +419,9 @@ document.querySelector('#imgMarkSet').onclick = async function()
 
 document.querySelector('#imgMarkClear').onclick = async function()
 {
-  await clearImgMark();
+  document.getElementById('imgMarkUrl').value = '';
+  document.getElementById('imgMarkW').value = '';
+  document.getElementById('imgMarkH').value = '';
+  document.getElementById('imgMarkAlpha').value = '';
+  await setImageMark();
 };

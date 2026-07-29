@@ -38,6 +38,13 @@ let mixTimer = null;
 // 当前合成签名字符串，用于跳过无变化的重复合成
 let mixKey = '';
 
+// =============================================================================
+// 1. 会议成员查询与基础 SIP 字段读取
+//
+// 这些函数不创建会话，只从 confLegs 或 SIP request 读取状态。其返回值被呼叫、
+// 接听、共享和 UI 共用，因此这里保持无副作用，便于沿调用链定位当前目标成员。
+// =============================================================================
+
 /**
  * 读取 SIP 请求中的自定义头部字段。
  * 用于识别 X-Silent-Join 等三方特有的信令标记。
@@ -56,17 +63,6 @@ function getConfHeader(request, name)
   {
     return null;
   }
-}
-
-/**
- * 判断 SIP 头部字段的布尔语义。
- * 支持 'true'、'1'、'yes' 及其大小写变体，忽略参数部分（如 ;param）。
- */
-function hasConfHeader(value)
-{
-  const normalized = String(value || '').split(';')[0].trim().toLowerCase();
-
-  return normalized === 'true' || normalized === '1' || normalized === 'yes';
 }
 
 /**
@@ -122,7 +118,72 @@ function getSelLeg()
 }
 
 // =============================================================================
-// 呼叫媒体与 composer 输出准备
+// 2. 会话入口参数识别
+//
+// 本地外呼通过 pendingCall 把角色和媒体参数交给 newRTCSession；远端呼入则从
+// SIP 请求读取号码及 X-Silent-Join。这里仅解析入口信息，不创建或接听会话。
+// =============================================================================
+
+/**
+ * 从 newRTCSession 事件中提取远端号码。
+ *
+ * @param {object} e - SDK newRTCSession 事件对象
+ * @returns {string} 远端 SIP 用户名，无法读取时返回空字符串
+ */
+function getRemoteNo(e)
+{
+  try
+  {
+    return e.originator === 'remote' ? e.request.from.uri.user : e.request.to.uri.user;
+  }
+  catch (error)
+  {
+    return '';
+  }
+}
+
+/**
+ * 从 newRTCSession 事件解析会话创建参数。
+ *
+ * 本地外呼：消费 pendingCall 中由 callConf()/callSilentC() 保存的参数。
+ * 远端呼入：分配 B/C 角色，并根据 X-Silent-Join 决定媒体方向和是否自动接听。
+ *
+ * @param {object} e - SDK newRTCSession 事件对象
+ * @returns {object|null} leg 创建参数；无法归类的会话返回 null
+ */
+function getSessOpts(e)
+{
+  if (e.originator === 'local' && pendingCall)
+  {
+    const pending = pendingCall;
+
+    pendingCall = null;
+
+    return pending;
+  }
+
+  if (e.originator !== 'remote')
+  {
+    return null;
+  }
+
+  const role = getNextRole();
+  const silentHeader = String(getConfHeader(e.request, 'X-Silent-Join') || '')
+    .split(';')[0].trim().toLowerCase();
+  const silent = silentHeader === 'true' || silentHeader === '1' || silentHeader === 'yes';
+
+  return {
+    role,
+    originator : e.originator,
+    remoteNo   : getRemoteNo(e),
+    direction  : silent ? 'sendonly' : 'sendrecv',
+    silent,
+    autoAnswer : role === 'C' && silent
+  };
+}
+
+// =============================================================================
+// 3. 呼叫媒体与 composer 输出准备
 //
 // 三方会议中 A 作为桥接端，需要 MediaEffectsComposer 来合成 B 和 C 的远端轨。
 // A-B 主会话的 composer 输出视频（A+B+C 合成画面），同时按 slot 混音，
@@ -237,21 +298,6 @@ function cloneHost(hostLeg)
 }
 
 /**
- * 用 composer 输出轨构建 MediaStream。
- * 视频轨来自 composer.getVideoStream()，音频轨来自指定的音频流。
- */
-function getMixStream(videoTrack, audioStream)
-{
-  const stream = new MediaStream();
-  const audioTrack = audioStream && audioStream.getAudioTracks()[0];
-
-  if (audioTrack) stream.addTrack(audioTrack);
-  if (videoTrack) stream.addTrack(videoTrack);
-
-  return stream;
-}
-
-/**
  * 为普通 C（非静默）准备 A-B 主 composer 的输出流。
  *
  * 执行步骤：
@@ -295,8 +341,14 @@ async function prepCOutput(hostLeg)
     confMixer = composer;
     mixHostId = hostLeg.session.id;
 
+    const mediaStream = new MediaStream();
+    const cAudioTrack = cAudio && cAudio.getAudioTracks()[0];
+
+    if (cAudioTrack) mediaStream.addTrack(cAudioTrack);
+    mediaStream.addTrack(videoTrack);
+
     return {
-      mediaStream : getMixStream(videoTrack, cAudio),
+      mediaStream,
       mixAudio    : cAudio,
       backupStream,
       mixerHostId : hostLeg.session.id
@@ -475,7 +527,7 @@ function getAnswerOpts(leg, cOutput)
 }
 
 // =============================================================================
-// 会话模型
+// 4. 会话模型
 //
 // 每个会议成员（B 或 C）用一个 leg 对象管理其 RTCSession、远端媒体轨、
 // 屏幕共享状态和 composer 合成输入。leg 的生命周期从 newRTCSession 事件开始，
@@ -544,22 +596,12 @@ function addLeg(session, opts)
 }
 
 // =============================================================================
-// 当前会议成员的通话统计与通用控制
+// 5. 当前会议成员的通话统计与通用控制
 //
 // 三方会议中 A 与 B、C 分别维护独立的 PeerConnection，统计面板需要
 // 根据当前选中的成员动态切换展示内容。所有统计相关信息通过
 // RTCSession 的 stats:detailed-report 事件消费。
 // =============================================================================
-
-function showLegStats(leg)
-{
-  const role = leg.role;
-  const remote = leg.remoteNo || '-';
-
-  setStats('#statsPc', `A-${role} PeerConnection（${role}: ${remote}）`);
-  setStats('#statsOutLabel', `A → ${role}:`);
-  setStats('#statsInLabel', `${role} → A:`);
-}
 
 /**
  * 选中会议成员并更新统计面板。
@@ -577,7 +619,9 @@ function selectLeg(leg)
   selectedId = leg.session.id;
   rtcSession = leg.session;
   statsCall = leg.session;
-  showLegStats(leg);
+  setStats('#statsPc', `A-${leg.role} PeerConnection（${leg.role}: ${leg.remoteNo || '-'}）`);
+  setStats('#statsOutLabel', `A → ${leg.role}:`);
+  setStats('#statsInLabel', `${leg.role} → A:`);
 
   if (leg.stats)
   {
@@ -694,69 +738,11 @@ function bindControls()
 }
 
 // =============================================================================
-// 会话识别、远端媒体与 RTCSession 事件
+// 6. 远端媒体收集与 RTCSession 事件
 //
-// 三方模式下 newRTCSession 事件由 onConfSession 统一处理。
-// 它负责分类呼入角色（B/C/静默）、创建 leg、绑定事件并决定是否自动接听。
+// bindTracks() 只收集 SDK PeerConnection 产生的远端轨；bindLegEvents() 统一处理
+// accepted/confirmed/failed/ended 等会话状态。事件顺序保持 SDK 原始语义。
 // =============================================================================
-
-/**
- * 从 newRTCSession 事件中提取远端号码。
- */
-function getRemoteNo(e)
-{
-  try
-  {
-    return e.originator === 'remote' ? e.request.from.uri.user : e.request.to.uri.user;
-  }
-  catch (error)
-  {
-    return '';
-  }
-}
-
-/**
- * 从 newRTCSession 事件解析会话创建参数。
- *
- * 本地外呼：使用 pending 队列中的 opts。
- * 远端呼入：根据 X-Silent-Join 头部和当前会议状态分配角色。
- */
-function getSessOpts(e)
-{
-  if (e.originator === 'local' && pendingCall)
-  {
-    const pending = pendingCall;
-
-    pendingCall = null;
-
-    return pending;
-  }
-
-  if (e.originator !== 'remote')
-  {
-    return null;
-  }
-
-  const role = getNextRole();
-  const silent = hasConfHeader(getConfHeader(e.request, 'X-Silent-Join'));
-
-  return {
-    role,
-    originator : e.originator,
-    remoteNo   : getRemoteNo(e),
-    direction  : silent ? 'sendonly' : 'sendrecv',
-    silent,
-    autoAnswer : role === 'C' && silent
-  };
-}
-
-function onTrackEnd(track, listener)
-{
-  if (track && track.addEventListener)
-  {
-    track.addEventListener('ended', listener, { once: true });
-  }
-}
 
 /**
  * 监听 PeerConnection 的 track 事件，自动收集远端音视频轨。
@@ -1197,6 +1183,13 @@ function onConfSession(e)
   return true;
 }
 
+// =============================================================================
+// 7. 会议呼叫与接听入口
+//
+// callConf()/callSilentC() 负责构造 ua.call() 参数，answerLeg() 负责调用
+// session.answer()。媒体准备失败只回滚 composer 输出，不改变 SDK 会话时序。
+// =============================================================================
+
 /**
  * 发起会议外呼。
  *
@@ -1489,7 +1482,7 @@ async function answerLeg(leg)
 }
 
 // =============================================================================
-// 三方媒体合成与失败降级
+// 8. 三方媒体合成与失败降级
 //
 // 合成流程：A-B 和 A-C 的远端音视频轨通过 MediaEffectsComposer.addSource()
 // 添加到主 composer 的不同 slot 中，composer 输出合成后的 A+B+C 视频画面，
@@ -1767,7 +1760,7 @@ async function restoreAll(badHostId)
 }
 
 // =============================================================================
-// 媒体预览与会话清理
+// 9. 媒体预览与会话清理
 // =============================================================================
 
 /**
@@ -1988,16 +1981,6 @@ async function removeLeg(leg)
   updateConfUi();
 }
 
-function endLeg(sessionId)
-{
-  const leg = confLegs.get(sessionId);
-
-  if (leg && !leg.session.isEnded())
-  {
-    leg.session.terminate();
-  }
-}
-
 /**
  * 挂断所有会议成员（包括已确认和未确认的）。
  */
@@ -2017,7 +2000,7 @@ function endConf()
 }
 
 // =============================================================================
-// 定向屏幕共享
+// 10. 定向屏幕共享
 //
 // 三方模式下 A 调用每条 RTCSession 的 share() 辅流模式，向指定成员（B 或 C）
 // 发送同一个屏幕流。transceiver、重协商、MID 通知和失败回滚均由 SDK 负责。
@@ -2220,7 +2203,7 @@ async function unshareConf(fromEnded)
 }
 
 // =============================================================================
-// 呼转与页面状态
+// 11. 呼转与页面状态
 // =============================================================================
 
 /**
@@ -2337,7 +2320,7 @@ function updateConfUi()
     endBtn.innerHTML = '<i class="bi-telephone-x-fill"></i>';
     endBtn.onclick = function()
     {
-      endLeg(leg.session.id);
+      if (!leg.session.isEnded()) leg.session.terminate();
     };
     item.appendChild(selectBtn);
     item.appendChild(targetBtn);
@@ -2405,9 +2388,4 @@ function updateConfUi()
       cancelBtn.onclick = cancelRefer;
     }
   }
-}
-
-function answerConf()
-{
-  return answerLeg().catch((error) => setStatus(`会议接听失败：${error.message || error}`));
 }

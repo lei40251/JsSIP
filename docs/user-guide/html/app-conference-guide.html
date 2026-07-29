@@ -181,8 +181,8 @@ flowchart TB
 </tr>
 <tr>
 <td><code>app-sdk-helper.js</code></td>
-<td><code>setStatus()</code>、<code>setMedia()</code>、来电通知和共享弹窗函数</td>
-<td>页面反馈和媒体渲染</td>
+<td><code>setStatus()</code>、<code>setMedia()</code>、<code>onTrackEnd()</code>、来电通知和共享弹窗函数</td>
+<td>页面反馈、媒体渲染和通用轨道生命周期监听</td>
 </tr>
 <tr>
 <td><code>app-annotation.js</code></td>
@@ -1004,7 +1004,7 @@ flowchart TB
 <td><code>X-Direction: sendonly</code></td>
 </tr>
 </tbody></table></div>
-<p><code>hasConfHeader()</code> 接受 <code>true</code>、<code>1</code>、<code>yes</code>，忽略大小写和分号后的参数。</p>
+<p><code>getSessOpts()</code> 在读取 <code>X-Silent-Join</code> 后直接识别 <code>true</code>、<code>1</code>、<code>yes</code>，忽略大小写和分号后的参数。</p>
 <h3 id="13-2-屏幕共享-info">13.2 屏幕共享 INFO<a class="heading-anchor" href="#13-2-屏幕共享-info" aria-label="链接到本节">#</a></h3>
 <p>该协议由 <code>RTCSession.share()</code> 内部发送和消费，Demo 不直接构造。内容类型为 <code>application/json</code>：</p>
 <div class="code-block"><div class="code-toolbar"><span>json</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-json">{
@@ -1444,8 +1444,8 @@ flowchart TB
 <td>单 leg 完整资源清理和降级</td>
 </tr>
 <tr>
-<td><code>endLeg</code></td>
-<td>挂断指定成员</td>
+<td><code>updateConfUi</code> 中的成员挂断事件</td>
+<td>直接调用目标会话的 <code>terminate()</code></td>
 </tr>
 <tr>
 <td><code>endConf</code></td>
@@ -1474,7 +1474,7 @@ flowchart TB
 </code></pre>
 </div><p>掌握这条链后，再分别阅读 <code>callSilentC()</code>、屏幕共享函数，以及 <code>app-annotation.js</code> 中的 <code>bindInk()</code>、<code>onInkInfo()</code> 和 <code>openBoard()</code>，即可覆盖会议、标注和白板的主干流程。</p>
 <h2 id="22-app-conference-js-完整方法调用图">22. <code>app-conference.js</code> 完整方法调用图<a class="heading-anchor" href="#22-app-conference-js-完整方法调用图" aria-label="链接到本节">#</a></h2>
-<p>本节先覆盖 <code>app-conference.js</code> 当前声明的全部 69 个函数，并补充它与 <code>app-annotation.js</code> 的跨文件调用关系。图中：</p>
+<p>本节覆盖 <code>app-conference.js</code> 当前声明的 37 个顶层函数，并补充它与 <code>app-sdk-helper.js</code>、<code>app-annotation.js</code> 的跨文件调用关系。图中：</p>
 <ul>
 <li>实线箭头表示函数直接调用另一个函数。</li>
 <li>虚线箭头表示页面绑定、SDK 事件或异步回调触发。</li>
@@ -1490,8 +1490,7 @@ flowchart TB
   NEXT --&gt; CALL[&quot;callConf()&quot;]
 
   SILENT[&quot;外部：静默呼叫 A 按钮&quot;] --&gt; SCALL[&quot;callSilentC()&quot;]
-  ANSWER[&quot;外部：接听来电按钮&quot;] --&gt; AP[&quot;answerConf()&quot;]
-  AP --&gt; ALEG[&quot;answerLeg()&quot;]
+  ANSWER[&quot;外部：接听来电按钮&quot;] --&gt; ALEG[&quot;answerLeg()&quot;]
   HANGALL[&quot;外部：全部挂断按钮&quot;] --&gt; TERMALL[&quot;endConf()&quot;]
 
   STARTUI[&quot;外部：开始共享屏幕按钮&quot;] --&gt; START[&quot;shareConf()&quot;]
@@ -1526,7 +1525,7 @@ flowchart TB
 
   RESOLVE --&gt; NEXT[&quot;getNextRole()&quot;]
   RESOLVE --&gt; REQHEAD
-  RESOLVE --&gt; ENABLED[&quot;hasConfHeader()&quot;]
+  RESOLVE --&gt; ENABLED[&quot;内联解析 X-Silent-Join&quot;]
   RESOLVE --&gt; REMOTE
   NEXT --&gt; BYROLE
 
@@ -1542,7 +1541,7 @@ flowchart TB
   SILENT[&quot;callSilentC()&quot;] --&gt; EXTRA
   SILENT -.-&gt;|&quot;ua.call()&quot;| NEW
 
-  PENDING[&quot;answerConf()&quot;] --&gt; ANSWER
+  PENDING[&quot;接听按钮事件&quot;] --&gt; ANSWER
   ANSWER --&gt; SELECTED[&quot;getSelLeg()&quot;]
   ANSWER --&gt; BYROLE
   ANSWER --&gt; PREPARE
@@ -1599,7 +1598,7 @@ flowchart TB
     PREPARE --&gt; HYDRATE_PREP[&quot;loadRemote()&quot;]
     PREPARE --&gt; SOURCE_PREP[&quot;setMixSource()&quot;]
     PREPARE --&gt; REMEMBER[&quot;saveMedia()&quot;]
-    PREPARE --&gt; OUTPUT[&quot;getMixStream()&quot;]
+    PREPARE --&gt; OUTPUT[&quot;new MediaStream()&quot;]
     PREPARE -.-&gt;|&quot;异常&quot;| ROLLBACK[&quot;undoCOutput()&quot;]
     ENSURE --&gt; OPT[&quot;buildMixOpts()&quot;]
     ENSURE --&gt; LOCAL_PREP[&quot;showLocal()&quot;]
@@ -1640,7 +1639,7 @@ flowchart TB
   UI --&gt; DISPLAY[&quot;leg.role&quot;]
   UI -.-&gt;|&quot;成员按钮 onclick&quot;| SELECT[&quot;selectLeg()&quot;]
   UI -.-&gt;|&quot;成员按钮 onclick&quot;| MAIN[&quot;showMain()&quot;]
-  UI -.-&gt;|&quot;单成员挂断 onclick&quot;| TERM[&quot;endLeg()&quot;]
+  UI -.-&gt;|&quot;单成员挂断 onclick&quot;| TERM[&quot;session.terminate()&quot;]
   UI --&gt; NEXT[&quot;getNextRole()&quot;]
   UI --&gt; TARGETS[&quot;getShareLegs()&quot;]
   UI --&gt; BINDCTRL[&quot;bindControls()&quot;]
@@ -1648,11 +1647,9 @@ flowchart TB
   UI -.-&gt;|&quot;取消 REFER 按钮绑定&quot;| CANCELREF[&quot;cancelRefer()&quot;]
 
   NEXT --&gt; BYROLE
-  SELECT --&gt; PEERLABEL[&quot;showLegStats()&quot;]
-  SELECT --&gt; REPORT[&quot;renderStats()&quot;]
   SELECT --&gt; TEXT[&quot;setStats()&quot;]
-  PEERLABEL --&gt; DISPLAY
-  PEERLABEL --&gt; TEXT
+  SELECT --&gt; REPORT[&quot;renderStats()&quot;]
+  TEXT --&gt; DISPLAY
 
   BINDSTATS[&quot;bindLegStats()&quot;] -.-&gt;|&quot;stats:detailed-report&quot;| REPORT
   BINDSTATS --&gt; SELECT
@@ -1712,7 +1709,7 @@ flowchart TB
 <h3 id="22-7-挂断-资源清理与-refer-调用图">22.7 挂断、资源清理与 REFER 调用图<a class="heading-anchor" href="#22-7-挂断-资源清理与-refer-调用图" aria-label="链接到本节">#</a></h3>
 <p>最后一张图展示所有结束入口如何汇入统一清理，以及清理过程会调用哪些恢复和 UI 函数。</p>
 <div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">flowchart TD
-  TERMONE[&quot;endLeg()&quot;] -.-&gt;|&quot;session.terminate → ended&quot;| CLEAN[&quot;removeLeg()&quot;]
+  TERMONE[&quot;成员挂断按钮：session.terminate()&quot;] -.-&gt;|&quot;ended&quot;| CLEAN[&quot;removeLeg()&quot;]
   TERMALL[&quot;endConf()&quot;] -.-&gt;|&quot;每个 session.terminate → ended&quot;| CLEAN
   EVENTS[&quot;bindLegEvents()&quot;] -.-&gt;|&quot;failed / ended&quot;| CLEAN
 
