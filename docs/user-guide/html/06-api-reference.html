@@ -1075,7 +1075,7 @@ if (aiNS)
 <p>会话集成时通常使用 <code>slot: 0</code> 表示本地摄像头。<code>options.mode</code> 可为 <code>none/blur/image/color</code>，完整参数见第 4 章。</p>
 <h3 id="clearaibackground-slot-void"><code>clearAiBackground(slot): void</code><a class="heading-anchor" href="#clearaibackground-slot-void" aria-label="链接到本节">#</a></h3>
 <p>清除对应输入源的虚拟背景。本地摄像头通常使用 <code>clearAiBackground(0)</code>。</p>
-<p>Base JS Demo 在调用这些方法前先判断当前会话是否真的创建了 composer。以下是 <a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a> 的运行时镜像更新节选：</p>
+<p>Base JS Demo 在调用这些方法前先判断当前会话是否真的创建了 composer。以下是 <a href="../../../demo/base-js/js/app-effects.js"><code>app-effects.js</code></a> 的运行时镜像更新节选：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const fx = getFx();
 
 if (!fx)
@@ -1168,7 +1168,7 @@ if (monitor)
 </tr>
 </tbody></table></div>
 <p><code>originator</code> 常见值为 <code>local</code>、<code>remote</code>。<code>cause</code> 是业务日志和用户提示的主要原因字段。</p>
-<p>Demo 将 <code>trying</code> 和 <code>progress</code> 转成页面可理解的状态文字。以下代码取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>：</p>
+<p>Demo 将 <code>trying</code> 和 <code>progress</code> 转成页面可理解的状态文字。以下代码取自 <a href="../../../demo/base-js/js/app-call.js"><code>app-call.js</code></a>：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">e.session.on(&#39;trying&#39;, function()
 {
   setStatus(&#39;Trying&#39;);
@@ -1286,7 +1286,7 @@ e.session.on(&#39;remoteUnShared&#39;, function()
   document.querySelector(&#39;#remoteVideo2&#39;).classList = &#39;mh-100 mw-100 hide&#39;;
 });
 </code></pre>
-</div><p>代码取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>。共享流与普通远端摄像头画面分区显示，可避免停止共享时把主视频也清空。</p>
+</div><p>代码取自 <a href="../../../demo/base-js/js/app-call.js"><code>app-call.js</code></a>。共享流与普通远端摄像头画面分区显示，可避免停止共享时把主视频也清空。</p>
 <h2 id="6-15-rtcsession-事件-sip-扩展消息">6.15 RTCSession 事件：SIP 扩展消息<a class="heading-anchor" href="#6-15-rtcsession-事件-sip-扩展消息" aria-label="链接到本节">#</a></h2>
 <div class="table-wrap"><table>
 <thead>
@@ -1343,7 +1343,7 @@ e.session.on(&#39;newInfo&#39;, function(d)
   }
 });
 </code></pre>
-</div><p>两段都节选自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>。Demo 的完整 <code>newInfo</code> 回调还会根据约定的 JSON <code>event</code> 处理呼转等候室，客户项目应按自己的协议处理。</p>
+</div><p>两段都节选自 <a href="../../../demo/base-js/js/app-call.js"><code>app-call.js</code></a>。Demo 的完整 <code>newInfo</code> 回调还会根据约定的 JSON <code>event</code> 处理呼转等候室，客户项目应按自己的协议处理。</p>
 <h2 id="6-16-rtcsession-统计事件">6.16 RTCSession 统计事件<a class="heading-anchor" href="#6-16-rtcsession-统计事件" aria-label="链接到本节">#</a></h2>
 <div class="table-wrap"><table>
 <thead>
@@ -1396,7 +1396,7 @@ e.session.on(&#39;stats:stats-error&#39;, function(error)
   }
 });
 </code></pre>
-</div><p>代码取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>。完整 Demo 还会渲染 RTT、上下行质量和 issue 列表。</p>
+</div><p>代码取自 <a href="../../../demo/base-js/js/app-call.js"><code>app-call.js</code></a>。完整 Demo 还会渲染 RTT、上下行质量和 issue 列表。</p>
 <h2 id="6-17-crtc-utils">6.17 <code>CRTC.Utils</code><a class="heading-anchor" href="#6-17-crtc-utils" aria-label="链接到本节">#</a></h2>
 <h3 id="设备与流">设备与流<a class="heading-anchor" href="#设备与流" aria-label="链接到本节">#</a></h3>
 <div class="table-wrap"><table>
@@ -1440,7 +1440,7 @@ e.session.on(&#39;stats:stats-error&#39;, function(error)
 </tr>
 </tbody></table></div>
 <p>设备项常见字段：<code>kind</code>、<code>label</code>、<code>deviceId</code>。未授权前 <code>label</code> 可能为空。</p>
-<p>Base JS Demo 在获得权限后用 SDK Utils 填充摄像头下拉框。以下代码取自 <a href="../../../demo/base-js/js/app-sdk-helper.js"><code>app-sdk-helper.js</code></a>：</p>
+<p>Base JS Demo 在获得权限后用 SDK Utils 填充摄像头下拉框。以下代码取自 <a href="../../../demo/base-js/js/app-helper.js"><code>app-helper.js</code></a>：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">await CRTC.Utils.getCameras()
   .then((cameras) =&gt;
   {

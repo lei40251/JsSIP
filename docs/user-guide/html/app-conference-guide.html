@@ -143,12 +143,12 @@ flowchart TB
 <h2 id="2-文件位置-加载顺序与模块边界">2. 文件位置、加载顺序与模块边界<a class="heading-anchor" href="#2-文件位置-加载顺序与模块边界" aria-label="链接到本节">#</a></h2>
 <p>页面脚本按以下顺序加载：</p>
 <ol>
-<li><a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a>：生成 composer、AiNS 等媒体配置。</li>
-<li><a href="../../../demo/base-js/js/app-sdk-helper.js"><code>app-sdk-helper.js</code></a>：设备约束、状态提示、媒体元素和弹窗辅助函数。</li>
-<li><a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>：UA 配置、点对点通话和页面公共状态。</li>
+<li><a href="../../../demo/base-js/js/app-effects.js"><code>app-effects.js</code></a>：生成 composer、AiNS 等媒体配置。</li>
+<li><a href="../../../demo/base-js/js/app-helper.js"><code>app-helper.js</code></a>：设备约束、状态提示、媒体元素和弹窗辅助函数。</li>
+<li><a href="../../../demo/base-js/js/app-call.js"><code>app-call.js</code></a>：UA 配置、点对点通话和页面公共状态。</li>
 <li><a href="../../../demo/base-js/js/app-conference.js"><code>app-conference.js</code></a>：三方会议逻辑。</li>
 <li><a href="../../../demo/base-js/js/app-annotation.js"><code>app-annotation.js</code></a>：屏幕标注、共享白板和 INFO 同步逻辑。</li>
-<li><a href="../../../demo/base-js/js/app-ui-binding.js"><code>app-ui-binding.js</code></a>：把页面按钮绑定到上述全局函数。</li>
+<li><a href="../../../demo/base-js/js/app-events.js"><code>app-events.js</code></a>：把页面按钮绑定到上述全局函数。</li>
 </ol>
 <p><code>app-conference.js</code> 没有模块导入/导出，而是依赖同一页面全局作用域中的变量和函数。主要外部依赖如下：</p>
 <div class="table-wrap"><table>
@@ -160,27 +160,27 @@ flowchart TB
 </tr>
 </thead>
 <tbody><tr>
-<td><code>app.js</code></td>
+<td><code>app-call.js</code></td>
 <td><code>ua</code>、<code>rtcSession</code>、<code>statsSession</code>、<code>appMode</code>、<code>pcConfig</code>、<code>extraFeatures</code>、<code>sipDomain</code>、<code>xdata</code>、<code>noremb</code>、<code>camFlag</code></td>
 <td>注册状态、当前会话、网络配置、SIP 地址和兼容开关</td>
 </tr>
 <tr>
-<td><code>app.js</code></td>
+<td><code>app-call.js</code></td>
 <td><code>localVid</code>、<code>remoteVid</code></td>
 <td>A 本地预览和 B/C 远端主画面</td>
 </tr>
 <tr>
-<td><code>app-media-effects.js</code></td>
+<td><code>app-effects.js</code></td>
 <td><code>getFxOpts()</code>、<code>getNsOpts()</code>、<code>onFxIssue()</code></td>
 <td>复用页面选择的镜像、水印、虚拟背景和 AiNS 配置</td>
 </tr>
 <tr>
-<td><code>app-sdk-helper.js</code></td>
+<td><code>app-helper.js</code></td>
 <td><code>getAudioOpts()</code>、<code>getVideoOpts()</code></td>
 <td>获取页面当前选择的麦克风和摄像头约束</td>
 </tr>
 <tr>
-<td><code>app-sdk-helper.js</code></td>
+<td><code>app-helper.js</code></td>
 <td><code>setStatus()</code>、<code>setMedia()</code>、<code>onTrackEnd()</code>、来电通知和共享弹窗函数</td>
 <td>页面反馈、媒体渲染和通用轨道生命周期监听</td>
 </tr>
@@ -200,7 +200,7 @@ flowchart TB
 <td>轨道组合、替换和屏幕采集</td>
 </tr>
 </tbody></table></div>
-<p>会议模块并不自行监听 UA。<code>initMode(&#39;conference&#39;)</code> 在 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a> 中创建唯一的 <code>CRTC.UA</code>，并将其 <code>newRTCSession</code> 事件绑定到 <code>onConfSession</code>。因此同一页面只会进入点对点处理器或会议处理器中的一个。</p>
+<p>会议模块并不自行监听 UA。<code>initMode(&#39;conference&#39;)</code> 在 <a href="../../../demo/base-js/js/app-call.js"><code>app-call.js</code></a> 中创建唯一的 <code>CRTC.UA</code>，并将其 <code>newRTCSession</code> 事件绑定到 <code>onConfSession</code>。因此同一页面只会进入点对点处理器或会议处理器中的一个。</p>
 <h2 id="3-角色-容量和两种-c">3. 角色、容量和两种 C<a class="heading-anchor" href="#3-角色-容量和两种-c" aria-label="链接到本节">#</a></h2>
 <h3 id="3-1-角色定义">3.1 角色定义<a class="heading-anchor" href="#3-1-角色定义" aria-label="链接到本节">#</a></h3>
 <div class="table-wrap"><table>
@@ -398,7 +398,7 @@ flowchart TB
 <h2 id="5-从页面初始化到新会话">5. 从页面初始化到新会话<a class="heading-anchor" href="#5-从页面初始化到新会话" aria-label="链接到本节">#</a></h2>
 <h3 id="5-1-选择三方模式">5.1 选择三方模式<a class="heading-anchor" href="#5-1-选择三方模式" aria-label="链接到本节">#</a></h3>
 <p>页面点击 <code>#initConf</code> 后：</p>
-<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">app-ui-binding.js
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">app-events.js
   → initMode(&#39;conference&#39;)
     → new CRTC.WebSocketInterface(signalingUrl)
     → new CRTC.UA(configuration)
@@ -672,7 +672,7 @@ flowchart TB
 <li>不调用任何 B 或 C sender 的 <code>replaceTrack()</code>。</li>
 </ol>
 <h3 id="8-5-composer-与页面媒体效果">8.5 composer 与页面媒体效果<a class="heading-anchor" href="#8-5-composer-与页面媒体效果" aria-label="链接到本节">#</a></h3>
-<p><code>getConfMixer()</code> 优先返回当前会议 composer。<code>app-media-effects.js</code> 的媒体效果面板会先调用它，再回退到全局 <code>rtcSession.getMediaEffectsComposer()</code>。因此三方模式下镜像、水印、虚拟背景等操作会落到会议实际使用的 composer。</p>
+<p><code>getConfMixer()</code> 优先返回当前会议 composer。<code>app-effects.js</code> 的媒体效果面板会先调用它，再回退到全局 <code>rtcSession.getMediaEffectsComposer()</code>。因此三方模式下镜像、水印、虚拟背景等操作会落到会议实际使用的 composer。</p>
 <p>需要注意：静默 C 场景的“当前会议 composer”会切换到 A-C 会话的独立 composer；普通三方则是 A-B 主 composer。</p>
 <h2 id="9-rtcsession-事件与媒体轨管理">9. RTCSession 事件与媒体轨管理<a class="heading-anchor" href="#9-rtcsession-事件与媒体轨管理" aria-label="链接到本节">#</a></h2>
 <h3 id="9-1-会话事件">9.1 会话事件<a class="heading-anchor" href="#9-1-会话事件" aria-label="链接到本节">#</a></h3>
@@ -833,7 +833,7 @@ flowchart TB
 <li>MID 与轨匹配后触发 <code>remoteShared</code>。</li>
 <li><code>screen-share/stop</code> 或轨 <code>ended</code> 时触发 <code>remoteUnShared</code>。</li>
 </ol>
-<p><a href="../../../demo/base-js/js/app.js"><code>app.js</code></a> 只监听这两个 SDK 事件更新 <code>#shareVid</code>，不再读取 MID 或直接监听共享 track。</p>
+<p><a href="../../../demo/base-js/js/app-call.js"><code>app-call.js</code></a> 只监听这两个 SDK 事件更新 <code>#shareVid</code>，不再读取 MID 或直接监听共享 track。</p>
 <h3 id="11-4-停止流程">11.4 停止流程<a class="heading-anchor" href="#11-4-停止流程" aria-label="链接到本节">#</a></h3>
 <p><code>unshareConf()</code> 对所有 <code>sharingScreen</code> leg：</p>
 <ol>
@@ -1246,7 +1246,7 @@ flowchart TB
 </ol>
 <h3 id="18-5-标注或白板不同步">18.5 标注或白板不同步<a class="heading-anchor" href="#18-5-标注或白板不同步" aria-label="链接到本节">#</a></h3>
 <ol>
-<li>确认 <code>app-annotation.js</code> 已在 <code>app-conference.js</code> 之后、<code>app-ui-binding.js</code> 之前加载。</li>
+<li>确认 <code>app-annotation.js</code> 已在 <code>app-conference.js</code> 之后、<code>app-events.js</code> 之前加载。</li>
 <li>检查各条会话是否执行 <code>bindInk()</code>，并收到内容类型为 <code>application/vnd.crtc.annotation+json</code> 的 <code>newInfo</code>。</li>
 <li>白板场景确认 A 发起前已选中目标，且目标会话存在于 <code>boardLegs</code>。</li>
 <li>B 能画但 C 看不到时，检查 A 是否收到 B 的 <code>operationId</code>，并通过 A-C 会话转发了同一操作 ID。</li>
@@ -1462,7 +1462,7 @@ flowchart TB
 </tbody></table></div>
 <h2 id="21-最短阅读路线">21. 最短阅读路线<a class="heading-anchor" href="#21-最短阅读路线" aria-label="链接到本节">#</a></h2>
 <p>如果只想快速掌握主干，依次阅读以下函数即可：</p>
-<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">initMode（app.js）
+<div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">initMode（app-call.js）
   → onConfSession
   → addLeg
   → bindLegEvents
@@ -1474,11 +1474,11 @@ flowchart TB
 </code></pre>
 </div><p>掌握这条链后，再分别阅读 <code>callSilentC()</code>、屏幕共享函数，以及 <code>app-annotation.js</code> 中的 <code>bindInk()</code>、<code>onInkInfo()</code> 和 <code>openBoard()</code>，即可覆盖会议、标注和白板的主干流程。</p>
 <h2 id="22-app-conference-js-完整方法调用图">22. <code>app-conference.js</code> 完整方法调用图<a class="heading-anchor" href="#22-app-conference-js-完整方法调用图" aria-label="链接到本节">#</a></h2>
-<p>本节覆盖 <code>app-conference.js</code> 当前声明的 37 个顶层函数，并补充它与 <code>app-sdk-helper.js</code>、<code>app-annotation.js</code> 的跨文件调用关系。图中：</p>
+<p>本节覆盖 <code>app-conference.js</code> 当前声明的 37 个顶层函数，并补充它与 <code>app-helper.js</code>、<code>app-annotation.js</code> 的跨文件调用关系。图中：</p>
 <ul>
 <li>实线箭头表示函数直接调用另一个函数。</li>
 <li>虚线箭头表示页面绑定、SDK 事件或异步回调触发。</li>
-<li>“外部”节点表示定义在 <code>app.js</code>、<code>app-ui-binding.js</code>、浏览器或 SDK 中的入口。</li>
+<li>“外部”节点表示定义在 <code>app-call.js</code>、<code>app-events.js</code>、浏览器或 SDK 中的入口。</li>
 <li>为保持可读性，同一个公共函数可能出现在多张图中。</li>
 </ul>
 <h3 id="22-1-页面-ua-与会议总入口">22.1 页面、UA 与会议总入口<a class="heading-anchor" href="#22-1-页面-ua-与会议总入口" aria-label="链接到本节">#</a></h3>

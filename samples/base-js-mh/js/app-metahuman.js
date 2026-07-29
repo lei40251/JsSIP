@@ -5,7 +5,7 @@
 // =============================================================================
 // 数字人（MetaHuman）Demo — UI 桥接层
 //
-// 本文件依赖 app.js 中声明的以下全局变量：
+// 本文件依赖 app-call.js 中声明的以下全局变量：
 //   metaflag, metaavatar, selectMic, setStatus, call,
 //   rtcSession, pcConfig, extraFeatures, ua
 //

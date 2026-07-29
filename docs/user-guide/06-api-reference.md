@@ -555,7 +555,7 @@ if (aiNS)
 
 清除对应输入源的虚拟背景。本地摄像头通常使用 `clearAiBackground(0)`。
 
-Base JS Demo 在调用这些方法前先判断当前会话是否真的创建了 composer。以下是 [`app-media-effects.js`](../../demo/base-js/js/app-media-effects.js) 的运行时镜像更新节选：
+Base JS Demo 在调用这些方法前先判断当前会话是否真的创建了 composer。以下是 [`app-effects.js`](../../demo/base-js/js/app-effects.js) 的运行时镜像更新节选：
 
 ```js
 const fx = getFx();
@@ -610,7 +610,7 @@ if (monitor)
 
 `originator` 常见值为 `local`、`remote`。`cause` 是业务日志和用户提示的主要原因字段。
 
-Demo 将 `trying` 和 `progress` 转成页面可理解的状态文字。以下代码取自 [`app.js`](../../demo/base-js/js/app.js)：
+Demo 将 `trying` 和 `progress` 转成页面可理解的状态文字。以下代码取自 [`app-call.js`](../../demo/base-js/js/app-call.js)：
 
 ```js
 e.session.on('trying', function()
@@ -690,7 +690,7 @@ e.session.on('remoteUnShared', function()
 });
 ```
 
-代码取自 [`app.js`](../../demo/base-js/js/app.js)。共享流与普通远端摄像头画面分区显示，可避免停止共享时把主视频也清空。
+代码取自 [`app-call.js`](../../demo/base-js/js/app-call.js)。共享流与普通远端摄像头画面分区显示，可避免停止共享时把主视频也清空。
 
 ## 6.15 RTCSession 事件：SIP 扩展消息
 
@@ -734,7 +734,7 @@ e.session.on('newInfo', function(d)
 });
 ```
 
-两段都节选自 [`app.js`](../../demo/base-js/js/app.js)。Demo 的完整 `newInfo` 回调还会根据约定的 JSON `event` 处理呼转等候室，客户项目应按自己的协议处理。
+两段都节选自 [`app-call.js`](../../demo/base-js/js/app-call.js)。Demo 的完整 `newInfo` 回调还会根据约定的 JSON `event` 处理呼转等候室，客户项目应按自己的协议处理。
 
 ## 6.16 RTCSession 统计事件
 
@@ -771,7 +771,7 @@ e.session.on('stats:stats-error', function(error)
 });
 ```
 
-代码取自 [`app.js`](../../demo/base-js/js/app.js)。完整 Demo 还会渲染 RTT、上下行质量和 issue 列表。
+代码取自 [`app-call.js`](../../demo/base-js/js/app-call.js)。完整 Demo 还会渲染 RTT、上下行质量和 issue 列表。
 
 ## 6.17 `CRTC.Utils`
 
@@ -787,7 +787,7 @@ e.session.on('stats:stats-error', function(error)
 
 设备项常见字段：`kind`、`label`、`deviceId`。未授权前 `label` 可能为空。
 
-Base JS Demo 在获得权限后用 SDK Utils 填充摄像头下拉框。以下代码取自 [`app-sdk-helper.js`](../../demo/base-js/js/app-sdk-helper.js)：
+Base JS Demo 在获得权限后用 SDK Utils 填充摄像头下拉框。以下代码取自 [`app-helper.js`](../../demo/base-js/js/app-helper.js)：
 
 ```js
 await CRTC.Utils.getCameras()

@@ -209,7 +209,7 @@ function buildMixOpts()
  * 获取当前会议的 MediaEffectsComposer 实例。
  *
  * 优先返回缓存的 confMixer；否则尝试从 A-B 主会话获取。
- * 供 app-media-effects.js 中的 getFx() 调用，
+ * 供 app-effects.js 中的 getFx() 调用，
  * 让媒体特效面板在三方模式下操作正确的 composer。
  */
 function getConfMixer()

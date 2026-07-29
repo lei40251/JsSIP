@@ -432,11 +432,11 @@ rg -n "markTransition|getLatestReport|getLatestLegacyReport|getLatestNetworkQual
 
 可以从以下文件查看推荐的新写法：
 
-- `demo/base-js/js/app.js`：RTCStatsMonitor 报告读取。
-- `demo/base-js/js/app-media-effects.js`：AiNS 和 AI 虚拟背景配置、运行时控制。
-- `samples/base-js-mh/js/app.js`：RTCStatsMonitor 完整报告说明。
-- `samples/base-js-mh/js/app-media-effects.js`：数字人示例中的媒体效果和 AiNS 配置。
-- `samples/base-js-mh/js/app.metahuman.js`：MetaHumanClient AiNS 运行时控制。
+- `demo/base-js/js/app-call.js`：RTCStatsMonitor 报告读取。
+- `demo/base-js/js/app-effects.js`：AiNS 和 AI 虚拟背景配置、运行时控制。
+- `samples/base-js-mh/js/app-call.js`：RTCStatsMonitor 完整报告说明。
+- `samples/base-js-mh/js/app-effects.js`：数字人示例中的媒体效果和 AiNS 配置。
+- `samples/base-js-mh/js/app-metahuman.js`：MetaHumanClient AiNS 运行时控制。
 - `lib/RTCStatsMonitor.d.ts`：RTCStatsMonitor 方法、选项及报告结构。
 - `lib/RTCSession.d.ts`：Composer、AiNS 控制器和会话配置类型。
 - `lib/MetaHumanClient.d.ts`：MetaHumanClient AiNS 配置和控制器类型。

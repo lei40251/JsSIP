@@ -256,7 +256,7 @@ ua.start();
 </tr>
 </tbody></table></div>
 <p><code>online</code> 只说明浏览器网络接口恢复，WSS 和 SIP 注册可能仍在恢复。页面应等到 <code>connected</code>、<code>registered</code> 后再恢复呼叫按钮。</p>
-<p>Demo 将浏览器离线和 UA 信令断开分开记录。以下代码取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>：</p>
+<p>Demo 将浏览器离线和 UA 信令断开分开记录。以下代码取自 <a href="../../../demo/base-js/js/app-call.js"><code>app-call.js</code></a>：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">ua.on(&#39;browser:navigator:offline&#39;, function()
 {
   setStatus(&#39;浏览器已离线&#39;);
@@ -346,7 +346,7 @@ ua.on(&#39;disconnected&#39;, function(data)
   }
 }
 </code></pre>
-</div><p>Base JS Demo 在 <code>await ua.call()</code> 成功后立即监听早期远端音频，避免将真实 183 提示音与本地回铃同时播放。以下节选自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>：</p>
+</div><p>Base JS Demo 在 <code>await ua.call()</code> 成功后立即监听早期远端音频，避免将真实 183 提示音与本地回铃同时播放。以下节选自 <a href="../../../demo/base-js/js/app-call.js"><code>app-call.js</code></a>：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const session = await ua.call(`${number}@${sipDomain}`, options);
 
 earlyMedia = false;
@@ -413,7 +413,7 @@ session.connection.ontrack = function(event)
   }
 }
 </code></pre>
-</div><p>Demo 的语音接听会把当前麦克风、PC 配置、composer 和 AiNS 一起传入。以下代码取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>：</p>
+</div><p>Demo 的语音接听会把当前麦克风、PC 配置、composer 和 AiNS 一起传入。以下代码取自 <a href="../../../demo/base-js/js/app-call.js"><code>app-call.js</code></a>：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">document.querySelector(&#39;#answer&#39;).onclick = function()
 {
   e.session.answer({
@@ -477,7 +477,7 @@ session.connection.ontrack = function(event)
   showNotice(e.request.mode, remoteNo);
 }
 </code></pre>
-</div><p>这段代码取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>。读取 <code>request</code> 只用于展示来电信息，真正接听仍要等用户点击后调用 <code>session.answer()</code>。</p>
+</div><p>这段代码取自 <a href="../../../demo/base-js/js/app-call.js"><code>app-call.js</code></a>。读取 <code>request</code> 只用于展示来电信息，真正接听仍要等用户点击后调用 <code>session.answer()</code>。</p>
 <p>如果页面只允许一通电话，可在已有会话时拒绝新呼入：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">if (currentSession &amp;&amp; currentSession !== data.session)
 {
@@ -619,7 +619,7 @@ session.connection.ontrack = function(event)
 }
 </code></pre>
 </div><p>还可以在 <code>confirmed</code> 后通过 <code>CRTC.Utils.getStreams(session.connection, &#39;local&#39;/&#39;remote&#39;)</code> 获取已聚合的本地或远端流。<code>ontrack</code> 仍应保留，因为远端可能在早期媒体、重协商或共享时新增轨道。</p>
-<p>Base JS Demo 把本地音频/视频和远端聚合流分开处理。以下是 <a href="../../../demo/base-js/js/app-sdk-helper.js"><code>app-sdk-helper.js</code></a> 的核心节选：</p>
+<p>Base JS Demo 把本地音频/视频和远端聚合流分开处理。以下是 <a href="../../../demo/base-js/js/app-helper.js"><code>app-helper.js</code></a> 的核心节选：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function getStreams(pc)
 {
   const localStream = CRTC.Utils.getStreams(pc, &#39;local&#39;);
@@ -697,7 +697,7 @@ session.on(&#39;ended&#39;, function() { clearSession(session); });
 <li>通话按钮、接听按钮、保持/静音/共享状态。</li>
 </ul>
 <p>会话内的统计实例和媒体效果控制器由会话释放；业务自行创建的 <code>MediaStream</code> 仍应停止其 tracks。</p>
-<p>Demo 的 <code>failed</code> 和 <code>ended</code> 都会清理统计引用、定时器和页面自建媒体流。以下节选自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>：</p>
+<p>Demo 的 <code>failed</code> 和 <code>ended</code> 都会清理统计引用、定时器和页面自建媒体流。以下节选自 <a href="../../../demo/base-js/js/app-call.js"><code>app-call.js</code></a>：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">if (statsSession === e.session)
 {
   statsSession = null;
@@ -724,7 +724,7 @@ cusMediaStream = new MediaStream();
 }
 </code></pre>
 </div><p>如果 <code>UA</code> 是整个应用共享的单例，组件卸载时只清理组件拥有的会话和 DOM，不要停止其他页面仍在使用的 UA。只有退出账号、关闭通信模块或整个页面卸载时才调用 <code>ua.stop()</code>。</p>
-<p>Base JS Demo 的页面卸载处理位于 <a href="../../../demo/base-js/js/app-ui-binding.js"><code>app-ui-binding.js</code></a>：</p>
+<p>Base JS Demo 的页面卸载处理位于 <a href="../../../demo/base-js/js/app-events.js"><code>app-events.js</code></a>：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">window.onbeforeunload = function()
 {
   handleStop = true;

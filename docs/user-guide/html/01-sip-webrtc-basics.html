@@ -134,7 +134,7 @@
       └─ RTCPeerConnection
 </code></pre>
 </div><p>示例页面如果只允许一通电话，可以用 <code>currentSession</code> 保存当前会话。需要并发通话时，应使用 <code>Map&lt;session.id, session&gt;</code> 管理，不能让后一通覆盖前一通。</p>
-<p>Base JS Demo 在 UA 的 <code>newRTCSession</code> 中保存当前会话。下面是 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a> 的会话入口节选：</p>
+<p>Base JS Demo 在 UA 的 <code>newRTCSession</code> 中保存当前会话。下面是 <a href="../../../demo/base-js/js/app-call.js"><code>app-call.js</code></a> 的会话入口节选：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">ua.on(&#39;newRTCSession&#39;, function(e)
 {
   if (tmpSession)
@@ -226,7 +226,7 @@
 </tr>
 </tbody></table></div>
 <p>自动注册是 <code>register: true</code>，<code>ua.start()</code> 连接后自动发送 REGISTER。SDK 也支持配置 <code>register: false</code> 后主动调用 <code>ua.register()</code>；Base JS Demo 选择运行模式后固定使用自动注册。两种方式的最终成功标志都相同：<code>registered</code>。</p>
-<p>Demo 不在 <code>connected</code> 事件中直接开放呼叫，而是分别记录连接和注册结果。以下代码取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>：</p>
+<p>Demo 不在 <code>connected</code> 事件中直接开放呼叫，而是分别记录连接和注册结果。以下代码取自 <a href="../../../demo/base-js/js/app-call.js"><code>app-call.js</code></a>：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">ua.on(&#39;connected&#39;, function()
 {
   setStatus(&#39;信令连接成功&#39;);
@@ -383,7 +383,7 @@ iceTransportPolicy &amp;&amp; (pcConfig[&#39;iceTransportPolicy&#39;] = iceTrans
 pcConfig[&#39;iceCandidatePoolSize&#39;] = 4;
 pcConfig[&#39;bundlePolicy&#39;] = &#39;max-compat&#39;;
 </code></pre>
-</div><p>这段代码取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>。<code>iceServers</code>、<code>iceTransportPolicy</code> 应来自当前部署环境，不要复制其他环境的 TURN 凭据。</p>
+</div><p>这段代码取自 <a href="../../../demo/base-js/js/app-call.js"><code>app-call.js</code></a>。<code>iceServers</code>、<code>iceTransportPolicy</code> 应来自当前部署环境，不要复制其他环境的 TURN 凭据。</p>
 <h3 id="ice-状态含义">ICE 状态含义<a class="heading-anchor" href="#ice-状态含义" aria-label="链接到本节">#</a></h3>
 <div class="table-wrap"><table>
 <thead>
@@ -480,14 +480,14 @@ console.log(stream.getVideoTracks());
 <li>页面自行创建的预览、屏幕流、占位流必须由页面停止。</li>
 <li>不要提前停止一个仍被当前通话使用的自定义 track。</li>
 </ul>
-<p>Demo 在页面自己创建的媒体流失败或结束时显式停止 tracks。以下是 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a> 中的清理方式：</p>
+<p>Demo 在页面自己创建的媒体流失败或结束时显式停止 tracks。以下是 <a href="../../../demo/base-js/js/app-call.js"><code>app-call.js</code></a> 中的清理方式：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">cusMediaStream.getTracks().forEach((track) =&gt; track.stop());
 cusMediaStream = new MediaStream();
 </code></pre>
 </div><p>这个规则适用于页面自行采集的屏幕流、自定义流和预览流；会话内部管理的流仍交给 SDK 会话生命周期。</p>
 <h2 id="1-12-本地预览和实际发送不是同一件事">1.12 本地预览和实际发送不是同一件事<a class="heading-anchor" href="#1-12-本地预览和实际发送不是同一件事" aria-label="链接到本节">#</a></h2>
 <p><code>localVideo.srcObject = stream</code> 只是把某个流显示在页面，不代表该流一定已经发送。实际发送取决于当前会话配置、媒体方向和 track 状态。</p>
-<p>Demo 通过 <a href="../../../demo/base-js/js/app-sdk-helper.js"><code>app-sdk-helper.js</code></a> 从 PeerConnection 读取 SDK 正在使用的流，再绑定到页面元素：</p>
+<p>Demo 通过 <a href="../../../demo/base-js/js/app-helper.js"><code>app-helper.js</code></a> 从 PeerConnection 读取 SDK 正在使用的流，再绑定到页面元素：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const localStream = CRTC.Utils.getStreams(pc, &#39;local&#39;);
 const remoteStream = CRTC.Utils.getStreams(pc, &#39;remote&#39;);
 
@@ -543,7 +543,7 @@ Promise.all([ localVideo.play(), remoteAudio.play(), remoteVideo.play() ])
 <td>提供“点击播放/恢复播放”按钮</td>
 </tr>
 </tbody></table></div>
-<p>Demo 初始化时先请求一次音视频权限，再通过 <a href="../../../demo/base-js/js/app-sdk-helper.js"><code>app-sdk-helper.js</code></a> 的 <code>loadDevices()</code> 读取设备。无论预采集成功还是失败，都会尝试刷新设备列表：</p>
+<p>Demo 初始化时先请求一次音视频权限，再通过 <a href="../../../demo/base-js/js/app-helper.js"><code>app-helper.js</code></a> 的 <code>loadDevices()</code> 读取设备。无论预采集成功还是失败，都会尝试刷新设备列表：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">navigator.mediaDevices.getUserMedia({ video: true, audio: true })
   .then(async(stream) =&gt;
   {

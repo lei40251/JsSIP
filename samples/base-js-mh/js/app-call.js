@@ -1766,7 +1766,7 @@ ua.on('newRTCSession', function(e)
     e.session.upgradeToVideo({ useUpdate: useUpdate, videoStream: tmpStream }, () => { setStatus('切换视频模式完成') + curMode; });
   };
 
-	  // 摄像头和麦克风的切换已统一在 app.ui-bindings.js 中处理，
+	  // 摄像头和麦克风的切换已统一在 app-events.js 中处理，
 	  // 避免同一个元素被多次 addEventListener 导致重复绑定。
 
   /**

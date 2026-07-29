@@ -261,8 +261,8 @@ function loadConferenceDemo()
   };
 
   vm.createContext(context);
-  // 会议 Demo 与点对点 Demo 共用 app.js 中的统计渲染函数。
-  const appSource = fs.readFileSync(path.join(__dirname, '../demo/base-js/js/app.js'), 'utf8');
+  // 会议 Demo 与点对点 Demo 共用 app-call.js 中的统计渲染函数。
+  const appSource = fs.readFileSync(path.join(__dirname, '../demo/base-js/js/app-call.js'), 'utf8');
   const statsStart = appSource.indexOf('const statsIssues');
   const statsEnd = appSource.indexOf('function onFxIssue');
 
@@ -513,7 +513,7 @@ module.exports = {
 
   'page defers UA creation and selects exactly one session handler' : function(test)
   {
-    const source = fs.readFileSync(path.join(__dirname, '../demo/base-js/js/app.js'), 'utf8');
+    const source = fs.readFileSync(path.join(__dirname, '../demo/base-js/js/app-call.js'), 'utf8');
     const conferenceSource = fs.readFileSync(path.join(__dirname, '../demo/base-js/js/app-conference.js'), 'utf8');
 
     test.ok(source.includes('let ua = null;'));
@@ -527,7 +527,7 @@ module.exports = {
 
   'demo passes AiNS with the RTCSession option name' : function(test)
   {
-    const source = fs.readFileSync(path.join(__dirname, '../demo/base-js/js/app.js'), 'utf8');
+    const source = fs.readFileSync(path.join(__dirname, '../demo/base-js/js/app-call.js'), 'utf8');
     const conferenceSource = fs.readFileSync(path.join(__dirname, '../demo/base-js/js/app-conference.js'), 'utf8');
 
     test.strictEqual((source.match(/aiNoiseSuppression\s*:\s*getNsOpts\(\)/g) || []).length, 2);
@@ -540,9 +540,9 @@ module.exports = {
 
   'MetaHuman demo uses the renamed media APIs and valid bundled assets' : function(test)
   {
-    const appSource = fs.readFileSync(path.join(__dirname, '../samples/base-js-mh/js/app.js'), 'utf8');
-    const effectsSource = fs.readFileSync(path.join(__dirname, '../samples/base-js-mh/js/app-media-effects.js'), 'utf8');
-    const metaHumanSource = fs.readFileSync(path.join(__dirname, '../samples/base-js-mh/js/app.metahuman.js'), 'utf8');
+    const appSource = fs.readFileSync(path.join(__dirname, '../samples/base-js-mh/js/app-call.js'), 'utf8');
+    const effectsSource = fs.readFileSync(path.join(__dirname, '../samples/base-js-mh/js/app-effects.js'), 'utf8');
+    const metaHumanSource = fs.readFileSync(path.join(__dirname, '../samples/base-js-mh/js/app-metahuman.js'), 'utf8');
     const oldNames = /getLatestReport|noiseReductionLevel|setSuppressionLevel|setSourceAiVirtualBackground|clearSourceAiVirtualBackground|enableInsertable|aiVirtualBackground\s*:/;
 
     test.strictEqual(oldNames.test(`${appSource}\n${effectsSource}\n${metaHumanSource}`), false);

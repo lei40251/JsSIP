@@ -136,7 +136,7 @@
 </tr>
 </tbody></table></div>
 <p>默认约每 <code>2000ms</code> 更新一次。通话刚开始时部分值暂时为 <code>null</code> 属于正常现象。</p>
-<p>Base JS Demo 在每次 <code>newRTCSession</code> 中绑定统计，并用 <code>statsSession</code> 防止旧会话的延迟结果覆盖新会话。以下代码取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>：</p>
+<p>Base JS Demo 在每次 <code>newRTCSession</code> 中绑定统计，并用 <code>statsSession</code> 防止旧会话的延迟结果覆盖新会话。以下代码取自 <a href="../../../demo/base-js/js/app-call.js"><code>app-call.js</code></a>：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">statsSession = e.session;
 resetSessionStatsPanel();
 
@@ -244,7 +244,7 @@ const formatSessionStatsBitrate = function(value)
   return value === null || value === undefined ? &#39;-&#39; : `${(Math.round(value / 100) / 10).toFixed(1)}kbps`;
 };
 </code></pre>
-</div><p>该节选来自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>。这里的换算等价于将 bps 除以 <code>1000</code> 后保留一位小数。</p>
+</div><p>该节选来自 <a href="../../../demo/base-js/js/app-call.js"><code>app-call.js</code></a>。这里的换算等价于将 bps 除以 <code>1000</code> 后保留一位小数。</p>
 <h2 id="5-3-网络质量等级-0-6">5.3 网络质量等级 0～6<a class="heading-anchor" href="#5-3-网络质量等级-0-6" aria-label="链接到本节">#</a></h2>
 <p>SDK 分别提供上行和下行质量等级。业务页面应直接使用 SDK 输出的等级，不要根据 RTT 或丢包率自行复刻判定逻辑，以免版本升级后出现口径不一致。</p>
 <div class="table-wrap"><table>
@@ -910,7 +910,7 @@ if (monitor)
 </tbody></table></div>
 <p>页面常规展示使用 <code>stats:detailed-report</code> 即可。问题上报时只选取排障需要的字段，并按产品安全要求脱敏。</p>
 <p><code>session.statsMonitor</code> 在 PeerConnection 创建后可用，会话结束释放后为 <code>null</code>。会话内实例不要自行调用 <code>start()</code>、<code>stop()</code> 或 <code>reset()</code>。</p>
-<p>Demo 把最近一份结果暴露给浏览器控制台，便于联调时对照页面面板。以下代码取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>：</p>
+<p>Demo 把最近一份结果暴露给浏览器控制台，便于联调时对照页面面板。以下代码取自 <a href="../../../demo/base-js/js/app-call.js"><code>app-call.js</code></a>：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function readStats()
 {
   const monitor = rtcSession &amp;&amp; rtcSession.statsMonitor;
@@ -1002,7 +1002,7 @@ monitor.stop();
 <td><code>quality.issues[].code/severity</code></td>
 </tr>
 </tbody></table></div>
-<p>Demo 代码见 [<code>demo/base-js/js/app.js</code>] 的 <code>RTCSession 统计事件接入示例</code>。运行和验证步骤见 <a href="08-demo-guide.html">Base JS Demo 学习与验证</a>，旧统计迁移见 <a href="07-upgrade-guide.html">旧版功能升级指南</a>。</p>
+<p>Demo 代码见 [<code>demo/base-js/js/app-call.js</code>] 的 <code>RTCSession 统计事件接入示例</code>。运行和验证步骤见 <a href="08-demo-guide.html">Base JS Demo 学习与验证</a>，旧统计迁移见 <a href="07-upgrade-guide.html">旧版功能升级指南</a>。</p>
 <p>Demo 在新会话开始、当前会话失败或结束时都调用同一个面板重置函数：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const resetSessionStatsPanel = function()
 {

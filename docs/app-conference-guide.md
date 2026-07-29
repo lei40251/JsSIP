@@ -67,27 +67,27 @@ flowchart TB
 
 页面脚本按以下顺序加载：
 
-1. [`app-media-effects.js`](../demo/base-js/js/app-media-effects.js)：生成 composer、AiNS 等媒体配置。
-2. [`app-sdk-helper.js`](../demo/base-js/js/app-sdk-helper.js)：设备约束、状态提示、媒体元素和弹窗辅助函数。
-3. [`app.js`](../demo/base-js/js/app.js)：UA 配置、点对点通话和页面公共状态。
+1. [`app-effects.js`](../demo/base-js/js/app-effects.js)：生成 composer、AiNS 等媒体配置。
+2. [`app-helper.js`](../demo/base-js/js/app-helper.js)：设备约束、状态提示、媒体元素和弹窗辅助函数。
+3. [`app-call.js`](../demo/base-js/js/app-call.js)：UA 配置、点对点通话和页面公共状态。
 4. [`app-conference.js`](../demo/base-js/js/app-conference.js)：三方会议逻辑。
 5. [`app-annotation.js`](../demo/base-js/js/app-annotation.js)：屏幕标注、共享白板和 INFO 同步逻辑。
-6. [`app-ui-binding.js`](../demo/base-js/js/app-ui-binding.js)：把页面按钮绑定到上述全局函数。
+6. [`app-events.js`](../demo/base-js/js/app-events.js)：把页面按钮绑定到上述全局函数。
 
 `app-conference.js` 没有模块导入/导出，而是依赖同一页面全局作用域中的变量和函数。主要外部依赖如下：
 
 | 来源 | 被会议模块使用的内容 | 用途 |
 | --- | --- | --- |
-| `app.js` | `ua`、`rtcSession`、`statsSession`、`appMode`、`pcConfig`、`extraFeatures`、`sipDomain`、`xdata`、`noremb`、`camFlag` | 注册状态、当前会话、网络配置、SIP 地址和兼容开关 |
-| `app.js` | `localVid`、`remoteVid` | A 本地预览和 B/C 远端主画面 |
-| `app-media-effects.js` | `getFxOpts()`、`getNsOpts()`、`onFxIssue()` | 复用页面选择的镜像、水印、虚拟背景和 AiNS 配置 |
-| `app-sdk-helper.js` | `getAudioOpts()`、`getVideoOpts()` | 获取页面当前选择的麦克风和摄像头约束 |
-| `app-sdk-helper.js` | `setStatus()`、`setMedia()`、`onTrackEnd()`、来电通知和共享弹窗函数 | 页面反馈、媒体渲染和通用轨道生命周期监听 |
+| `app-call.js` | `ua`、`rtcSession`、`statsSession`、`appMode`、`pcConfig`、`extraFeatures`、`sipDomain`、`xdata`、`noremb`、`camFlag` | 注册状态、当前会话、网络配置、SIP 地址和兼容开关 |
+| `app-call.js` | `localVid`、`remoteVid` | A 本地预览和 B/C 远端主画面 |
+| `app-effects.js` | `getFxOpts()`、`getNsOpts()`、`onFxIssue()` | 复用页面选择的镜像、水印、虚拟背景和 AiNS 配置 |
+| `app-helper.js` | `getAudioOpts()`、`getVideoOpts()` | 获取页面当前选择的麦克风和摄像头约束 |
+| `app-helper.js` | `setStatus()`、`setMedia()`、`onTrackEnd()`、来电通知和共享弹窗函数 | 页面反馈、媒体渲染和通用轨道生命周期监听 |
 | `app-annotation.js` | `bindInk()`、`sendSnapshot()`、`isBoardOpen()` | 标注会话绑定、白板成员状态和快照同步 |
 | CRTC SDK | `CRTC.UA`、`RTCSession`、`CRTC.Utils.getStreams()`、`closeMediaStream()` | SIP 会话、WebRTC 和资源释放 |
 | 浏览器 API | `MediaStream`、`RTCPeerConnection`、`RTCRtpSender`、`getDisplayMedia()` | 轨道组合、替换和屏幕采集 |
 
-会议模块并不自行监听 UA。`initMode('conference')` 在 [`app.js`](../demo/base-js/js/app.js) 中创建唯一的 `CRTC.UA`，并将其 `newRTCSession` 事件绑定到 `onConfSession`。因此同一页面只会进入点对点处理器或会议处理器中的一个。
+会议模块并不自行监听 UA。`initMode('conference')` 在 [`app-call.js`](../demo/base-js/js/app-call.js) 中创建唯一的 `CRTC.UA`，并将其 `newRTCSession` 事件绑定到 `onConfSession`。因此同一页面只会进入点对点处理器或会议处理器中的一个。
 
 ## 3. 角色、容量和两种 C
 
@@ -216,7 +216,7 @@ flowchart TB
 页面点击 `#initConf` 后：
 
 ```text
-app-ui-binding.js
+app-events.js
   → initMode('conference')
     → new CRTC.WebSocketInterface(signalingUrl)
     → new CRTC.UA(configuration)
@@ -478,7 +478,7 @@ stateDiagram-v2
 
 ### 8.5 composer 与页面媒体效果
 
-`getConfMixer()` 优先返回当前会议 composer。`app-media-effects.js` 的媒体效果面板会先调用它，再回退到全局 `rtcSession.getMediaEffectsComposer()`。因此三方模式下镜像、水印、虚拟背景等操作会落到会议实际使用的 composer。
+`getConfMixer()` 优先返回当前会议 composer。`app-effects.js` 的媒体效果面板会先调用它，再回退到全局 `rtcSession.getMediaEffectsComposer()`。因此三方模式下镜像、水印、虚拟背景等操作会落到会议实际使用的 composer。
 
 需要注意：静默 C 场景的“当前会议 composer”会切换到 A-C 会话的独立 composer；普通三方则是 A-B 主 composer。
 
@@ -620,7 +620,7 @@ B/C 的 `RTCSession` 内部同时监听 INFO 和 PeerConnection `track`：
 4. MID 与轨匹配后触发 `remoteShared`。
 5. `screen-share/stop` 或轨 `ended` 时触发 `remoteUnShared`。
 
-[`app.js`](../demo/base-js/js/app.js) 只监听这两个 SDK 事件更新 `#shareVid`，不再读取 MID 或直接监听共享 track。
+[`app-call.js`](../demo/base-js/js/app-call.js) 只监听这两个 SDK 事件更新 `#shareVid`，不再读取 MID 或直接监听共享 track。
 
 ### 11.4 停止流程
 
@@ -965,7 +965,7 @@ flowchart TB
 
 ### 18.5 标注或白板不同步
 
-1. 确认 `app-annotation.js` 已在 `app-conference.js` 之后、`app-ui-binding.js` 之前加载。
+1. 确认 `app-annotation.js` 已在 `app-conference.js` 之后、`app-events.js` 之前加载。
 2. 检查各条会话是否执行 `bindInk()`，并收到内容类型为 `application/vnd.crtc.annotation+json` 的 `newInfo`。
 3. 白板场景确认 A 发起前已选中目标，且目标会话存在于 `boardLegs`。
 4. B 能画但 C 看不到时，检查 A 是否收到 B 的 `operationId`，并通过 A-C 会话转发了同一操作 ID。
@@ -1057,7 +1057,7 @@ flowchart TB
 如果只想快速掌握主干，依次阅读以下函数即可：
 
 ```text
-initMode（app.js）
+initMode（app-call.js）
   → onConfSession
   → addLeg
   → bindLegEvents
@@ -1072,11 +1072,11 @@ initMode（app.js）
 
 ## 22. `app-conference.js` 完整方法调用图
 
-本节覆盖 `app-conference.js` 当前声明的 37 个顶层函数，并补充它与 `app-sdk-helper.js`、`app-annotation.js` 的跨文件调用关系。图中：
+本节覆盖 `app-conference.js` 当前声明的 37 个顶层函数，并补充它与 `app-helper.js`、`app-annotation.js` 的跨文件调用关系。图中：
 
 - 实线箭头表示函数直接调用另一个函数。
 - 虚线箭头表示页面绑定、SDK 事件或异步回调触发。
-- “外部”节点表示定义在 `app.js`、`app-ui-binding.js`、浏览器或 SDK 中的入口。
+- “外部”节点表示定义在 `app-call.js`、`app-events.js`、浏览器或 SDK 中的入口。
 - 为保持可读性，同一个公共函数可能出现在多张图中。
 
 ### 22.1 页面、UA 与会议总入口

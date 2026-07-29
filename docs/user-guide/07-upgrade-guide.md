@@ -128,7 +128,7 @@ else
 }
 ```
 
-代码节选自 [`app-media-effects.js`](../../demo/base-js/js/app-media-effects.js)。升级时应同时替换开启、切换和清除三条路径，不能只改初始呼叫参数。
+代码节选自 [`app-effects.js`](../../demo/base-js/js/app-effects.js)。升级时应同时替换开启、切换和清除三条路径，不能只改初始呼叫参数。
 
 ### 7.2.3 模式与参数迁移
 
@@ -196,7 +196,7 @@ remoteNo = number;
 const session = await ua.call(`${number}@${sipDomain}`, options);
 ```
 
-标准音频和视频接听也调用同样的 `getFxOpts()` 和 `getNsOpts()`。这段代码取自 [`app.js`](../../demo/base-js/js/app.js)，可作为检查“呼出已升级、接听未升级”问题的对照点。
+标准音频和视频接听也调用同样的 `getFxOpts()` 和 `getNsOpts()`。这段代码取自 [`app-call.js`](../../demo/base-js/js/app-call.js)，可作为检查“呼出已升级、接听未升级”问题的对照点。
 
 当前会话需要动态更新时：
 
@@ -292,7 +292,7 @@ e.session.on('stats:detailed-report', function(report)
 });
 ```
 
-该节选来自 [`app.js`](../../demo/base-js/js/app.js)。旧页面迁移后如果允许快速重呼，建议保留这种会话归属检查。
+该节选来自 [`app-call.js`](../../demo/base-js/js/app-call.js)。旧页面迁移后如果允许快速重呼，建议保留这种会话归属检查。
 
 ## 7.6 网络质量等级的行为变化
 

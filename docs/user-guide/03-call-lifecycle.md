@@ -155,7 +155,7 @@ ua.start();
 
 `online` 只说明浏览器网络接口恢复，WSS 和 SIP 注册可能仍在恢复。页面应等到 `connected`、`registered` 后再恢复呼叫按钮。
 
-Demo 将浏览器离线和 UA 信令断开分开记录。以下代码取自 [`app.js`](../../demo/base-js/js/app.js)：
+Demo 将浏览器离线和 UA 信令断开分开记录。以下代码取自 [`app-call.js`](../../demo/base-js/js/app-call.js)：
 
 ```js
 ua.on('browser:navigator:offline', function()
@@ -257,7 +257,7 @@ async function call(target)
 }
 ```
 
-Base JS Demo 在 `await ua.call()` 成功后立即监听早期远端音频，避免将真实 183 提示音与本地回铃同时播放。以下节选自 [`app.js`](../../demo/base-js/js/app.js)：
+Base JS Demo 在 `await ua.call()` 成功后立即监听早期远端音频，避免将真实 183 提示音与本地回铃同时播放。以下节选自 [`app-call.js`](../../demo/base-js/js/app-call.js)：
 
 ```js
 const session = await ua.call(`${number}@${sipDomain}`, options);
@@ -336,7 +336,7 @@ function answerIncoming(session, video)
 }
 ```
 
-Demo 的语音接听会把当前麦克风、PC 配置、composer 和 AiNS 一起传入。以下代码取自 [`app.js`](../../demo/base-js/js/app.js)：
+Demo 的语音接听会把当前麦克风、PC 配置、composer 和 AiNS 一起传入。以下代码取自 [`app-call.js`](../../demo/base-js/js/app-call.js)：
 
 ```js
 document.querySelector('#answer').onclick = function()
@@ -393,7 +393,7 @@ if (e.originator === 'remote')
 }
 ```
 
-这段代码取自 [`app.js`](../../demo/base-js/js/app.js)。读取 `request` 只用于展示来电信息，真正接听仍要等用户点击后调用 `session.answer()`。
+这段代码取自 [`app-call.js`](../../demo/base-js/js/app-call.js)。读取 `request` 只用于展示来电信息，真正接听仍要等用户点击后调用 `session.answer()`。
 
 如果页面只允许一通电话，可在已有会话时拒绝新呼入：
 
@@ -460,7 +460,7 @@ function bindPeerConnection(pc)
 
 还可以在 `confirmed` 后通过 `CRTC.Utils.getStreams(session.connection, 'local'/'remote')` 获取已聚合的本地或远端流。`ontrack` 仍应保留，因为远端可能在早期媒体、重协商或共享时新增轨道。
 
-Base JS Demo 把本地音频/视频和远端聚合流分开处理。以下是 [`app-sdk-helper.js`](../../demo/base-js/js/app-sdk-helper.js) 的核心节选：
+Base JS Demo 把本地音频/视频和远端聚合流分开处理。以下是 [`app-helper.js`](../../demo/base-js/js/app-helper.js) 的核心节选：
 
 ```js
 function getStreams(pc)
@@ -533,7 +533,7 @@ session.on('ended', function() { clearSession(session); });
 
 会话内的统计实例和媒体效果控制器由会话释放；业务自行创建的 `MediaStream` 仍应停止其 tracks。
 
-Demo 的 `failed` 和 `ended` 都会清理统计引用、定时器和页面自建媒体流。以下节选自 [`app.js`](../../demo/base-js/js/app.js)：
+Demo 的 `failed` 和 `ended` 都会清理统计引用、定时器和页面自建媒体流。以下节选自 [`app-call.js`](../../demo/base-js/js/app-call.js)：
 
 ```js
 if (statsSession === e.session)
@@ -568,7 +568,7 @@ function disposeCallPage()
 
 如果 `UA` 是整个应用共享的单例，组件卸载时只清理组件拥有的会话和 DOM，不要停止其他页面仍在使用的 UA。只有退出账号、关闭通信模块或整个页面卸载时才调用 `ua.stop()`。
 
-Base JS Demo 的页面卸载处理位于 [`app-ui-binding.js`](../../demo/base-js/js/app-ui-binding.js)：
+Base JS Demo 的页面卸载处理位于 [`app-events.js`](../../demo/base-js/js/app-events.js)：
 
 ```js
 window.onbeforeunload = function()

@@ -15,10 +15,10 @@ Base JS Demo 是一份可运行的 SDK 接入示例，覆盖模式初始化、�
 | 文件 | 客户应重点阅读的内容 |
 | --- | --- |
 | [`index.html`](../../demo/base-js/index.html) | 页面控件、按钮 ID、音视频元素和脚本加载顺序 |
-| [`app.js`](../../demo/base-js/js/app.js) | UA 配置与事件、`newRTCSession`、呼叫/接听、通话中控制、共享和统计展示 |
-| [`app-sdk-helper.js`](../../demo/base-js/js/app-sdk-helper.js) | URL 参数、设备列表、选中设备约束、本地/远端媒体渲染 |
-| [`app-ui-binding.js`](../../demo/base-js/js/app-ui-binding.js) | 主动注册/注销、外呼按钮、设备下拉框和媒体效果控件绑定 |
-| [`app-media-effects.js`](../../demo/base-js/js/app-media-effects.js) | composer、虚拟背景、水印和 AiNS 参数构建及通话中更新 |
+| [`app-call.js`](../../demo/base-js/js/app-call.js) | UA 配置与事件、`newRTCSession`、呼叫/接听、通话中控制、共享和统计展示 |
+| [`app-helper.js`](../../demo/base-js/js/app-helper.js) | URL 参数、设备列表、选中设备约束、本地/远端媒体渲染 |
+| [`app-events.js`](../../demo/base-js/js/app-events.js) | 主动注册/注销、外呼按钮、设备下拉框和媒体效果控件绑定 |
+| [`app-effects.js`](../../demo/base-js/js/app-effects.js) | composer、虚拟背景、水印和 AiNS 参数构建及通话中更新 |
 | [`config.js`](../../demo/config.js) | Demo 环境选择；客户必须替换为自己的交付配置 |
 
 `index.html` 先加载 SDK 和环境配置，再加载媒体效果、辅助函数、主流程和页面绑定。阅读时建议按以下顺序搜索函数或事件名：
@@ -101,7 +101,7 @@ http://localhost:8080/demo/base-js/index.html?caller=1001
 
 Demo 会根据已配置的环境和账号创建 `CRTC.UA`。客户项目应使用服务方提供的 WSS、SIP URI、鉴权凭据、授权码和注册参数，不要迁移 Demo 的测试账号规则。完整 UA 配置见 [SDK API 参考](./06-api-reference.md)。
 
-Demo 中的 UA 创建代码位于 [`app.js`](../../demo/base-js/js/app.js)：
+Demo 中的 UA 创建代码位于 [`app-call.js`](../../demo/base-js/js/app-call.js)：
 
 ```js
 const account = getQuery('caller');
@@ -156,7 +156,7 @@ ua.on('registered', function(data)
 
 初始化后 Demo 固定自动注册。注册控制区仍保留主动注销和重新注册，用于验证注册生命周期。
 
-注册控制区对应代码位于 [`app-ui-binding.js`](../../demo/base-js/js/app-ui-binding.js)：
+注册控制区对应代码位于 [`app-events.js`](../../demo/base-js/js/app-events.js)：
 
 ```js
 document.querySelector('#regUa').onclick = function()
@@ -183,7 +183,7 @@ document.querySelector('#unregUa').onclick = function()
 3. 点击“主动注册”，确认可以重新注册并呼叫。
 4. 未注册时点击外呼，`call()` 会通过 `isRegistered()` 阻止呼叫。
 
-为避免影响通话验证，建议在没有活动通话时注销或重新注册。注册状态处理集中在 [`app.js`](../../demo/base-js/js/app.js) 的 `connected`、`registered`、`registrationFailed`、`unregistered` 和 `disconnected` 事件中。
+为避免影响通话验证，建议在没有活动通话时注销或重新注册。注册状态处理集中在 [`app-call.js`](../../demo/base-js/js/app-call.js) 的 `connected`、`registered`、`registrationFailed`、`unregistered` 和 `disconnected` 事件中。
 
 ## 8.6 WebRTC 网络配置
 
@@ -191,7 +191,7 @@ document.querySelector('#unregUa').onclick = function()
 
 注册成功但没有媒体时，先检查 ICE/TURN，不要只检查 WSS。强制 `relay` 时 TURN 地址、凭据、UDP/TCP 端口或防火墙任一异常都会导致媒体失败。
 
-Demo 在 [`app.js`](../../demo/base-js/js/app.js) 中按环境参数组装 `pcConfig`：
+Demo 在 [`app-call.js`](../../demo/base-js/js/app-call.js) 中按环境参数组装 `pcConfig`：
 
 ```js
 const pcConfig = {};
@@ -221,7 +221,7 @@ await ua.call(`${number}@${sipDomain}`, options);
 - 无通话：保存 deviceId，标准呼叫/接听通过 `getAudioOpts()`、`getVideoOpts()` 写入 `deviceId.exact`。
 - 通话中：立即调用 `session.switchDevice('camera'/'audio', deviceId)`。
 
-代码位置：设备枚举和约束构建在 [`app-sdk-helper.js`](../../demo/base-js/js/app-sdk-helper.js)，下拉框 `change` 事件在 [`app-ui-binding.js`](../../demo/base-js/js/app-ui-binding.js)。标准接听和视频升级也复用相同的视频约束，避免呼出、接听使用不同设备。
+代码位置：设备枚举和约束构建在 [`app-helper.js`](../../demo/base-js/js/app-helper.js)，下拉框 `change` 事件在 [`app-events.js`](../../demo/base-js/js/app-events.js)。标准接听和视频升级也复用相同的视频约束，避免呼出、接听使用不同设备。
 
 约束构建函数会在已选设备时写入 `deviceId.exact`：
 
@@ -264,7 +264,7 @@ document.querySelector('#cameras').addEventListener('change', function()
 });
 ```
 
-两段代码分别取自 [`app-sdk-helper.js`](../../demo/base-js/js/app-sdk-helper.js) 和 [`app-ui-binding.js`](../../demo/base-js/js/app-ui-binding.js)。麦克风的处理相同，只把设备类型替换为 `'audio'`。
+两段代码分别取自 [`app-helper.js`](../../demo/base-js/js/app-helper.js) 和 [`app-events.js`](../../demo/base-js/js/app-events.js)。麦克风的处理相同，只把设备类型替换为 `'audio'`。
 
 ### 更新方式
 
@@ -273,7 +273,7 @@ document.querySelector('#cameras').addEventListener('change', function()
 | `useUpdate` | `true` | 音视频升级/降级时使用 UPDATE 方式 |
 | `useReInvite` | `false` | 使用 re-INVITE 方式 |
 
-下拉框在 [`app-ui-binding.js`](../../demo/base-js/js/app-ui-binding.js) 更新 `useUpdate`；`#toAudio`、`#toVideo` 和 `#toVideoSend` 在 [`app.js`](../../demo/base-js/js/app.js) 把该值传给升级/降级方法。必须由服务端和对端共同支持，默认联调先使用现网已验证的方式。
+下拉框在 [`app-events.js`](../../demo/base-js/js/app-events.js) 更新 `useUpdate`；`#toAudio`、`#toVideo` 和 `#toVideoSend` 在 [`app-call.js`](../../demo/base-js/js/app-call.js) 把该值传给升级/降级方法。必须由服务端和对端共同支持，默认联调先使用现网已验证的方式。
 
 ### 画质偏好
 
@@ -296,7 +296,7 @@ document.querySelector('#videoHint').onchange = function()
 };
 ```
 
-这段代码位于 [`app.js`](../../demo/base-js/js/app.js) 的 `newRTCSession` 内，因此操作的始终是当前这一通会话。
+这段代码位于 [`app-call.js`](../../demo/base-js/js/app-call.js) 的 `newRTCSession` 内，因此操作的始终是当前这一通会话。
 
 ### 输出镜像
 
@@ -322,7 +322,7 @@ document.querySelector('#videoHint').onchange = function()
 
 关闭下拉并不代表当前通话一定会动态销毁已有 AiNS；Demo 重点展示初始启用和强度热更新。需要运行时开关时应按产品设计明确其生命周期。
 
-以上三项的参数构建和通话中更新集中在 [`app-media-effects.js`](../../demo/base-js/js/app-media-effects.js)：
+以上三项的参数构建和通话中更新集中在 [`app-effects.js`](../../demo/base-js/js/app-effects.js)：
 
 - `getFxOpts()`：组合镜像、水印和虚拟背景，供呼叫/标准接听使用。
 - `setMirror()`：更新当前通话输出镜像。
@@ -330,7 +330,7 @@ document.querySelector('#videoHint').onchange = function()
 - `getNsOpts()`：生成下一次呼叫/标准接听的 AiNS 参数。
 - `setNsLevel()`：热更新当前通话降噪强度。
 
-composer 初始配置的核心代码如下，取自 [`app-media-effects.js`](../../demo/base-js/js/app-media-effects.js)：
+composer 初始配置的核心代码如下，取自 [`app-effects.js`](../../demo/base-js/js/app-effects.js)：
 
 ```js
 const outputMirror = document.getElementById('fxMirror').value === 'on';
@@ -401,7 +401,7 @@ return {
 
 “应用”读取当前控件并调用 `setWatermarks()`；“清空”移除对应水印。`getMediaEffectsComposer()` 返回 `null` 时表示本通电话没有启用 composer，按钮不能改变当前发送画面。
 
-代码位置：水印输入读取、合并和更新位于 [`app-media-effects.js`](../../demo/base-js/js/app-media-effects.js) 的 `getTextMark() / getImageMark()`、`mergeMarks()`、`setTextMark() / setImageMark()`；按钮绑定位于 [`app-ui-binding.js`](../../demo/base-js/js/app-ui-binding.js)。
+代码位置：水印输入读取、合并和更新位于 [`app-effects.js`](../../demo/base-js/js/app-effects.js) 的 `getTextMark() / getImageMark()`、`mergeMarks()`、`setTextMark() / setImageMark()`；按钮绑定位于 [`app-events.js`](../../demo/base-js/js/app-events.js)。
 
 文字水印的构造函数会保留 SDK 默认值，只写入用户真正填写的可选字段：
 
@@ -471,7 +471,7 @@ function mergeMarks(nextItems, idsToReplace)
 }
 ```
 
-两段都取自 [`app-media-effects.js`](../../demo/base-js/js/app-media-effects.js)。`setWatermarks()` 是全量写入，如果跳过合并步骤，应用文字水印时可能会把图片水印删掉。
+两段都取自 [`app-effects.js`](../../demo/base-js/js/app-effects.js)。`setWatermarks()` 是全量写入，如果跳过合并步骤，应用文字水印时可能会把图片水印删掉。
 
 ## 8.9 基础呼叫按钮
 
@@ -493,7 +493,7 @@ function mergeMarks(nextItems, idsToReplace)
 7. `await ua.call()`。
 8. 在 session 上处理远端媒体和通话事件。
 
-页面级按钮位于 [`app-ui-binding.js`](../../demo/base-js/js/app-ui-binding.js)，最终统一进入 [`app.js`](../../demo/base-js/js/app.js) 的 `call(type, direction, mediaStream)`。该函数先检查注册状态，再组合设备、媒体效果、`pcConfig` 和媒体流，最后执行 `await ua.call()`。
+页面级按钮位于 [`app-events.js`](../../demo/base-js/js/app-events.js)，最终统一进入 [`app-call.js`](../../demo/base-js/js/app-call.js) 的 `call(type, direction, mediaStream)`。该函数先检查注册状态，再组合设备、媒体效果、`pcConfig` 和媒体流，最后执行 `await ua.call()`。
 
 标准音频和视频按钮只负责传入呼叫类型：
 
@@ -550,7 +550,7 @@ remoteNo = number;
 const session = await ua.call(`${number}@${sipDomain}`, options);
 ```
 
-两段均取自 Demo 当前的 [`app-ui-binding.js`](../../demo/base-js/js/app-ui-binding.js) 和 [`app.js`](../../demo/base-js/js/app.js)。完整 `call()` 还包含屏幕外呼、占位轨道、单向视频和 iOS OPTIONS 保活；学习标准接入时先掌握上面的主路径。
+两段均取自 Demo 当前的 [`app-events.js`](../../demo/base-js/js/app-events.js) 和 [`app-call.js`](../../demo/base-js/js/app-call.js)。完整 `call()` 还包含屏幕外呼、占位轨道、单向视频和 iOS OPTIONS 保活；学习标准接入时先掌握上面的主路径。
 
 需要使用自定义 SIP 头时，其名称、编码和服务端处理规则必须由双方约定；无明确要求时不要添加。
 
@@ -563,9 +563,9 @@ const session = await ua.call(`${number}@${sipDomain}`, options);
 | 语音接听 | 麦克风音频，`video: false` |
 | 音视频接听 | 麦克风 + 摄像头 |
 
-两个标准接听入口位于 [`app.js`](../../demo/base-js/js/app.js) 的 `newRTCSession` 回调中，分别绑定 `#answer` 和 `#answerVideo`。它们会组合 `pcConfig`、当前选中设备、composer 和 AiNS，再调用 `session.answer()`。
+两个标准接听入口位于 [`app-call.js`](../../demo/base-js/js/app-call.js) 的 `newRTCSession` 回调中，分别绑定 `#answer` 和 `#answerVideo`。它们会组合 `pcConfig`、当前选中设备、composer 和 AiNS，再调用 `session.answer()`。
 
-下面是两个标准入口中最能体现区别的参数部分，取自 [`app.js`](../../demo/base-js/js/app.js)：
+下面是两个标准入口中最能体现区别的参数部分，取自 [`app-call.js`](../../demo/base-js/js/app-call.js)：
 
 ```js
 document.querySelector('#answer').onclick = function()
@@ -615,7 +615,7 @@ document.querySelector('#answerVideo').onclick = function()
 
 模式切换完成后监听 `mode({ mode: 'audio'|'video' })` 更新页面。不要只在按钮点击时先改 UI，因为远端可能拒绝或协商失败。
 
-代码位置：按钮绑定和 `mode` 事件都在 [`app.js`](../../demo/base-js/js/app.js) 的 `newRTCSession` 回调中。`useUpdate` 来自页面顶部“更新方式”下拉框。
+代码位置：按钮绑定和 `mode` 事件都在 [`app-call.js`](../../demo/base-js/js/app-call.js) 的 `newRTCSession` 回调中。`useUpdate` 来自页面顶部“更新方式”下拉框。
 
 Demo 的标准切换按钮代码如下：
 
@@ -636,7 +636,7 @@ document.querySelector('#toVideoSend').onclick = function()
 };
 ```
 
-以上代码取自 [`app.js`](../../demo/base-js/js/app.js)。视频升级继续复用当前摄像头约束，因此通话前选择的设备在升级时也不会丢失。
+以上代码取自 [`app-call.js`](../../demo/base-js/js/app-call.js)。视频升级继续复用当前摄像头约束，因此通话前选择的设备在升级时也不会丢失。
 
 ## 8.12 静音、设备和保持
 
@@ -652,7 +652,7 @@ document.querySelector('#toVideoSend').onclick = function()
 
 保持状态以 `hold/unhold` 事件为准。`originator: 'local'` 表示本端操作，`remote` 表示对端保持。
 
-代码位置：设备下拉框绑定在 [`app-ui-binding.js`](../../demo/base-js/js/app-ui-binding.js)；静音、前后摄像头切换和保持按钮，以及 `muted/unmuted`、`cameraChanged`、`hold/unhold` 事件在 [`app.js`](../../demo/base-js/js/app.js) 的 `newRTCSession` 回调中。
+代码位置：设备下拉框绑定在 [`app-events.js`](../../demo/base-js/js/app-events.js)；静音、前后摄像头切换和保持按钮，以及 `muted/unmuted`、`cameraChanged`、`hold/unhold` 事件在 [`app-call.js`](../../demo/base-js/js/app-call.js) 的 `newRTCSession` 回调中。
 
 麦克风和摄像头使用独立的 mute 参数：
 
@@ -700,7 +700,7 @@ document.querySelector('#hold').onclick = function()
 };
 ```
 
-代码均取自 [`app.js`](../../demo/base-js/js/app.js)。页面最终状态还应以 `muted/unmuted` 和 `hold/unhold` 事件为准，不只依赖按钮点击。
+代码均取自 [`app-call.js`](../../demo/base-js/js/app-call.js)。页面最终状态还应以 `muted/unmuted` 和 `hold/unhold` 事件为准，不只依赖按钮点击。
 
 ## 8.13 共享与推流
 
@@ -729,7 +729,7 @@ await leg.session.share('screen', {
 
 Demo 负责目标选择和统一停止 `screenStream`；SDK 负责每条会话的 sender、re-INVITE、MID 通知以及远端 `remoteShared/remoteUnShared` 事件。页面代码不应直接操作共享 transceiver。
 
-代码位置：`#shareScreen`、`#shareHtml`、`#sharePic`、`#shareVideo`、`#unshare` 以及带 `D` 的双流入口都在 [`app.js`](../../demo/base-js/js/app.js)。标准客户接入先参考不带 `D` 的方法；双流需要双方及网络侧能力支持。
+代码位置：`#shareScreen`、`#shareHtml`、`#sharePic`、`#shareVideo`、`#unshare` 以及带 `D` 的双流入口都在 [`app-call.js`](../../demo/base-js/js/app-call.js)。标准客户接入先参考不带 `D` 的方法；双流需要双方及网络侧能力支持。
 
 标准屏幕共享会保留 SDK 返回的 stream，并监听浏览器原生停止操作：
 
@@ -783,7 +783,7 @@ document.querySelector('#unshare').onclick = function()
 };
 ```
 
-以上代码均取自 [`app.js`](../../demo/base-js/js/app.js)。`unShare()` 后重新读取 PeerConnection 媒体，是为了恢复本地和远端主画面。
+以上代码均取自 [`app-call.js`](../../demo/base-js/js/app-call.js)。`unShare()` 后重新读取 PeerConnection 媒体，是为了恢复本地和远端主画面。
 
 ## 8.14 呼转、SIP INFO 和 DTMF
 
@@ -840,7 +840,7 @@ e.session.on('newDTMF', function(d)
 });
 ```
 
-代码位置：发送按钮 `referBtn`、`sendInfo`、`dtmf` 以及接收事件 `refer`、`newInfo`、`newDTMF` 均位于 [`app.js`](../../demo/base-js/js/app.js) 的 `newRTCSession` 回调中。
+代码位置：发送按钮 `referBtn`、`sendInfo`、`dtmf` 以及接收事件 `refer`、`newInfo`、`newDTMF` 均位于 [`app-call.js`](../../demo/base-js/js/app-call.js) 的 `newRTCSession` 回调中。
 
 ## 8.15 统计浮层
 
@@ -882,7 +882,7 @@ e.session.on('stats:stats-error', function(error)
 });
 ```
 
-这段代码直接取自 [`app.js`](../../demo/base-js/js/app.js) 的 `RTCSession 统计事件接入示例`。
+这段代码直接取自 [`app-call.js`](../../demo/base-js/js/app-call.js) 的 `RTCSession 统计事件接入示例`。
 
 | 区域 | 字段 |
 | --- | --- |
@@ -896,7 +896,7 @@ e.session.on('stats:stats-error', function(error)
 
 会话失败/结束或当前统计会话切换时，Demo 清空旧面板，防止重呼显示上一通数据。
 
-代码位置：统计事件绑定、格式转换和浮层渲染均在 [`app.js`](../../demo/base-js/js/app.js) 的 `newRTCSession` 回调前半部分。页面只消费 `session` 的 `stats:*` 公开事件；质量 `0` 显示“暂无数据”，质量 `6` 显示“严重异常”。
+代码位置：统计事件绑定、格式转换和浮层渲染均在 [`app-call.js`](../../demo/base-js/js/app-call.js) 的 `newRTCSession` 回调前半部分。页面只消费 `session` 的 `stats:*` 公开事件；质量 `0` 显示“暂无数据”，质量 `6` 显示“严重异常”。
 
 ## 8.16 媒体效果资源检查
 
@@ -932,7 +932,7 @@ function onFxIssue(d)
 }
 ```
 
-该函数位于 [`app.js`](../../demo/base-js/js/app.js)，呼出时通过 `options.events.mediaEffectsIssue` 传入，呼入会话则在 `newRTCSession` 中绑定事件。
+该函数位于 [`app-call.js`](../../demo/base-js/js/app-call.js)，呼出时通过 `options.events.mediaEffectsIssue` 传入，呼入会话则在 `newRTCSession` 中绑定事件。
 
 ## 8.17 按功能逐步验证
 
@@ -1060,9 +1060,9 @@ start();
 initFx();
 ```
 
-这段代码取自 [`app.js`](../../demo/base-js/js/app.js)。预采集只为了请求权限和获取带名称的设备列表，因此成功后立即停止这些 tracks。
+这段代码取自 [`app-call.js`](../../demo/base-js/js/app-call.js)。预采集只为了请求权限和获取带名称的设备列表，因此成功后立即停止这些 tracks。
 
-页面退出时的 UA 清理位于 [`app-ui-binding.js`](../../demo/base-js/js/app-ui-binding.js)：
+页面退出时的 UA 清理位于 [`app-events.js`](../../demo/base-js/js/app-events.js)：
 
 ```js
 window.onbeforeunload = function()

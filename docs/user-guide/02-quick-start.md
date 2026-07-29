@@ -52,7 +52,7 @@ const ua = new CRTC.UA({
 
 生产环境不要把账号密码和授权码直接写入前端代码或提交到版本管理系统。
 
-Base JS Demo 把环境配置和账号参数组合成 `configuration`，再只创建一个 UA。以下节选自 [`app.js`](../../demo/base-js/js/app.js)：
+Base JS Demo 把环境配置和账号参数组合成 `configuration`，再只创建一个 UA。以下节选自 [`app-call.js`](../../demo/base-js/js/app-call.js)：
 
 ```js
 const account = getQuery('caller');
@@ -137,7 +137,7 @@ const mediaConstraints = {
 
 第一版接入建议先使用 Demo 的 `640×480@15fps`，基础通话稳定后再提高分辨率和帧率。约束越严格，设备不支持时越容易产生 `OverconstrainedError`。
 
-Demo 将设备选择收敛成两个构造函数，呼出、接听和视频升级都复用它们。代码取自 [`app-sdk-helper.js`](../../demo/base-js/js/app-sdk-helper.js)：
+Demo 将设备选择收敛成两个构造函数，呼出、接听和视频升级都复用它们。代码取自 [`app-helper.js`](../../demo/base-js/js/app-helper.js)：
 
 ```js
 function getAudioOpts()
@@ -412,7 +412,7 @@ function getVideoOpts()
 
 不要把事件绑定放到 `confirmed` 后：拒接、超时、早期媒体和建立前失败都会在 confirmed 之前发生。
 
-Base JS Demo 的标准呼出也遵循同一顺序。以下是 [`app.js`](../../demo/base-js/js/app.js) 中 `call(type, direction, mediaStream)` 的核心节选：
+Base JS Demo 的标准呼出也遵循同一顺序。以下是 [`app-call.js`](../../demo/base-js/js/app-call.js) 中 `call(type, direction, mediaStream)` 的核心节选：
 
 ```js
 if (!ua.isRegistered())
@@ -444,7 +444,7 @@ const session = await ua.call(`${number}@${sipDomain}`, options);
 
 这是 Demo 的通用函数节选，因此包含随路头和媒体效果。最小接入可只保留 `pcConfig`、`mediaConstraints` 和 `ua.call()`。
 
-标准视频接听的参数与呼出保持一致，以下代码同样取自 [`app.js`](../../demo/base-js/js/app.js)：
+标准视频接听的参数与呼出保持一致，以下代码同样取自 [`app-call.js`](../../demo/base-js/js/app-call.js)：
 
 ```js
 document.querySelector('#answerVideo').onclick = function()

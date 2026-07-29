@@ -244,7 +244,7 @@ ans_onnx.tar.gz
 <li><code>setNsLevel()</code>：通话中修改降噪强度。</li>
 <li><code>setNsGain()</code>：通话中修改输出增益。</li>
 </ul>
-<p>这些函数位于 [<code>demo/base-js/js/app-media-effects.js</code>]。</p>
+<p>这些函数位于 [<code>demo/base-js/js/app-effects.js</code>]。</p>
 <p>Demo 的实际初始配置只在页面选中 AiNS 时返回对象：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function getNsOpts()
 {
@@ -281,7 +281,7 @@ ans_onnx.tar.gz
   return true;
 }
 </code></pre>
-</div><p>两段代码均取自 <a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a>。<code>false</code> 表示当前通话无法热更新，Demo 会提示“将在下一次呼叫/接听时生效”。</p>
+</div><p>两段代码均取自 <a href="../../../demo/base-js/js/app-effects.js"><code>app-effects.js</code></a>。<code>false</code> 表示当前通话无法热更新，Demo 会提示“将在下一次呼叫/接听时生效”。</p>
 <h2 id="4-4-ai-虚拟背景">4.4 AI 虚拟背景<a class="heading-anchor" href="#4-4-ai-虚拟背景" aria-label="链接到本节">#</a></h2>
 <p>SDK 会话集成中，本地摄像头是 <code>slot 0</code>。虚拟背景配置属于该输入源。</p>
 <h3 id="背景模式">背景模式<a class="heading-anchor" href="#背景模式" aria-label="链接到本节">#</a></h3>
@@ -427,9 +427,9 @@ function clearVirtualBackground()
 <ul>
 <li><code>getFxOpts()</code>：构造混流和虚拟背景初始配置。</li>
 <li><code>setVb()</code>：通话中切换背景。</li>
-<li>函数实现见 [<code>app-media-effects.js</code>]，页面控件见 [<code>index.html</code>]。</li>
+<li>函数实现见 [<code>app-effects.js</code>]，页面控件见 [<code>index.html</code>]。</li>
 </ul>
-<p>Demo 把当前视频约束和页面选择转换为 AiVB 配置。以下是 <a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a> 的模式构造节选：</p>
+<p>Demo 把当前视频约束和页面选择转换为 AiVB 配置。以下是 <a href="../../../demo/base-js/js/app-effects.js"><code>app-effects.js</code></a> 的模式构造节选：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const aiVBOptions = {
   assetConfig : { cdnUrl: AI_VB_TASKS_ROOT },
   video       : {
@@ -471,7 +471,7 @@ else
 </div><p>这样初始呼叫和通话中切换不会出现两套背景参数解析规则。</p>
 <h2 id="4-5-音视频混流">4.5 音视频混流<a class="heading-anchor" href="#4-5-音视频混流" aria-label="链接到本节">#</a></h2>
 <p>启用 <code>mediaEffectsComposer</code> 后，本地摄像头作为 <code>slot 0</code>。SDK 将合成结果用于当前通话，业务无需再次获取输出流。</p>
-<p>Base JS Demo 根据页面当前镜像、水印和虚拟背景状态构造 composer。以下代码取自 <a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a>：</p>
+<p>Base JS Demo 根据页面当前镜像、水印和虚拟背景状态构造 composer。以下代码取自 <a href="../../../demo/base-js/js/app-effects.js"><code>app-effects.js</code></a>：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function getFxOpts()
 {
   const outputMirror = document.getElementById(&#39;fxMirror&#39;).value === &#39;on&#39;;
@@ -690,7 +690,7 @@ catch (error)
   console.warn(&#39;setTextMark error&#39;, error);
 }
 </code></pre>
-</div><p>该节选来自 <a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a>。图片水印使用相同流程，只替换稳定 ID 和水印构造函数。</p>
+</div><p>该节选来自 <a href="../../../demo/base-js/js/app-effects.js"><code>app-effects.js</code></a>。图片水印使用相同流程，只替换稳定 ID 和水印构造函数。</p>
 <h3 id="水印参数">水印参数<a class="heading-anchor" href="#水印参数" aria-label="链接到本节">#</a></h3>
 <div class="table-wrap"><table>
 <thead>

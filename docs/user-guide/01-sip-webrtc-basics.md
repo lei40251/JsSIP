@@ -38,7 +38,7 @@
 
 示例页面如果只允许一通电话，可以用 `currentSession` 保存当前会话。需要并发通话时，应使用 `Map<session.id, session>` 管理，不能让后一通覆盖前一通。
 
-Base JS Demo 在 UA 的 `newRTCSession` 中保存当前会话。下面是 [`app.js`](../../demo/base-js/js/app.js) 的会话入口节选：
+Base JS Demo 在 UA 的 `newRTCSession` 中保存当前会话。下面是 [`app-call.js`](../../demo/base-js/js/app-call.js) 的会话入口节选：
 
 ```js
 ua.on('newRTCSession', function(e)
@@ -131,7 +131,7 @@ WSS 地址、SIP 域和 TURN 地址用途不同，不一定使用同一个域名
 
 自动注册是 `register: true`，`ua.start()` 连接后自动发送 REGISTER。SDK 也支持配置 `register: false` 后主动调用 `ua.register()`；Base JS Demo 选择运行模式后固定使用自动注册。两种方式的最终成功标志都相同：`registered`。
 
-Demo 不在 `connected` 事件中直接开放呼叫，而是分别记录连接和注册结果。以下代码取自 [`app.js`](../../demo/base-js/js/app.js)：
+Demo 不在 `connected` 事件中直接开放呼叫，而是分别记录连接和注册结果。以下代码取自 [`app-call.js`](../../demo/base-js/js/app-call.js)：
 
 ```js
 ua.on('connected', function()
@@ -244,7 +244,7 @@ pcConfig['iceCandidatePoolSize'] = 4;
 pcConfig['bundlePolicy'] = 'max-compat';
 ```
 
-这段代码取自 [`app.js`](../../demo/base-js/js/app.js)。`iceServers`、`iceTransportPolicy` 应来自当前部署环境，不要复制其他环境的 TURN 凭据。
+这段代码取自 [`app-call.js`](../../demo/base-js/js/app-call.js)。`iceServers`、`iceTransportPolicy` 应来自当前部署环境，不要复制其他环境的 TURN 凭据。
 
 ### ICE 状态含义
 
@@ -288,7 +288,7 @@ Track 的常见属性：
 - 页面自行创建的预览、屏幕流、占位流必须由页面停止。
 - 不要提前停止一个仍被当前通话使用的自定义 track。
 
-Demo 在页面自己创建的媒体流失败或结束时显式停止 tracks。以下是 [`app.js`](../../demo/base-js/js/app.js) 中的清理方式：
+Demo 在页面自己创建的媒体流失败或结束时显式停止 tracks。以下是 [`app-call.js`](../../demo/base-js/js/app-call.js) 中的清理方式：
 
 ```js
 cusMediaStream.getTracks().forEach((track) => track.stop());
@@ -301,7 +301,7 @@ cusMediaStream = new MediaStream();
 
 `localVideo.srcObject = stream` 只是把某个流显示在页面，不代表该流一定已经发送。实际发送取决于当前会话配置、媒体方向和 track 状态。
 
-Demo 通过 [`app-sdk-helper.js`](../../demo/base-js/js/app-sdk-helper.js) 从 PeerConnection 读取 SDK 正在使用的流，再绑定到页面元素：
+Demo 通过 [`app-helper.js`](../../demo/base-js/js/app-helper.js) 从 PeerConnection 读取 SDK 正在使用的流，再绑定到页面元素：
 
 ```js
 const localStream = CRTC.Utils.getStreams(pc, 'local');
@@ -336,7 +336,7 @@ video { transform: scaleX(-1); }
 | 设备 label 为空 | 尚未授权媒体权限 | 先请求一次权限后重新枚举 |
 | `play()` reject | 浏览器自动播放限制 | 提供“点击播放/恢复播放”按钮 |
 
-Demo 初始化时先请求一次音视频权限，再通过 [`app-sdk-helper.js`](../../demo/base-js/js/app-sdk-helper.js) 的 `loadDevices()` 读取设备。无论预采集成功还是失败，都会尝试刷新设备列表：
+Demo 初始化时先请求一次音视频权限，再通过 [`app-helper.js`](../../demo/base-js/js/app-helper.js) 的 `loadDevices()` 读取设备。无论预采集成功还是失败，都会尝试刷新设备列表：
 
 ```js
 navigator.mediaDevices.getUserMedia({ video: true, audio: true })

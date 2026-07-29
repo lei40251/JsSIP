@@ -51,7 +51,7 @@ ua.on('newRTCSession', function(data)
 
 默认约每 `2000ms` 更新一次。通话刚开始时部分值暂时为 `null` 属于正常现象。
 
-Base JS Demo 在每次 `newRTCSession` 中绑定统计，并用 `statsSession` 防止旧会话的延迟结果覆盖新会话。以下代码取自 [`app.js`](../../demo/base-js/js/app.js)：
+Base JS Demo 在每次 `newRTCSession` 中绑定统计，并用 `statsSession` 防止旧会话的延迟结果覆盖新会话。以下代码取自 [`app-call.js`](../../demo/base-js/js/app-call.js)：
 
 ```js
 statsSession = e.session;
@@ -137,7 +137,7 @@ const formatSessionStatsBitrate = function(value)
 };
 ```
 
-该节选来自 [`app.js`](../../demo/base-js/js/app.js)。这里的换算等价于将 bps 除以 `1000` 后保留一位小数。
+该节选来自 [`app-call.js`](../../demo/base-js/js/app-call.js)。这里的换算等价于将 bps 除以 `1000` 后保留一位小数。
 
 ## 5.3 网络质量等级 0～6
 
@@ -413,7 +413,7 @@ if (monitor)
 
 `session.statsMonitor` 在 PeerConnection 创建后可用，会话结束释放后为 `null`。会话内实例不要自行调用 `start()`、`stop()` 或 `reset()`。
 
-Demo 把最近一份结果暴露给浏览器控制台，便于联调时对照页面面板。以下代码取自 [`app.js`](../../demo/base-js/js/app.js)：
+Demo 把最近一份结果暴露给浏览器控制台，便于联调时对照页面面板。以下代码取自 [`app-call.js`](../../demo/base-js/js/app-call.js)：
 
 ```js
 function readStats()
@@ -473,7 +473,7 @@ monitor.stop();
 | 网络质量 | `quality.RTT/uplinkNetworkQuality/downlinkNetworkQuality` |
 | 存在问题 | `quality.issues[].code/severity` |
 
-Demo 代码见 [`demo/base-js/js/app.js`] 的 `RTCSession 统计事件接入示例`。运行和验证步骤见 [Base JS Demo 学习与验证](./08-demo-guide.md)，旧统计迁移见 [旧版功能升级指南](./07-upgrade-guide.md)。
+Demo 代码见 [`demo/base-js/js/app-call.js`] 的 `RTCSession 统计事件接入示例`。运行和验证步骤见 [Base JS Demo 学习与验证](./08-demo-guide.md)，旧统计迁移见 [旧版功能升级指南](./07-upgrade-guide.md)。
 
 Demo 在新会话开始、当前会话失败或结束时都调用同一个面板重置函数：
 

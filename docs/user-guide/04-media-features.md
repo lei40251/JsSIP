@@ -143,7 +143,7 @@ Base JS Demo 中对应：
 - `setNsLevel()`：通话中修改降噪强度。
 - `setNsGain()`：通话中修改输出增益。
 
-这些函数位于 [`demo/base-js/js/app-media-effects.js`]。
+这些函数位于 [`demo/base-js/js/app-effects.js`]。
 
 Demo 的实际初始配置只在页面选中 AiNS 时返回对象：
 
@@ -187,7 +187,7 @@ function setNsLevel(level)
 }
 ```
 
-两段代码均取自 [`app-media-effects.js`](../../demo/base-js/js/app-media-effects.js)。`false` 表示当前通话无法热更新，Demo 会提示“将在下一次呼叫/接听时生效”。
+两段代码均取自 [`app-effects.js`](../../demo/base-js/js/app-effects.js)。`false` 表示当前通话无法热更新，Demo 会提示“将在下一次呼叫/接听时生效”。
 
 ## 4.4 AI 虚拟背景
 
@@ -288,9 +288,9 @@ function clearVirtualBackground()
 
 - `getFxOpts()`：构造混流和虚拟背景初始配置。
 - `setVb()`：通话中切换背景。
-- 函数实现见 [`app-media-effects.js`]，页面控件见 [`index.html`]。
+- 函数实现见 [`app-effects.js`]，页面控件见 [`index.html`]。
 
-Demo 把当前视频约束和页面选择转换为 AiVB 配置。以下是 [`app-media-effects.js`](../../demo/base-js/js/app-media-effects.js) 的模式构造节选：
+Demo 把当前视频约束和页面选择转换为 AiVB 配置。以下是 [`app-effects.js`](../../demo/base-js/js/app-effects.js) 的模式构造节选：
 
 ```js
 const aiVBOptions = {
@@ -341,7 +341,7 @@ else
 
 启用 `mediaEffectsComposer` 后，本地摄像头作为 `slot 0`。SDK 将合成结果用于当前通话，业务无需再次获取输出流。
 
-Base JS Demo 根据页面当前镜像、水印和虚拟背景状态构造 composer。以下代码取自 [`app-media-effects.js`](../../demo/base-js/js/app-media-effects.js)：
+Base JS Demo 根据页面当前镜像、水印和虚拟背景状态构造 composer。以下代码取自 [`app-effects.js`](../../demo/base-js/js/app-effects.js)：
 
 ```js
 function getFxOpts()
@@ -503,7 +503,7 @@ catch (error)
 }
 ```
 
-该节选来自 [`app-media-effects.js`](../../demo/base-js/js/app-media-effects.js)。图片水印使用相同流程，只替换稳定 ID 和水印构造函数。
+该节选来自 [`app-effects.js`](../../demo/base-js/js/app-effects.js)。图片水印使用相同流程，只替换稳定 ID 和水印构造函数。
 
 ### 水印参数
 

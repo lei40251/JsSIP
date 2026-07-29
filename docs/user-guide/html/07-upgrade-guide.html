@@ -216,7 +216,7 @@ else
   fx.setAiBackground(0, aiVBOptions);
 }
 </code></pre>
-</div><p>代码节选自 <a href="../../../demo/base-js/js/app-media-effects.js"><code>app-media-effects.js</code></a>。升级时应同时替换开启、切换和清除三条路径，不能只改初始呼叫参数。</p>
+</div><p>代码节选自 <a href="../../../demo/base-js/js/app-effects.js"><code>app-effects.js</code></a>。升级时应同时替换开启、切换和清除三条路径，不能只改初始呼叫参数。</p>
 <h3 id="7-2-3-模式与参数迁移">7.2.3 模式与参数迁移<a class="heading-anchor" href="#7-2-3-模式与参数迁移" aria-label="链接到本节">#</a></h3>
 <div class="table-wrap"><table>
 <thead>
@@ -328,7 +328,7 @@ remoteNo = number;
 
 const session = await ua.call(`${number}@${sipDomain}`, options);
 </code></pre>
-</div><p>标准音频和视频接听也调用同样的 <code>getFxOpts()</code> 和 <code>getNsOpts()</code>。这段代码取自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>，可作为检查“呼出已升级、接听未升级”问题的对照点。</p>
+</div><p>标准音频和视频接听也调用同样的 <code>getFxOpts()</code> 和 <code>getNsOpts()</code>。这段代码取自 <a href="../../../demo/base-js/js/app-call.js"><code>app-call.js</code></a>，可作为检查“呼出已升级、接听未升级”问题的对照点。</p>
 <p>当前会话需要动态更新时：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">const composer = session.getMediaEffectsComposer();
 
@@ -459,7 +459,7 @@ e.session.on(&#39;stats:detailed-report&#39;, function(report)
   renderSessionConnectionStats(report.connection);
 });
 </code></pre>
-</div><p>该节选来自 <a href="../../../demo/base-js/js/app.js"><code>app.js</code></a>。旧页面迁移后如果允许快速重呼，建议保留这种会话归属检查。</p>
+</div><p>该节选来自 <a href="../../../demo/base-js/js/app-call.js"><code>app-call.js</code></a>。旧页面迁移后如果允许快速重呼，建议保留这种会话归属检查。</p>
 <h2 id="7-6-网络质量等级的行为变化">7.6 网络质量等级的行为变化<a class="heading-anchor" href="#7-6-网络质量等级的行为变化" aria-label="链接到本节">#</a></h2>
 <p>这是统计升级中最需要重新确认页面文案和告警逻辑的部分。</p>
 <h3 id="等级-0">等级 0<a class="heading-anchor" href="#等级-0" aria-label="链接到本节">#</a></h3>

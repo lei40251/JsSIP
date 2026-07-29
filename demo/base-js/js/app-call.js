@@ -1756,7 +1756,7 @@ function onSession(e)
     e.session.upgradeToVideo({ useUpdate: useUpdate, videoStream: tmpStream }, () => { setStatus('切换视频模式完成') + curMode; });
   };
 
-  // 摄像头和麦克风的切换已统一在 app-ui-binding.js 中处理，
+  // 摄像头和麦克风的切换已统一在 app-events.js 中处理，
   // 避免同一个元素被多次 addEventListener 导致重复绑定。
 
   /**
@@ -2370,7 +2370,7 @@ async function call(type, direction, mediaStream)
  * 3. 提示用户选择"点对点"或"三方"模式
  *
  * UA 的创建、信令连接和注册在用户点击模式按钮后由 initMode() 执行。
- * 按钮绑定、设备选择等在 app-ui-binding.js 中统一管理。
+ * 按钮绑定、设备选择等在 app-events.js 中统一管理。
  */
 function initPage()
 {
