@@ -1,4 +1,18 @@
-/* Demo 媒体效果：虚拟背景、镜像、水印和 AI 降噪配置。 */
+/* Demo 媒体效果：虚拟背景、镜像、水印和 AI 降噪配置。
+ *
+ * 聚合 demo 页面中与媒体效果相关的核心逻辑：
+ * 1. 页面状态与效果资源配置
+ * 2. 虚拟背景配置构建（AiVBOptions）
+ * 3. 水印配置构建（文字水印 + 图片水印）
+ * 4. MediaEffectsComposer 呼叫/接听参数汇总（getFxOpts）
+ * 5. AI 降噪呼叫/接听参数构建（getNsOpts）
+ * 6. 当前会话实例获取和水印合并辅助
+ * 7. 当前通话效果同步（setMirror、setMarks、setVb、setNsLevel）
+ * 8. 页面状态初始化（initFx）
+ *
+ * 呼叫/接听时的初始效果通过 getFxOpts() 和 getNsOpts() 配置；
+ * 通话建立后的增量更新通过 setMirror/setMarks/setVb/setNsLevel 实时生效。
+ */
 /* eslint-disable prefer-const */
 /* eslint-disable no-unused-vars */
 /* eslint-disable max-len */
@@ -20,8 +34,9 @@
 // 1. 页面状态与资源
 // =============================================================================
 
-// 当前选中的虚拟背景类型：''、'none'、'blur'、'img1'、'img2'
+// 当前选中的虚拟背景类型：''（不启用）、'none'（保留人物不替换）、'blur'（模糊）、'img1'、'img2'
 let vbType = '';
+// AI 虚拟背景模型资源根路径（WASM/TFLite 等文件所在目录）
 const VB_ROOT = './assets/aivb';
 
 // 演示页内置背景图 key -> URL 映射
@@ -30,12 +45,14 @@ const vbImgs = {
   img2 : './imgs/sky.jpg'
 };
 
-// 当前是否启用了 AiNS。演示里只处理 '' 和 'AiNS' 两种值。
+// 当前是否启用了 AiNS。演示里只处理 ''（未启用）和 'AiNS'（启用）两种值。
 let aiNsType = '';
+// AI 降噪模型资源根路径（WASM 和模型文件所在目录）
 const NS_ROOT = './assets/ains';
 
-// 当前呼叫页里两类输出水印的固定 ID。
+// 文字水印固定 ID，用于 Composer 中水印的去重和按 ID 更新
 const TEXT_MARK_ID = 'call-output-text-watermark';
+// 图片水印固定 ID，用于 Composer 中水印的去重和按 ID 更新
 const IMAGE_MARK_ID = 'call-output-image-watermark';
 
 // =============================================================================
@@ -765,3 +782,6 @@ function initFx()
 
   levelInput.value = normNsLevel(levelInput.value);
 }
+
+// 媒体效果模块负责同步自己的初始表单状态。
+initFx();

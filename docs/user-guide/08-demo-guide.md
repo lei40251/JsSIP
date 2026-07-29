@@ -1013,10 +1013,10 @@ Demo 中可以直接参考的结构：
 - 在每次 `newRTCSession` 中绑定本通电话全部事件。
 - 直接从当前 session 获取 composer、AiNS 和统计。
 
-Demo 的应用入口会先请求权限并枚举设备，然后启动 UA：
+Demo 的应用入口只初始化页面状态并预采集设备。UA 会在用户选择点对点或三方模式后，由 `initMode()` 创建并启动：
 
 ```js
-function start()
+function initPage()
 {
   setStatus(`${CRTC.version}`);
 
@@ -1024,7 +1024,7 @@ function start()
     .then(async(mediastream) =>
     {
       await loadDevices();
-      mediastream && mediastream.getTracks().forEach((track) => track.stop());
+      CRTC.Utils.closeMediaStream(mediastream);
     })
     .catch(async(error) =>
     {
@@ -1040,27 +1040,16 @@ function start()
       setStatus(`预采集失败: ${error.name || error.message || 'unknown'}`);
     });
 
-  handleStop = false;
-  disconnectedBy = null;
-  isShowUI = false;
-
-  ua.start();
-
-  setTimeout(() =>
-  {
-    if (!ua.isConnected() || !ua.isRegistered())
-    {
-      ua.stop();
-      console.log('网络连接异常或未注册成功');
-    }
-  }, 10000);
+  setStatus('请选择三方或点对点模式');
 }
 
-start();
-initFx();
+initPage();
+updateMode();
 ```
 
-这段代码取自 [`app-call.js`](../../demo/base-js/js/app-call.js)。预采集只为了请求权限和获取带名称的设备列表，因此成功后立即停止这些 tracks。
+这段代码取自 [`app-call.js`](../../demo/base-js/js/app-call.js)。预采集只为了请求权限和获取带名称的设备列表，因此成功后立即停止这些 tracks；此时不会提前连接或注册 SIP。
+
+媒体效果表单的初始状态由 [`app-effects.js`](../../demo/base-js/js/app-effects.js) 在模块加载完成时调用 `initFx()` 同步，不再由通话模块代为初始化。
 
 页面退出时的 UA 清理位于 [`app-events.js`](../../demo/base-js/js/app-events.js)：
 

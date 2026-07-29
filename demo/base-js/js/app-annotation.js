@@ -1,4 +1,15 @@
-/* Demo 共享白板与屏幕标注：绘制、同步和白板生命周期。 */
+/* Demo 共享白板与屏幕标注：绘制、同步和白板生命周期。
+ *
+ * 本文件实现基于 Konva 的共享白板和屏幕标注功能，通过 SIP INFO 消息
+ * 在通话参与者之间实时同步标注操作。核心设计要点：
+ *
+ * 1. Konva 只负责浏览器端绘制，标注数据以归一化矢量操作发送
+ * 2. 通过 RTCSession.sendInfo() 同步标注，不合成进屏幕视频轨
+ * 3. 自由画笔在 pointerup 时按完整笔画发送（避免 pointermove 高频占用信令）
+ * 4. 归一化坐标（0~1）存储，渲染时按当前舞台尺寸换算为像素
+ * 5. 用户身份用于操作去重、作者权限判断和稳定配色
+ * 6. 三方模式下 A 负责转发 B/C 之间的操作，排除来源 session 防止回环
+ */
 /* eslint-disable no-unused-vars */
 /* eslint-disable max-len */
 /* eslint-disable no-console */
@@ -12,37 +23,61 @@
 // pointerup 时按完整笔画发送，避免 pointermove 持续占用 SIP 信令链路。
 // =============================================================================
 
+// SIP INFO 消息的 Content-Type，用于标注数据同步
 const INK_TYPE = 'application/vnd.crtc.annotation+json';
+// 标注协议版本号，用于前后向兼容校验
 const INK_VERSION = 1;
+// 单条 SIP INFO 消息的最大字节数（64KB），超出则拒绝发送
 const MAX_INK_SIZE = 64 * 1024;
+// 单个 board 最多保存的图形数量，防止无限增长
 const MAX_SHAPES = 500;
+// 单个自由笔画最多包含的坐标点数，防止高频绘制产生过大消息
 const MAX_POINTS = 1200;
+// 8 种标注颜色，通过用户 ID 哈希取模分配，保证同一用户颜色稳定
 const INK_COLORS = [
   '#e5484d', '#2f6fdd', '#16a36a', '#d97706',
   '#7c3aed', '#0891b2', '#db2777', '#475569'
 ];
 
+// 双 board 状态容器：screen（屏幕标注）和 whiteboard（共享白板），
+// 各自独立维护图形列表和撤销栈
 const boards = {
   screen     : { shapes: [], redo: [] },
   whiteboard : { shapes: [], redo: [] }
 };
 
+// 已绑定 newInfo / ended / failed 事件的会话集合（WeakSet 防重复绑定）
 const boundLegs = new WeakSet();
+// 已处理的操作 ID 集合（上限 1000 条），用于远端消息去重
 const seenOps = new Set();
+// 共享白板的当前目标会话集合，白板操作通过此集合确定发送范围
 const boardLegs = new Set();
 
+// Konva.Stage 实例，标注画布的根容器
 let inkStage = null;
+// Konva.Layer 实例，所有标注图形所在的图层
 let inkLayer = null;
+// 当前标注模式：''|'local'|'remote'|'whiteboard'
 let inkMode = '';
+// 进入白板模式前的上一个标注模式，用于关闭白板后恢复
 let prevMode = '';
+// 屏幕标注开关：true 表示在屏幕共享画面上开启了标注工具
 let inkOn = false;
+// 当前选中的绘制工具：'pen'|'arrow'|'rect'|'ellipse'|'eraser'
 let inkTool = 'pen';
+// 是否正在绘制中（pointerdown 到 pointerup/cancel 之间）
 let drawing = false;
+// 绘制过程中的预览节点，pointerup 时销毁并转为正式图形存入 board
 let draftNode = null;
+// 绘制过程中的预览图形数据对象
 let draftShape = null;
+// 全局自增操作序号，makeOp() 每次调用 +1，用于生成唯一 operationId
 let opSeq = 0;
+// Konva Stage 的 ResizeObserver 实例，监听容器尺寸变化自动重绘
 let inkResize = null;
+// 上一次更新颜色选择器的用户 ID 缓存，避免同用户重复 DOM 操作
 let colorUserId = '';
+// 共享白板发起方的用户 ID，只有发起方可以广播 board:close
 let boardUserId = '';
 
 // =============================================================================
@@ -53,27 +88,59 @@ let boardUserId = '';
 // 保证同一用户在一次白板会话中返回稳定值。
 // =============================================================================
 
+/**
+ * 将数值限制在 [min, max] 范围内。
+ * 用于归一化坐标和图形尺寸的边界保护。
+ *
+ * @param {number} value - 输入值
+ * @param {number} min - 最小值
+ * @param {number} max - 最大值
+ * @returns {number} 限制后的值
+ */
 function clamp(value, min, max)
 {
   return Math.min(max, Math.max(min, value));
 }
 
+/**
+ * 获取当前标注模式对应的 board ID。
+ * 'whiteboard' 模式返回 'whiteboard'，屏幕标注模式返回 'screen'。
+ *
+ * @returns {'whiteboard'|'screen'} board 标识符
+ */
 function getBoardId()
 {
   return inkMode === 'whiteboard' ? 'whiteboard' : 'screen';
 }
 
+/**
+ * 根据 boardId 获取对应的 board 状态对象。
+ *
+ * @param {'whiteboard'|'screen'} boardId - board 标识符
+ * @returns {object} 包含 shapes 和 redo 数组的 board 对象
+ */
 function getBoard(boardId)
 {
   return boards[boardId === 'whiteboard' ? 'whiteboard' : 'screen'];
 }
 
+/**
+ * 重置指定 board 的图形和撤销栈。
+ *
+ * @param {'whiteboard'|'screen'} boardId - 要重置的 board
+ */
 function resetBoard(boardId)
 {
   boards[boardId].shapes = [];
   boards[boardId].redo = [];
 }
 
+/**
+ * 获取当前用户标识，用于标注操作的作者归属和颜色分配。
+ * 优先级：UA 配置的 SIP URI 用户名 > account 变量 > 'demo'。
+ *
+ * @returns {string} 用户标识符
+ */
 function getInkUser()
 {
   const uri = typeof ua !== 'undefined' && ua && ua.configuration ? ua.configuration.uri : null;
@@ -84,6 +151,12 @@ function getInkUser()
   return 'demo';
 }
 
+/**
+ * 获取当前用户的展示名称（display name），用于远端标注参与者列表。
+ * 回退链路：UA display_name → getInkUser()。
+ *
+ * @returns {string} 用户展示名称
+ */
 function getAnnotUserLabel()
 {
   const displayName = typeof ua !== 'undefined' && ua && ua.configuration ?
@@ -93,11 +166,26 @@ function getAnnotUserLabel()
   return cleanId(label, 32) || getInkUser();
 }
 
+/**
+ * 清理字符串：去首尾空白并截断到指定长度。
+ * 用于 SIP INFO 字段的安全截断，防止超长字符串。
+ *
+ * @param {string} value - 原始字符串
+ * @param {number} maxLength - 最大长度
+ * @returns {string} 清理后的字符串
+ */
 function cleanId(value, maxLength)
 {
   return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
 }
 
+/**
+ * 为用户分配稳定的标注颜色（基于用户 ID 的哈希取色）。
+ * 同一用户在同一会话中始终获得相同颜色，便于远端区分参与者。
+ *
+ * @param {string} senderId - 用户标识符
+ * @returns {string} CSS 颜色值（如 '#e5484d'）
+ */
 function getInkColor(senderId)
 {
   const identity = senderId || 'demo';
@@ -111,6 +199,10 @@ function getInkColor(senderId)
   return INK_COLORS[hash % INK_COLORS.length];
 }
 
+/**
+ * 更新颜色选择器的值为当前用户的默认标注颜色。
+ * 仅当用户标识变化时才更新（通过 colorUserId 缓存比较），避免频繁 DOM 操作。
+ */
 function setInkColor()
 {
   const senderId = getInkUser();
@@ -130,6 +222,15 @@ function setInkColor()
 // 三方模式发送给全部有效 leg；共享白板可传入固定 targets 做定向同步。
 // =============================================================================
 
+/**
+ * 构造标注操作对象，包含操作元数据和业务参数。
+ * 自动递增全局序号 opSeq，生成全局唯一的 operationId。
+ *
+ * @param {string} action - 操作类型（如 'shape:add'、'clear'）
+ * @param {string} boardId - 目标 board 标识符
+ * @param {object} [payload] - 操作携带的业务数据
+ * @returns {object} 可 JSON 序列化的标注操作对象
+ */
 function makeOp(action, boardId, payload)
 {
   opSeq++;
@@ -148,6 +249,12 @@ function makeOp(action, boardId, payload)
   };
 }
 
+/**
+ * 记录已处理的操作 ID，用于远端消息去重。
+ * seenOps 集合限制最大 1000 条，超出时删除最早记录。
+ *
+ * @param {string} operationId - 操作唯一标识
+ */
 function rememberOp(operationId)
 {
   if (!operationId) return;
@@ -159,6 +266,12 @@ function rememberOp(operationId)
   }
 }
 
+/**
+ * 获取当前上下文中可用于标注同步的 RTCSession 列表。
+ * 三方模式返回所有有效成员的会话；点对点模式返回 rtcSession（如果有效）。
+ *
+ * @returns {object[]} RTCSession 实例数组
+ */
 function getInkLegs()
 {
   if (typeof appMode !== 'undefined' && appMode === 'conference' &&
@@ -177,16 +290,31 @@ function getInkLegs()
   return [];
 }
 
+/**
+ * 检查共享白板是否已打开（当前模式为 whiteboard 且至少有一个白板成员）。
+ *
+ * @returns {boolean}
+ */
 function isBoardOpen()
 {
   return inkMode === 'whiteboard' && boardLegs.size > 0;
 }
 
+/**
+ * 检查指定会话是否属于共享白板目标集合。
+ *
+ * @param {object} session - RTCSession 实例
+ * @returns {boolean}
+ */
 function isBoardLeg(session)
 {
   return boardLegs.has(session);
 }
 
+/**
+ * 刷新共享/白板相关的会议 UI（仅三方模式）。
+ * 在白板开关状态变化后，确保会议控制栏中的共享按钮状态正确。
+ */
 function refreshShare()
 {
   if (typeof appMode !== 'undefined' && appMode === 'conference' &&
@@ -242,11 +370,25 @@ function sendOp(op, except, targets)
 // 点数量和归一化坐标范围，避免异常消息创建过多节点或越界图形。
 // =============================================================================
 
+/**
+ * 检查值是否为有限数字。
+ *
+ * @param {*} value - 待检查的值
+ * @returns {boolean}
+ */
 function isNumber(value)
 {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
+/**
+ * 清理和归一化坐标点，确保值为 [0, 1] 范围内的有限数字。
+ * 格式不合法的点（非数组、长度不为 2、值不是数字）返回 null。
+ * 这是远端数据进入 Konva 前的第一道防线。
+ *
+ * @param {*} point - 待清理的坐标点（期望格式为 [x, y]）
+ * @returns {number[]|null} 归一化后的 [x, y] 坐标，非法时返回 null
+ */
 function cleanPoint(point)
 {
   if (!Array.isArray(point) || point.length !== 2 ||
@@ -258,6 +400,19 @@ function cleanPoint(point)
   return [ clamp(point[0], 0, 1), clamp(point[1], 0, 1) ];
 }
 
+/**
+ * 清理和归一化标注图形数据，限制字段长度、类型白名单、坐标范围。
+ * 这是远端图形数据进入 Board 前的唯一校验入口：
+ * - 校验 id 长度 ≤ 120 字符
+ * - 校验 type 在白名单内（pen/eraser/arrow/rect/ellipse）
+ * - 笔画的点数量在 [2, MAX_POINTS] 之间
+ * - 非笔画的 start/end 坐标必须合法
+ * - authorId/authorLabel 截断到安全长度
+ * - color 若不是合法的 #rrggbb 格式则用 hash 自动分配
+ *
+ * @param {object} shape - 待清理的图形数据
+ * @returns {object|null} 清理后的图形对象，非法时返回 null
+ */
 function cleanShape(shape)
 {
   const types = [ 'pen', 'eraser', 'arrow', 'rect', 'ellipse' ];
@@ -301,6 +456,15 @@ function cleanShape(shape)
   return sanitized;
 }
 
+/**
+ * 校验 SIP INFO 解析出的标注操作的完整性和合法性。
+ * 校验项：event/version/boardId/action 字段存在且合法、
+ * operationId 为字符串且 ≤ 160 字符、payload 为对象。
+ * 这是 onInkInfo 处理远端消息前的最外层防线。
+ *
+ * @param {*} op - 从 JSON.parse 得到的原始操作对象
+ * @returns {boolean} 操作是否通过了所有校验
+ */
 function validOp(op)
 {
   const actions = [
@@ -323,6 +487,19 @@ function validOp(op)
 // 因此窗口缩放后可以直接重新 renderBoard()，无需改写已保存的 shape 数据。
 // =============================================================================
 
+/**
+ * 根据 shape 数据创建 Konva 图形节点（不添加到画布）。
+ *
+ * 将归一化坐标（0~1）乘以当前舞台尺寸换算为像素坐标，
+ * 支持笔画（Line，含预览橡皮模式）、箭头（Arrow）、矩形（Rect）和椭圆（Ellipse）。
+ *
+ * preview 参数仅在 type='eraser' 时生效：预览时显示为灰色虚线，
+ * 正式提交后使用 destination-out 合成模式擦除。
+ *
+ * @param {object} shape - 已通过 cleanShape() 校验的图形数据
+ * @param {boolean} [preview=false] - 是否为预览模式（绘制中尚未提交）
+ * @returns {Konva.Shape|null} Konva 节点，舞台不存在时返回 null
+ */
 function makeNode(shape, preview)
 {
   if (!inkStage) return null;
@@ -403,6 +580,13 @@ function makeNode(shape, preview)
   });
 }
 
+/**
+ * 按当前 Board 的 shapes 数组完全重绘 Konva 画布。
+ *
+ * 每位参与者使用独立的 Konva.Group + cache，使橡皮（destination-out）
+ * 只影响自己的标注，不会擦除其他人的图形。绘制完成后刷新标注参与者
+ * 图例和工具栏状态。
+ */
 function renderBoard()
 {
   if (!inkLayer || !inkStage) return;
@@ -442,6 +626,11 @@ function renderBoard()
   updateInkUi();
 }
 
+/**
+ * 在标注工具栏旁渲染远端参与者图例。
+ * 遍历当前 Board 中非本人、非橡皮的图形，按作者去重后
+ * 显示色块和名称，帮助用户识别每位参与者的标注颜色。
+ */
 function showInkUsers()
 {
   const legend = document.querySelector('#inkUsers');
@@ -582,6 +771,16 @@ function applyOp(op)
   return true;
 }
 
+/**
+ * 处理远端 SIP INFO 标注消息。
+ *
+ * 处理流程严格按顺序：校验 Content-Type → 解析 JSON → validOp() 全字段校验 →
+ * seenOps 去重 → 白板成员校验 → 白板 open/close 状态更新 → applyOp() 写入 Board →
+ * 三方模式转发给其他目标（排除来源 session，保持 operationId 不变防回环）。
+ *
+ * @param {object} session - 消息来源的 RTCSession 实例
+ * @param {object} data - newInfo 事件数据对象
+ */
 function onInkInfo(session, data)
 {
   if (!data || data.originator !== 'remote' || !data.info) return;
@@ -691,6 +890,12 @@ function bindInk(session)
   session.on('failed', cleanup);
 }
 
+/**
+ * 向指定会话发送当前完整的白板和屏幕标注快照。
+ * 用于新加入白板的成员同步现有标注内容，避免从零开始接收增量操作。
+ *
+ * @param {object} session - 目标 RTCSession 实例
+ */
 function sendSnapshot(session)
 {
   if (!session) return;
@@ -710,6 +915,12 @@ function sendSnapshot(session)
 // sendOp() 同步完整笔画，避免自由画笔产生高频 SIP INFO。
 // =============================================================================
 
+/**
+ * 获取当前指针在画布上的归一化坐标 [x, y]（0~1）。
+ * 舞台不存在或尺寸为 0 时返回 null。
+ *
+ * @returns {number[]|null} 归一化坐标，无法获取时返回 null
+ */
 function getPointer()
 {
   if (!inkStage) return null;
@@ -724,6 +935,13 @@ function getPointer()
   ];
 }
 
+/**
+ * pointerdown 事件处理：开始绘制。
+ *
+ * 仅在白板模式或开启标注的屏幕模式下响应。创建 draftShape（含工具类型、
+ * 颜色、线宽和起始点），生成预览节点并添加到 inkLayer。
+ * 笔/橡皮工具额外初始化 points 数组。
+ */
 function startDraw()
 {
   if (!inkStage || (inkMode !== 'whiteboard' && !inkOn)) return;
@@ -766,6 +984,12 @@ function startDraw()
   }
 }
 
+/**
+ * pointermove 事件处理：更新绘制预览。
+ *
+ * 笔/橡皮：限制最小采样距离（2/舞台短边）避免冗余点，限制最大点数 MAX_POINTS。
+ * 形状工具（箭头/矩形/椭圆）：实时更新 end 坐标。每次移动销毁旧预览节点并创建新节点。
+ */
 function moveDraw()
 {
   if (!drawing || !draftShape || !draftNode) return;
@@ -797,6 +1021,13 @@ function moveDraw()
   inkLayer.batchDraw();
 }
 
+/**
+ * pointerup / pointercancel 事件处理：结束绘制并提交。
+ *
+ * 销毁预览节点，将 draftShape 通过 cleanShape() 校验后写入 Board
+ * 并清空 redo 栈，最后通过 runOp() 同步给远端。
+ * 校验失败的绘制（如点太少）直接丢弃并重绘画布。
+ */
 function endDraw()
 {
   if (!drawing) return;
@@ -823,7 +1054,15 @@ function endDraw()
   }
 }
 
-// 本端绘制操作统一走“记录去重 → 更新画布 → SIP INFO 同步”。
+/**
+ * 统一入口：记录去重 → 更新本地画布 → 发送 SIP INFO 同步远端。
+ * 所有本端标注操作（绘制、撤销、重做、清空）都应通过此函数提交。
+ *
+ * @param {string} action - 操作类型（如 'shape:add'）
+ * @param {object} payload - 操作携带的业务数据
+ * @param {string} [boardId] - 目标 board，省略时使用当前 mode 对应的 board
+ */
+// 本端绘制操作统一走”记录去重 → 更新画布 → SIP INFO 同步”。
 function runOp(action, payload, boardId)
 {
   const op = makeOp(action, boardId || getBoardId(), payload);
@@ -839,6 +1078,13 @@ function runOp(action, payload, boardId)
 // 会清空该 board 的 redo，避免把另一条编辑分支重新插回画布。
 // =============================================================================
 
+/**
+ * 获取当前用户在 board 中最新的自有图形（从后往前遍历）。
+ * 用于判断撤销/重做/清空按钮的可用性和实际操作。
+ *
+ * @param {object} board - Board 状态对象
+ * @returns {object|null} 最新的自有图形，没有时返回 null
+ */
 function getOwnShape(board)
 {
   const senderId = getInkUser();
@@ -851,6 +1097,9 @@ function getOwnShape(board)
   return null;
 }
 
+/**
+ * 撤销当前用户最后一个图形（移入 redo 栈，发送 shape:remove）。
+ */
 function undoInk()
 {
   const boardId = getBoardId();
@@ -863,6 +1112,9 @@ function undoInk()
   runOp('shape:remove', { shapeId: shape.id }, boardId);
 }
 
+/**
+ * 重做最近一次撤销操作（从 redo 栈弹出，发送 shape:add）。
+ */
 function redoInk()
 {
   const boardId = getBoardId();
@@ -874,6 +1126,9 @@ function redoInk()
   runOp('shape:add', { shape }, boardId);
 }
 
+/**
+ * 清除当前用户在当前 Board 中的所有图形（发送 author:clear）。
+ */
 function clearMine()
 {
   const boardId = getBoardId();
@@ -892,6 +1147,12 @@ function clearMine()
 // 和白板生命周期函数中，方便从页面操作定位真实的 SDK 接入点。
 // =============================================================================
 
+/**
+ * 显示或隐藏清空确认弹窗。
+ * 显示时自动聚焦确认按钮；隐藏时恢复工具栏状态。
+ *
+ * @param {boolean} visible - true 显示确认弹窗，false 隐藏
+ */
 function showClearBox(visible)
 {
   const confirmation = document.querySelector('#inkClearBox');
@@ -907,6 +1168,13 @@ function showClearBox(visible)
   }
 }
 
+/**
+ * 根据当前工具类型更新操作提示文字。
+ * 传入 message 参数时直接显示该文本；否则按 inkTool 显示预设提示。
+ * 各工具的预设提示：笔—拖动画布绘制、箭头—拖动设置方向、矩形/椭圆—拖动绘制、橡皮—拖动擦除。
+ *
+ * @param {string} [message] - 自定义提示文本，省略时使用预设
+ */
 function setInkHint(message)
 {
   const hint = document.querySelector('#inkHint');
@@ -931,6 +1199,15 @@ function setInkHint(message)
   if (hint) hint.textContent = hints[inkTool] || '';
 }
 
+/**
+ * 统一更新标注工具栏的所有 UI 状态。
+ *
+ * 根据当前 inkMode（白板/屏幕）、inkOn（标注开关）、boardUserId（白板发起方）
+ * 综合决策：画布显隐、工具栏显隐、标注开关按钮、白板关闭按钮、工具激活状态、
+ * 撤销/重做/清空按钮的禁用状态、提示文字。
+ *
+ * 每次标注操作后都应调用此函数同步 UI。
+ */
 function updateInkUi()
 {
   const stageEl = document.querySelector('#inkStage');
@@ -986,6 +1263,15 @@ function updateInkUi()
   setInkHint();
 }
 
+/**
+ * 根据容器尺寸自适应调整 Konva Stage 大小和位置。
+ *
+ * 白板模式：Stage 填满整个共享浮层容器。
+ * 屏幕标注模式：Stage 按视频原始比例居中缩放，覆盖在视频元素上方。
+ * 尺寸变化超过 1px 时触发 Konva 舞台重设和全量重绘。
+ *
+ * 触发时机：容器 ResizeObserver 回调、窗口 resize、视频 loadedmetadata。
+ */
 function resizeInk()
 {
   if (!inkStage) return;
@@ -1035,6 +1321,12 @@ function resizeInk()
 // 目标集合。只有共享白板发起方可以广播 board:close，防止参与方误关全局白板。
 // =============================================================================
 
+/**
+ * 切换标注模式并更新 Stage 背景和画布渲染。
+ * 进入白板模式时显示白色背景，退出时隐藏。立即触发 resizeInk 和 renderBoard。
+ *
+ * @param {string} mode - 新标注模式：''|'local'|'remote'|'whiteboard'
+ */
 function setInkMode(mode)
 {
   inkMode = mode || '';
@@ -1048,18 +1340,32 @@ function setInkMode(mode)
   renderBoard();
 }
 
+/**
+ * 屏幕共享开始时初始化 screen board（清空图形、关闭标注开关）。
+ * 由 showShare() 在显示共享画面前调用。
+ */
 function startInk()
 {
   resetBoard('screen');
   inkOn = false;
 }
 
+/**
+ * 屏幕共享停止时清理 screen board（清空图形、关闭标注开关）。
+ * 由 hideShare() 在隐藏共享画面时调用。
+ */
 function stopInk()
 {
   resetBoard('screen');
   inkOn = false;
 }
 
+/**
+ * 切换屏幕标注开关。
+ *
+ * 仅 screen 模式下有效。开启时自动设置色板为当前用户配色。
+ * 关闭时清除当前用户的所有标注并退出标注模式。
+ */
 function toggleInk()
 {
   if (inkMode !== 'local' && inkMode !== 'remote')
@@ -1182,6 +1488,13 @@ function closeBoard(notify)
   }
 }
 
+/**
+ * 完全重置所有标注状态到初始值。
+ *
+ * 清空两个 Board、去重集合、白板目标集合、刷新 UI，
+ * 重置所有模式、开关、用户缓存和绘制状态。
+ * 在最后一个会话结束或手动重置时调用。
+ */
 function resetInk()
 {
   resetBoard('screen');
@@ -1288,3 +1601,6 @@ function initInk()
 
   updateInkUi();
 }
+
+// 标注模块负责初始化自己的 Konva 画布和白板工具栏事件。
+initInk();

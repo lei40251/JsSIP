@@ -1,4 +1,16 @@
-/* Demo 公共辅助方法：媒体渲染、设备列表、通知和共享浮层。 */
+/* Demo 公共辅助方法：媒体渲染、设备列表、通知和共享浮层。
+ *
+ * 本文件提供点对点和三方模式共用的工具函数，不包含 SDK API 调用封装。
+ * 所有函数都是纯页面辅助逻辑，可直接查看代码理解实现。
+ *
+ * 主要功能：
+ * 1. 媒体渲染：showStreams / clearStreams / setMedia
+ * 2. 设备管理：loadDevices / getAudioOpts / getVideoOpts
+ * 3. 系统通知：showNotice / closeNotice
+ * 4. 共享浮层：openShareBox / minShareBox / closeShareBox
+ * 5. 输入处理：normNsLevel / getNsLevel / readOpacity / getQuery
+ * 6. 工具函数：sameTracks / onTrackEnd / getRemoteOs
+ */
 /* eslint-disable no-unused-vars */
 /* eslint-disable max-len */
 /* eslint-disable no-console */

@@ -33,7 +33,11 @@ let earlyMedia = false;
 let rtcSession;
 // 用户选择模式前不创建 UA，也不会连接或注册。
 let appMode = null;
+// CRTC.UserAgent 实例，由 initMode() 在用户选择模式后创建。
+// 点对点和三方模式共用同一个 UA，负责 SIP 连接、注册和新会话分发。
 let ua = null;
+// SIP 注册状态：'idle'（未初始化）、'registering'（注册中）、
+// 'registered'（已注册）、'unregistered'（已注销）
 let regState = 'idle';
 
 /**
@@ -225,6 +229,13 @@ if (extSet.has('BP720P'))
   };
 }
 
+/**
+ * 获取或创建黑屏视频轨道生成器（懒初始化，只创建一次）。
+ * 用于无摄像头呼叫和音视频升级场景中的视频占位，
+ * 避免 PeerConnection 因缺少视频轨而无法完成 SDP 协商。
+ *
+ * @returns {{videoTrack: MediaStreamTrack}} 黑屏视频轨道包装对象
+ */
 // 黑屏占位轨只创建一次，接听和音视频升级场景共用。
 function getBlackTrack()
 {
@@ -245,6 +256,9 @@ function getBlackTrack()
 // RTCPeerConnection 配置
 // =============================================================================
 
+// 基础 RTCPeerConnection 配置对象，所有呼叫/接听共用。
+// 包含 ICE 服务器、ICE 传输策略、候选池大小和 BUNDLE 策略。
+// 在 ua.call() 时通过 pcConfig 选项传入，不同场景可在此基础扩展。
 const pcConfig = {};
 
 // ICE 服务器列表（STUN/TURN）
@@ -257,14 +271,25 @@ pcConfig['iceCandidatePoolSize'] = 4;
 // BUNDLE 策略设为最大兼容模式，所有媒体流复用同一端口
 pcConfig['bundlePolicy'] = 'max-compat';
 
+/**
+ * 构建接听侧的 RTCPeerConnection 配置。
+ * 在 pcConfig 基础上追加 rtcpMuxPolicy: 'negotiate'，
+ * 用于兼容部分要求非复用 RTCP 的远端端点，避免因 RTCP 复用策略不匹配
+ * 导致 DTLS 握手或媒体传输失败。
+ *
+ * @returns {object} 接听专用的 RTCPeerConnection 配置对象
+ */
 function getAnswerPc()
 {
   return Object.assign({}, pcConfig, { rtcpMuxPolicy: 'negotiate' });
 }
 
-// ***** UA 事件回调 *****
+// =============================================================================
+// UA 事件回调
+//
 // 点对点和三方模式共用同一组 UA 层事件（连接、注册、断网等）。
 // newRTCSession 事件在模式初始化时按模式分别绑定不同的处理函数。
+// =============================================================================
 
 /**
  * 绑定 UA 级别的事件回调（连接、注册、断网、浏览器网络状态）。
@@ -416,6 +441,13 @@ function bindUa()
 
   /**
    * unregistered — SIP 主动注销或注册失效
+   *
+   * @fires 主动调用 ua.unregister() 或注册因网络/服务端原因失效时触发
+   *
+   * @type {object}
+   * @property {string} [cause] - 注销原因描述（如 'Expired'、'Connection Error'）
+   *
+   * 处理逻辑：更新 regState 为 'unregistered'、更新模式 UI、显示注销原因。
    */
   ua.on('unregistered', function(data)
   {
@@ -457,8 +489,16 @@ const statsIssues = {
   VIDEO_FREEZING               : '视频卡顿',
   VIDEO_PAUSING                : '视频暂停'
 };
+// 网络质量等级 0-6 对应的中文标签，用于统计面板展示
 const qualityText = [ '暂无数据', '极佳', '较好', '一般', '差', '极差', '严重异常' ];
 
+/**
+ * 将文本设置到指定 DOM 元素的 textContent。
+ * 元素不存在时静默跳过（避免统计面板未渲染时抛错）。
+ *
+ * @param {string} selector - CSS 选择器，定位目标 DOM 元素
+ * @param {string} value - 要显示的文本内容
+ */
 function setStats(selector, value)
 {
   const element = document.querySelector(selector);
@@ -466,22 +506,48 @@ function setStats(selector, value)
   if (element) element.textContent = value;
 }
 
+/**
+ * 格式化数值，null/undefined 时返回 '-'。
+ *
+ * @param {number|null|undefined} value - 待格式化的数值
+ * @param {string} [unit] - 可选单位后缀（如 'ms'、'%'）
+ * @returns {string} 格式化后的字符串，如 '42ms' 或 '-'
+ */
 function fmtNum(value, unit)
 {
   return value === null || value === undefined ? '-' : `${value}${unit || ''}`;
 }
 
+/**
+ * 格式化码率（bps → kbps），null/undefined 时返回 '-'。
+ *
+ * @param {number|null|undefined} value - 码率（bps）
+ * @returns {string} 格式化后的字符串，如 '1.5kbps' 或 '-'
+ */
 function fmtRate(value)
 {
   return value === null || value === undefined ? '-' : `${(value / 1000).toFixed(1)}kbps`;
 }
 
+/**
+ * 格式化网络质量等级（数字 → 中文标签），null/undefined 时返回 '-'。
+ *
+ * @param {number|null|undefined} value - 质量等级索引（0-6），对应 qualityText 数组
+ * @returns {string} 格式化后的字符串，如 '极佳(1)' 或 '-'
+ */
 function fmtQuality(value)
 {
   return value === null || value === undefined ? '-' :
     `${qualityText[value] || '未知'}(${value})`;
 }
 
+/**
+ * 向统计表格容器追加一行数据单元格。
+ * 每个值生成一个 span.rtc-stats-cell 元素。
+ *
+ * @param {HTMLElement} table - 统计表格的容器 DOM 元素
+ * @param {string[]} values - 每列的文本值数组
+ */
 function addStatsRow(table, values)
 {
   values.forEach((value) =>
@@ -494,6 +560,14 @@ function addStatsRow(table, values)
   });
 }
 
+/**
+ * 渲染发送或接收媒体流的详细统计（编码、码率、抖动、丢包、画面、FPS 等）。
+ * 按音频优先、MID 数字顺序排序，便于与 SDP 媒体行对照排查。
+ *
+ * @param {string} selector - 统计容器 CSS 选择器
+ * @param {Array} streams - 媒体流统计对象数组（来自 stats:detailed-report）
+ * @param {boolean} outbound - true 为发送（outbound），false 为接收（inbound）
+ */
 function renderMedia(selector, streams, outbound)
 {
   const element = document.querySelector(selector);
@@ -558,6 +632,11 @@ function renderMedia(selector, streams, outbound)
   element.appendChild(table);
 }
 
+/**
+ * 渲染连接层统计（连接状态、ICE 状态、DTLS 状态、收发带宽）。
+ *
+ * @param {object} connection - stats:detailed-report 中的 connection 字段
+ */
 function renderConn(connection)
 {
   const element = document.querySelector('#statsConn');
@@ -583,6 +662,10 @@ function renderConn(connection)
 
 /**
  * 展示 RTCSession 的详细统计。点对点和三方会话共用此函数。
+ *
+ * @param {object} session - RTCSession 实例，用于去重校验
+ *   （仅当传入 session 与当前 statsCall 相同时才渲染，避免旧会话覆盖新会话统计）
+ * @param {object} report - stats:detailed-report 事件中的详细报告对象
  */
 function renderStats(session, report)
 {
@@ -602,6 +685,10 @@ function renderStats(session, report)
   setStats('#statsIssues', issues || '无');
 }
 
+/**
+ * 重置所有统计面板显示为占位符（'--' / '无'）。
+ * 在会话结束后调用，避免残留上一通通话的统计数据。
+ */
 function resetStats()
 {
   [ '#statsConn', '#statsQuality', '#statsOut', '#statsIn' ]
@@ -609,6 +696,18 @@ function resetStats()
   setStats('#statsIssues', '无');
 }
 
+// =============================================================================
+// 屏幕共享画面渲染
+// =============================================================================
+
+/**
+ * 在共享浮层中展示本端或远端屏幕共享画面。
+ * 同时启动标注（startInk）并打开共享浮层（openShareBox）。
+ *
+ * @param {MediaStream} stream - 屏幕共享的媒体流
+ * @param {'local'|'remote'} mode - 共享来源：'local' 显示在本端预览窗口，
+ *   'remote' 显示在远端画面窗口
+ */
 // 屏幕共享统一使用同一个浮层。mode 为 local 时显示本端预览，为 remote 时显示远端画面。
 function showShare(stream, mode)
 {
@@ -620,6 +719,12 @@ function showShare(stream, mode)
   if (typeof openShareBox === 'function') openShareBox(mode);
 }
 
+/**
+ * 隐藏共享画面，清除 srcObject 并添加 hide CSS 类。
+ * 同时停止标注（stopInk）并关闭共享浮层（closeShareBox）。
+ *
+ * @param {'local'|'remote'} mode - 要隐藏的共享来源
+ */
 function hideShare(mode)
 {
   const video = document.querySelector(mode === 'local' ? '#screen' : '#shareVid');
@@ -630,6 +735,16 @@ function hideShare(mode)
   if (typeof closeShareBox === 'function') closeShareBox(mode);
 }
 
+/**
+ * 监听屏幕共享轨道的结束事件，清理预览画面。
+ *
+ * 部分浏览器不触发 MediaStreamTrack 的 ended 事件（如 Chrome 通过浏览器
+ * 原生 UI 停止共享时），因此提供 poll 参数启用额外的 readyState 轮询作为
+ * 兜底兼容方案。
+ *
+ * @param {MediaStream} stream - 屏幕共享的媒体流
+ * @param {boolean} poll - 是否额外每 100ms 轮询 track.readyState 作为兼容兜底
+ */
 // 部分浏览器不触发 ended，双流分享额外轮询轨道状态作为兼容处理。
 function watchShare(stream, poll)
 {
@@ -652,19 +767,13 @@ function watchShare(stream, poll)
 }
 
 /**
- * newRTCSession — 新建通话会话
+ * mediaEffectsIssue 事件回调（点对点和三方共用）。
+ * 媒体效果管线出现异常时（如虚拟背景初始化失败、水印渲染错误等），
+ * 通过此回调在控制台告警并更新页面状态栏，便于开发者快速定位问题。
  *
- * @fires 呼入或呼出通话时触发（SIP INVITE 发送或接收）
- *
- * @type {object}
- * @property {string} originator - 'local'（本端发起）或 'remote'（远端呼入）
- * @property {object} session - 通话的 RTCSession 实例
- * @property {object} request - 请求对象，远端呼入时可从此获取随路数据和呼叫模式
- *
- * 处理逻辑：
- * 1. 打印会话信息和远端操作系统类型
- * 2. 会话交接：已有会话时按冲突策略处理（终止新会话或排队为 tmpSession）
- * 3. 远端呼入时提取主叫号码并显示通知
+ * @param {object} d - SDK 事件对象
+ * @param {string} [d.module] - 发生异常的媒体效果模块名称
+ * @param {string} [d.message] - 异常描述信息
  */
 function onFxIssue(d)
 {
@@ -681,10 +790,18 @@ function onFxIssue(d)
 /**
  * 点对点模式下的 newRTCSession 事件处理入口。
  *
+ * newRTCSession 在呼入或呼出通话时触发（SIP INVITE 发送或接收）。
+ * 事件对象关键字段：
+ * - originator: 'local'（本端发起）或 'remote'（远端呼入）
+ * - session: 通话的 RTCSession 实例
+ * - request: 请求对象，远端呼入时可从此获取随路数据和呼叫模式
+ *
  * 三方模式下此函数不会被调用（由 onConfSession 接管）。
  * 除常规的呼叫/接听逻辑外，还包括：
  * - 通过 SDK remoteShared/remoteUnShared 事件渲染远端共享
  * - 点对点模式下的 stats 面板标签设置
+ * - 会话交接：已有会话时按冲突策略处理（终止新会话或排队为 tmpSession）
+ * - 远端呼入时提取主叫号码并显示通知
  */
 function onSession(e)
 {
@@ -2051,9 +2168,12 @@ function onSession(e)
   };
 
   /**
-   * unshare — 停止分享
+   * unshare — 停止屏幕分享
    *
-   * 停止后延迟 300ms 恢复本地/远端媒体渲染。
+   * 调用 session.unShare() 发起 re-INVITE 移除屏幕视频轨，
+   * 同步清理本地共享预览浮层（hideShare），并延迟 300ms 恢复
+   * 本地/远端摄像头画面渲染。延迟是为了等待 renegotiation 完成，
+   * 避免在 PeerConnection 尚未移除旧轨道时提前读取流。
    */
   document.querySelector('#unshare').onclick = function()
   {
@@ -2551,5 +2671,3 @@ function initMode(mode)
 // 页面只初始化 UI 和设备列表；UA 必须由用户选择模式后创建。
 initPage();
 updateMode();
-// 初始化媒体效果模块（虚拟背景、AI 降噪、水印等）
-initFx();

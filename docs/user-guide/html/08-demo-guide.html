@@ -1303,8 +1303,8 @@ e.session.on(&#39;stats:stats-error&#39;, function(error)
 <li>在每次 <code>newRTCSession</code> 中绑定本通电话全部事件。</li>
 <li>直接从当前 session 获取 composer、AiNS 和统计。</li>
 </ul>
-<p>Demo 的应用入口会先请求权限并枚举设备，然后启动 UA：</p>
-<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function start()
+<p>Demo 的应用入口只初始化页面状态并预采集设备。UA 会在用户选择点对点或三方模式后，由 <code>initMode()</code> 创建并启动：</p>
+<div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">function initPage()
 {
   setStatus(`${CRTC.version}`);
 
@@ -1312,7 +1312,7 @@ e.session.on(&#39;stats:stats-error&#39;, function(error)
     .then(async(mediastream) =&gt;
     {
       await loadDevices();
-      mediastream &amp;&amp; mediastream.getTracks().forEach((track) =&gt; track.stop());
+      CRTC.Utils.closeMediaStream(mediastream);
     })
     .catch(async(error) =&gt;
     {
@@ -1328,26 +1328,14 @@ e.session.on(&#39;stats:stats-error&#39;, function(error)
       setStatus(`预采集失败: ${error.name || error.message || &#39;unknown&#39;}`);
     });
 
-  handleStop = false;
-  disconnectedBy = null;
-  isShowUI = false;
-
-  ua.start();
-
-  setTimeout(() =&gt;
-  {
-    if (!ua.isConnected() || !ua.isRegistered())
-    {
-      ua.stop();
-      console.log(&#39;网络连接异常或未注册成功&#39;);
-    }
-  }, 10000);
+  setStatus(&#39;请选择三方或点对点模式&#39;);
 }
 
-start();
-initFx();
+initPage();
+updateMode();
 </code></pre>
-</div><p>这段代码取自 <a href="../../../demo/base-js/js/app-call.js"><code>app-call.js</code></a>。预采集只为了请求权限和获取带名称的设备列表，因此成功后立即停止这些 tracks。</p>
+</div><p>这段代码取自 <a href="../../../demo/base-js/js/app-call.js"><code>app-call.js</code></a>。预采集只为了请求权限和获取带名称的设备列表，因此成功后立即停止这些 tracks；此时不会提前连接或注册 SIP。</p>
+<p>媒体效果表单的初始状态由 <a href="../../../demo/base-js/js/app-effects.js"><code>app-effects.js</code></a> 在模块加载完成时调用 <code>initFx()</code> 同步，不再由通话模块代为初始化。</p>
 <p>页面退出时的 UA 清理位于 <a href="../../../demo/base-js/js/app-events.js"><code>app-events.js</code></a>：</p>
 <div class="code-block"><div class="code-toolbar"><span>js</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-js">window.onbeforeunload = function()
 {

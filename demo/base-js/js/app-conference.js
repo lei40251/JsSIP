@@ -78,7 +78,9 @@ function getLegByRole(role)
 
 /**
  * 获取下一个可用角色。
- * B 优先被分配，B 已存在时返回 C。
+ * 优先分配 B 角色，B 已存在时返回 C 角色。
+ *
+ * @returns {'B'|'C'} 下一个可用的成员角色
  */
 function getNextRole()
 {
@@ -87,6 +89,8 @@ function getNextRole()
 
 /**
  * 获取所有已确认且未结束的会议成员。
+ *
+ * @returns {object[]} 已确认且未结束的 leg 对象数组
  */
 function getLiveLegs()
 {
@@ -98,6 +102,8 @@ function getLiveLegs()
  *
  * 优先返回用户手动选中的成员；否则返回第一个可见成员（非静默、未结束）；
  * 再回退到任意未结束成员。
+ *
+ * @returns {object|null} 选中的 leg 对象，无可用成员时返回 null
  */
 function getSelLeg()
 {
@@ -194,6 +200,8 @@ function getSessOpts(e)
  * 构建三方会议的 MediaEffectsComposer 配置。
  * 与点对点模式共用 getFxOpts()，但强制启用 insertable 模式，
  * 确保即使页面未选择任何特效，主会话也持有可动态添加远端源的 composer。
+ *
+ * @returns {object} MediaEffectsComposerOptions 配置对象（insertable 强制为 true）
  */
 function buildMixOpts()
 {
@@ -211,6 +219,8 @@ function buildMixOpts()
  * 优先返回缓存的 confMixer；否则尝试从 A-B 主会话获取。
  * 供 app-effects.js 中的 getFx() 调用，
  * 让媒体特效面板在三方模式下操作正确的 composer。
+ *
+ * @returns {object|null} MediaEffectsComposer 实例，不存在时返回 null
  */
 function getConfMixer()
 {
@@ -246,6 +256,7 @@ function getConfFx()
  * 如果主会话尚未创建 composer，则调用 updateMediaEffectsComposer 初始化。
  * 创建成功后刷新本端预览，确保 composer 的原始输入流正确绑定到 localVid。
  *
+ * @param {object} hostLeg - A-B 主会话的 leg 对象
  * @throws {Error} 如果主会话不存在或无法创建 composer
  */
 async function ensureMixer(hostLeg)
@@ -278,6 +289,8 @@ async function ensureMixer(hostLeg)
  * 当 composer 宿主（A-B 主会话）因 B 挂断而销毁时，保留的普通 C 需要回退到
  * 未合成的 A 原始轨继续 A-C 通话。此克隆流独立于 composer 生命周期。
  *
+ * @param {object} hostLeg - A-B 主会话的 leg 对象
+ * @returns {MediaStream} 克隆后的本地媒体流
  * @throws {Error} 如果从 A-B 主会话取不到原始媒体流
  */
 function cloneHost(hostLeg)
@@ -309,6 +322,10 @@ function cloneHost(hostLeg)
  *
  * 这样 C 在 INVITE 阶段就绑定了稳定的 composer 输出轨（A+B 合成画面 + A+B 混音）。
  * C 确认后只需向 composer 加入 C 的远端源，无需替换 C 的 sender track。
+ *
+ * @param {object} hostLeg - A-B 主会话的 leg 对象
+ * @returns {object} 包含 mediaStream, mixAudio, backupStream, mixerHostId 的输出对象
+ * @throws {Error} 如果 composer 无法创建或缺少视频输出轨道
  */
 async function prepCOutput(hostLeg)
 {
@@ -368,6 +385,9 @@ async function prepCOutput(hostLeg)
  * - 移除已添加到 composer 的 B 远端源
  * - 恢复 B 的原始音频 sender
  * - 释放已创建的混音输出和降级流
+ *
+ * @param {object} hostLeg - A-B 主会话的 leg 对象
+ * @param {object} output - prepCOutput 的返回值，包含 backupStream 等恢复所需状态
  */
 async function undoCOutput(hostLeg, output)
 {
@@ -476,6 +496,8 @@ function buildCallOpts(role, cOutput)
  * 普通 C 的接听：复用 prepCOutput 的输出流。
  * 静默 C 的接听：使用独立 composer，应答时以 A 的设备流创建输出；
  *   会话确认后再动态加入 B 的远端源。
+ *
+ * @returns {object} 传给 session.answer() 的选项对象
  */
 function getAnswerOpts(leg, cOutput)
 {
@@ -543,13 +565,22 @@ function getAnswerOpts(leg, cOutput)
  * - originator：'local'（A 主动外呼）或 'remote'（A 被动接听）
  * - silent：是否为静默成员（只收不发）
  * - confirmed：媒体协商是否已确认
+ * - stage：信令阶段标识
+ * - answering：是否正在执行接听流程
+ * - answerTimer：接听超时定时器
  * - rStream/rAudio/rVideo：远端媒体轨
  * - audioSender/videoSender/audioTrack/videoTrack：
  *   原始 sender 和 track 快照，用于 composer 降级恢复
  * - sharingScreen：该会话是否已经由 session.share() 成功发送屏幕辅流
  * - shareTarget：用户是否选择把下一次屏幕或白板共享发送给该成员
+ * - stats：最新统计报告缓存
+ * - tracksBound：是否已绑定 PeerConnection track 事件
  *
  * 创建 leg 时自动将其注册到 confLegs，并根据可见性设置默认选中。
+ *
+ * @param {object} session - RTCSession 实例
+ * @param {object} opts - 会话创建参数（由 getSessOpts 或 callConf 构造）
+ * @returns {object} 创建的 leg 对象
  */
 function addLeg(session, opts)
 {
@@ -608,6 +639,8 @@ function addLeg(session, opts)
  *
  * 切换 selectedId 和 rtcSession，刷新 PeerConnection 标题、
  * 上行/下行标签，并渲染最新统计报告。
+ *
+ * @param {object} leg - 要选中的会议成员对象
  */
 function selectLeg(leg)
 {
@@ -633,6 +666,13 @@ function selectLeg(leg)
   }
 }
 
+/**
+ * 为会议成员会话绑定统计事件（stats:detailed-report 和 stats:stats-error）。
+ * 收到详细报告后缓存到 leg.stats 并刷新统计面板；报告错误时在控制台告警。
+ * 如果当前选中的正是该成员，则立即选中以提高统计面板。
+ *
+ * @param {object} leg - 会议成员对象
+ */
 function bindLegStats(leg)
 {
   leg.session.on('stats:detailed-report', (report) =>
@@ -660,6 +700,9 @@ function bindLegStats(leg)
  *
  * 所有控制栏按钮（静音、保持、挂断等）都通过此函数统一获取当前选中的
  * 会议成员会话并执行操作，避免每个按钮重复检查有效性。
+ *
+ * @param {string} action - 操作名称（仅用于错误提示）
+ * @param {Function} callback - 接收 leg.session 的回调函数
  */
 function withLeg(action, callback)
 {
@@ -687,6 +730,8 @@ function withLeg(action, callback)
  * 绑定当前选中成员的控制按钮（静音、保持、挂断、DTMF 等）。
  * 在三方模式启用时由 updateConfUi 调用，将控制栏按钮事件
  * 重定向到当前选中的成员会话。
+ *
+ * @returns {void}
  */
 function bindControls()
 {
@@ -750,6 +795,8 @@ function bindControls()
  * 每个 leg 只绑定一次 track 监听。音频轨放入 rStream 并创建
  * 隐式 audio 元素播放；视频轨放入 rStream 并刷新主画面。
  * 轨道 ended 时自动清理并触发重新合成。
+ *
+ * @param {object} leg - 会议成员对象
  */
 function bindTracks(leg)
 {
@@ -824,6 +871,8 @@ function bindTracks(leg)
  *
  * 用于 track 事件触发之前已有远端轨的场景（比如 early media 或
  * 快速协商），确保 rStream 包含所有已有轨道。
+ *
+ * @param {object} leg - 会议成员对象
  */
 function loadRemote(leg)
 {
@@ -853,6 +902,13 @@ function loadRemote(leg)
   bindAudio(leg);
 }
 
+/**
+ * 为会议成员创建隐藏的 &lt;audio&gt; 元素用于远端音频播放。
+ * 将成员的远端音频流绑定到该元素并自动播放。
+ * 如果已存在绑定同一流的音频元素则复用，避免重复创建 DOM 节点。
+ *
+ * @param {object} leg - 会议成员对象
+ */
 function bindAudio(leg)
 {
   if (!leg.rAudio)
@@ -872,6 +928,13 @@ function bindAudio(leg)
   leg.audioEl.play().catch(() => {});
 }
 
+/**
+ * 保存成员的原始 sender track，用于 composer 异常降级时恢复。
+ * 在启用 MediaEffectsComposer 前调用，将 PeerConnection 的 sender track
+ * 快照到 leg.audioTrack / leg.videoTrack，供 restoreMedia() 回退使用。
+ *
+ * @param {object} leg - 会议成员对象
+ */
 function saveMedia(leg)
 {
   const senders = leg.session.connection ? leg.session.connection.getSenders() : [];
@@ -899,6 +962,8 @@ function saveMedia(leg)
  * - 信令阶段追踪（stage）
  * - confirmed 时自动收集轨道、记录原始 sender、触发 UI 更新和媒体合成
  * - ended/failed 时自动调用 removeLeg 清理资源
+ *
+ * @param {object} leg - 会议成员对象
  */
 function bindLegEvents(leg)
 {
@@ -1072,6 +1137,12 @@ function bindLegEvents(leg)
   bindTracks(leg);
 }
 
+/**
+ * 清除成员的自动接听定时器并重置接听状态。
+ * 在会话提前结束或接听成功后被调用，防止定时器泄漏或重复接听。
+ *
+ * @param {object} leg - 会议成员对象
+ */
 function clearAnswer(leg)
 {
   if (leg && leg.answerTimer)
@@ -1089,6 +1160,7 @@ function clearAnswer(leg)
  * - 检查会议容量、角色冲突和静默 C 准入条件
  * - 为合法会话创建 leg、绑定事件、处理自动接听
  *
+ * @param {object} e - SDK newRTCSession 事件对象
  * @returns {boolean} true 表示事件已被会议模块处理
  */
 function onConfSession(e)
@@ -1200,6 +1272,8 @@ function onConfSession(e)
  *   加入 C 的远端源即可。
  *
  * @param {object} options - { role: 'B'|'C' }
+ * @returns {Promise<void>}
+ * @throws {Error} 用户取消或呼叫参数无效时抛出
  */
 async function callConf(options)
 {
@@ -1342,6 +1416,8 @@ async function callConf(options)
  *
  * 使用 recvonly 方向 + X-Silent-Join 头部，只收 A-B 合成流，
  * 不发送音视频。CDemo 在点对点模式下使用此按钮模拟 C 端接入。
+ *
+ * @returns {Promise<void>}
  */
 async function callSilentC()
 {
@@ -1404,6 +1480,9 @@ async function callSilentC()
  *
  * 对于普通 C，先准备 composer 输出流再应答；静默 C 创建独立 composer。
  * 设置超时保护，超时后自动挂断避免来电挂起。
+ *
+ * @returns {Promise<void>}
+ * @throws {Error} 接听超时或 mediaEffectsComposer 不可用时抛出
  */
 async function answerLeg(leg)
 {
@@ -1535,6 +1614,15 @@ function queueMix()
   return mixQueue;
 }
 
+/**
+ * 生成当前合成状态的签名键，用于检测是否需要重新合成。
+ * 基于主会话和 C 会话的 ID、流状态、音频/视频轨道数量生成唯一字符串，
+ * 与上一次合成结果比较，相同时跳过合成以节省 CPU 资源。
+ *
+ * @param {object} hostLeg - A-B 主会话的 leg 对象
+ * @param {object} cLeg - C 成员的 leg 对象（可能为 null）
+ * @returns {string} 合成状态签名
+ */
 function getMixKey(hostLeg, cLeg)
 {
   const trackKey = (track) =>
@@ -1558,6 +1646,11 @@ function getMixKey(hostLeg, cLeg)
  *
  * 每个 leg 在 composer 中最多有一个活跃的远端源。更换源时先移除旧的、
  * 再添加新的，避免轨道泄漏。
+ *
+ * @param {object} composer - MediaEffectsComposer 实例
+ * @param {object} leg - 源成员 leg 对象
+ * @param {MediaStream} stream - 成员的远端媒体流
+ * @param {number} slot - composer 的输入槽位索引
  */
 function setMixSource(composer, leg, stream, slot)
 {
@@ -1591,6 +1684,9 @@ function setMixSource(composer, leg, stream, slot)
  *   避免改动 A-B 主会话的 canvas 输出。
  *
  * 使用 key 跳过无变化的重复合成。合成失败时自动降级。
+ *
+ * @returns {Promise<void>}
+ * @throws {Error} composer 不可用或媒体源异常时抛出
  */
 async function syncMixer()
 {
@@ -1722,6 +1818,10 @@ async function syncMixer()
  *
  * composer 销毁或降级时调用，将 sender 替换回首次创建时的原始 track。
  * 如果 composer 宿主已销毁且有降级流可用，使用降级流（A 原始轨的克隆）。
+ *
+ * @param {object} leg - 要恢复的成员 leg 对象
+ * @param {string} [badHostId] - 故障宿主 ID，用于跳过自身恢复
+ * @returns {Promise<void>}
  */
 async function restoreMedia(leg, badHostId)
 {
@@ -1753,6 +1853,13 @@ async function restoreMedia(leg, badHostId)
   }
 }
 
+/**
+ * 恢复所有会议成员的原始 sender track（composer 异常降级兜底）。
+ * composer 发生严重故障时，遍历所有有效成员调用 restoreMedia()，
+ * 让每个成员的 PeerConnection 回到直传模式，保证通话继续进行。
+ *
+ * @param {string} badHostId - 故障的 composer 宿主会话 ID，该宿主自身跳过恢复
+ */
 async function restoreAll(badHostId)
 {
   await Promise.all(Array.from(confLegs.values()).map((leg) =>
@@ -1769,13 +1876,14 @@ async function restoreAll(badHostId)
  * 优先显示 B 的视频在 remoteVid 主区域；C 的视频在 confVideoC
  * 辅助区域。如果 B 没有视频轨，则 C 视频占满主区域。
  * 静默 C 的上行视频本就不存在，A 端不为它保留空白预览区。
+ *
+ * @returns {void}
  */
 function showMain()
 {
   const bLeg = getLegByRole('B');
   const cLeg = getLegByRole('C');
   const bTrack = bLeg && bLeg.rVideo;
-  // 静默 C 的上行视频本就不存在，A 端不为它保留空白预览区。
   const cTrack = cLeg && !cLeg.silent ? cLeg.rVideo : null;
   const cVideo = document.querySelector('#confVideoC');
 
@@ -1796,6 +1904,9 @@ function showMain()
  *
  * 三方模式下优先取 A-B 主会话的 composer 原始输入流（getComposerInputStream），
  * 确保本地预览与 composer 看到的输入一致。回退到普通 localStream。
+ *
+ * @param {object} [leg] - 会议的 leg 对象，不传时回退到 B 成员
+ * @returns {void}
  */
 function showLocal(leg)
 {
@@ -1824,6 +1935,15 @@ function showLocal(leg)
   }
 }
 
+/**
+ * 将视频轨道绑定到指定 video 元素用于预览，并根据 hideEmpty 参数控制显隐。
+ * 轨道不存在时隐藏 video 元素；轨道存在时设置 srcObject 并显示。
+ * 用于会议中 B/C 成员的本地视频预览和远端合成画面的动态切换。
+ *
+ * @param {HTMLVideoElement} video - 目标 video 元素
+ * @param {MediaStreamTrack|null} track - 要绑定的视频轨道，为 null 时隐藏
+ * @param {boolean} [hideEmpty] - 轨道为空时是否隐藏 video 元素
+ */
 function bindPreview(video, track, hideEmpty)
 {
   if (!video)
@@ -1844,6 +1964,11 @@ function bindPreview(video, track, hideEmpty)
   video.play().catch(() => {});
 }
 
+/**
+ * 释放当前的 MediaEffectsComposer 实例及其所有 submix 流。
+ * 清除 confMixer 和 mixHostId，停止所有合成输出。
+ * 注意：仅在成员离开或会议结束时调用，不影响已在 send 的轨道。
+ */
 function releaseMixer()
 {
   if (confMixer)
@@ -1873,6 +1998,8 @@ function releaseMixer()
  * 6. 清理 composer 中的远端源
  * 7. 恢复保留成员的原始 track（如果 composer 宿主已销毁）
  * 8. 更新 UI 和统计面板
+ *
+ * @param {object} leg - 要移除的成员 leg 对象
  */
 async function removeLeg(leg)
 {
@@ -1983,6 +2110,8 @@ async function removeLeg(leg)
 
 /**
  * 挂断所有会议成员（包括已确认和未确认的）。
+ *
+ * @returns {void}
  */
 function endConf()
 {
@@ -2008,6 +2137,12 @@ function endConf()
 // 不直接访问 session.connection，也不自行发送 screen-share INFO。
 // =============================================================================
 
+/**
+ * 获取所有标记为屏幕共享目标的会议成员。
+ * 用户在会议控制栏中勾选共享目标后，此函数返回对应 leg 对象列表。
+ *
+ * @returns {object[]} 标记了 shareTarget 的 leg 对象数组
+ */
 function getShareLegs()
 {
   return getLiveLegs().filter((leg) => leg.shareTarget);
@@ -2209,6 +2344,8 @@ async function unshareConf(fromEnded)
 /**
  * 三方模式下的 REFER 呼转。
  * 仅在只有一路已确认成员时可用；三方期间不支持 REFER。
+ *
+ * @returns {void}
  */
 function referSelected()
 {
@@ -2234,6 +2371,10 @@ function referSelected()
   leg.session.refer(`${document.querySelector('#refer').value}@${sipDomain}`, { eventHandlers: events });
 }
 
+/**
+ * 取消正在进行的呼叫转移（发送 cancel-REFER INFO 消息）。
+ * 向当前选中的成员会话发送 REFER 取消指令，中断正在进行的转移流程。
+ */
 function cancelRefer()
 {
   const leg = getSelLeg();
@@ -2254,6 +2395,8 @@ function cancelRefer()
  * - 控制"开始/停止共享"按钮
  * - 重绑定当前选中成员的控制栏按钮
  * - 管理 REFER 相关按钮
+ *
+ * @returns {void}
  */
 function updateConfUi()
 {
@@ -2389,3 +2532,6 @@ function updateConfUi()
     }
   }
 }
+
+// 会议模块负责初始化自己的面板状态；后续状态变化仍由 updateMode 和会议事件刷新。
+updateConfUi();

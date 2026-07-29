@@ -1,4 +1,17 @@
-/* Demo 页面事件统一绑定入口。 */
+/* Demo 页面事件统一绑定入口。
+ *
+ * 本文件负责将页面 UI 按钮（呼叫、接听、挂断、设备切换、模式选择等）
+ * 绑定到 SDK API 调用。事件处理逻辑本身在 app-call.js、app-conference.js
+ * 和 app-effects.js 中实现，这里只做桥接。
+ *
+ * 核心职责：
+ * 1. 模式选择：点对点 / 三方
+ * 2. 呼叫按钮：标准呼叫、B2B 呼叫、屏幕共享呼叫、无音视频呼叫等
+ * 3. 设备切换：摄像头、麦克风热切换
+ * 4. 会议控制：添加成员、静默接入、接听、挂断
+ * 5. 媒体效果：虚拟背景、镜像、AI 降噪、水印
+ * 6. 页面生命周期：可见性变化、卸载时优雅退出
+ */
 /* eslint-disable max-len */
 /* eslint-disable no-console */
 /* eslint-disable no-undef */
@@ -7,28 +20,38 @@
 // 页面级 UI 事件绑定
 // =============================================================================
 
-// ---- 模式选择 ----
+// =============================================================================
+// 模式选择
+//
 // 用户点击"点对点"或"三方"按钮后，通过 initMode 创建 UA 并启动。
 // 模式一旦选定不可切换（需刷新页面重新选择）。
+// =============================================================================
 
+/**
+ * 点对点模式：A ↔ B 一对一通话。
+ * SDK 的 newRTCSession 事件由 onSession() 处理。
+ */
 document.querySelector('#initP2p').onclick = function()
 {
   initMode('point-to-point');
 };
 
+/**
+ * 三方会议模式：A 作为桥接端同时与 B、C 建立两路通话。
+ * SDK 的 newRTCSession 事件由 onConfSession() 处理。
+ */
 document.querySelector('#initConf').onclick = function()
 {
   initMode('conference');
 };
 
-// 白板和屏幕标注按钮、Konva Stage 由独立模块初始化。屏幕共享开始后不会自动
-// 抢占鼠标，用户需在共享浮层中点击“开启标注”。
-initInk();
-
-// ---- 屏幕共享浮层控制 ----
+// =============================================================================
+// 屏幕共享浮层控制
+//
 // 点对点与三方模式共用屏幕共享浮层，页面级按钮统一在此绑定。
-// 关闭按钮调用 minShareBox（隐藏浮层，保留恢复按钮）。
-// 恢复按钮读取 dialog.dataset.mode 恢复之前的状态。
+// - 关闭按钮：调用 minShareBox()（隐藏浮层，保留恢复按钮）
+// - 恢复按钮：读取 dialog.dataset.mode 恢复之前的共享状态
+// =============================================================================
 
 document.querySelector('#shareClose').onclick = minShareBox;
 document.querySelector('#shareRestore').onclick = function()
@@ -69,18 +92,22 @@ document.querySelector('#confHangup').onclick = endConf;
 document.querySelector('#confShare').onclick = function()
 {
   shareConf()
-    .then(updateConfUi)
     .catch((error) => setStatus(`会议屏幕共享失败：${error.message || error}`));
 };
 
 document.querySelector('#confUnshare').onclick = function()
 {
   unshareConf()
-    .then(updateConfUi)
     .catch((error) => setStatus(`停止会议屏幕共享失败：${error.message || error}`));
 };
 
-updateConfUi();
+// =============================================================================
+// 主动注册 / 注销
+//
+// 初始化时会自动注册，按钮用于主动注销后重新注册。
+// - 主动注册：仅当 UA 已连接且未注册时可用
+// - 主动注销：注销 SIP 注册但保留 WSS 连接
+// =============================================================================
 
 // 主动注册：初始化时会自动注册，该按钮用于主动注销后重新注册。
 document.querySelector('#regUa').onclick = function()
@@ -130,6 +157,17 @@ document.querySelector('#unregUa').onclick = function()
   setStatus('正在主动注销');
   ua.unregister();
 };
+
+// =============================================================================
+// 点对点呼叫按钮
+//
+// 提供多种呼叫模式供演示：
+// - callnull / callnullaudio / callnullvideo：无音视频占位呼叫（测试协商兼容性）
+// - call：标准音频呼叫
+// - callVideo：标准视频呼叫
+// - callScreen：屏幕共享呼叫
+// - callVideoSend / b2bVideo / b2bVideoSend：纯视频 / B2B 场景
+// =============================================================================
 
 // 发起无音视频呼叫（静默音频 + 黑屏视频）
 document.querySelector('#callNull').onclick = function()
@@ -242,6 +280,12 @@ document.querySelector('#callVideoSend').onclick = function()
   call('onlyVideo');
 };
 
+/**
+ * 页面可见性变化处理。
+ *
+ * 进入后台时仅打印日志；回到前台时关闭来电系统通知，
+ * 避免用户已返回页面但通知仍然悬挂。
+ */
 // 页面可见性变化：回到前台时关闭来电通知
 document.addEventListener('visibilitychange', function()
 {
@@ -307,12 +351,27 @@ document.querySelector('#mics').addEventListener('change', function()
   setStatus(`${rtcSession ? 'switchDevice' : 'select mic'} ${this.options[this.selectedIndex].innerText}`);
 });
 
+/**
+ * 恢复所有 video 元素的播放。
+ *
+ * Chrome 等浏览器自动播放策略可能导致视频暂停（尤其在页面不可见时），
+ * 点击此按钮可批量恢复所有 video 元素的播放。
+ */
 // 恢复所有视频播放
 document.querySelector('.resume').onclick = function()
 {
   document.querySelectorAll('video').forEach((video) => video.play().catch());
 };
 
+/**
+ * 音视频升级策略选择。
+ *
+ * 控制 mute/unmute 音视频时使用 SIP UPDATE 还是 re-INVITE：
+ * - 'update'：使用 UPDATE 方法，轻量级，不重新协商 SDP
+ * - 其他值（默认）：使用 re-INVITE，重新协商 SDP
+ *
+ * 该选项在通话建立后通过 rtcSession 的配置生效。
+ */
 // 控制音视频切换时使用 update 还是 reInvite
 document.querySelector('#useupdate').onchange = function()
 {
@@ -321,6 +380,16 @@ document.querySelector('#useupdate').onchange = function()
   setStatus(`${this.options[this.selectedIndex].value === 'update' ? 'useUpdate' : 'useReInvite'}`);
 };
 
+/**
+ * 页面卸载前优雅退出。
+ *
+ * 设置 handleStop 标记（防止误判断网），然后调用 ua.stop() 终止 UA：
+ * - 关闭 WebSocket 信令连接
+ * - 终止所有活跃的 RTCSession（发送 BYE）
+ * - 释放所有设备权限和媒体资源
+ *
+ * 注意：浏览器限制 beforeunload 中的异步操作，建议使用同步清理。
+ */
 // 页面卸载时优雅退出：终止所有会话并注销 UA
 window.onbeforeunload = function()
 {
