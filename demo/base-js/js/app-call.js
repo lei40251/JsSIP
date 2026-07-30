@@ -40,29 +40,6 @@ let ua = null;
 // 'registered'（已注册）、'unregistered'（已注销）
 let regState = 'idle';
 
-/**
- * 读取当前通话最近一份统计，不触发新的采样。
- * 可在浏览器控制台执行 readStats() 对照 docs/user-guide/05-call-statistics.md。
- *
- * @returns {{networkQuality: object|null, legacyReport: object|null, detailedReport: object|null}|null}
- */
-function readStats()
-{
-  const monitor = rtcSession && rtcSession.statsMonitor;
-
-  if (!monitor)
-  {
-    return null;
-  }
-
-  return {
-    networkQuality : monitor.getNetworkQuality(),
-    legacyReport   : monitor.getLegacyReport(),
-    detailedReport : monitor.getReport()
-  };
-}
-
-window.readStats = readStats;
 // iOS 兼容：定时发送 OPTIONS 保活的定时器句柄
 let keepTimer;
 // 呼叫转移场景中被转入的新会话实例
@@ -156,8 +133,6 @@ let blackVideo = null;
 
 // 随路数据（Base64 编码），默认 'dGVzdCB4LWRhdGE=' → 'test x-data'
 let xdata = getQuery('xdata') || 'dGVzdCB4LWRhdGE=';
-// 最大视频码率（kbps），用于 RTCRtpSender 配置
-const mbit = getQuery('mbit') || 400;
 // 通话录音时长（秒），0 或不传则不录音
 const rec = getQuery('rec') || false;
 // 环境标识，用于切换不同的信令服务器/密码等配置
@@ -859,7 +834,7 @@ function onSession(e)
   setStats('#statsInLabel', '远端 → 本端:');
   resetStats();
 
-  // 推荐从 RTCSession 消费统计事件，不在 Demo 中直接管理 RTCStatsMonitor。
+  // 推荐从 RTCSession 消费统计事件
   e.session.on('stats:detailed-report', function(report)
   {
     renderStats(e.session, report);
@@ -1025,7 +1000,6 @@ function onSession(e)
    *
    * 处理逻辑：
    * - 更新当前模式和统计实例
-   * - 切换为视频模式时设置最大码率 400kbps
    * - 重新获取媒体流渲染
    */
   e.session.on('mode', function(d)
@@ -1034,23 +1008,6 @@ function onSession(e)
 
     // 更新当前通话模式
     curMode = d.mode;
-
-    // 切换到视频模式时，设置视频发送最大码率
-    if (d.mode == 'video')
-    {
-      e.session.connection.getSenders().forEach((sender) =>
-      {
-        if (sender.track && sender.track.kind === 'video')
-        {
-          const parameters = sender.getParameters();
-
-          // 设置视频编码最大码率为 400kbps
-          parameters.encodings[0].maxBitrate = 400 * 1000;
-
-          sender.setParameters(parameters);
-        }
-      });
-    }
 
     // 模式切换后重新获取媒体流
     showStreams(e.session.connection);
@@ -1605,33 +1562,6 @@ function onSession(e)
 
     // ---- 渲染本地和远端媒体流 ----
     showStreams(e.session.connection);
-
-    // ---- 设置视频发送最大码率 ----
-    // 根据 URL 参数 mbit 调整视频编码码率
-    if (mbit)
-    {
-      e.session.connection.getSenders().forEach((sender) =>
-      {
-        if (sender.track && sender.track.kind === 'video')
-        {
-          const parameters = sender.getParameters();
-
-          // 将 mbit（kbps）转为 bps 设置
-          parameters.encodings[0].maxBitrate = mbit * 1000;
-
-          sender.setParameters(parameters).then(() =>
-          {
-            console.log('成功设置 maxBitrate');
-          })
-            .catch((err) =>
-            {
-              console.error('设置 RTCRtpSender 参数失败:', err);
-            });
-
-          sender.track.contentHint = 'detail';
-        }
-      });
-    }
   });
 
   //  ***** DOM 事件绑定 *****
@@ -2481,6 +2411,143 @@ async function call(type, direction, mediaStream)
   }
 }
 
+// =============================================================================
+// 页面级通话操作
+//
+// app-events.js 只负责把静态页面控件绑定到这些具名操作。这里集中维护
+// UA 注册状态、设备选择和通话协商选项，避免页面绑定入口承载通话逻辑。
+// =============================================================================
+
+/**
+ * 主动注册当前 UA。
+ * 初始化时 UA 会自动注册；该操作用于主动注销后重新注册。
+ */
+function registerUa()
+{
+  if (!ua)
+  {
+    setStatus('请先选择点对点或三方模式');
+
+    return;
+  }
+  if (!ua.isConnected())
+  {
+    setStatus('信令尚未连接，不能注册');
+
+    return;
+  }
+  if (ua.isRegistered())
+  {
+    setStatus('当前账号已经注册');
+
+    return;
+  }
+
+  setStatus('正在主动注册');
+  regState = 'registering';
+  updateMode();
+  ua.register();
+}
+
+/**
+ * 主动注销当前 UA，保留 WSS 连接以便再次注册。
+ */
+function unregisterUa()
+{
+  if (!ua)
+  {
+    setStatus('请先选择点对点或三方模式');
+
+    return;
+  }
+  if (!ua.isRegistered())
+  {
+    setStatus('当前账号尚未注册');
+
+    return;
+  }
+
+  setStatus('正在主动注销');
+  ua.unregister();
+}
+
+/**
+ * 保存摄像头选择；通话中立即通过 RTCSession.switchDevice() 热切换。
+ * 切换前停止 MCU 等候室场景遗留的克隆视频轨道。
+ *
+ * @param {HTMLSelectElement} selectEl - 摄像头选择框
+ */
+function changeCamera(selectEl)
+{
+  const option = selectEl.options[selectEl.selectedIndex];
+
+  cameraId = option.value;
+
+  if (rtcSession)
+  {
+    if (cloneStream)
+    {
+      cloneStream.getVideoTracks().forEach((track) => track.stop());
+    }
+    rtcSession.switchDevice('camera', cameraId);
+  }
+
+  setStatus(`${rtcSession ? 'switchDevice' : 'select camera'} ${option.innerText}`);
+}
+
+/**
+ * 保存麦克风选择；通话中立即通过 RTCSession.switchDevice() 热切换。
+ *
+ * @param {HTMLSelectElement} selectEl - 麦克风选择框
+ */
+function changeMic(selectEl)
+{
+  const option = selectEl.options[selectEl.selectedIndex];
+
+  micId = option.value;
+
+  if (rtcSession)
+  {
+    rtcSession.switchDevice('audio', micId);
+  }
+
+  setStatus(`${rtcSession ? 'switchDevice' : 'select mic'} ${option.innerText}`);
+}
+
+/**
+ * 选择音视频升级时使用 SIP UPDATE 还是 re-INVITE。
+ *
+ * @param {HTMLSelectElement} selectEl - 协商方式选择框
+ */
+function changeUpdateMode(selectEl)
+{
+  const option = selectEl.options[selectEl.selectedIndex];
+
+  useUpdate = option.value === 'update';
+  console.log(option);
+  setStatus(`${useUpdate ? 'useUpdate' : 'useReInvite'}`);
+}
+
+/**
+ * 发起纯视频呼叫，并保存纯视频模式供后续 mute/unmute 使用。
+ *
+ * @param {'sendonly'|undefined} direction - 传 'sendonly' 时仅发送视频
+ */
+function callVideoOnly(direction)
+{
+  videoOnly = true;
+  call('onlyVideo', direction);
+}
+
+/**
+ * 页面卸载前主动停止 UA，避免将正常关闭误判为网络断开。
+ */
+function stopUaBeforeUnload()
+{
+  handleStop = true;
+  if (ua) ua.stop();
+}
+
 /**
  * 页面初始化
  *
@@ -2490,31 +2557,60 @@ async function call(type, direction, mediaStream)
  * 3. 提示用户选择"点对点"或"三方"模式
  *
  * UA 的创建、信令连接和注册在用户点击模式按钮后由 initMode() 执行。
- * 按钮绑定、设备选择等在 app-events.js 中统一管理。
+ * 静态页面控件在 app-events.js 中统一绑定，具体通话操作由本文件实现。
  */
-function initPage()
+async function initPage()
 {
   setStatus(`${CRTC.version}`);
 
-  navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-    .then(async(mediastream) =>
-    {
-      await loadDevices();
-      CRTC.Utils.closeMediaStream(mediastream);
-    })
-    .catch(async(error) =>
-    {
-      try
-      {
-        await loadDevices();
-      }
-      catch (deviceError)
-      {
-        setStatus(`设备列表加载失败: ${deviceError.name || deviceError.message || 'unknown'}`);
-      }
+  if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function')
+  {
+    setStatus('当前浏览器不支持媒体设备采集');
 
-      setStatus(`预采集失败: ${error.name || error.message || 'unknown'}`);
-    });
+    return;
+  }
+
+  let mediaStream;
+  let captureError;
+
+  try
+  {
+    mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+  }
+  catch (error)
+  {
+    captureError = error;
+  }
+  finally
+  {
+    // 预采集只用于请求权限，设备列表加载失败时也必须立即释放轨道。
+    if (mediaStream) CRTC.Utils.closeMediaStream(mediaStream);
+  }
+
+  let deviceError;
+
+  try
+  {
+    await loadDevices();
+  }
+  catch (error)
+  {
+    deviceError = error;
+  }
+
+  if (captureError)
+  {
+    setStatus(`预采集失败: ${captureError.name || captureError.message || 'unknown'}`);
+
+    return;
+  }
+
+  if (deviceError)
+  {
+    setStatus(`设备列表加载失败: ${deviceError.name || deviceError.message || 'unknown'}`);
+
+    return;
+  }
 
   setStatus('请选择三方或点对点模式');
 }

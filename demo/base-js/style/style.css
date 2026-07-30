@@ -490,6 +490,7 @@ body {
   width: 100%;
   height: 100%;
   object-fit: contain;
+  transform-origin: center center;
 }
 
 .whiteboard-background,
@@ -602,52 +603,129 @@ body {
   }
 
   .screen-share-dialog-header {
-    align-items: flex-start;
-    flex-wrap: wrap;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 0.35rem;
+    min-height: 2.75rem;
+    padding: 0.35rem 0.45rem;
+  }
+
+  .screen-share-dialog-heading {
+    flex: 1 1 auto;
+    gap: 0;
+    font-size: 0.85rem;
+  }
+
+  .screen-share-dialog-heading-icon,
+  .screen-share-dialog-subtitle {
+    display: none;
   }
 
   .screen-share-dialog-actions {
-    flex: 1 1 auto;
-    flex-wrap: wrap;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
     justify-content: flex-end;
+    gap: 0.25rem;
     min-width: 0;
   }
 
+  .screen-share-dialog-actions .btn {
+    justify-content: center;
+    width: 2rem;
+    min-width: 2rem;
+    min-height: 2rem;
+    padding: 0.25rem;
+    gap: 0;
+    font-size: 0;
+  }
+
+  .screen-share-dialog-actions .btn i {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    line-height: 1;
+  }
+
+  .screen-share-dialog-actions .btn i::before {
+    vertical-align: 0;
+  }
+
+  .screen-share-dialog-actions #shareRotate,
+  .screen-share-dialog-actions #shareClose {
+    width: auto;
+    padding-right: 0.45rem;
+    padding-left: 0.45rem;
+    gap: 0.25rem;
+    font-size: 0.7rem;
+    white-space: nowrap;
+  }
+
+  #shareRotateText {
+    display: inline;
+  }
+
   .annotation-toolbar {
-    align-items: stretch;
-    flex-direction: column;
-    max-height: 16rem;
-    overflow-y: auto;
+    display: block;
+    max-height: none;
+    padding: 0.35rem 0.4rem;
+    overflow: visible;
   }
 
   .annotation-toolbar-main {
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.3rem;
+    width: 100%;
   }
 
   .annotation-tool-section {
+    grid-column: 1 / -1;
     width: 100%;
-    padding-right: 0;
-    overflow-x: auto;
+    padding: 0.2rem;
+    overflow: visible;
     border-right: 1px solid #dce6f1;
   }
 
   .annotation-tool-section .btn-group {
-    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    width: 100%;
   }
 
   .annotation-style-section,
   .annotation-history-section {
-    flex: 1 1 100%;
-    width: 100%;
-    padding-right: 0;
+    width: auto;
+    min-width: 0;
+    padding: 0.2rem 0.3rem;
     border-right: 1px solid #dce6f1;
   }
 
+  .annotation-section-label,
+  .annotation-field > span,
   .annotation-toolbar-feedback {
-    max-width: none;
-    padding: 0.4rem 0.2rem 0;
-    border-top: 1px solid #d7e1ec;
-    border-left: 0;
+    display: none;
+  }
+
+  .annotation-toolbar .btn {
+    min-height: 1.9rem;
+    padding: 0.2rem 0.35rem;
+    font-size: 0.7rem;
+  }
+
+  .annotation-history-section .btn {
+    width: 1.9rem;
+    min-width: 1.9rem;
+    padding: 0.2rem;
+    font-size: 0;
+  }
+
+  .annotation-history-section .btn i {
+    font-size: 0.82rem;
+  }
+
+  .annotation-field input[type="range"] {
+    width: min(5.2rem, 22vw);
   }
 
   .annotation-confirm-card {

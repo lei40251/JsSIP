@@ -1016,29 +1016,57 @@ Demo 中可以直接参考的结构：
 Demo 的应用入口只初始化页面状态并预采集设备。UA 会在用户选择点对点或三方模式后，由 `initMode()` 创建并启动：
 
 ```js
-function initPage()
+async function initPage()
 {
   setStatus(`${CRTC.version}`);
 
-  navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-    .then(async(mediastream) =>
-    {
-      await loadDevices();
-      CRTC.Utils.closeMediaStream(mediastream);
-    })
-    .catch(async(error) =>
-    {
-      try
-      {
-        await loadDevices();
-      }
-      catch (deviceError)
-      {
-        setStatus(`设备列表加载失败: ${deviceError.name || deviceError.message || 'unknown'}`);
-      }
+  if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function')
+  {
+    setStatus('当前浏览器不支持媒体设备采集');
 
-      setStatus(`预采集失败: ${error.name || error.message || 'unknown'}`);
-    });
+    return;
+  }
+
+  let mediaStream;
+  let captureError;
+
+  try
+  {
+    mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+  }
+  catch (error)
+  {
+    captureError = error;
+  }
+  finally
+  {
+    if (mediaStream) CRTC.Utils.closeMediaStream(mediaStream);
+  }
+
+  let deviceError;
+
+  try
+  {
+    await loadDevices();
+  }
+  catch (error)
+  {
+    deviceError = error;
+  }
+
+  if (captureError)
+  {
+    setStatus(`预采集失败: ${captureError.name || captureError.message || 'unknown'}`);
+
+    return;
+  }
+
+  if (deviceError)
+  {
+    setStatus(`设备列表加载失败: ${deviceError.name || deviceError.message || 'unknown'}`);
+
+    return;
+  }
 
   setStatus('请选择三方或点对点模式');
 }
@@ -1047,7 +1075,7 @@ initPage();
 updateMode();
 ```
 
-这段代码取自 [`app-call.js`](../../demo/base-js/js/app-call.js)。预采集只为了请求权限和获取带名称的设备列表，因此成功后立即停止这些 tracks；此时不会提前连接或注册 SIP。
+这段代码取自 [`app-call.js`](../../demo/base-js/js/app-call.js)。预采集只为了请求权限和获取带名称的设备列表，临时 tracks 会在 `finally` 中停止；此时不会提前连接或注册 SIP。权限查询不作为调用条件，因为首次访问仍需要由 `getUserMedia()` 触发授权提示。
 
 媒体效果表单的初始状态由 [`app-effects.js`](../../demo/base-js/js/app-effects.js) 在模块加载完成时调用 `initFx()` 同步，不再由通话模块代为初始化。
 

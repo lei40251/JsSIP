@@ -180,6 +180,70 @@ function createElement()
   };
 }
 
+function createTrackedElement(classes)
+{
+  const names = new Set(classes || []);
+
+  return {
+    dataset     : {},
+    textContent : '',
+    className   : '',
+    attributes  : {},
+    classList   : {
+      add      : function(name) { names.add(name); },
+      remove   : function(name) { names.delete(name); },
+      contains : function(name) { return names.has(name); },
+      toggle   : function(name, force)
+      {
+        const enabled = force === undefined ? !names.has(name) : Boolean(force);
+
+        if (enabled) names.add(name);
+        else names.delete(name);
+
+        return enabled;
+      }
+    },
+    setAttribute : function(name, value) { this.attributes[name] = String(value); }
+  };
+}
+
+function loadShareHelperDemo()
+{
+  const elements = new Map();
+  const selectors = [
+    '#crtcMediaDialog', '#shareRestore', '#screen', '#shareVid', '#shareTitle',
+    '#shareSub', '#shareIcon i', '#shareRotate', '#shareRotateText'
+  ];
+
+  selectors.forEach(function(selector)
+  {
+    elements.set(selector, createTrackedElement(
+      selector === '#crtcMediaDialog' || selector === '#shareRotate' ? [ 'hide' ] : []
+    ));
+  });
+
+  const context = {
+    console,
+    Map,
+    Set,
+    String,
+    Boolean,
+    document : { querySelector: function(selector) { return elements.get(selector) || null; } },
+    setInkMode : function() {},
+    onShareRotationChanged : function() {}
+  };
+
+  vm.createContext(context);
+  vm.runInContext(
+    fs.readFileSync(path.join(__dirname, '../demo/base-js/js/app-helper.js'), 'utf8'),
+    context,
+    { filename: 'app-helper.js' }
+  );
+  context.elements = elements;
+
+  return context;
+}
+
 function loadConferenceDemo()
 {
   const elements = new Map();
@@ -300,7 +364,10 @@ function loadAnnotationDemo()
       querySelectorAll : function() { return []; },
       createElement    : function() { return createElement(); }
     },
-    appMode  : 'point-to-point',
+    appMode       : 'point-to-point',
+    openShareBox  : function() {},
+    closeShareBox : function() {},
+    isShareViewRotated : function() { return false; },
     setStatus : function() {},
     ua        : { configuration: { uri: { user: 'local' } } }
   };
@@ -374,6 +441,55 @@ function createAnswerSession(overrides)
 }
 
 module.exports = {
+  'annotation width normalization does not depend on viewport size' : function(test)
+  {
+    const context = loadAnnotationDemo();
+    const result = vm.runInContext(`
+      inkStage = { width: function() { return 320; }, height: function() { return 180; } };
+      const mobileWidth = getInkWidthNorm(4);
+      inkStage = { width: function() { return 1280; }, height: function() { return 720; } };
+      ({ mobileWidth: mobileWidth, desktopWidth: getInkWidthNorm(4) });
+    `, context);
+
+    test.strictEqual(result.mobileWidth, 0.00625);
+    test.strictEqual(result.desktopWidth, 0.00625);
+    test.done();
+  },
+
+  'share view rotation is local and follows dialog lifecycle' : function(test)
+  {
+    const context = loadShareHelperDemo();
+    const result = vm.runInContext(`
+      openShareBox('local');
+      toggleShareRotation();
+      const rotatedBeforeMinimize = isShareViewRotated();
+      minShareBox();
+      restoreShareBox();
+      const rotatedAfterRestore = isShareViewRotated();
+      openShareBox('whiteboard');
+      const rotatedAfterModeChange = isShareViewRotated();
+      toggleShareRotation();
+      closeShareBox('whiteboard');
+      ({
+        rotatedBeforeMinimize,
+        rotatedAfterRestore,
+        rotatedAfterModeChange,
+        rotatedAfterClose: isShareViewRotated()
+      });
+    `, context);
+    const button = context.elements.get('#shareRotate');
+    const label = context.elements.get('#shareRotateText');
+
+    test.strictEqual(result.rotatedBeforeMinimize, true);
+    test.strictEqual(result.rotatedAfterRestore, true);
+    test.strictEqual(result.rotatedAfterModeChange, false);
+    test.strictEqual(result.rotatedAfterClose, false);
+    test.strictEqual(button.classList.contains('hide'), true);
+    test.strictEqual(button.attributes['aria-pressed'], 'false');
+    test.strictEqual(label.textContent, '旋转90°');
+    test.done();
+  },
+
   'annotation history and removal operations only affect sender shapes' : function(test)
   {
     const context = loadAnnotationDemo();
@@ -511,6 +627,169 @@ module.exports = {
     test.done();
   },
 
+  'annotation whiteboard preserves initiator aspect ratio in different containers' : function(test)
+  {
+    const context = loadAnnotationDemo();
+    const result = JSON.parse(JSON.stringify(vm.runInContext(`
+      ({
+        landscapeInPortrait: getContainedBoardRect(360, 640, 16 / 9),
+        portraitInLandscape: getContainedBoardRect(960, 540, 9 / 16),
+        fallback: getContainedBoardRect(360, 640, 0)
+      });
+    `, context)));
+
+    test.deepEqual(result.landscapeInPortrait, {
+      left: 0, top: 218.75, width: 360, height: 202.5
+    });
+    test.deepEqual(result.portraitInLandscape, {
+      left: 328.125, top: 0, width: 303.75, height: 540
+    });
+    test.deepEqual(result.fallback, {
+      left: 0, top: 0, width: 360, height: 640
+    });
+    test.done();
+  },
+
+  'annotation whiteboard synchronizes and clears initiator aspect ratio' : function(test)
+  {
+    const context = loadAnnotationDemo();
+    const result = vm.runInContext(`
+      const sent = [];
+      const stageBox = { clientWidth: 360, clientHeight: 640 };
+      const target = {
+        isEnded: function() { return false; },
+        sendInfo: function(type, body) { sent.push(JSON.parse(body)); }
+      };
+      appMode = 'conference';
+      getShareLegs = function() { return [ { session: target } ]; };
+      document.querySelector = function(selector) {
+        if (selector === '.screen-share-dialog-stage') return stageBox;
+        return null;
+      };
+      openShareBox = function(mode) { setInkMode(mode); };
+      closeShareBox = function() { setInkMode(''); };
+
+      openBoard(true);
+      const openRatio = sent[0].payload.aspectRatio;
+      const snapshotRatio = sent[1].payload.whiteboard.aspectRatio;
+
+      applyOp({
+        action: 'snapshot', boardId: 'whiteboard', payload: {
+          screen: { shapes: [] },
+          whiteboard: { shapes: [], aspectRatio: 16 / 9 }
+        }
+      });
+      const restoredRatio = boardAspectRatio;
+
+      applyOp({
+        action: 'snapshot', boardId: 'whiteboard', payload: {
+          screen: { shapes: [] },
+          whiteboard: { shapes: [], aspectRatio: 99 }
+        }
+      });
+      const ratioAfterInvalidSnapshot = boardAspectRatio;
+      closeBoard(false);
+
+      ({ openRatio, snapshotRatio, restoredRatio, ratioAfterInvalidSnapshot,
+        ratioAfterClose: boardAspectRatio });
+    `, context);
+
+    test.strictEqual(result.openRatio, 360 / 640);
+    test.strictEqual(result.snapshotRatio, 360 / 640);
+    test.strictEqual(result.restoredRatio, 16 / 9);
+    test.strictEqual(result.ratioAfterInvalidSnapshot, 16 / 9);
+    test.strictEqual(result.ratioAfterClose, 0);
+    test.done();
+  },
+
+  'annotation maps local rotation without changing protocol coordinates' : function(test)
+  {
+    const context = loadAnnotationDemo();
+    const result = JSON.parse(JSON.stringify(vm.runInContext(`
+      isShareViewRotated = function() { return true; };
+      const source = [ 0.2, 0.3 ];
+      const view = toViewPoint(source);
+      ({
+        view,
+        restored: toSourcePoint(view),
+        boardRatio: getBoardViewAspectRatio(16 / 9),
+        layout: getShareVideoLayout(1000, 600, 1920, 1080, true)
+      });
+    `, context)));
+
+    test.deepEqual(result.view, [ 0.7, 0.2 ]);
+    test.ok(Math.abs(result.restored[0] - 0.2) < 1e-12);
+    test.ok(Math.abs(result.restored[1] - 0.3) < 1e-12);
+    test.strictEqual(result.boardRatio, 9 / 16);
+    test.deepEqual(result.layout.stage, {
+      left: 331.25, top: 0, width: 337.5, height: 600
+    });
+    test.deepEqual(result.layout.video, {
+      left: 200, top: 131.25, width: 600, height: 337.5
+    });
+    test.strictEqual(result.layout.rotation, 90);
+    test.done();
+  },
+
+  'annotation pointer uses inverse rotation mapping' : function(test)
+  {
+    const context = loadAnnotationDemo();
+    const result = vm.runInContext(`
+      isShareViewRotated = function() { return true; };
+      inkStage = {
+        width: function() { return 200; },
+        height: function() { return 100; },
+        getPointerPosition: function() { return { x: 50, y: 20 }; }
+      };
+      getPointer();
+    `, context);
+
+    test.deepEqual(Array.from(result), [ 0.2, 0.75 ]);
+    test.done();
+  },
+
+  'annotation rotates rendered shapes and cancels an active draft' : function(test)
+  {
+    const context = loadAnnotationDemo();
+    const result = vm.runInContext(`
+      function MockNode(config) { this.config = config; }
+      let draftDestroyed = false;
+
+      Konva = { Rect: MockNode };
+      isShareViewRotated = function() { return true; };
+      inkStage = {
+        width: function() { return 300; },
+        height: function() { return 500; }
+      };
+      const node = makeNode({
+        id: 'rotated-rect', type: 'rect', color: '#123456', widthNorm: 0.01,
+        start: [ 0.1, 0.2 ], end: [ 0.4, 0.6 ]
+      });
+      drawing = true;
+      draftShape = { id: 'draft' };
+      draftNode = { destroy: function() { draftDestroyed = true; } };
+      onShareRotationChanged();
+
+      ({
+        rect: node.config,
+        draftDestroyed,
+        drawing,
+        draftNode,
+        draftShape
+      });
+    `, context);
+
+    test.strictEqual(result.rect.x, 120);
+    test.strictEqual(result.rect.y, 50);
+    test.strictEqual(result.rect.width, 120);
+    test.strictEqual(result.rect.height, 150);
+    test.strictEqual(result.draftDestroyed, true);
+    test.strictEqual(result.drawing, false);
+    test.strictEqual(result.draftNode, null);
+    test.strictEqual(result.draftShape, null);
+    test.done();
+  },
+
   'page defers UA creation and selects exactly one session handler' : function(test)
   {
     const source = fs.readFileSync(path.join(__dirname, '../demo/base-js/js/app-call.js'), 'utf8');
@@ -522,6 +801,18 @@ module.exports = {
     test.strictEqual(source.includes("getQuery('register')"), false);
     test.strictEqual((source.match(/ua\.on\('newRTCSession'/g) || []).length, 1);
     test.strictEqual((conferenceSource.match(/ua\.on\('newRTCSession'/g) || []).length, 0);
+    test.done();
+  },
+
+  'base demo loads helpers before modules that initialize from them' : function(test)
+  {
+    const source = fs.readFileSync(path.join(__dirname, '../demo/base-js/index.html'), 'utf8');
+    const helperIndex = source.indexOf('<script src="./js/app-helper.js"></script>');
+    const effectsIndex = source.indexOf('<script src="./js/app-effects.js"></script>');
+
+    test.ok(helperIndex >= 0);
+    test.ok(effectsIndex >= 0);
+    test.ok(helperIndex < effectsIndex);
     test.done();
   },
 

@@ -33,6 +33,11 @@ const MAX_INK_SIZE = 64 * 1024;
 const MAX_SHAPES = 500;
 // 单个自由笔画最多包含的坐标点数，防止高频绘制产生过大消息
 const MAX_POINTS = 1200;
+// 线宽按固定参考短边归一化，避免小屏发起的标注在大屏端被成比例放粗。
+const INK_WIDTH_REFERENCE_SIZE = 640;
+// 白板比例协议允许的范围，超出则兼容回退到本端容器比例。
+const MIN_BOARD_ASPECT_RATIO = 0.25;
+const MAX_BOARD_ASPECT_RATIO = 4;
 // 8 种标注颜色，通过用户 ID 哈希取模分配，保证同一用户颜色稳定
 const INK_COLORS = [
   '#e5484d', '#2f6fdd', '#16a36a', '#d97706',
@@ -79,6 +84,8 @@ let inkResize = null;
 let colorUserId = '';
 // 共享白板发起方的用户 ID，只有发起方可以广播 board:close
 let boardUserId = '';
+// 白板由发起方锁定的画布比例；0 表示兼容回退到本端容器比例。
+let boardAspectRatio = 0;
 
 // =============================================================================
 // 1. 画布状态、用户身份与基础取值
@@ -382,6 +389,25 @@ function isNumber(value)
 }
 
 /**
+ * 将线宽滑块值换算为与本端画布尺寸无关的归一化线宽。
+ *
+ * @param {number|string} value - 线宽滑块值
+ * @returns {number} 归一化线宽
+ */
+function getInkWidthNorm(value)
+{
+  const width = Number(value);
+
+  return clamp((isNumber(width) ? width : 4) / INK_WIDTH_REFERENCE_SIZE, 0.001, 0.08);
+}
+
+function cleanBoardAspectRatio(value)
+{
+  return isNumber(value) && value >= MIN_BOARD_ASPECT_RATIO &&
+    value <= MAX_BOARD_ASPECT_RATIO ? value : 0;
+}
+
+/**
  * 清理和归一化坐标点，确保值为 [0, 1] 范围内的有限数字。
  * 格式不合法的点（非数组、长度不为 2、值不是数字）返回 null。
  * 这是远端数据进入 Konva 前的第一道防线。
@@ -487,6 +513,32 @@ function validOp(op)
 // 因此窗口缩放后可以直接重新 renderBoard()，无需改写已保存的 shape 数据。
 // =============================================================================
 
+function isInkViewRotated()
+{
+  return typeof isShareViewRotated === 'function' && isShareViewRotated();
+}
+
+function toViewPoint(point)
+{
+  if (!isInkViewRotated()) return [ point[0], point[1] ];
+
+  return [ clamp(1 - point[1], 0, 1), clamp(point[0], 0, 1) ];
+}
+
+function toSourcePoint(point)
+{
+  if (!isInkViewRotated()) return [ point[0], point[1] ];
+
+  return [ clamp(point[1], 0, 1), clamp(1 - point[0], 0, 1) ];
+}
+
+function getBoardViewAspectRatio(aspectRatio)
+{
+  const ratio = cleanBoardAspectRatio(aspectRatio);
+
+  return ratio && isInkViewRotated() ? 1 / ratio : ratio;
+}
+
 /**
  * 根据 shape 数据创建 Konva 图形节点（不添加到画布）。
  *
@@ -516,7 +568,9 @@ function makeNode(shape, preview)
 
     shape.points.forEach((point) =>
     {
-      points.push(point[0] * width, point[1] * height);
+      const viewPoint = toViewPoint(point);
+
+      points.push(viewPoint[0] * width, viewPoint[1] * height);
     });
 
     return new Konva.Line({
@@ -534,10 +588,12 @@ function makeNode(shape, preview)
     });
   }
 
-  const startX = shape.start[0] * width;
-  const startY = shape.start[1] * height;
-  const endX = shape.end[0] * width;
-  const endY = shape.end[1] * height;
+  const start = toViewPoint(shape.start);
+  const end = toViewPoint(shape.end);
+  const startX = start[0] * width;
+  const startY = start[1] * height;
+  const endX = end[0] * width;
+  const endY = end[1] * height;
 
   if (shape.type === 'arrow')
   {
@@ -749,10 +805,20 @@ function applyOp(op)
       .filter(Boolean);
     boards.screen.redo = [];
     boards.whiteboard.redo = [];
+
+    const aspectRatio = cleanBoardAspectRatio(
+      payload.whiteboard && payload.whiteboard.aspectRatio
+    );
+
+    if (aspectRatio) boardAspectRatio = aspectRatio;
   }
   else if (op.action === 'board:open')
   {
-    if (op.boardId === 'whiteboard') openBoard(false);
+    if (op.boardId === 'whiteboard')
+    {
+      boardAspectRatio = cleanBoardAspectRatio(payload.aspectRatio);
+      openBoard(false);
+    }
   }
   else if (op.action === 'board:close')
   {
@@ -902,7 +968,7 @@ function sendSnapshot(session)
 
   const op = makeOp('snapshot', 'whiteboard', {
     screen     : { shapes: boards.screen.shapes },
-    whiteboard : { shapes: boards.whiteboard.shapes }
+    whiteboard : { shapes: boards.whiteboard.shapes, aspectRatio: boardAspectRatio }
   });
 
   sendOp(op, null, [ session ]);
@@ -929,10 +995,10 @@ function getPointer()
 
   if (!position || inkStage.width() <= 0 || inkStage.height() <= 0) return null;
 
-  return [
+  return toSourcePoint([
     clamp(position.x / inkStage.width(), 0, 1),
     clamp(position.y / inkStage.height(), 0, 1)
-  ];
+  ]);
 }
 
 /**
@@ -954,7 +1020,6 @@ function startDraw()
 
   const colorInput = document.querySelector('#inkColor');
   const widthInput = document.querySelector('#inkWidth');
-  const minSize = Math.max(1, Math.min(inkStage.width(), inkStage.height()));
   const authorId = getInkUser();
 
   opSeq++;
@@ -966,7 +1031,7 @@ function startDraw()
     color       : colorInput ? colorInput.value : '#ff3b30',
     authorId,
     authorLabel : getAnnotUserLabel(),
-    widthNorm   : clamp(Number(widthInput ? widthInput.value : 4) / minSize, 0.001, 0.08),
+    widthNorm   : getInkWidthNorm(widthInput ? widthInput.value : 4),
     start       : point,
     end         : point
   };
@@ -1266,12 +1331,59 @@ function updateInkUi()
 /**
  * 根据容器尺寸自适应调整 Konva Stage 大小和位置。
  *
- * 白板模式：Stage 填满整个共享浮层容器。
+ * 白板模式：Stage 保持发起方比例并居中显示在共享浮层容器内。
  * 屏幕标注模式：Stage 按视频原始比例居中缩放，覆盖在视频元素上方。
  * 尺寸变化超过 1px 时触发 Konva 舞台重设和全量重绘。
  *
  * 触发时机：容器 ResizeObserver 回调、窗口 resize、视频 loadedmetadata。
  */
+function getContainedBoardRect(containerWidth, containerHeight, aspectRatio)
+{
+  let width = containerWidth;
+  let height = containerHeight;
+  const ratio = cleanBoardAspectRatio(aspectRatio);
+
+  if (ratio)
+  {
+    if (width / height > ratio) width = height * ratio;
+    else height = width / ratio;
+  }
+
+  return {
+    left   : (containerWidth - width) / 2,
+    top    : (containerHeight - height) / 2,
+    width  : width,
+    height : height
+  };
+}
+
+function getShareVideoLayout(containerWidth, containerHeight, videoWidth, videoHeight, rotated)
+{
+  const viewWidth = rotated ? videoHeight : videoWidth;
+  const viewHeight = rotated ? videoWidth : videoHeight;
+  const scale = Math.min(containerWidth / viewWidth, containerHeight / viewHeight);
+  const stageWidth = viewWidth * scale;
+  const stageHeight = viewHeight * scale;
+  const videoBoxWidth = rotated ? stageHeight : stageWidth;
+  const videoBoxHeight = rotated ? stageWidth : stageHeight;
+
+  return {
+    stage : {
+      left   : (containerWidth - stageWidth) / 2,
+      top    : (containerHeight - stageHeight) / 2,
+      width  : stageWidth,
+      height : stageHeight
+    },
+    video : {
+      left   : (containerWidth - videoBoxWidth) / 2,
+      top    : (containerHeight - videoBoxHeight) / 2,
+      width  : videoBoxWidth,
+      height : videoBoxHeight
+    },
+    rotation : rotated ? 90 : 0
+  };
+}
+
 function resizeInk()
 {
   if (!inkStage) return;
@@ -1285,24 +1397,60 @@ function resizeInk()
   let top = 0;
   let width = container.clientWidth;
   let height = container.clientHeight;
+  const rotated = isInkViewRotated();
+  let video = null;
+  let videoLayout = null;
 
-  if (inkMode === 'local' || inkMode === 'remote')
+  if (inkMode === 'whiteboard')
   {
-    const video = document.querySelector(inkMode === 'local' ? '#screen' : '#shareVid');
+    const rect = getContainedBoardRect(
+      container.clientWidth, container.clientHeight, getBoardViewAspectRatio(boardAspectRatio)
+    );
+
+    left = rect.left;
+    top = rect.top;
+    width = rect.width;
+    height = rect.height;
+  }
+  else if (inkMode === 'local' || inkMode === 'remote')
+  {
+    video = document.querySelector(inkMode === 'local' ? '#screen' : '#shareVid');
     const videoWidth = video && video.videoWidth ? video.videoWidth : 16;
     const videoHeight = video && video.videoHeight ? video.videoHeight : 9;
-    const scale = Math.min(width / videoWidth, height / videoHeight);
 
-    width = videoWidth * scale;
-    height = videoHeight * scale;
-    left = (container.clientWidth - width) / 2;
-    top = (container.clientHeight - height) / 2;
+    videoLayout = getShareVideoLayout(
+      container.clientWidth, container.clientHeight, videoWidth, videoHeight, rotated
+    );
+
+    left = videoLayout.stage.left;
+    top = videoLayout.stage.top;
+    width = videoLayout.stage.width;
+    height = videoLayout.stage.height;
   }
 
-  stageEl.style.left = `${left}px`;
-  stageEl.style.top = `${top}px`;
-  stageEl.style.width = `${width}px`;
-  stageEl.style.height = `${height}px`;
+  const background = document.querySelector('#boardBg');
+
+  [ stageEl, background ].forEach((element) =>
+  {
+    if (!element || (element === background && inkMode !== 'whiteboard')) return;
+    element.style.left = `${left}px`;
+    element.style.top = `${top}px`;
+    element.style.right = 'auto';
+    element.style.bottom = 'auto';
+    element.style.width = `${width}px`;
+    element.style.height = `${height}px`;
+  });
+
+  if (video && videoLayout)
+  {
+    video.style.left = `${videoLayout.video.left}px`;
+    video.style.top = `${videoLayout.video.top}px`;
+    video.style.right = 'auto';
+    video.style.bottom = 'auto';
+    video.style.width = `${videoLayout.video.width}px`;
+    video.style.height = `${videoLayout.video.height}px`;
+    video.style.transform = `rotate(${videoLayout.rotation}deg)`;
+  }
 
   const stageW = Math.max(1, Math.round(width));
   const stageH = Math.max(1, Math.round(height));
@@ -1312,6 +1460,16 @@ function resizeInk()
     inkStage.size({ width: stageW, height: stageH });
     renderBoard();
   }
+}
+
+function onShareRotationChanged()
+{
+  drawing = false;
+  if (draftNode) draftNode.destroy();
+  draftNode = null;
+  draftShape = null;
+  resizeInk();
+  renderBoard();
 }
 
 // =============================================================================
@@ -1426,11 +1584,20 @@ function openBoard(notify)
 
   if (notify !== false)
   {
+    const box = document.querySelector('.screen-share-dialog-stage');
+
+    boardAspectRatio = cleanBoardAspectRatio(
+      box && box.clientHeight > 0 ? box.clientWidth / box.clientHeight : 0
+    );
+  }
+
+  if (notify !== false)
+  {
     boardLegs.clear();
     targets.forEach((session) => boardLegs.add(session));
     refreshShare();
 
-    const op = makeOp('board:open', 'whiteboard', {});
+    const op = makeOp('board:open', 'whiteboard', { aspectRatio: boardAspectRatio });
 
     rememberOp(op.operationId);
     sendOp(op, null, targets);
@@ -1472,6 +1639,7 @@ function closeBoard(notify)
   draftShape = null;
   resetBoard('whiteboard');
   boardUserId = '';
+  boardAspectRatio = 0;
 
   const oldMode = prevMode;
   const oldVideo = oldMode === 'local' ? document.querySelector('#screen') :
@@ -1503,6 +1671,7 @@ function resetInk()
   boardLegs.clear();
   refreshShare();
   boardUserId = '';
+  boardAspectRatio = 0;
   colorUserId = '';
   prevMode = '';
   inkOn = false;

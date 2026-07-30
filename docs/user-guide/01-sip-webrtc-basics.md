@@ -336,23 +336,34 @@ video { transform: scaleX(-1); }
 | 设备 label 为空 | 尚未授权媒体权限 | 先请求一次权限后重新枚举 |
 | `play()` reject | 浏览器自动播放限制 | 提供“点击播放/恢复播放”按钮 |
 
-Demo 初始化时先请求一次音视频权限，再通过 [`app-helper.js`](../../demo/base-js/js/app-helper.js) 的 `loadDevices()` 读取设备。无论预采集成功还是失败，都会尝试刷新设备列表：
+Demo 初始化时先检查媒体采集 API，再请求一次音视频权限，最后通过 [`app-helper.js`](../../demo/base-js/js/app-helper.js) 的 `loadDevices()` 读取设备。权限状态不作为调用前置条件；首次访问需要由 `getUserMedia()` 触发浏览器授权提示。核心流程如下，省略了 API 不支持和设备列表加载失败的提示分支：
 
 ```js
-navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-  .then(async(stream) =>
-  {
-    await loadDevices();
-    CRTC.Utils.closeMediaStream(stream);
-  })
-  .catch(async(error) =>
-  {
-    await loadDevices();
-    setStatus(`预采集失败: ${error.name || error.message}`);
-  });
+let stream;
+let captureError;
+
+try
+{
+  stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+}
+catch (error)
+{
+  captureError = error;
+}
+finally
+{
+  if (stream) CRTC.Utils.closeMediaStream(stream);
+}
+
+await loadDevices();
+
+if (captureError)
+{
+  setStatus(`预采集失败: ${captureError.name || captureError.message}`);
+}
 ```
 
-预采集成功后立即关闭临时媒体流，不会与后续通话争用设备。权限失败时设备 label 可能为空，但页面仍会展示浏览器能够枚举到的设备。
+临时媒体流在 `finally` 中关闭，因此设备列表加载失败时也不会与后续通话争用设备。权限失败时设备 label 可能为空，但页面仍会尝试展示浏览器能够枚举到的设备。
 
 ## 1.14 AiNS、虚拟背景、混流与通话的关系
 

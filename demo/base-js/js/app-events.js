@@ -1,8 +1,11 @@
 /* Demo 页面事件统一绑定入口。
  *
- * 本文件负责将页面 UI 按钮（呼叫、接听、挂断、设备切换、模式选择等）
- * 绑定到 SDK API 调用。事件处理逻辑本身在 app-call.js、app-conference.js
- * 和 app-effects.js 中实现，这里只做桥接。
+ * 本文件负责静态页面控件的集中绑定，便于接入方快速查找
+ * UI 操作对应的功能入口。具体处理由 app-call.js、app-b2b.js、
+ * app-conference.js、app-effects.js 和 app-helper.js 中的具名函数实现。
+ *
+ * 依赖当前 RTCSession 或会议成员的动态控件，仍由 app-call.js 和
+ * app-conference.js 在会话建立或成员切换时绑定。
  *
  * 核心职责：
  * 1. 模式选择：点对点 / 三方
@@ -54,15 +57,8 @@ document.querySelector('#initConf').onclick = function()
 // =============================================================================
 
 document.querySelector('#shareClose').onclick = minShareBox;
-document.querySelector('#shareRestore').onclick = function()
-{
-  const dialog = document.querySelector('#crtcMediaDialog');
-
-  if (dialog && dialog.dataset.mode)
-  {
-    openShareBox(dialog.dataset.mode);
-  }
-};
+document.querySelector('#shareRotate').onclick = toggleShareRotation;
+document.querySelector('#shareRestore').onclick = restoreShareBox;
 
 // ---- 三方会议控制按钮 ----
 // 三方会议静态按钮只负责调用会议模块公开给 Demo 的操作函数。
@@ -110,53 +106,10 @@ document.querySelector('#confUnshare').onclick = function()
 // =============================================================================
 
 // 主动注册：初始化时会自动注册，该按钮用于主动注销后重新注册。
-document.querySelector('#regUa').onclick = function()
-{
-  if (!ua)
-  {
-    setStatus('请先选择点对点或三方模式');
-
-    return;
-  }
-  if (!ua.isConnected())
-  {
-    setStatus('信令尚未连接，不能注册');
-
-    return;
-  }
-
-  if (ua.isRegistered())
-  {
-    setStatus('当前账号已经注册');
-
-    return;
-  }
-
-  setStatus('正在主动注册');
-  regState = 'registering';
-  updateMode();
-  ua.register();
-};
+document.querySelector('#regUa').onclick = registerUa;
 
 // 主动注销：注销 SIP 注册但保留 WSS 连接，可再次点击“主动注册”。
-document.querySelector('#unregUa').onclick = function()
-{
-  if (!ua)
-  {
-    setStatus('请先选择点对点或三方模式');
-
-    return;
-  }
-  if (!ua.isRegistered())
-  {
-    setStatus('当前账号尚未注册');
-
-    return;
-  }
-
-  setStatus('正在主动注销');
-  ua.unregister();
-};
+document.querySelector('#unregUa').onclick = unregisterUa;
 
 // =============================================================================
 // 点对点呼叫按钮
@@ -208,160 +161,46 @@ document.querySelector('#callVideo').onclick = function()
 // B2B 纯视频呼叫（无音频）
 document.querySelector('#b2bVideo').onclick = function()
 {
-  b2bReq({
-    url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/getInCallIdStr',
-    method : 'POST',
-    secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
-
-    body : { 'caller': document.querySelector('#callee').value }
-  })
-    .then((callId) =>
-    {
-      console.warn('cid: ', callId);
-
-      return b2bReq({
-        url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/status',
-        method : 'POST',
-        secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
-
-        body : { 'callId': callId.data.data, 'cmd': 'query' }
-      });
-    })
-    .then(((callNo) =>
-    {
-      const stat = callNo.data.data.stat.split('&');
-
-      xdata = stat[1];
-      callee = stat[0];
-      console.warn('call: ', callee);
-      videoOnly = true;
-      call('onlyVideo');
-    }));
+  callB2bVideo();
 };
 
 // B2B 纯视频单向呼叫（仅发送）
 document.querySelector('#b2bVideoSend').onclick = function()
 {
-  b2bReq({
-    url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/getInCallIdStr',
-    method : 'POST',
-    secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
-
-    body : { 'caller': document.querySelector('#callee').value }
-  })
-    .then((callId) =>
-    {
-      console.warn('cid: ', callId);
-
-      return b2bReq({
-        url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/status',
-        method : 'POST',
-        secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
-
-        body : { 'callId': callId.data.data, 'cmd': 'query' }
-      });
-    })
-    .then(((callNo) =>
-    {
-      const stat = callNo.data.data.stat.split('&');
-
-      xdata = stat[1];
-      callee = stat[0];
-      console.warn('call: ', callee);
-      videoOnly = true;
-      call('onlyVideo', 'sendonly');
-    }));
+  callB2bVideo('sendonly');
 };
 
 // 发起纯视频呼叫（无音频、双向）
 document.querySelector('#callVideoSend').onclick = function()
 {
-  videoOnly = true;
-  call('onlyVideo');
+  callVideoOnly();
 };
 
-/**
- * 页面可见性变化处理。
- *
- * 进入后台时仅打印日志；回到前台时关闭来电系统通知，
- * 避免用户已返回页面但通知仍然悬挂。
- */
-// 页面可见性变化：回到前台时关闭来电通知
-document.addEventListener('visibilitychange', function()
-{
-  if (document.hidden)
-  {
-    console.log('页面进入后台');
-  }
-  else
-  {
-    closeNotice();
-    console.warn('页面回到前台');
-  }
-});
+// =============================================================================
+// 设备、通话选项与页面生命周期
+// =============================================================================
+
+// 页面可见性变化：回到前台时关闭来电通知。
+document.addEventListener('visibilitychange', handleVisibilityChange);
 
 /**
- * 摄像头切换（页面级统一绑定）
- *
- * 1. 记录用户选择的设备，下次呼叫时生效
- * 2. 如果当前有活跃会话，则立即切换（触发 cameraChanged 事件）
- * 3. 兼容 MCU 等候室：切换前停止旧的克隆视频轨道
+ * 摄像头选择交给通话模块处理：未通话时保存选择，通话中热切换设备。
  */
 document.querySelector('#cameras').addEventListener('change', function()
 {
-  const deviceId = this.options[this.selectedIndex].value;
-
-  cameraId = deviceId;
-
-  // 会话内热切换
-  if (rtcSession)
-  {
-    // 清理旧的克隆视频轨道（MCU 等候室兼容）
-    if (typeof cloneStream !== 'undefined' && cloneStream)
-    {
-      cloneStream.getVideoTracks().forEach((v) =>
-      {
-        v.stop();
-      });
-    }
-    rtcSession.switchDevice('camera', deviceId);
-  }
-
-  setStatus(`${rtcSession ? 'switchDevice' : 'select camera'} ${this.options[this.selectedIndex].innerText}`);
+  changeCamera(this);
 });
 
 /**
- * 麦克风切换（页面级统一绑定）
- *
- * 1. 记录用户选择的设备，下次呼叫时生效
- * 2. 如果当前有活跃会话，则立即切换
+ * 麦克风选择交给通话模块处理：未通话时保存选择，通话中热切换设备。
  */
 document.querySelector('#mics').addEventListener('change', function()
 {
-  const deviceId = this.options[this.selectedIndex].value;
-
-  micId = deviceId;
-
-  // 会话内热切换
-  if (rtcSession)
-  {
-    rtcSession.switchDevice('audio', deviceId);
-  }
-
-  setStatus(`${rtcSession ? 'switchDevice' : 'select mic'} ${this.options[this.selectedIndex].innerText}`);
+  changeMic(this);
 });
 
-/**
- * 恢复所有 video 元素的播放。
- *
- * Chrome 等浏览器自动播放策略可能导致视频暂停（尤其在页面不可见时），
- * 点击此按钮可批量恢复所有 video 元素的播放。
- */
-// 恢复所有视频播放
-document.querySelector('.resume').onclick = function()
-{
-  document.querySelectorAll('video').forEach((video) => video.play().catch());
-};
+// 恢复所有视频播放。
+document.querySelector('.resume').onclick = resumeVideos;
 
 /**
  * 音视频升级策略选择。
@@ -375,27 +214,11 @@ document.querySelector('.resume').onclick = function()
 // 控制音视频切换时使用 update 还是 reInvite
 document.querySelector('#useupdate').onchange = function()
 {
-  this.options[this.selectedIndex].value !== 'update' ? useUpdate = false : useUpdate = true;
-  console.log(this.options[this.selectedIndex]);
-  setStatus(`${this.options[this.selectedIndex].value === 'update' ? 'useUpdate' : 'useReInvite'}`);
+  changeUpdateMode(this);
 };
 
-/**
- * 页面卸载前优雅退出。
- *
- * 设置 handleStop 标记（防止误判断网），然后调用 ua.stop() 终止 UA：
- * - 关闭 WebSocket 信令连接
- * - 终止所有活跃的 RTCSession（发送 BYE）
- * - 释放所有设备权限和媒体资源
- *
- * 注意：浏览器限制 beforeunload 中的异步操作，建议使用同步清理。
- */
-// 页面卸载时优雅退出：终止所有会话并注销 UA
-window.onbeforeunload = function()
-{
-  handleStop = true;
-  if (ua) ua.stop();
-};
+// 页面卸载时停止 UA；beforeunload 中只执行同步清理。
+window.onbeforeunload = stopUaBeforeUnload;
 
 // =============================================================================
 // 媒体效果 UI 绑定
@@ -422,50 +245,15 @@ document.querySelector('#fxMirror').addEventListener('change', function()
   });
 });
 
-// AiNS 开关变化时：
-// 1. 更新当前模式
-// 2. 提示当前状态
+// AI 降噪模式和强度由媒体效果模块保存并按当前通话状态生效。
 document.querySelector('#nsMode').addEventListener('change', function()
 {
-  // 保存当前下拉框值，供构建呼叫参数复用
-  aiNsType = this.value;
-
-  // 先提示当前模式
-  if (aiNsType === 'AiNS')
-  {
-    setStatus(`AI 降噪强度已设为 ${getNsLevel()}，将在下一次呼叫/接听时生效`);
-  }
-  else
-  {
-    setStatus('AI 降噪已关闭');
-  }
+  changeNsMode(this);
 });
 
-// AiNS 强度变化时：
-// 1. 先把输入值整理到 0-100
-// 2. 如果当前通话已经开了 AiNS，就直接动态生效
 document.querySelector('#nsLevel').addEventListener('change', function()
 {
-  // 先把输入整理成 SDK 期望的合法范围
-  const nextLevel = normNsLevel(this.value);
-
-  // 再把规范化后的值回写到输入框
-  this.value = nextLevel;
-
-  // 只有 AiNS 开启时，才需要提示和应用这个强度
-  if (aiNsType === 'AiNS')
-  {
-    // 已经在通话里并且拿到了 AiNS 实例，就直接热更新
-    if (setNsLevel(nextLevel))
-    {
-      setStatus(`AI 降噪强度已设为 ${nextLevel}，已应用到当前通话`);
-    }
-    else
-    {
-      // 否则提示它会在下次通话时生效
-      setStatus(`AI 降噪强度已设为 ${nextLevel}，将在下一次呼叫/接听时生效`);
-    }
-  }
+  changeNsLevel(this);
 });
 
 document.querySelector('#textMarkSet').onclick = async function()
@@ -473,24 +261,11 @@ document.querySelector('#textMarkSet').onclick = async function()
   await setTextMark();
 };
 
-document.querySelector('#textMarkClear').onclick = async function()
-{
-  document.getElementById('textMarkText').value = '';
-  document.getElementById('textMarkSize').value = '';
-  document.getElementById('textMarkAlpha').value = '';
-  await setTextMark();
-};
+document.querySelector('#textMarkClear').onclick = clearTextMark;
 
 document.querySelector('#imgMarkSet').onclick = async function()
 {
   await setImageMark();
 };
 
-document.querySelector('#imgMarkClear').onclick = async function()
-{
-  document.getElementById('imgMarkUrl').value = '';
-  document.getElementById('imgMarkW').value = '';
-  document.getElementById('imgMarkH').value = '';
-  document.getElementById('imgMarkAlpha').value = '';
-  await setImageMark();
-};
+document.querySelector('#imgMarkClear').onclick = clearImageMark;

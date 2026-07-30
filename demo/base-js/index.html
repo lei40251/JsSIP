@@ -81,8 +81,13 @@
                   aria-pressed="false"><i class="bi bi-pencil" aria-hidden="true"></i>开启标注</button>
                 <button class="btn btn-sm btn-outline-secondary hide" id="boardClose" type="button">
                   <i class="bi bi-x-lg" aria-hidden="true"></i>关闭白板</button>
+                <button class="btn btn-sm btn-outline-secondary hide" id="shareRotate" type="button"
+                  aria-pressed="false">
+                  <i class="bi bi-arrow-90deg-right" aria-hidden="true"></i>
+                  <span id="shareRotateText">旋转90°</span>
+                </button>
                 <button class="btn btn-sm btn-outline-secondary" id="shareClose" type="button">
-                  <i class="bi bi-dash-lg" aria-hidden="true"></i>最小化</button>
+                  <i class="bi bi-window-dash" aria-hidden="true"></i>最小化</button>
               </div>
             </header>
             <!-- 标注操作以归一化矢量数据通过会话 INFO 同步，不会烧录进共享视频。 -->
@@ -526,8 +531,9 @@
   <script src="./js/konva-10.3.0.min.js"></script>
   <script src="../../dist/CRTC.min.js"></script>
   <script src="../config.js"></script>
-  <script src="./js/app-effects.js"></script>
+  <!-- 通用页面辅助函数需先加载，供媒体效果模块初始化表单状态。 -->
   <script src="./js/app-helper.js"></script>
+  <script src="./js/app-effects.js"></script>
   <script src="./js/app-call.js"></script>
   <!-- 三方会议模块：在 app-call.js 之后加载，向全局作用域公开 onConfSession 等接口 -->
   <script src="./js/app-conference.js"></script>

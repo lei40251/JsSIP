@@ -8,7 +8,8 @@
  * 5. AI 降噪呼叫/接听参数构建（getNsOpts）
  * 6. 当前会话实例获取和水印合并辅助
  * 7. 当前通话效果同步（setMirror、setMarks、setVb、setNsLevel）
- * 8. 页面状态初始化（initFx）
+ * 8. 媒体效果页面操作（changeNsMode、changeNsLevel、清除水印）
+ * 9. 页面状态初始化（initFx）
  *
  * 呼叫/接听时的初始效果通过 getFxOpts() 和 getNsOpts() 配置；
  * 通话建立后的增量更新通过 setMirror/setMarks/setVb/setNsLevel 实时生效。
@@ -27,11 +28,11 @@
  * 2. 虚拟背景、水印与 MediaEffectsComposer 呼叫参数
  * 3. 呼叫 / 接听时使用的 AI 降噪参数
  * 4. 当前通话中的增量效果更新
- * 5. 页面初始状态同步
+ * 5. 媒体效果表单操作与初始状态同步
  */
 
 // =============================================================================
-// 1. 页面状态与资源
+// 页面状态与资源
 // =============================================================================
 
 // 当前选中的虚拟背景类型：''（不启用）、'none'（保留人物不替换）、'blur'（模糊）、'img1'、'img2'
@@ -56,7 +57,7 @@ const TEXT_MARK_ID = 'call-output-text-watermark';
 const IMAGE_MARK_ID = 'call-output-image-watermark';
 
 // =============================================================================
-// 2. 虚拟背景配置构建
+// 虚拟背景配置构建
 // =============================================================================
 
 /**
@@ -150,7 +151,7 @@ function getVbOpts()
 }
 
 // =============================================================================
-// 3. 水印配置构建
+// 水印配置构建
 // =============================================================================
 
 /**
@@ -279,7 +280,7 @@ function getImageMark()
 }
 
 // =============================================================================
-// 4. MediaEffectsComposer 呼叫 / 接听参数汇总
+// MediaEffectsComposer 呼叫 / 接听参数汇总
 //
 // getFxOpts() 是 app-call.js 与会议模块共同使用的配置入口：按页面当前选择组合镜像、
 // 水印和 slot 0 虚拟背景。没有启用任何效果时返回 null，避免无意义地创建管线。
@@ -374,7 +375,7 @@ function getFxOpts()
 }
 
 // =============================================================================
-// 5. AI 降噪呼叫 / 接听参数构建
+// AI 降噪呼叫 / 接听参数构建
 //
 // 这里只返回 RTCSession.call()/answer() 使用的 aiNoiseSuppression 配置，不创建
 // AiNS 实例。实例由 SDK 随通话创建；通话建立后的强度更新由 setNsLevel() 完成。
@@ -415,7 +416,7 @@ function getNsOpts()
 }
 
 // =============================================================================
-// 6. 当前会话实例与水印合并辅助
+// 当前会话实例与水印合并辅助
 //
 // 点对点模式从 rtcSession 取 composer；三方模式优先使用会议主 composer。
 // setWatermarks() 是全量替换，因此更新单类水印前必须先保留另一类水印。
@@ -503,7 +504,7 @@ function mergeMarks(next, ids)
 }
 
 // =============================================================================
-// 7. 当前通话效果同步
+// 当前通话效果同步
 //
 // 以下方法直接调用 SDK 的运行时更新 API，不重新发起呼叫或自行操作 sender。
 // 如果当前通话没有创建相应实例，会提示用户让配置在下一次通话生效。
@@ -767,7 +768,81 @@ function setNsLevel(level)
 }
 
 // =============================================================================
-// 8. 页面状态初始化
+// 媒体效果页面操作
+//
+// app-events.js 只负责绑定控件；表单状态、运行时更新和页面提示由本模块统一处理。
+// =============================================================================
+
+/**
+ * 保存 AI 降噪模式选择并提示生效时机。
+ *
+ * @param {HTMLSelectElement} selectEl - AI 降噪模式选择框
+ */
+function changeNsMode(selectEl)
+{
+  aiNsType = selectEl.value;
+
+  if (aiNsType === 'AiNS')
+  {
+    setStatus(`AI 降噪强度已设为 ${getNsLevel()}，将在下一次呼叫/接听时生效`);
+  }
+  else
+  {
+    setStatus('AI 降噪已关闭');
+  }
+}
+
+/**
+ * 整理 AI 降噪强度，并在当前通话已创建 AiNS 实例时热更新。
+ *
+ * @param {HTMLInputElement} inputEl - AI 降噪强度输入框
+ */
+function changeNsLevel(inputEl)
+{
+  const nextLevel = normNsLevel(inputEl.value);
+
+  inputEl.value = nextLevel;
+
+  if (aiNsType !== 'AiNS')
+  {
+    return;
+  }
+
+  if (setNsLevel(nextLevel))
+  {
+    setStatus(`AI 降噪强度已设为 ${nextLevel}，已应用到当前通话`);
+  }
+  else
+  {
+    setStatus(`AI 降噪强度已设为 ${nextLevel}，将在下一次呼叫/接听时生效`);
+  }
+}
+
+/**
+ * 清空文字水印表单并同步当前通话。
+ */
+async function clearTextMark()
+{
+  document.getElementById('textMarkText').value = '';
+  document.getElementById('textMarkSize').value = '';
+  document.getElementById('textMarkAlpha').value = '';
+  await setTextMark();
+}
+
+/**
+ * 清空图片水印表单并同步当前通话。
+ */
+async function clearImageMark()
+{
+  document.getElementById('imgMarkUrl').value = '';
+  document.getElementById('imgMarkW').value = '';
+  document.getElementById('imgMarkH').value = '';
+  document.getElementById('imgMarkAlpha').value = '';
+  await setImageMark();
+}
+
+// =============================================================================
+// 页面状态初始化
 // =============================================================================
 
 /**

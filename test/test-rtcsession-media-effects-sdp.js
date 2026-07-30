@@ -371,13 +371,44 @@ async function testApplyVideoMaxBitrateSkipsWhenSdpAsMissing()
   assert.strictEqual(setParametersCalls.length, 0);
 }
 
+
+async function testToggleModeToVideoAppliesSenderBitrateFromSdpAs()
+{
+  const RTCSession = require('../lib/RTCSession');
+  const session = new RTCSession(createMockUA());
+  const setParametersCalls = [];
+  const sender = {
+    track         : new MockMediaStreamTrack('video'),
+    getParameters : () => ({ encodings: [ {} ] }),
+    setParameters : (parameters) =>
+    {
+      setParametersCalls.push(JSON.parse(JSON.stringify(parameters)));
+
+      return Promise.resolve();
+    }
+  };
+
+  session._mode = 'audio';
+  session._sdpResolution = 'BP720P';
+  session._connection = {
+    getSenders : () => [ sender ]
+  };
+
+  session._ontogglemode('video');
+
+  assert.strictEqual(setParametersCalls.length, 1);
+  assert.strictEqual(setParametersCalls[0].encodings[0].minBitrate, 1946 * 1000);
+  assert.strictEqual(setParametersCalls[0].encodings[0].maxBitrate, 2378 * 1000);
+}
+
 const TESTS = [
   { name: 'testCreateLocalDescriptionAppends720pGoogleBitrateFmtpOnlyForLocalDescription', fn: testCreateLocalDescriptionAppends720pGoogleBitrateFmtpOnlyForLocalDescription },
   { name: 'testCreateLocalDescriptionAnswerUsesRemoteAsFor720pGoogleBitrateFmtp', fn: testCreateLocalDescriptionAnswerUsesRemoteAsFor720pGoogleBitrateFmtp },
   { name: 'testCreateLocalDescriptionAnswerPrefersRemoteAsForNon720p', fn: testCreateLocalDescriptionAnswerPrefersRemoteAsForNon720p },
   { name: 'testCreateLocalDescriptionSkipsGoogleBitrateFmtpWhenNoAsAvailable', fn: testCreateLocalDescriptionSkipsGoogleBitrateFmtpWhenNoAsAvailable },
   { name: 'testConfirmedSetsDetailContentHintAndAppliesSenderBitrateFromSdpAs', fn: testConfirmedSetsDetailContentHintAndAppliesSenderBitrateFromSdpAs },
-  { name: 'testApplyVideoMaxBitrateSkipsWhenSdpAsMissing', fn: testApplyVideoMaxBitrateSkipsWhenSdpAsMissing }
+  { name: 'testApplyVideoMaxBitrateSkipsWhenSdpAsMissing', fn: testApplyVideoMaxBitrateSkipsWhenSdpAsMissing },
+  { name: 'testToggleModeToVideoAppliesSenderBitrateFromSdpAs', fn: testToggleModeToVideoAppliesSenderBitrateFromSdpAs }
 ];
 
 async function run(customSuiteName)

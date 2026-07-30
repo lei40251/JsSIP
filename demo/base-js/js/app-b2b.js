@@ -1,19 +1,21 @@
-/* B2B（Business-to-Business）呼入请求辅助模块。
+/* B2B（Business-to-Business）外呼辅助模块。
  *
- * 该文件提供 B2B 场景下与第三方平台对接的 HTTP 签名和请求能力，由 app-events.js
- * 中的 B2B 外呼按钮（#b2bVideo / #b2bVideoSend）调用。
+ * 该文件提供 B2B 场景下与第三方平台对接的 HTTP 签名、请求和外呼流程。
+ * app-events.js 仅将 B2B 按钮绑定到 callB2bVideo()。
  *
  * 核心流程：
  * 1. 通过 b2bReq() 向第三方 B2B 接口发起带签名的 HTTP 请求
  * 2. 第一个请求获取 callId 字符串
  * 3. 第二个请求用 callId 查询真实被叫号码
- * 4. 外层拿到号码后再通过 SDK 的 call() API 发起 SIP 呼叫
+ * 4. 拿到号码后通过 SDK 的 call() API 发起 SIP 呼叫
  *
  * 安全机制：使用 HmacSHA256 双重签名（请求头签名 + 请求体签名），
  * 确保请求头（时间戳/版本号/应用ID）和请求体（业务参数）均不可篡改。
  * 签名计算全程使用浏览器原生 Web Crypto API，不依赖第三方库。
  */
 /* eslint-disable no-unused-vars */
+/* eslint-disable no-console */
+/* eslint-disable no-undef */
 
 // =============================================================================
 // 工具函数
@@ -163,7 +165,7 @@ async function signB2b({ secret, headers, body })
  * @returns {Promise<{status: number, data: any}>} HTTP 状态码和解析后的响应数据
  *
  * @example
- * // 在 app-events.js 中的 B2B 视频呼叫按钮使用示例：
+ * // B2B 请求使用示例：
  * b2bReq({
  *   url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/getInCallIdStr',
  *   method : 'POST',
@@ -222,4 +224,42 @@ async function b2bReq({ url, method = 'POST', body = {}, secret })
     status : res.status,
     data
   };
+}
+
+/**
+ * 查询 B2B 真实被叫号码并发起纯视频 SIP 呼叫。
+ *
+ * @param {'sendonly'|undefined} direction - 传 'sendonly' 时仅发送视频
+ * @returns {Promise<void>} B2B 查询和呼叫发起流程
+ */
+function callB2bVideo(direction)
+{
+  const secret = '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp';
+
+  return b2bReq({
+    url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/getInCallIdStr',
+    method : 'POST',
+    secret,
+    body   : { 'caller': document.querySelector('#callee').value }
+  })
+    .then((callId) =>
+    {
+      console.warn('cid: ', callId);
+
+      return b2bReq({
+        url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/status',
+        method : 'POST',
+        secret,
+        body   : { 'callId': callId.data.data, 'cmd': 'query' }
+      });
+    })
+    .then((callNo) =>
+    {
+      const stat = callNo.data.data.stat.split('&');
+
+      xdata = stat[1];
+      callee = stat[0];
+      console.warn('call: ', callee);
+      callVideoOnly(direction);
+    });
 }

@@ -7,9 +7,10 @@
  * 1. 媒体渲染：showStreams / clearStreams / setMedia
  * 2. 设备管理：loadDevices / getAudioOpts / getVideoOpts
  * 3. 系统通知：showNotice / closeNotice
- * 4. 共享浮层：openShareBox / minShareBox / closeShareBox
- * 5. 输入处理：normNsLevel / getNsLevel / readOpacity / getQuery
- * 6. 工具函数：sameTracks / onTrackEnd / getRemoteOs
+ * 4. 页面操作：handleVisibilityChange / resumeVideos
+ * 5. 共享浮层：openShareBox / minShareBox / restoreShareBox / closeShareBox
+ * 6. 输入处理：normNsLevel / getNsLevel / readOpacity / getQuery
+ * 7. 工具函数：sameTracks / onTrackEnd / getRemoteOs
  */
 /* eslint-disable no-unused-vars */
 /* eslint-disable max-len */
@@ -133,6 +134,35 @@ function setStatus(text)
 
   statusEl.innerText = `${statusEl.innerText}${text}\r\n`;
   statusEl.scrollTop = statusEl.scrollHeight;
+}
+
+// =============================================================================
+// 页面通用操作
+// =============================================================================
+
+/**
+ * 页面回到前台时关闭来电系统通知，避免通知继续悬挂。
+ */
+function handleVisibilityChange()
+{
+  if (document.hidden)
+  {
+    console.log('页面进入后台');
+  }
+  else
+  {
+    closeNotice();
+    console.warn('页面回到前台');
+  }
+}
+
+/**
+ * 恢复页面中所有 video 元素的播放。
+ * 用于处理浏览器自动播放策略或页面后台恢复后的视频暂停。
+ */
+function resumeVideos()
+{
+  document.querySelectorAll('video').forEach((video) => video.play().catch());
 }
 
 // =============================================================================
@@ -423,6 +453,49 @@ function onTrackEnd(track, listener)
 // 共享画面与白板通用浮层
 // =============================================================================
 
+let shareViewRotated = false;
+
+function isShareViewRotated()
+{
+  return shareViewRotated;
+}
+
+function updateShareRotationUi()
+{
+  const dialog = document.querySelector('#crtcMediaDialog');
+  const button = document.querySelector('#shareRotate');
+  const label = document.querySelector('#shareRotateText');
+  const visible = Boolean(dialog && dialog.dataset.mode);
+
+  if (button)
+  {
+    button.classList.toggle('hide', !visible);
+    button.setAttribute('aria-pressed', String(shareViewRotated));
+  }
+  if (label) label.textContent = shareViewRotated ? '恢复' : '旋转90°';
+}
+
+function setShareViewRotated(rotated)
+{
+  const next = Boolean(rotated);
+
+  if (shareViewRotated === next)
+  {
+    updateShareRotationUi();
+
+    return;
+  }
+
+  shareViewRotated = next;
+  updateShareRotationUi();
+  if (typeof onShareRotationChanged === 'function') onShareRotationChanged();
+}
+
+function toggleShareRotation()
+{
+  setShareViewRotated(!shareViewRotated);
+}
+
 /**
  * 展示本端/远端屏幕共享或独立共享白板。点对点与三方模式共用同一组页面节点。
  *
@@ -443,6 +516,9 @@ function openShareBox(mode)
     return;
   }
 
+  const previousMode = dialog.dataset.mode;
+
+  if (previousMode && previousMode !== mode) setShareViewRotated(false);
   dialog.dataset.mode = mode;
   dialog.classList.remove('hide');
   if (restore)
@@ -467,6 +543,7 @@ function openShareBox(mode)
     icon.className = mode === 'whiteboard' ? 'bi bi-pencil-square' : 'bi bi-display';
   }
   if (typeof setInkMode === 'function') setInkMode(mode);
+  updateShareRotationUi();
 }
 
 /**
@@ -479,6 +556,19 @@ function minShareBox()
 
   if (dialog) dialog.classList.add('hide');
   if (restore) restore.classList.remove('hide');
+}
+
+/**
+ * 按浮层记录的共享来源恢复屏幕共享或白板显示。
+ */
+function restoreShareBox()
+{
+  const dialog = document.querySelector('#crtcMediaDialog');
+
+  if (dialog && dialog.dataset.mode)
+  {
+    openShareBox(dialog.dataset.mode);
+  }
 }
 
 /**
@@ -498,6 +588,7 @@ function closeShareBox(mode)
 
   dialog.classList.add('hide');
   dialog.dataset.mode = '';
+  setShareViewRotated(false);
   if (restore) restore.classList.add('hide');
   if (typeof setInkMode === 'function') setInkMode('');
 }
