@@ -1329,13 +1329,12 @@ function updateInkUi()
 }
 
 /**
- * 根据容器尺寸自适应调整 Konva Stage 大小和位置。
+ * 计算等比包含矩形（白板模式 Stage 定位用）。
  *
- * 白板模式：Stage 保持发起方比例并居中显示在共享浮层容器内。
- * 屏幕标注模式：Stage 按视频原始比例居中缩放，覆盖在视频元素上方。
- * 尺寸变化超过 1px 时触发 Konva 舞台重设和全量重绘。
- *
- * 触发时机：容器 ResizeObserver 回调、窗口 resize、视频 loadedmetadata。
+ * @param {number} containerWidth - 容器宽度
+ * @param {number} containerHeight - 容器高度
+ * @param {number} aspectRatio - 目标宽高比
+ * @returns {{left:number, top:number, width:number, height:number}} 居中后的矩形
  */
 function getContainedBoardRect(containerWidth, containerHeight, aspectRatio)
 {
@@ -1384,6 +1383,15 @@ function getShareVideoLayout(containerWidth, containerHeight, videoWidth, videoH
   };
 }
 
+/**
+ * 根据容器尺寸自适应调整 Konva Stage 大小和位置。
+ *
+ * 白板模式：Stage 保持发起方比例并居中显示在共享浮层容器内。
+ * 屏幕标注模式：Stage 按视频原始比例居中缩放，覆盖在视频元素上方。
+ * 尺寸变化超过 1px 时触发 Konva 舞台重设和全量重绘。
+ *
+ * 触发时机：容器 ResizeObserver 回调、窗口 resize、视频 loadedmetadata。
+ */
 function resizeInk()
 {
   if (!inkStage) return;

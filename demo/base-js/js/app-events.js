@@ -205,11 +205,11 @@ document.querySelector('.resume').onclick = resumeVideos;
 /**
  * 音视频升级策略选择。
  *
- * 控制 mute/unmute 音视频时使用 SIP UPDATE 还是 re-INVITE：
- * - 'update'：使用 UPDATE 方法，轻量级，不重新协商 SDP
- * - 其他值（默认）：使用 re-INVITE，重新协商 SDP
+ * 控制音视频模式切换（toAudio / toVideo 等按钮）时使用 SIP UPDATE 还是 re-INVITE：
+ * - 'update'：使用 UPDATE 方法，轻量级，不重新协商 SDP（默认）
+ * - 其他值：使用 re-INVITE，重新协商 SDP
  *
- * 该选项在通话建立后通过 rtcSession 的配置生效。
+ * 该选项为模块级全局变量，点击切换按钮时通过 upgradeToVideo / downgradeToAudio 的 useUpdate 参数即时生效。
  */
 // 控制音视频切换时使用 update 还是 reInvite
 document.querySelector('#useupdate').onchange = function()

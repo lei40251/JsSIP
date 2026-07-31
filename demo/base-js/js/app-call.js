@@ -1514,8 +1514,6 @@ function onSession(e)
    * 2. ICE 状态异常检测
    * 3. 启动录音（如果 URL 参数指定）
    * 4. 渲染本地/远端媒体流
-   * 5. 监听 ontrack 处理远端辅助视频流
-   * 6. 根据参数设置视频码率
    */
   e.session.on('confirmed', async function()
   {

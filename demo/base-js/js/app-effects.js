@@ -67,28 +67,22 @@ const IMAGE_MARK_ID = 'call-output-image-watermark';
  *
  * @typedef {Object} AiVBOptions
  *
- * @property {boolean} [enabled] — 是否启用（默认 true，设为 false 可暂停效果而不销毁）
- *
- * @property {'none'|'blur'|'image'|'color'} [mode] — 虚拟背景模式：
+ * @property {'none'|'blur'|'image'} [mode] — 虚拟背景模式：
  *   - 'none'  : 不应用虚拟背景效果；保留 AI 虚拟背景配置对象，但不做人像分割、不替换背景
  *   - 'blur'  : 背景模糊
- *   - 'image' : 替换为自定义图片（需同时传 url）
- *   - 'color' : 替换为纯色背景（需同时传 color）
+ *   - 'image' : 替换为自定义图片（需同时传 imageUrl）
  *
  * @property {string}  [imageUrl]   — 背景图片 URL（mode='image' 时需要）
- * @property {string}  [color]      — 背景颜色（mode='color' 时需要，CSS 颜色值）
- * @property {string}  [modelPath]  — 自定义 AI 模型路径
  *
  * ---------- video：视频源处理参数 ----------
  * @property {Object}  [video]
- * @property {number}  [video.width]           — 输入宽度（默认 1280）
- * @property {number}  [video.height]          — 输入高度（默认 720）
- * @property {number}  [video.targetFps]       — 目标帧率（默认 15）
- * @property {boolean} [video.mirror]          — 是否水平翻转源视频（默认 false）
+ * @property {number}  [video.width]     — 输入宽度（默认 1280）
+ * @property {number}  [video.height]    — 输入高度（默认 720）
+ * @property {number}  [video.targetFps] — 目标帧率（默认 15）
  *
  * ---------- assetConfig：AI 资源文件路径（用于自定义 CDN / 本地部署）----------
  * @property {Object}  [assetConfig]
- * @property {string}  [assetConfig.cdnUrl]    — 扁平资源基路径（所有文件在同一目录）
+ * @property {string}  [assetConfig.cdnUrl] — 扁平资源基路径（所有文件在同一目录）
  */
 
 /**
@@ -160,15 +154,13 @@ function getVbOpts()
  * @typedef {Object} MediaEffectsComposerWatermarkOptions
  *
  * ---- 核心字段 ----
- * @property {string}  [id]               — 水印唯一 ID（用于后续更新/删除时的去重和定位） * 
+ * @property {string}  [id]               — 水印唯一 ID（用于后续更新/删除时的去重和定位）
  * @property {'text'|'image'} [type]      — 水印类型：'text'=文字水印，'image'=图片水印
  *
  * ---- 文字水印专用 ----
  * @property {string}  [text]            — 文字内容
- * @property {string}  [font]            — CSS font 属性（如 'bold 20px Arial'）
- * @property {number}  [fontSize]        — 字号 / px（优先级低于 font）
+ * @property {number}  [fontSize]        — 字号 / px
  * @property {string}  [color]           — 文字颜色（CSS 颜色值，默认 '#ffffff'）
- * @property {string}  [backgroundColor] — 文字背景色（CSS 颜色值，默认透明）
  * 
  * ---- 图片水印专用 ----
  * @property {string|ImageBitmap} [image]
@@ -179,11 +171,9 @@ function getVbOpts()
  * @property {number}  [height]   — 水印高度 / px；同上
  * @property {number}  [opacity]  — 透明度（0~1，默认 1）
  *
- * ---- 位置（二选一）----
+ * ---- 位置 ----
  * @property {'top-left'|'top-center'|'top-right'|'center'|'bottom-left'|'bottom-center'|'bottom-right'} [position]
  *   — 预设位置（默认 'bottom-right'），九宫格定位
- * @property {{x:number, y:number}} [position]
- *   — 自定义坐标（像素值，原点在左上角）
  *
  */
 
@@ -293,13 +283,11 @@ function getImageMark()
  *
  * @typedef {Object} MediaEffectsComposerOptions
  *
- * ---- 画布基础参数 ----
- * @property {number}  [width]                 — 合成画布宽度（默认 1280）
- * @property {number}  [height]                — 合成画布高度（默认 720）
- * @property {number}  [fps]                   — 合成帧率（默认 15）
- *
  * ---- 输出镜像 ----
  * @property {boolean} [mirror]       — 输出画面水平镜像（默认 false，影响所有观看者看到的画面）
+ *
+ * ---- 输出模式 ----
+ * @property {boolean} [insertable]   — 是否启用 Insertable 输出（默认 false，关闭时回退传统 captureStream）
  *
  * ---- 水印 ----
  * @property {MediaEffectsComposerWatermarkOptions[]|MediaEffectsComposerWatermarkOptions|null} [watermarks]
@@ -308,7 +296,6 @@ function getImageMark()
  * ---- 输入源配置（含 AI 虚拟背景）----
  * @property {MediaEffectsComposerSourceOptions[]} [sources]
  *   — 输入源配置数组，每个元素：
- *     @property {number}   [slot]               — 槽位索引
  *     @property {AiVBOptions} [aiBackground]
  *       — 该源的 AI 虚拟背景配置，详见 getVbOpts 上方 JSDoc
  */

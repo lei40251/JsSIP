@@ -24,7 +24,7 @@
  *
  * 处理流程：
  * 1. 从连接中提取本地和远端流
- * 2. 克隆本地音视频轨道构造新的 MediaStream（兼容 MCU 等候室）
+ * 2. 组合本地音视频轨道构造新的 MediaStream（兼容 MCU 等候室）
  * 3. 渲染远端音频（延迟 100ms 适配安卓微信无声问题）
  * 4. 渲染远端视频（监听 ended 清理残留黑框）
  * 5. 统一播放（兼容 Chrome 自动播放策略）
@@ -110,7 +110,7 @@ function clearStreams()
 /**
  * 从 URL 查询参数中提取值
  *
- * @param {string} name - 参数名（区分大小写）
+ * @param {string} name - 参数名（不区分大小写）
  * @returns {string|null} 参数值，不存在时返回 null
  */
 function getQuery(name)
