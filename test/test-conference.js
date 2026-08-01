@@ -840,7 +840,8 @@ module.exports = {
     test.strictEqual((appSource.match(/aiNoiseSuppression\s*:\s*buildCallAiNsOptions\(\)/g) || []).length, 2);
     test.ok(/options\.aiNoiseSuppression\s*=/.test(appSource));
     test.ok(/aiBackground\s*:\s*aiVBOptions/.test(effectsSource));
-    test.ok(/composerOptions\.insertable\s*=\s*true/.test(effectsSource));
+    // insertable 默认开启（SDK 侧默认值），示例不再显式赋值。
+    test.strictEqual(/composerOptions\.insertable\s*=/.test(effectsSource), false);
     test.ok(/sessionComposer\.setAiBackground\(0, aiVBOptions\)/.test(effectsSource));
     test.ok(/sessionComposer\.clearAiBackground\(0\)/.test(effectsSource));
     test.ok(/\blevel\s*:\s*getCurrentAiNsLevel\(\)/.test(effectsSource));

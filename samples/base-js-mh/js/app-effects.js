@@ -345,11 +345,6 @@ function buildCallComposerOptions()
     ];
   }
 
-  if (hasComposerEffects)
-  {
-    composerOptions.insertable = true;
-  }
-
   if (!hasComposerEffects)
   {
     return null;
@@ -393,7 +388,7 @@ function buildCallComposerOptions()
  * rtcSession.getMediaEffectsComposer()
  *   - 返回: MediaEffectsComposerInstance | null
  *   - 说明: 仅在通话建立且 mediaEffectsComposer 已启用时返回实例，
- *           否则返回 null（需在 call/answer 时传入 insertable: true）
+ *           否则返回 null（需在 call/answer 时传入 mediaEffectsComposer 配置）
  *   - 返回的实例上可用方法见本区块顶部注释
  *
  * @returns {{ sessionComposer: Object|null }}
@@ -750,9 +745,6 @@ async function handleVirtualBackgroundChange(selectEl)
  *   - 0   = 不降噪
  *   - 100 = 最大降噪强度
  *   - 值越高噪声抑制越强，但语音可能稍有失真
- *
- * @property {number} [outputGain] — AiNS 处理后的输出增益（0~4，默认 1）
- *   大于 1 可补偿降噪后的音量，过高可能造成削波
  *
  * @property {Object} [assetConfig] — AI 模型资源路径配置
  * @property {string} [assetConfig.cdnUrl] — CDN 根路径（默认 './static'）

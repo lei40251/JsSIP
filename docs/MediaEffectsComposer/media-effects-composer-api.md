@@ -115,7 +115,6 @@ const composer = new CRTC.MediaEffectsComposer(localStream, {
 | `workerUrl` | `string \| null` | `null` | 外部 Worker 脚本地址；不传时默认走 Blob Worker |
 | `dropBusyFrames` | `boolean` | `true` | Worker 忙时是否丢弃当前帧，避免延迟累积 |
 | `maxFrameQueue` | `number` | `1` | 预留帧队列长度，当前默认只保留 1 帧 |
-| `insertable` | `boolean` | `false` | 是否优先使用 Insertable Streams 导出视频 |
 | `manualFrameControl` | `boolean` | `true` | captureStream 路径下是否优先使用 `captureStream(0)+requestFrame` |
 | `sourceMirror` | `boolean` | `false` | 所有源默认镜像，属于源级处理，发生在布局进入最终输出前 |
 | `mirror` | `boolean` | `false` | 构造期整体输出镜像，影响最终合成输出流，不等同于本地预览 CSS 镜像 |

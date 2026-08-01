@@ -39,7 +39,7 @@ let mixTimer = null;
 let mixKey = '';
 
 // =============================================================================
-// 1. 会议成员查询与基础 SIP 字段读取
+// 会议成员查询与基础 SIP 字段读取
 //
 // 这些函数不创建会话，只从 confLegs 或 SIP request 读取状态。其返回值被呼叫、
 // 接听、共享和 UI 共用，因此这里保持无副作用，便于沿调用链定位当前目标成员。
@@ -124,7 +124,7 @@ function getSelLeg()
 }
 
 // =============================================================================
-// 2. 会话入口参数识别
+// 会话入口参数识别
 //
 // 本地外呼通过 pendingCall 把角色和媒体参数交给 newRTCSession；远端呼入则从
 // SIP 请求读取号码及 X-Silent-Join。这里仅解析入口信息，不创建或接听会话。
@@ -189,7 +189,7 @@ function getSessOpts(e)
 }
 
 // =============================================================================
-// 3. 呼叫媒体与 composer 输出准备
+// 呼叫媒体与 composer 输出准备
 //
 // 三方会议中 A 作为桥接端，需要 MediaEffectsComposer 来合成 B 和 C 的远端轨。
 // A-B 主会话的 composer 输出视频（A+B+C 合成画面），同时按 slot 混音，
@@ -198,19 +198,16 @@ function getSessOpts(e)
 
 /**
  * 构建三方会议的 MediaEffectsComposer 配置。
- * 与点对点模式共用 getFxOpts()，但强制启用 insertable 模式，
- * 确保即使页面未选择任何特效，主会话也持有可动态添加远端源的 composer。
+ * 与点对点模式共用 getFxOpts()；无论页面是否选择了媒体特效，
+ * 都必须传入 composer 配置对象（getFxOpts() 返回 null 时兜底为 {}），
+ * SDK 收到非空配置即创建 composer，供三方动态追加 B/C 远端源。
  *
- * @returns {object} MediaEffectsComposerOptions 配置对象（insertable 强制为 true）
+ * @returns {object} MediaEffectsComposerOptions 配置对象（无特效时为 {}）
  */
 function buildMixOpts()
 {
-  const options = Object.assign({}, getFxOpts() || {});
-
-  // 即使页面没有选择特效，主会话也必须创建 composer，供三方动态加源。
-  options.insertable = true;
-
-  return options;
+  // 即使页面没有选择特效，主会话也必须持有 composer，供三方动态加源。
+  return Object.assign({}, getFxOpts() || {});
 }
 
 /**
@@ -253,27 +250,20 @@ function getConfFx()
 /**
  * 确保 A-B 主会话拥有可用的 MediaEffectsComposer。
  *
- * 如果主会话尚未创建 composer，则调用 updateMediaEffectsComposer 初始化。
- * 创建成功后刷新本端预览，确保 composer 的原始输入流正确绑定到 localVid。
+ * B 会话建立时已通过 mediaEffectsComposer 配置创建 composer；
+ * 若首次创建失败（SDK 降级回退），此处直接抛错。
  *
  * @param {object} hostLeg - A-B 主会话的 leg 对象
- * @throws {Error} 如果主会话不存在或无法创建 composer
+ * @throws {Error} 如果主会话不存在或没有可用的 composer
  */
-async function ensureMixer(hostLeg)
+function ensureMixer(hostLeg)
 {
   if (!hostLeg || !hostLeg.session)
   {
     throw new Error('A-B 主会话不存在');
   }
 
-  let composer = hostLeg.session.getMediaEffectsComposer && hostLeg.session.getMediaEffectsComposer();
-
-  if (!composer && hostLeg.session.updateMediaEffectsComposer)
-  {
-    await hostLeg.session.updateMediaEffectsComposer(buildMixOpts());
-    composer = hostLeg.session.getMediaEffectsComposer();
-    showLocal(hostLeg);
-  }
+  const composer = hostLeg.session.getMediaEffectsComposer && hostLeg.session.getMediaEffectsComposer();
 
   if (!composer)
   {
@@ -549,7 +539,7 @@ function getAnswerOpts(leg, cOutput)
 }
 
 // =============================================================================
-// 4. 会话模型
+// 会话模型
 //
 // 每个会议成员（B 或 C）用一个 leg 对象管理其 RTCSession、远端媒体轨、
 // 屏幕共享状态和 composer 合成输入。leg 的生命周期从 newRTCSession 事件开始，
@@ -627,7 +617,7 @@ function addLeg(session, opts)
 }
 
 // =============================================================================
-// 5. 当前会议成员的通话统计与通用控制
+// 当前会议成员的通话统计与通用控制
 //
 // 三方会议中 A 与 B、C 分别维护独立的 PeerConnection，统计面板需要
 // 根据当前选中的成员动态切换展示内容。所有统计相关信息通过
@@ -783,7 +773,7 @@ function bindControls()
 }
 
 // =============================================================================
-// 6. 远端媒体收集与 RTCSession 事件
+// 远端媒体收集与 RTCSession 事件
 //
 // bindTracks() 只收集 SDK PeerConnection 产生的远端轨；bindLegEvents() 统一处理
 // accepted/confirmed/failed/ended 等会话状态。事件顺序保持 SDK 原始语义。
@@ -903,7 +893,7 @@ function loadRemote(leg)
 }
 
 /**
- * 为会议成员创建隐藏的 &lt;audio&gt; 元素用于远端音频播放。
+ * 为会议成员创建隐藏的 <audio> 元素用于远端音频播放。
  * 将成员的远端音频流绑定到该元素并自动播放。
  * 如果已存在绑定同一流的音频元素则复用，避免重复创建 DOM 节点。
  *
@@ -1256,7 +1246,7 @@ function onConfSession(e)
 }
 
 // =============================================================================
-// 7. 会议呼叫与接听入口
+// 会议呼叫与接听入口
 //
 // callConf()/callSilentC() 负责构造 ua.call() 参数，answerLeg() 负责调用
 // session.answer()。媒体准备失败只回滚 composer 输出，不改变 SDK 会话时序。
@@ -1561,7 +1551,7 @@ async function answerLeg(leg)
 }
 
 // =============================================================================
-// 8. 三方媒体合成与失败降级
+// 三方媒体合成与失败降级
 //
 // 合成流程：A-B 和 A-C 的远端音视频轨通过 MediaEffectsComposer.addSource()
 // 添加到主 composer 的不同 slot 中，composer 输出合成后的 A+B+C 视频画面，
@@ -1867,7 +1857,7 @@ async function restoreAll(badHostId)
 }
 
 // =============================================================================
-// 9. 媒体预览与会话清理
+// 媒体预览与会话清理
 // =============================================================================
 
 /**
@@ -2129,7 +2119,7 @@ function endConf()
 }
 
 // =============================================================================
-// 10. 定向屏幕共享
+// 定向屏幕共享
 //
 // 三方模式下 A 调用每条 RTCSession 的 share() 辅流模式，向指定成员（B 或 C）
 // 发送同一个屏幕流。transceiver、重协商、MID 通知和失败回滚均由 SDK 负责。
@@ -2338,7 +2328,7 @@ async function unshareConf(fromEnded)
 }
 
 // =============================================================================
-// 11. 呼转与页面状态
+// 呼转与页面状态
 // =============================================================================
 
 /**

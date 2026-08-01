@@ -239,7 +239,6 @@ const mediaEffectsComposer = {
   fps                : 25,
   dropBusyFrames     : true,
   keepDrawingBuffer  : true,
-  insertable         : false,
   manualFrameControl : true,
   mirrorWatermarks   : false,
   sources : [
@@ -332,7 +331,6 @@ composer.releaseSubmixStream({ slots: [ 0, 2 ], isolated: true });
 | `mirrorWatermarksWithOutput` | `mirrorWatermarks` | `boolean`, 默认 `false` | 当最终输出启用镜像时，输出级水印是否随画面一起水平翻转。也可通过 `setWatermarkMirror()` 动态修改。 |
 | `dropFrameWhenBusy` | `dropBusyFrames` | `boolean`, 默认 `true` | Worker 尚未完成上一帧时是否丢弃新帧，避免队列堆积导致延迟持续增加。 |
 | `preserveDrawingBuffer` | `keepDrawingBuffer` | `boolean`, 默认 `true` | 是否要求主线程 WebGL2 渲染上下文保留绘图缓冲。此处是 Composer 配置名；传给原生 WebGL 的上下文属性仍叫 `preserveDrawingBuffer`。 |
-| `enableInsertable` | `insertable` | `boolean`, 默认 `false` | 是否优先尝试使用 Insertable Streams 生成输出视频轨；浏览器不支持时仍按原逻辑回退到 `captureStream`。 |
 | `manualCaptureFrameControl` | `manualFrameControl` | `boolean`, 默认 `true` | 在 `captureStream` 输出路径下，是否优先使用 `captureStream(0)` 加 `requestFrame()` 手动控制出帧。 |
 
 `aiBackground` 会出现在 source 配置/状态和能力报告两类对象中。

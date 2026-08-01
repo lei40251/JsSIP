@@ -1002,7 +1002,8 @@ async function testRequestFrameFailureSwitchesLiveOutputToAutomaticCapture()
     height             : 180,
     fps                : 15,
     renderMode         : 'main-2d',
-    manualFrameControl : true
+    manualFrameControl : true,
+    insertable         : false
   });
   const output = mixer.getVideoStream();
   const oldTrack = output.getVideoTracks()[0];
@@ -1023,7 +1024,7 @@ async function testRequestFrameFailureSwitchesLiveOutputToAutomaticCapture()
 }
 
 
-async function testDefaultPrefersCaptureStreamEvenWhenInsertableSupported()
+async function testDefaultPrefersInsertableWhenSupported()
 {
   resetMockState();
   enableInsertableMocks();
@@ -1036,17 +1037,22 @@ async function testDefaultPrefersCaptureStreamEvenWhenInsertableSupported()
     manualFrameControl : false
   });
   const output = mixer.getVideoStream();
+  const generator = MockVideoTrackGenerator.instances[0];
+
+  await flushAsync();
+  const writtenFrames = generator && generator._writer ? generator._writer.writes.length : 0;
+
+  assert.ok(generator);
+  assert.strictEqual(output.getVideoTracks().length, 1);
+  assert.strictEqual(mixer._capturedStreams.length, 0);
+  assert.ok(writtenFrames >= 1);
+
   const info = mixer.getRenderInfo();
 
-  assert.strictEqual(output.getVideoTracks().length, 1);
-  assert.strictEqual(mixer._capturedStreams.length, 1);
-  assert.strictEqual(info.outputMode, 'capture-stream');
-  assert.strictEqual(info.insertableActive, false);
-  assert.strictEqual(info.insertableConfigured, false);
+  assert.strictEqual(info.outputMode, 'insertable');
+  assert.strictEqual(info.insertableActive, true);
+  assert.strictEqual(info.insertableConfigured, true);
   assert.strictEqual(info.insertableSupported, true);
-  assert.strictEqual(info.captureSinkActive, true);
-  assert.ok(mixer._outMgr._captureSinkVideo);
-  assert.strictEqual(mixer._outMgr._captureSinkVideo.srcObject, mixer._capturedStreams[0]);
 
   mixer.stop();
 }
@@ -1061,7 +1067,8 @@ async function testCaptureStreamActiveSinkIsDisposedOnStop()
     width      : 320,
     height     : 180,
     fps        : 15,
-    renderMode : 'main-2d'
+    renderMode : 'main-2d',
+    insertable : false
   });
 
   mixer.getVideoStream();
@@ -1262,7 +1269,7 @@ const TESTS = [
   { name: 'testConsumedInsertableFrameSourceClosesOnSuccessAndCreationFailure', fn: testConsumedInsertableFrameSourceClosesOnSuccessAndCreationFailure },
   { name: 'testRepeatedInsertableWriteFailureSwitchesLiveOutputToCaptureStream', fn: testRepeatedInsertableWriteFailureSwitchesLiveOutputToCaptureStream },
   { name: 'testRequestFrameFailureSwitchesLiveOutputToAutomaticCapture', fn: testRequestFrameFailureSwitchesLiveOutputToAutomaticCapture },
-  { name: 'testDefaultPrefersCaptureStreamEvenWhenInsertableSupported', fn: testDefaultPrefersCaptureStreamEvenWhenInsertableSupported },
+  { name: 'testDefaultPrefersInsertableWhenSupported', fn: testDefaultPrefersInsertableWhenSupported },
   { name: 'testCaptureStreamActiveSinkIsDisposedOnStop', fn: testCaptureStreamActiveSinkIsDisposedOnStop },
   { name: 'testInsertableVideoStreamPreferredWhenSupported', fn: testInsertableVideoStreamPreferredWhenSupported },
   { name: 'testInsertableFallbacksToCaptureStreamWhenGeneratorUnavailable', fn: testInsertableFallbacksToCaptureStreamWhenGeneratorUnavailable },

@@ -273,7 +273,7 @@ flowchart TD
     → 设置 conferencePendingOutgoing
     → buildCallOpts('B')
       → 使用页面选中的麦克风/摄像头约束
-      → mediaEffectsComposer.insertable = true
+      → mediaEffectsComposer = buildMixOpts()（始终传入配置对象，无特效时为空对象）
       → 配置 AiNS（如果页面启用）
       → 从 extraFeatures 移除 BFCP
     → ua.call('号码@域', callOptions)
@@ -281,7 +281,7 @@ flowchart TD
     → pending 参数转成 B leg
 ```
 
-强制 `insertable = true` 的原因是：即使页面没有选择任何媒体特效，B 会话也必须提前拥有 composer，后续 C 加入时才能动态追加 B/C 远端源。
+B 的呼叫始终传入 composer 配置对象（即使页面没有选择任何媒体特效，`buildMixOpts()` 也会兜底为空配置对象）：SDK 收到非空配置即创建 composer，B 会话因此提前持有合成器，后续 C 加入时才能动态追加 B/C 远端源。
 
 ### 6.2 添加普通 C
 
@@ -367,7 +367,7 @@ C 端会监听 PeerConnection 的 `track` 和会话 `confirmed`，在 A 的合�
 
 | 来电类型 | 接听媒体准备 | answer 方向 | composer |
 | --- | --- | --- | --- |
-| B | 页面选择的设备流 | `sendrecv` | B 会话独立创建，强制 insertable |
+| B | 页面选择的设备流 | `sendrecv` | B 会话独立创建 composer（始终传入配置对象） |
 | 普通 C | 先执行 `prepCOutput(B)` | `sendrecv` | 不为 C 新建 composer，直接使用 B composer 输出流 |
 | 静默 C | 页面选择的 A 设备流 | `sendonly` | 在 A-C 会话上创建独立 composer |
 
@@ -857,7 +857,6 @@ B 结束后，`restoreMedia(C, endedBId)` 使用克隆轨替换 C sender，使 A
 | `session.answer(options)` | 接听 B/C 来电 |
 | `session.terminate()` | 挂断、拒绝或超时关闭会话 |
 | `session.getMediaEffectsComposer()` | 取得当前会话 composer |
-| `session.updateMediaEffectsComposer()` | B composer 不存在时运行时创建 |
 | `session.getComposerInputStream()` | 获取 A 原始输入，用于预览和 fallback 克隆 |
 | `composer.addSource/removeSource()` | 动态加入/移除 B、C 远端流 |
 | `composer.getVideoStream()` | 取得稳定的合成视频轨 |
@@ -1010,8 +1009,8 @@ flowchart TB
 
 | 函数 | 作用 |
 | --- | --- |
-| `buildMixOpts` | 强制创建可动态插源的 composer |
-| `ensureMixer` | 确保 B 会话存在 composer |
+| `buildMixOpts` | 构建 composer 配置（无特效时兜底为空配置对象） |
+| `ensureMixer` | 确保 B 会话存在 composer，不存在时直接抛错 |
 | `prepCOutput` | 在 C 信令前生成稳定的 composer 输出 |
 | `undoCOutput` | C 创建失败时恢复 B |
 | `queueMix` | 防抖并串行调度合成 |
@@ -1216,9 +1215,6 @@ flowchart TB
     PREPARE --> REMEMBER["saveMedia()"]
     PREPARE --> OUTPUT["new MediaStream()"]
     PREPARE -.->|"异常"| ROLLBACK["undoCOutput()"]
-    ENSURE --> OPT["buildMixOpts()"]
-    ENSURE --> LOCAL_PREP["showLocal()"]
-    OPT -.->|"复用 getFxOpts"| EXTOPT["外部：页面媒体效果配置"]
     ROLLBACK --> RESTORE_ONE_PREP["restoreMedia()"]
     SOURCE_PREP -.->|"SDK"| ADDREMOVE_PREP["外部：composer.addSource/removeSource"]
     OUTPUT -.->|"浏览器"| STREAM["外部：new MediaStream()"]

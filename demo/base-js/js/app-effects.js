@@ -286,9 +286,6 @@ function getImageMark()
  * ---- 输出镜像 ----
  * @property {boolean} [mirror]       — 输出画面水平镜像（默认 false，影响所有观看者看到的画面）
  *
- * ---- 输出模式 ----
- * @property {boolean} [insertable]   — 是否启用 Insertable 输出（默认 false，关闭时回退传统 captureStream）
- *
  * ---- 水印 ----
  * @property {MediaEffectsComposerWatermarkOptions[]|MediaEffectsComposerWatermarkOptions|null} [watermarks]
  *   — 水印配置（数组/单对象/null），详见 getTextMark 上方注释
@@ -348,11 +345,6 @@ function getFxOpts()
     ];
   }
 
-  if (hasFx)
-  {
-    opts.insertable = true;
-  }
-
   if (!hasFx)
   {
     return null;
@@ -377,7 +369,6 @@ function getFxOpts()
  *
  * @property {boolean} [enabled] — 是否启用 AI 降噪（默认 true）
  * @property {number} [level] — 降噪强度（0~100，默认 80）
- * @property {number} [outputGain] — AiNS 输出增益（0~4，默认 1）
  * @property {Object} [assetConfig] — AI 模型资源路径配置
  * @property {string} [assetConfig.cdnUrl] — WASM 和模型文件所在根路径
  */
@@ -397,7 +388,6 @@ function getNsOpts()
   return {
     enabled     : true,
     level       : getNsLevel(),
-    outputGain  : 1,
     assetConfig : { cdnUrl: NS_ROOT }
   };
 }
@@ -440,7 +430,7 @@ function getNsOpts()
  * rtcSession.getMediaEffectsComposer()
  *   - 返回: MediaEffectsComposerInstance | null
  *   - 说明: 仅在通话建立且 mediaEffectsComposer 已启用时返回实例，
- *           否则返回 null（需在 call/answer 时传入 insertable: true）
+ *           否则返回 null（需在 call/answer 时传入 mediaEffectsComposer 配置）
  *   - 返回的实例上可用方法见本区块顶部注释
  *
  * @returns {Object|null} 当前通话使用的合成器

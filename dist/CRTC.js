@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.6-beta.2026728154
+ * CRTC v2.0.6-beta.20267312142
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -4371,7 +4371,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.6-beta.405214563008 (Web)',
+  USER_AGENT: 'UA/2.0.6-beta.405214624284 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17626,7 +17626,7 @@ var debug = require('debug')('CRTC');
 var RTCStatsMonitor = require('./RTCStatsMonitor');
 var MediaEffectsComposer = require('./MediaEffectsComposer/MediaEffectsComposer');
 var MetaHumanClient = require('./MetaHumanClient');
-debug('version %s', '2.0.6-beta.405214563008');
+debug('version %s', '2.0.6-beta.405214624284');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17667,7 +17667,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.6-beta.405214563008';
+    return '2.0.6-beta.405214624284';
   }
 };
 },{"./Constants":30,"./Exceptions":35,"./Grammar":36,"./MediaEffectsComposer/MediaEffectsComposer":47,"./MetaHumanClient":59,"./NameAddrHeader":60,"./RTCStatsMonitor":70,"./UA":78,"./URI":79,"./Utils":80,"./WebSocketInterface":81,"debug":86}],38:[function(require,module,exports){
@@ -21710,7 +21710,7 @@ var VALID_RENDER_MODES = {
  * @returns {boolean} returns.mirrorX - 是否默认对所有槽位做水平镜像（公开参数名 sourceMirror）
  * @returns {boolean} returns.outputMirrorX - 是否对最终合成输出做整体水平镜像（公开参数名 mirror）
  * @returns {boolean} returns.mirrorWatermarks - 整体镜像时水印是否一起镜像
- * @returns {boolean} returns.insertable - 是否启用 Insertable 输出；默认关闭
+ * @returns {boolean} returns.insertable - 是否启用 Insertable 输出；默认开启，能力不足时自动回退 captureStream
  * @returns {boolean} returns.manualFrameControl - 是否启用 captureStream(0)+requestFrame 手动出帧；默认开启
  */
 exports.create = function (options) {
@@ -21730,7 +21730,7 @@ exports.create = function (options) {
     mirrorX: exports.normalizeMirrorX(options.sourceMirror, false),
     outputMirrorX: exports.normalizeMirrorX(options.mirror, false),
     mirrorWatermarks: exports.normalizeMirrorX(options.mirrorWatermarks, false),
-    insertable: options.insertable === true,
+    insertable: options.insertable !== false,
     manualFrameControl: options.manualFrameControl !== false,
     watermarks: options.watermarks || []
   };
@@ -22329,8 +22329,8 @@ class MediaEffectsComposer {
    *   是否对最终合成输出整体做水平镜像。
    * @param {boolean} [options.mirrorWatermarks=false]
    *   输出镜像时，输出级水印是否跟着一起翻转。
-   * @param {boolean} [options.insertable=false]
-   *   是否优先使用 Insertable Streams 导出视频；能力不足时回退到 captureStream。
+   * @param {boolean} [options.insertable=true]
+   *   是否优先使用 Insertable Streams 导出视频；能力不足时自动回退到 captureStream。
    * @param {boolean} [options.manualFrameControl=true]
    *   captureStream 路径下是否优先使用 captureStream(0)+requestFrame 手动出帧。
    * @param {Array<Object>} [options.watermarks=[]]
@@ -35856,7 +35856,7 @@ module.exports = class RTCSession extends EventEmitter {
       extraHeaders.push(`Contact: ${this._ua.contact.toString()}`);
       this.sendRequest(CRTC_C.INVITE, {
         extraHeaders,
-        body: sdp,
+        body: e.sdp,
         eventHandlers: {
           onSuccessResponse: response => {
             onSucceeded.call(this, response);
@@ -35988,7 +35988,7 @@ module.exports = class RTCSession extends EventEmitter {
         this.emit('sdp', e);
         this.sendRequest(CRTC_C.UPDATE, {
           extraHeaders,
-          body: sdp,
+          body: e.sdp,
           eventHandlers: {
             onSuccessResponse: response => {
               onSucceeded.call(this, response);
@@ -36595,6 +36595,12 @@ module.exports = class RTCSession extends EventEmitter {
     logger.debug(`${this._id} session ontogglemode`);
     if (!this._remoteHold) {
       this._setLocalMedia(mode);
+    }
+
+    // 音频通话升级为视频后，新的 sender 需要重新应用当前 SDP 清晰度档位的码率。
+    // 统一由 SDK 管理，避免接入页面使用固定值覆盖协商结果和浏览器兼容分支。
+    if (mode === 'video') {
+      this._applyVideoMaxBitrate();
     }
     logger.debug(`${this._id} emit "mode"`);
     this.emit('mode', {
