@@ -1000,11 +1000,8 @@ function bindLegEvents(leg)
 
   session.on('refer', (data) =>
   {
-    if (confLegs.size > 1)
-    {
-      data.reject();
-      setStatus('三方会议期间已拒绝远端 REFER');
-    }
+    data.reject();
+    setStatus('三方模式已拒绝远端 REFER');
   });
 
   [
@@ -2122,9 +2119,7 @@ function endConf()
 // 定向屏幕共享
 //
 // 三方模式下 A 调用每条 RTCSession 的 share() 辅流模式，向指定成员（B 或 C）
-// 发送同一个屏幕流。transceiver、重协商、MID 通知和失败回滚均由 SDK 负责。
-// Demo 只保留“选择目标、采集一次屏幕、调用 SDK、维护页面预览”四项教学逻辑，
-// 不直接访问 session.connection，也不自行发送 screen-share INFO。
+// 发送同一个屏幕流。
 // =============================================================================
 
 /**
@@ -2146,7 +2141,6 @@ function getShareLegs()
  * 一份 MediaStream，再通过 SDK 的 mediaStream 参数交给所有目标会话复用。
  *
  * 页面职责：校验目标、采集/预览、逐路调用 SDK、展示每路成功或失败状态。
- * SDK 职责：sender/transceiver、re-INVITE、MID INFO、track-ended 和失败回滚。
  * 单路失败不会撤销已经成功的其他会话；全部失败时才统一关闭本地预览和屏幕流。
  *
  * @returns {Promise<void>} 所有目标会话均完成尝试后结束
@@ -2230,13 +2224,9 @@ async function shareConf()
 
         await leg.session.share('screen', {
           // auxiliary 表示新增独立 video m-line，不替换本会话的摄像头轨，也不使用 BFCP。
-          mode                : 'auxiliary',
+          mode        : 'auxiliary',
           // 多条会话复用同一个屏幕源，避免重复采集和重复系统授权。
-          mediaStream         : screenStream,
-          // 单条会话停止/挂断时不能 stop 共享流，流由 unshareConf 统一释放。
-          stopStreamOnUnShare : false,
-          // detail 优先保证桌面文字、表格和 UI 边缘清晰。
-          contentHint         : 'detail'
+          mediaStream : screenStream
         });
 
         // share() 等待 re-INVITE 期间用户可能已从系统栏停止共享。此时立即撤销
@@ -2328,52 +2318,8 @@ async function unshareConf(fromEnded)
 }
 
 // =============================================================================
-// 呼转与页面状态
+// 页面状态
 // =============================================================================
-
-/**
- * 三方模式下的 REFER 呼转。
- * 仅在只有一路已确认成员时可用；三方期间不支持 REFER。
- *
- * @returns {void}
- */
-function referSelected()
-{
-  const leg = getSelLeg();
-
-  if (!leg || confLegs.size !== 1 || !leg.confirmed)
-  {
-    setStatus('三方期间暂不支持 REFER');
-
-    return;
-  }
-
-  const events = {
-    progress         : (data) => console.log('progress', data),
-    failed           : () => { if (leg.session.isOnHold().local) leg.session.unhold(); },
-    accepted         : (data) => { console.log('accept', data); leg.session.terminate(); },
-    trying           : (data) => console.log('trying', data),
-    requestSucceeded : (data) => console.log('requestSucceeded', data),
-    requestFailed    : () => { if (leg.session.isOnHold().local) leg.session.unhold(); }
-  };
-
-  leg.session.hold();
-  leg.session.refer(`${document.querySelector('#refer').value}@${sipDomain}`, { eventHandlers: events });
-}
-
-/**
- * 取消正在进行的呼叫转移（发送 cancel-REFER INFO 消息）。
- * 向当前选中的成员会话发送 REFER 取消指令，中断正在进行的转移流程。
- */
-function cancelRefer()
-{
-  const leg = getSelLeg();
-
-  if (leg && confLegs.size === 1)
-  {
-    leg.session.sendInfo('text/plain', JSON.stringify({ event: 'cancel' }));
-  }
-}
 
 /**
  * 刷新会议控制面板 UI。
@@ -2384,7 +2330,6 @@ function cancelRefer()
  * - 更新"添加成员"按钮的可用性
  * - 控制"开始/停止共享"按钮
  * - 重绑定当前选中成员的控制栏按钮
- * - 管理 REFER 相关按钮
  *
  * @returns {void}
  */
@@ -2397,9 +2342,6 @@ function updateConfUi()
   const shareBtn = document.querySelector('#confShare');
   const boardBtn = document.querySelector('#openBoard');
   const stopBtn = document.querySelector('#confUnshare');
-  const referButton = document.querySelector('#referBtn');
-  const cancelBtn = document.querySelector('#cancelRefer');
-  const threeActive = confLegs.size > 1 || Boolean(pendingCall);
   const confEnabled = typeof appMode !== 'undefined' && appMode === 'conference';
   const bLeg = getLegByRole('B');
   const canShare = getShareLegs().length > 0;
@@ -2509,17 +2451,6 @@ function updateConfUi()
   if (confEnabled)
   {
     bindControls();
-
-    if (referButton)
-    {
-      referButton.disabled = threeActive;
-      referButton.onclick = referSelected;
-    }
-    if (cancelBtn)
-    {
-      cancelBtn.disabled = threeActive;
-      cancelBtn.onclick = cancelRefer;
-    }
   }
 }
 

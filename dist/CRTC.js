@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.6-beta.20267312142
+ * CRTC v2.0.6-beta.20268399
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -4371,7 +4371,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.6-beta.405214624284 (Web)',
+  USER_AGENT: 'UA/2.0.6-beta.405216061818 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17626,7 +17626,7 @@ var debug = require('debug')('CRTC');
 var RTCStatsMonitor = require('./RTCStatsMonitor');
 var MediaEffectsComposer = require('./MediaEffectsComposer/MediaEffectsComposer');
 var MetaHumanClient = require('./MetaHumanClient');
-debug('version %s', '2.0.6-beta.405214624284');
+debug('version %s', '2.0.6-beta.405216061818');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17667,7 +17667,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.6-beta.405214624284';
+    return '2.0.6-beta.405216061818';
   }
 };
 },{"./Constants":30,"./Exceptions":35,"./Grammar":36,"./MediaEffectsComposer/MediaEffectsComposer":47,"./MetaHumanClient":59,"./NameAddrHeader":60,"./RTCStatsMonitor":70,"./UA":78,"./URI":79,"./Utils":80,"./WebSocketInterface":81,"debug":86}],38:[function(require,module,exports){

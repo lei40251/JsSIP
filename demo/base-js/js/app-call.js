@@ -2620,6 +2620,7 @@ async function initPage()
  * - 更新顶部模式/注册状态标签（"点对点 · 已注册" 等）
  * - 禁用/启用"点对点"/"三方"选择按钮
  * - 禁用/启用点对点专属按钮（data-mode="point-to-point"、呼叫/接听按钮组）
+ * - 三方模式下禁用呼转输入框和操作按钮
  * - 展开/收起会议面板（三方模式首次选择时自动展开）
  * - 切换会议面板的帮助文字和控件可见性
  * - 同步调用三方模块的 updateConfUi（如果已加载）
@@ -2636,6 +2637,7 @@ function updateMode()
   const p2pOnly = document.querySelectorAll(
     '[data-mode="point-to-point"], #p2pCall button, #p2pAnswer button'
   );
+  const transferControls = document.querySelectorAll('#refer, #referBtn, #cancelRefer');
   const confActive = document.querySelector('#confActive');
   const confHelp = document.querySelector('#confHelp');
 
@@ -2655,6 +2657,10 @@ function updateMode()
   p2pOnly.forEach((element) =>
   {
     element.disabled = appMode !== 'point-to-point';
+  });
+  transferControls.forEach((element) =>
+  {
+    element.disabled = appMode === 'conference';
   });
 
   if (confPanel)

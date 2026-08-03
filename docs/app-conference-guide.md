@@ -497,7 +497,7 @@ stateDiagram-v2
 | `confirmed` | 标记确认、收集远端轨、保存原始 sender、刷新 UI、调度合成 |
 | `cameraChanged`、`localMediastreamUpdate` | 刷新 A 本地预览 |
 | `hold`、`unhold`、`muted`、`unmuted` | 更新页面状态 |
-| `refer` | 三方期间拒绝远端 REFER |
+| `refer` | 三方模式始终拒绝远端 REFER |
 | 多个 PeerConnection/SDP 失败事件 | 记录失败阶段并提示媒体协商失败 |
 | `failed`、`ended` | 清除定时器并进入 `removeLeg()` |
 | `mediaEffectsIssue` | 呼入会话手工绑定公共媒体效果错误处理器 |
@@ -840,14 +840,12 @@ B 结束后，`restoreMedia(C, endedBId)` 使用克隆轨替换 C sender，使 A
 
 ## 14. REFER 行为
 
-三方激活时不支持 REFER：
+三方模式始终不支持 REFER，不区分当前是一名还是两名会议成员：
 
-- 本地 REFER 按钮被禁用。
+- 页面保留呼转区域，但号码输入框、“呼转”和“取消”按钮均被禁用。
 - 收到远端 `refer` 事件时调用 `data.reject()`。
 
-只有 `conferenceLegs.size === 1` 且该 leg 已确认时，`referSelected()` 才允许执行：先 hold 当前会话，再调用 `session.refer()`；REFER 失败时恢复 unhold，成功接受后终止原会话。
-
-“取消呼转”通过 `sendInfo('text/plain', JSON.stringify({ event: 'cancel' }))` 通知远端。
+会议模块不绑定本地 REFER 操作，也不会调用 `session.hold()`、`session.refer()` 或发送取消呼转 INFO。点对点模式仍由 `app-call.js` 保留原有呼转能力。
 
 ## 15. 主要 SDK/浏览器 API 调用表
 
@@ -1260,8 +1258,6 @@ flowchart TD
   UI --> NEXT["getNextRole()"]
   UI --> TARGETS["getShareLegs()"]
   UI --> BINDCTRL["bindControls()"]
-  UI -.->|"单路 REFER 按钮绑定"| REFER["referSelected()"]
-  UI -.->|"取消 REFER 按钮绑定"| CANCELREF["cancelRefer()"]
 
   NEXT --> BYROLE
   SELECT --> TEXT["setStats()"]
@@ -1356,13 +1352,6 @@ flowchart TD
   LOCAL --> BYROLE
   MAIN --> BYROLE
   MAIN --> PREVIEW["bindPreview()"]
-
-  UI -.->|"只有一路 confirmed"| REFER["referSelected()"]
-  UI -.->|"只有一路"| CANCEL["cancelRefer()"]
-  REFER --> CURRENT
-  CANCEL --> CURRENT
-  REFER -.->|"SDK"| SDKREF["外部：session.hold/refer/terminate"]
-  CANCEL -.->|"SDK"| SDKINFO["外部：session.sendInfo(cancel)"]
 ```
 
 ### 22.8 标注与共享白板跨文件调用图

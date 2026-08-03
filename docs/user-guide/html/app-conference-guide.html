@@ -445,14 +445,14 @@ flowchart TB
     → 设置 conferencePendingOutgoing
     → buildCallOpts(&#39;B&#39;)
       → 使用页面选中的麦克风/摄像头约束
-      → mediaEffectsComposer.insertable = true
+      → mediaEffectsComposer = buildMixOpts()（始终传入配置对象，无特效时为空对象）
       → 配置 AiNS（如果页面启用）
       → 从 extraFeatures 移除 BFCP
     → ua.call(&#39;号码@域&#39;, callOptions)
     → newRTCSession
     → pending 参数转成 B leg
 </code></pre>
-</div><p>强制 <code>insertable = true</code> 的原因是：即使页面没有选择任何媒体特效，B 会话也必须提前拥有 composer，后续 C 加入时才能动态追加 B/C 远端源。</p>
+</div><p>B 的呼叫始终传入 composer 配置对象（即使页面没有选择任何媒体特效，<code>buildMixOpts()</code> 也会兜底为空配置对象）：SDK 收到非空配置即创建 composer，B 会话因此提前持有合成器，后续 C 加入时才能动态追加 B/C 远端源。</p>
 <h3 id="6-2-添加普通-c">6.2 添加普通 C<a class="heading-anchor" href="#6-2-添加普通-c" aria-label="链接到本节">#</a></h3>
 <p>C 的外呼比 B 多出“信令前准备媒体”阶段：</p>
 <div class="code-block"><div class="code-toolbar"><span>text</span><button type="button" class="copy-code">复制</button></div><pre><code class="language-text">callConf({ role: &#39;C&#39; })
@@ -531,7 +531,7 @@ flowchart TB
 <td>B</td>
 <td>页面选择的设备流</td>
 <td><code>sendrecv</code></td>
-<td>B 会话独立创建，强制 insertable</td>
+<td>B 会话独立创建 composer（始终传入配置对象）</td>
 </tr>
 <tr>
 <td>普通 C</td>
@@ -714,7 +714,7 @@ flowchart TB
 </tr>
 <tr>
 <td><code>refer</code></td>
-<td>三方期间拒绝远端 REFER</td>
+<td>三方模式始终拒绝远端 REFER</td>
 </tr>
 <tr>
 <td>多个 PeerConnection/SDP 失败事件</td>
@@ -1068,13 +1068,12 @@ flowchart TB
 </tbody></table></div>
 <p>接收端会校验协议版本、<code>boardId</code>、action、操作 ID 和 shape 字段。单条消息上限为 64 KiB，每块画布最多保留 500 个图形，单条自由线最多 1200 个归一化点。A 转发时保留原 <code>operationId</code>，各端使用最近操作集合去重，避免三方转发形成重复绘制。</p>
 <h2 id="14-refer-行为">14. REFER 行为<a class="heading-anchor" href="#14-refer-行为" aria-label="链接到本节">#</a></h2>
-<p>三方激活时不支持 REFER：</p>
+<p>三方模式始终不支持 REFER，不区分当前是一名还是两名会议成员：</p>
 <ul>
-<li>本地 REFER 按钮被禁用。</li>
+<li>页面保留呼转区域，但号码输入框、“呼转”和“取消”按钮均被禁用。</li>
 <li>收到远端 <code>refer</code> 事件时调用 <code>data.reject()</code>。</li>
 </ul>
-<p>只有 <code>conferenceLegs.size === 1</code> 且该 leg 已确认时，<code>referSelected()</code> 才允许执行：先 hold 当前会话，再调用 <code>session.refer()</code>；REFER 失败时恢复 unhold，成功接受后终止原会话。</p>
-<p>“取消呼转”通过 <code>sendInfo(&#39;text/plain&#39;, JSON.stringify({ event: &#39;cancel&#39; }))</code> 通知远端。</p>
+<p>会议模块不绑定本地 REFER 操作，也不会调用 <code>session.hold()</code>、<code>session.refer()</code> 或发送取消呼转 INFO。点对点模式仍由 <code>app-call.js</code> 保留原有呼转能力。</p>
 <h2 id="15-主要-sdk-浏览器-api-调用表">15. 主要 SDK/浏览器 API 调用表<a class="heading-anchor" href="#15-主要-sdk-浏览器-api-调用表" aria-label="链接到本节">#</a></h2>
 <div class="table-wrap"><table>
 <thead>
@@ -1098,10 +1097,6 @@ flowchart TB
 <tr>
 <td><code>session.getMediaEffectsComposer()</code></td>
 <td>取得当前会话 composer</td>
-</tr>
-<tr>
-<td><code>session.updateMediaEffectsComposer()</code></td>
-<td>B composer 不存在时运行时创建</td>
 </tr>
 <tr>
 <td><code>session.getComposerInputStream()</code></td>
@@ -1319,11 +1314,11 @@ flowchart TB
 </thead>
 <tbody><tr>
 <td><code>buildMixOpts</code></td>
-<td>强制创建可动态插源的 composer</td>
+<td>构建 composer 配置（无特效时兜底为空配置对象）</td>
 </tr>
 <tr>
 <td><code>ensureMixer</code></td>
-<td>确保 B 会话存在 composer</td>
+<td>确保 B 会话存在 composer，不存在时直接抛错</td>
 </tr>
 <tr>
 <td><code>prepCOutput</code></td>
@@ -1600,9 +1595,6 @@ flowchart TB
     PREPARE --&gt; REMEMBER[&quot;saveMedia()&quot;]
     PREPARE --&gt; OUTPUT[&quot;new MediaStream()&quot;]
     PREPARE -.-&gt;|&quot;异常&quot;| ROLLBACK[&quot;undoCOutput()&quot;]
-    ENSURE --&gt; OPT[&quot;buildMixOpts()&quot;]
-    ENSURE --&gt; LOCAL_PREP[&quot;showLocal()&quot;]
-    OPT -.-&gt;|&quot;复用 getFxOpts&quot;| EXTOPT[&quot;外部：页面媒体效果配置&quot;]
     ROLLBACK --&gt; RESTORE_ONE_PREP[&quot;restoreMedia()&quot;]
     SOURCE_PREP -.-&gt;|&quot;SDK&quot;| ADDREMOVE_PREP[&quot;外部：composer.addSource/removeSource&quot;]
     OUTPUT -.-&gt;|&quot;浏览器&quot;| STREAM[&quot;外部：new MediaStream()&quot;]
@@ -1643,8 +1635,6 @@ flowchart TB
   UI --&gt; NEXT[&quot;getNextRole()&quot;]
   UI --&gt; TARGETS[&quot;getShareLegs()&quot;]
   UI --&gt; BINDCTRL[&quot;bindControls()&quot;]
-  UI -.-&gt;|&quot;单路 REFER 按钮绑定&quot;| REFER[&quot;referSelected()&quot;]
-  UI -.-&gt;|&quot;取消 REFER 按钮绑定&quot;| CANCELREF[&quot;cancelRefer()&quot;]
 
   NEXT --&gt; BYROLE
   SELECT --&gt; TEXT[&quot;setStats()&quot;]
@@ -1728,14 +1718,7 @@ flowchart TB
   RESTORE --&gt; RESTORE_ONE[&quot;restoreMedia()&quot;]
   LOCAL --&gt; BYROLE
   MAIN --&gt; BYROLE
-  MAIN --&gt; PREVIEW[&quot;bindPreview()&quot;]
-
-  UI -.-&gt;|&quot;只有一路 confirmed&quot;| REFER[&quot;referSelected()&quot;]
-  UI -.-&gt;|&quot;只有一路&quot;| CANCEL[&quot;cancelRefer()&quot;]
-  REFER --&gt; CURRENT
-  CANCEL --&gt; CURRENT
-  REFER -.-&gt;|&quot;SDK&quot;| SDKREF[&quot;外部：session.hold/refer/terminate&quot;]
-  CANCEL -.-&gt;|&quot;SDK&quot;| SDKINFO[&quot;外部：session.sendInfo(cancel)&quot;]</pre></div>
+  MAIN --&gt; PREVIEW[&quot;bindPreview()&quot;]</pre></div>
 <h3 id="22-8-标注与共享白板跨文件调用图">22.8 标注与共享白板跨文件调用图<a class="heading-anchor" href="#22-8-标注与共享白板跨文件调用图" aria-label="链接到本节">#</a></h3>
 <p>屏幕标注和白板不修改 SDK 媒体链路。会议模块提供会话与目标集合，标注模块通过 <code>RTCSession.sendInfo()</code> 发送操作，并消费 <code>newInfo</code> 完成校验、绘制和三方转发。</p>
 <div class="diagram-block"><div class="diagram-toolbar"><span>流程图</span><button type="button" class="expand-diagram" aria-expanded="false">放大查看</button></div><pre class="mermaid">flowchart TB

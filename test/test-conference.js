@@ -804,6 +804,39 @@ module.exports = {
     test.done();
   },
 
+  'conference mode disables every transfer control' : function(test)
+  {
+    const source = fs.readFileSync(path.join(__dirname, '../demo/base-js/js/app-call.js'), 'utf8');
+    const updateModeStart = source.indexOf('function updateMode()');
+    const initModeStart = source.indexOf('function initMode(mode)', updateModeStart);
+    const elements = new Map();
+    const transferControls = [ createElement(), createElement(), createElement() ];
+
+    [
+      '#modeLabel', '#initP2p', '#initConf', '#confPanel', '#confSummary',
+      '#confActive', '#confHelp'
+    ].forEach((selector) => elements.set(selector, createElement()));
+
+    const context = {
+      appMode  : 'conference',
+      regState : 'registered',
+      document : {
+        querySelector : function(selector) { return elements.get(selector) || null; },
+        querySelectorAll : function(selector)
+        {
+          return selector === '#refer, #referBtn, #cancelRefer' ? transferControls : [];
+        }
+      },
+      updateConfUi : function() {}
+    };
+
+    vm.runInNewContext(source.slice(updateModeStart, initModeStart), context);
+    context.updateMode();
+
+    transferControls.forEach((control) => test.strictEqual(control.disabled, true));
+    test.done();
+  },
+
   'base demo loads helpers before modules that initialize from them' : function(test)
   {
     const source = fs.readFileSync(path.join(__dirname, '../demo/base-js/index.html'), 'utf8');
@@ -949,6 +982,26 @@ module.exports = {
 
     test.strictEqual(terminated.status_code, 486);
     test.ok(context.statuses.some((status) => status.includes('会议已满')));
+    test.done();
+  },
+
+  'conference rejects remote REFER when only one member exists' : function(test)
+  {
+    const context = loadConferenceDemo();
+    const handlers = {};
+    let rejected = 0;
+
+    context.testSession = {
+      id : 'single-member',
+      on : function(eventName, handler) { handlers[eventName] = handler; }
+    };
+    context.testLeg = { role: 'B', session: context.testSession };
+    vm.runInContext("confLegs.set('single-member', testLeg); bindLegEvents(testLeg);", context);
+
+    handlers.refer({ reject: function() { rejected++; } });
+
+    test.strictEqual(rejected, 1);
+    test.ok(context.statuses.some((status) => status.includes('已拒绝远端 REFER')));
     test.done();
   },
 
