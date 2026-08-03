@@ -1873,7 +1873,7 @@ function onSession(e)
     const events = {
       'progress'         : function(data) { console.log('progress', data); },
       'failed'           : function() { if (e.session.isOnHold().local) { e.session.unhold(); } },
-      'accepted'         : function(data) { console.log('accept', data); e.session.terminate(); },
+      'accepted'         : function(data) { console.log('accept', data); data.request.reply(200); setTimeout(() => { e.session.terminate(); }, 100); },
       'trying'           : function(data) { console.log('trying', data); },
       'requestSucceeded' : function(data) { console.log('requestSucceeded', data); },
       'requestFailed'    : function() { if (e.session.isOnHold().local) { e.session.unhold(); } }
