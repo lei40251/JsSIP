@@ -1880,10 +1880,45 @@ function onSession(e)
     };
 
     // 保持当前通话后发起盲转
-    e.session.hold();
-    e.session.refer(`${document.querySelector('#refer').value}@${sipDomain}`, {
-      eventHandlers : events
+    const referNumber = document.querySelector('#refer').value.trim();
+    const referTarget = `${referNumber}@${sipDomain}`;
+
+    if (!referNumber)
+    {
+      console.error('转接号码不能为空');
+      
+      return;
+    }
+
+    const holdStarted = e.session.hold({}, function()
+    {
+      try
+      {
+        const referSubscriber = e.session.refer(referTarget, {
+          eventHandlers : events
+        });
+
+        // 会话状态不允许 REFER
+        if (!referSubscriber && e.session.isOnHold().local)
+        {
+          e.session.unhold();
+        }
+      }
+      catch (error)
+      {
+        console.error('发起呼转失败:', error);
+
+        if (e.session.isOnHold().local)
+        {
+          e.session.unhold();
+        }
+      }
     });
+
+    if (!holdStarted)
+    {
+      console.error('当前会话状态无法执行保持，未发起呼转');
+    }
   };
 
   /**
