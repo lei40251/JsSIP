@@ -1456,7 +1456,7 @@ ua.on('newRTCSession', function(e)
       return;
     }
 
-    const holdStarted = e.session.hold({}, function()
+    const holdStarted = e.session.hold({ useUpdate: useUpdate }, function()
     {
       try
       {
