@@ -1696,12 +1696,20 @@ ua.on('newRTCSession', function(e)
   };
 
   /**
-   * 通话种推送消息
+   * 通话中推送消息
    */
   document.querySelector('#sendInfo').onclick = function() 
   {
     // 注意： contentType 必填，一般用 text/plain 发送字符串
     e.session.sendInfo('text/plain', JSON.stringify(document.querySelector('#info').value));
+  };
+
+  /**
+   * 通话中发送DC消息
+   */
+  document.querySelector('#sendDc').onclick = function() 
+  {
+    e.session._sendDataChannelMessage(JSON.stringify(document.querySelector('#datachannel').value));
   };
 
   /**
