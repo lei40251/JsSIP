@@ -922,6 +922,16 @@ ua.on('newRTCSession', function(e)
     }
   });
 
+  e.session.on('dc_send', (d) => 
+  {
+    setStatus(`DC Send: ${d}`);
+  });
+
+  e.session.on('dc_recv', (d) => 
+  {
+    setStatus(`DC Recv: ${ d}`);
+  });
+
   /**
     * confirmed
     *
