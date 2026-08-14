@@ -308,6 +308,8 @@ ua.on('newRTCSession', function(e)
 
   confirmed = false;
 
+  const holdMohController = createHoldMohController(e.session);
+
   if (tmpSession) 
   {
     e.session.terminate({ status_code: 486 });
@@ -489,8 +491,19 @@ ua.on('newRTCSession', function(e)
   e.session.on('hold', function(d) 
   {
     setStatus(`${d.originator} hold`);
-    // 通话暂停后跨域设置本地视频媒体为空，或者切换UI为暂停通话状态
-    stopStreams();
+
+    if (d.originator === 'local')
+    {
+      holdMohController.hold();
+
+      // 本端保持时停止当前媒体展示。
+      stopStreams();
+    }
+    else
+    {
+      // 对端保持时保留远端媒体对象，用于播放保持音乐并维持原有视频布局。
+      localVideo.srcObject = null;
+    }
   });
 
   /**
@@ -507,8 +520,15 @@ ua.on('newRTCSession', function(e)
   {
     setStatus(`${d.originator} unhold`);
 
-    // 获取媒体流
-    getStreams(e.session.connection);
+    if (d.originator === 'local')
+    {
+      holdMohController.unhold().then(() => getStreams(e.session.connection));
+    }
+    else
+    {
+      // 获取媒体流
+      getStreams(e.session.connection);
+    }
   });
 
   /**
@@ -1058,7 +1078,16 @@ ua.on('newRTCSession', function(e)
         return;
       }
 
-      if (event.track.readyState == 'live' && event.track.muted == false && document.querySelector('#remoteVideo2').srcObject.id != event.streams[0].id) 
+      // 主视频在 hold/unhold 协商后可能再次触发 ontrack，不能当作第二路视频。
+      if (remoteVideo.srcObject && remoteVideo.srcObject.getVideoTracks()
+        .some((track) => track.id === event.track.id))
+      {
+        remoteVideo.classList = 'mh-100 mw-100 w-100';
+
+        return;
+      }
+
+      if (event.track.readyState == 'live' && event.track.muted == false && (document.querySelector('#remoteVideo2').srcObject && document.querySelector('#remoteVideo2').srcObject.id) != event.streams[0].id)
       {
         document.querySelector('#remoteVideo2').srcObject = event.streams[0];
         // document.querySelector('#remoteVideo2').play();
@@ -1185,7 +1214,7 @@ ua.on('newRTCSession', function(e)
       pcConfig            : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
       // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
       extraHeaders        : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
-      rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
+      rtcOfferConstraints : { offerToReceiveVideo: true },
       extraFeatures       : extraFeatures
     });
 
@@ -1929,7 +1958,7 @@ async function call(type, direction, mediaStream)
 
   if (type === 'callVB') 
   {
-    const engine = new CRTC.VirtualBackground({ video: Object.assign({}, { facingMode: videoConstraints.facingMode, width: videoConstraints.height, height: videoConstraints.width, frameRate: videoConstraints.frameRate }, { mirror: false }) });
+    engine = new CRTC.VirtualBackground({ video: Object.assign({}, { facingMode: videoConstraints.facingMode, width: videoConstraints.height, height: videoConstraints.width, frameRate: videoConstraints.frameRate }, { mirror: false }) });
 
     const inputStream = await navigator.mediaDevices.getUserMedia({
       video : videoConstraints
@@ -2087,6 +2116,113 @@ async function call(type, direction, mediaStream)
     }, 3000);
   }
 
+}
+
+/**
+ * 创建本地保持音乐控制器。
+ *
+ * @param {RTCSession} session 当前通话会话
+ * @returns {object} 保持音乐控制器
+ */
+function createHoldMohController(session)
+{
+  let sender = null;
+  let originalTrack = null;
+  let mohTrack = null;
+  let audio = null;
+  let audioContext = null;
+  let source = null;
+
+  // 释放保持音乐占用的 Web Audio 资源。
+  const cleanup = async function()
+  {
+    audio && audio.pause();
+    source && source.disconnect();
+    mohTrack && mohTrack.stop();
+
+    if (audioContext && audioContext.state !== 'closed')
+    {
+      await audioContext.close();
+    }
+
+    sender = null;
+    originalTrack = null;
+    mohTrack = null;
+    audio = null;
+    audioContext = null;
+    source = null;
+  };
+
+  // 通话直接结束时由控制器自行释放资源。
+  session.on('failed', cleanup);
+  session.on('ended', cleanup);
+
+  return {
+    hold : async function()
+    {
+      try
+      {
+        // 保存当前麦克风轨道，unhold 时直接换回，不重新申请设备权限。
+        sender = session.connection.getSenders()
+          .find((item) => item.track && item.track.kind === 'audio');
+
+        if (!sender || mohTrack)
+        {
+          return;
+        }
+
+        originalTrack = sender.track;
+
+        const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+
+        audio = new Audio('./sound/moh.mp3');
+        audio.loop = true;
+        audioContext = new AudioContextConstructor();
+        const destination = audioContext.createMediaStreamDestination();
+
+        source = audioContext.createMediaElementSource(audio);
+        source.connect(destination);
+
+        const playPromise = audio.play();
+
+        if (audioContext.state === 'suspended')
+        {
+          await audioContext.resume();
+        }
+
+        await playPromise;
+
+        mohTrack = destination.stream.getAudioTracks()[0];
+        // RTCSession 会禁用原麦克风轨道，新生成的 MOH 轨道需要保持启用。
+        mohTrack.enabled = true;
+        await sender.replaceTrack(mohTrack);
+      }
+      catch (error)
+      {
+        console.warn(`切换保持音乐失败: ${error.message}`);
+        await cleanup();
+      }
+    },
+
+    unhold : async function()
+    {
+      try
+      {
+        if (sender && originalTrack)
+        {
+          // 恢复 hold 前的麦克风轨道及用户原有的静音状态。
+          originalTrack.enabled = !session.isMuted().audio;
+          await sender.replaceTrack(originalTrack);
+        }
+
+        await cleanup();
+      }
+      catch (error)
+      {
+        console.warn(`恢复原音频轨道失败: ${error.message}`);
+      }
+    }
+  };
 }
 
 /**
