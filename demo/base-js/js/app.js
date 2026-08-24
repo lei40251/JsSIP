@@ -928,15 +928,25 @@ ua.on('newRTCSession', function(e)
     }
   });
 
-  e.session.on('upgradeToVideo', (d) => 
+  e.session.on('upgradeToVideo', async(d) => 
   {
-    if (confirmed && !haveACamera) 
+    // 先判断是否存在摄像头（实时检查并更新 haveACamera 状态）
+    await checkCameraStatus();
+
+    if (haveACamera) 
     {
-      d.reject();
+      // 有摄像头：传摄像头约束参数
+      d.accept(videoConstraints);
     }
     else 
     {
-      d.accept(videoConstraints);
+      // 无摄像头：传自定义视频流（黑屏/无摄像头提示图）
+      const tmpStream = new MediaStream();
+
+      blackVideo || (blackVideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg, width: videoConstraints.width, height: videoConstraints.height, fps: videoConstraints.fps }));
+
+      tmpStream.addTrack(blackVideo.videoTrack, tmpStream);
+      d.accept(tmpStream);
     }
   });
 
@@ -1456,7 +1466,8 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#cancelReferBtn').onclick = function() 
   {
-    e.session.sendInfo('text/plain', JSON.stringify({ 'event': 'cancel' }));
+    // e.session.sendInfo('text/plain', JSON.stringify({ 'event': 'cancel' }));
+    e.session.sendInfo('application/sip-control', 'TransferCmd=cancel');
   };
 
   /**
@@ -2353,6 +2364,9 @@ function setStatus(text)
 // 检查摄像头状态
 async function checkCameraStatus() 
 {
+  // 每次检查前重置状态，保证结果准确
+  haveACamera = false;
+
   try 
   {
     // 先检查是否有摄像头设备
