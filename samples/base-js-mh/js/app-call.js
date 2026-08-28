@@ -95,6 +95,7 @@ let isRefer = false;
 
 // 数字人（MetaHuman）通话相关变量
 let metaflag = 0; // ASR/TTS 处理开关（0 不处理，1 处理）
+let spk = 'default'; // 音色选择（default 默认，longyingmu 优雅女声，longyingcheng 年轻男声，longyingwan 甜美女声）
 let metaavatar = 'wav2lip256_avatar1'; // 数字人头像标识
 
 // =============================================================================

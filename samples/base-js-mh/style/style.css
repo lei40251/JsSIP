@@ -170,11 +170,11 @@ body {
   align-items: start;
 }
 
-.rtc-stats-section + .rtc-stats-section {
+.rtc-stats-section+.rtc-stats-section {
   margin-top: 0.14rem;
 }
 
-.rtc-stats-section > div:last-child {
+.rtc-stats-section>div:last-child {
   min-width: 0;
 }
 
@@ -524,11 +524,17 @@ body {
 
 .call-config-grid-meta {
   width: fit-content;
-  grid-template-columns: repeat(2, minmax(0, var(--call-config-side-field-width)));
+  grid-template-columns: repeat(3, minmax(0, var(--call-config-side-field-width)));
 }
 
 .call-config-grid-meta.metaavatar-custom-active {
   grid-template-columns: var(--call-config-side-field-width) minmax(0, 200px);
+}
+
+/* 自定义数字头像时，数字头像字段独占一行并跨两列，
+   避免被自动排进 84px 的第一列导致输入框被挤压到几乎不可见。 */
+.metaavatar-custom-active .call-field-metaavatar {
+  grid-column: 1 / -1;
 }
 
 .metaavatar-controls {
@@ -548,6 +554,7 @@ body {
 
 .metaavatar-controls #metaavatarCustom {
   flex: 1 1 auto;
+  min-width: 0;
 }
 
 .call-config-grid-effects {

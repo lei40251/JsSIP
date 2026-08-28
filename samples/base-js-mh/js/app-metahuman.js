@@ -6,12 +6,17 @@
 // 数字人（MetaHuman）Demo — UI 桥接层
 //
 // 本文件依赖 app-call.js 中声明的以下全局变量：
-//   metaflag, metaavatar, selectMic, setStatus, call,
+//   metaflag, spk, metaavatar, selectMic, setStatus, call,
 //   rtcSession, pcConfig, extraFeatures, ua
 //
 // 核心 WebRTC 逻辑由 CRTC.MetaHumanClient 提供。
 // =============================================================================
 
+const mhEnv = handleGetQuery('env_mh');
+const { mhServer, mhICEServer } = mhEnv ? mh_envs[`env_${mhEnv}`] : mh_envs['env_dev'];
+
+console.warn(mhEnv);
+console.warn(mhServer, mhICEServer);
 // 当前 MetaHumanClient 实例
 let mh = null;
 
@@ -37,13 +42,15 @@ function releaseMetaHuman()
 }
 
 /**
- * 从页面 UI 控件同步 metaflag / metaavatar 到全局变量。
+ * 从页面 UI 控件同步 metaflag / spk / metaavatar 到全局变量。
  */
 function syncMetaHumanConfigFromUI()
 {
   const metaFlagSelect = document.querySelector('#metaflag');
+  const spkSelect = document.querySelector('#spk');
 
   metaFlagSelect && (metaflag = normalizeMetaHumanFlag(metaFlagSelect.value));
+  spkSelect && (spk = spkSelect.value);
   syncMetaHumanAvatarFromUI();
 
   if (mh)
@@ -51,6 +58,7 @@ function syncMetaHumanConfigFromUI()
     mh.updateConfig({
       avatar             : metaavatar,
       flag               : metaflag,
+      spk                : spk,
       micDeviceId        : selectMic || null,
       aiNoiseSuppression : buildCallAiNsOptions()
     });
@@ -117,13 +125,14 @@ function markMetaHumanMediaStream(stream)
 function buildMetaHumanOptions()
 {
   syncMetaHumanConfigFromUI();
-
+  
   // 从当前环境配置读取 metaHumanServer（定义在 config.js）
   return {
-    server             : metaHumanServer,
-    iceServers         : metaHumanIceServers,
+    server             : mhServer,
+    iceServers         : mhICEServer,
     avatar             : metaavatar,
     flag               : metaflag,
+    spk                : spk,
     micDeviceId        : selectMic || undefined,
     aiNoiseSuppression : buildCallAiNsOptions()
   };
@@ -370,6 +379,18 @@ document.querySelector('#metaflag').onchange = function()
   }
 
   setStatus(`asr/tts: ${metaflag}`);
+};
+
+document.querySelector('#spk').onchange = function()
+{
+  spk = this.options[this.selectedIndex].value;
+
+  if (mh)
+  {
+    mh.updateConfig({ spk: spk });
+  }
+
+  setStatus(`音色: ${spk}`);
 };
 
 document.querySelector('#closeMetaHuman').onclick = function()

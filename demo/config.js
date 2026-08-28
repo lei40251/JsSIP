@@ -18,7 +18,6 @@ const defaulteEnv_no = {
 const metaHumanServer = 'https://dev.vsbc.com:9090';
 const metaHumanIceServers = [ { urls: 'turn:dev.vsbc.com:9001?transport=udp', username: 'test', credential: 'test' } ];
 
-
 const envs =
 {
   env_default : defaulteEnv,

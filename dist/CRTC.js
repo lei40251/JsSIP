@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.6-beta.2026841639
+ * CRTC v2.0.6-beta.20268181531
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -4118,7 +4118,7 @@ User.FloorRequestId = 0;
 module.exports = User;
 }).call(this)}).call(this,require("buffer").Buffer)
 
-},{"../AttributeName.js":6,"../messages/FloorRelease.js":14,"../messages/FloorRequest.js":15,"../messages/FloorRequestStatus.js":16,"../messages/FloorRequestStatusAck.js":17,"../messages/FloorStatus.js":18,"../messages/FloorStatusAck.js":19,"../messages/Hello.js":20,"../messages/HelloAck.js":21,"../messages/Primitive.js":24,"../messages/RequestStatusValue.js":25,"../parser/Parser.js":27,"buffer":85}],29:[function(require,module,exports){
+},{"../AttributeName.js":6,"../messages/FloorRelease.js":14,"../messages/FloorRequest.js":15,"../messages/FloorRequestStatus.js":16,"../messages/FloorRequestStatusAck.js":17,"../messages/FloorStatus.js":18,"../messages/FloorStatusAck.js":19,"../messages/Hello.js":20,"../messages/HelloAck.js":21,"../messages/Primitive.js":24,"../messages/RequestStatusValue.js":25,"../parser/Parser.js":27,"buffer":84}],29:[function(require,module,exports){
 "use strict";
 
 var Utils = require('./Utils');
@@ -4371,7 +4371,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.6-beta.405216083278 (Web)',
+  USER_AGENT: 'UA/2.0.6-beta.405216363062 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17626,7 +17626,7 @@ var debug = require('debug')('CRTC');
 var RTCStatsMonitor = require('./RTCStatsMonitor');
 var MediaEffectsComposer = require('./MediaEffectsComposer/MediaEffectsComposer');
 var MetaHumanClient = require('./MetaHumanClient');
-debug('version %s', '2.0.6-beta.405216083278');
+debug('version %s', '2.0.6-beta.405216363062');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17667,10 +17667,10 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.6-beta.405216083278';
+    return '2.0.6-beta.405216363062';
   }
 };
-},{"./Constants":30,"./Exceptions":35,"./Grammar":36,"./MediaEffectsComposer/MediaEffectsComposer":47,"./MetaHumanClient":59,"./NameAddrHeader":60,"./RTCStatsMonitor":70,"./UA":78,"./URI":79,"./Utils":80,"./WebSocketInterface":81,"debug":86}],38:[function(require,module,exports){
+},{"./Constants":30,"./Exceptions":35,"./Grammar":36,"./MediaEffectsComposer/MediaEffectsComposer":47,"./MetaHumanClient":59,"./NameAddrHeader":60,"./RTCStatsMonitor":70,"./UA":78,"./URI":79,"./Utils":80,"./WebSocketInterface":81,"debug":85}],38:[function(require,module,exports){
 "use strict";
 
 var debugFactory = require('debug');
@@ -17772,7 +17772,7 @@ module.exports = class Logger {
 // log.debug('登录成功');  // [ts] CRTC:D:Auth 登录成功 +5ms
 // log.warn('风险提示');   // [ts] CRTC:W:Auth 风险提示 +3ms
 // log.error('异常信息');  // [ts] CRTC:E:Auth 异常信息 +1ms
-},{"debug":86}],39:[function(require,module,exports){
+},{"debug":85}],39:[function(require,module,exports){
 "use strict";
 
 /**
@@ -23851,7 +23851,7 @@ class MediaEffectsComposer {
   }
 }
 module.exports = MediaEffectsComposer;
-},{"../Logger":38,"../MediaEffectsIssue":57,"../Utils":80,"./AiVirtualBackground/AiVBState":42,"./AudioMixer":44,"./ComposerConfig":45,"./LayoutEngine":46,"./OutputStream":48,"./RenderLoop":49,"./Sources":50,"./Watermark":51}],48:[function(require,module,exports){
+},{"../Logger":38,"../MediaEffectsIssue":57,"../Utils":80,"./AiVirtualBackground/AiVBState":42,"./AudioMixer":44,"./ComposerConfig":45,"./LayoutEngine":46,"./OutputStream":48,"./RenderLoop":49,"./Sources":55,"./Watermark":56}],48:[function(require,module,exports){
 (function (global){(function (){
 "use strict";
 
@@ -24735,9 +24735,9 @@ module.exports = OutputStream;
  * @module RenderLoop
  */
 
-var MainCanvas2DRenderer = require('./renderers/MainCanvas2DRenderer');
-var MainWebGL2Renderer = require('./renderers/MainWebGL2Renderer');
-var WorkerRenderer = require('./renderers/WorkerRenderer');
+var MainCanvas2DRenderer = require('./Renderers/MainCanvas2DRenderer');
+var MainWebGL2Renderer = require('./Renderers/MainWebGL2Renderer');
+var WorkerRenderer = require('./Renderers/WorkerRenderer');
 var issueUtils = require('../MediaEffectsIssue');
 var getErrorMessage = issueUtils.getErrorMessage;
 
@@ -25487,962 +25487,7 @@ class RenderLoop {
   }
 }
 module.exports = RenderLoop;
-},{"../MediaEffectsIssue":57,"./renderers/MainCanvas2DRenderer":52,"./renderers/MainWebGL2Renderer":53,"./renderers/WorkerRenderer":55}],50:[function(require,module,exports){
-"use strict";
-
-/**
- * Sources — 混流器输入源注册表
- *
- * 管理所有参与混流的输入源（MediaStream / HTMLVideoElement）。
- * 负责源的增删、ID 生成、slot 分配、状态查询等。
- *
- * @module Sources
- */
-class Sources {
-  /**
-   * @param {Object} options
-   * @param {Object} options.logger - 日志记录器
-   * @param {Function} options.getDefaultGain - 返回默认音量增益的回调
-   * @param {Function} options.normalizeGain - 增益值归一化函数
-   * @param {Function} options.createVideoElement - 创建隐藏 video 元素的工厂函数
-   * @param {Function} options.onBeforeRemove - 源被移除前的回调（用于断开音频连接）
-   * @param {Function} options.onAfterRemove - 源被移除后的回调（用于清理渲染器、清空画布）
-   */
-  constructor(options) {
-    options = options || {};
-    this._logger = options.logger;
-    this._getDefaultGain = options.getDefaultGain;
-    this._normalizeGain = options.normalizeGain;
-    this._createVideoElement = options.createVideoElement;
-    this._onBeforeRemove = options.onBeforeRemove;
-    this._onAfterRemove = options.onAfterRemove;
-
-    /** @type {Array<Object>} 当前所有输入源对象列表 */
-    this.sources = [];
-
-    /** @type {Array<HTMLVideoElement>} 当前所有源对应的 video 元素列表（与 sources 同步） */
-    this.videos = [];
-
-    /** @type {number} 内部自增 ID 序列，用于生成唯一 source ID */
-    this._sourceSeq = 0;
-    if (this._logger) {
-      this._logger.debug('Sources constructed');
-    }
-  }
-
-  /**
-   * 添加一个新的输入源。
-   *
-   * 如果新源的 slot 已被占用，旧源会被替换（先移除旧源再添加新源）。
-   *
-   * @param {MediaStream|HTMLVideoElement|Object} input - 输入源
-   * @param {Object} [options={}] - 配置选项 { slot, gain, sourceMirror, aiBackground }
-   * @returns {Object} 新建的 source 对象
-   */
-  add(input, options) {
-    var source = this._createSource(input, options || {});
-
-    // 检查 slot 冲突，同 slot 旧源会被替换
-    if (typeof source.slot === 'number') {
-      var oldSource = this.sources.find(item => item.slot === source.slot);
-      if (oldSource) {
-        if (this._logger) {
-          this._logger.warn(`Slot ${source.slot} overwritten.`);
-        }
-        this.remove(oldSource);
-      }
-    }
-    this.sources.push(source);
-    this._syncVideos();
-    if (this._logger) {
-      var hasAudio = this.hasLiveAudioTrack(source);
-      var hasVideo = this.hasVideoTrack(source);
-      var trackLabel = hasAudio && hasVideo ? 'audio+video' : hasAudio ? 'audio' : hasVideo ? 'video' : 'none';
-      this._logger.debug(`Source added: id=${source.id} slot=${source.slot} tracks=${trackLabel} gain=${source.gain}`);
-    }
-    return source;
-  }
-
-  /**
-   * 移除所有输入源（遍历快照逐一移除）。
-   */
-  clear() {
-    if (this._logger) {
-      this._logger.debug(`Clearing all sources: count=${this.sources.length}`);
-    }
-    this.sources.slice().forEach(source => {
-      this.remove(source);
-    });
-  }
-
-  /**
-   * 按 MediaStream 对象、stream.id 或内部 source.id 查找源。
-   *
-   * @param {MediaStream|string|HTMLVideoElement} streamOrId - 查找依据
-   * @returns {Object|null} 找到的 source 对象，或 null
-   */
-  find(streamOrId) {
-    if (!streamOrId) {
-      return null;
-    }
-    if (typeof streamOrId === 'string') {
-      // 先匹配 source.id，再匹配 stream.id
-      return this.sources.find(source => {
-        var stream = this.getStream(source);
-        return source.id === streamOrId || stream && stream.id === streamOrId;
-      }) || null;
-    }
-
-    // 按 MediaStream 或 HTMLVideoElement 引用匹配
-    var stream = streamOrId.mediaStream || streamOrId;
-    return this.sources.find(source => {
-      return source.stream === stream || source.video === streamOrId;
-    }) || null;
-  }
-
-  /**
-   * 移除一个具体的 source 对象。
-   *
-   * 步骤：触发 onBeforeRemove（断开音频）→ 清理 ownedVideo（暂停、清空 srcObject、移除 DOM）→
-   * 从数组移除 → 同步 _videos → 触发 onAfterRemove（渲染器清理、画布清空）。
-   *
-   * @param {Object} source - 要移除的 source 对象
-   * @returns {boolean} true=成功移除；false=source 为空
-   */
-  remove(source) {
-    if (!source) {
-      return false;
-    }
-    if (this._logger) {
-      this._logger.debug(`Removing source: id=${source.id} slot=${source.slot}`);
-    }
-
-    // 先通知外部断开音频连接
-    if (this._onBeforeRemove) {
-      try {
-        this._onBeforeRemove(source);
-      } catch (error) {
-        if (this._logger) this._logger.warn(`Source before-remove cleanup failed: ${error.message || String(error)}`);
-      }
-    }
-
-    // 如果是 composer 内部创建的 video 元素，清理 DOM
-    if (source.ownedVideo && source.video) {
-      try {
-        source.video.pause();
-      } catch (error) {}
-      try {
-        source.video.srcObject = null;
-      } catch (error) {}
-      try {
-        source.video.remove();
-      } catch (error) {}
-    }
-    var index = this.sources.indexOf(source);
-    if (index !== -1) {
-      this.sources.splice(index, 1);
-    }
-    this._syncVideos();
-
-    // 通知外部源已移除（渲染器清理、画布清空等）
-    if (this._onAfterRemove) {
-      try {
-        this._onAfterRemove(source);
-      } catch (error) {
-        if (this._logger) this._logger.warn(`Source after-remove cleanup failed: ${error.message || String(error)}`);
-      }
-    }
-    if (this._logger) {
-      this._logger.debug(`Source removed: id=${source.id} remaining=${this.sources.length}`);
-    }
-    return true;
-  }
-
-  /**
-   * 返回当前所有源的快照。
-   * 返回新数组，外部修改不影响内部状态。
-   *
-   * @returns {Array<Object>} 源信息列表：{ id, streamId, slot, gain, sourceMirror, hasAudio, hasVideo }
-   */
-  getSnapshot() {
-    return this.sources.map(source => {
-      var stream = this.getStream(source);
-      return {
-        id: source.id,
-        streamId: stream ? stream.id : null,
-        slot: source.slot,
-        gain: source.gain,
-        sourceMirror: typeof source.mirrorX === 'boolean' ? source.mirrorX : null,
-        aiBackground: cloneSnapshotValue(source.aiBackground),
-        hasAudio: this.hasLiveAudioTrack(source),
-        hasVideo: this.hasVideoTrack(source)
-      };
-    });
-  }
-
-  /**
-   * 获取 source 当前关联的 MediaStream。
-   *
-   * 对于外部传入的 HTMLVideoElement，调用方可能后续替换 srcObject，
-   * 这里同步更新 source.stream 引用，确保后续操作使用最新流。
-   *
-   * @param {Object} source - 内部 source 对象
-   * @returns {MediaStream|null} 当前 MediaStream
-   */
-  getStream(source) {
-    var stream = source.video && !source.ownedVideo ? source.video.srcObject : source.stream;
-
-    // 同步 stream 引用（外部换源场景）
-    if (source.stream !== stream) {
-      source.stream = stream;
-    }
-    return stream;
-  }
-
-  /**
-   * 检测是否至少有一路源有 live（活跃）状态的音频轨。
-   *
-   * @returns {boolean} true=至少一路有活跃音频
-   */
-  hasLiveAudio() {
-    return this.sources.some(source => this.hasLiveAudioTrack(source));
-  }
-
-  /**
-   * 检测某路源是否有 live（活跃）状态的音频轨。
-   * 只混入 live 状态的音频轨，避免 ended track 导致 WebAudio 创建失败或无效混音。
-   *
-   * @param {Object} source - 内部 source 对象
-   * @returns {boolean} true=至少有一条 live 音频轨
-   */
-  hasLiveAudioTrack(source) {
-    var stream = this.getStream(source);
-    return Boolean(stream && stream.getAudioTracks && stream.getAudioTracks().some(track => track.readyState === 'live'));
-  }
-
-  /**
-   * 检测某路源是否有视频轨（不判断 readyState）。
-   * readyState 在绘制阶段才判断，刚加入但尚未出帧的源仍保留在布局中。
-   *
-   * @param {Object} source - 内部 source 对象
-   * @returns {boolean} true=至少有一条视频轨
-   */
-  hasVideoTrack(source) {
-    var stream = this.getStream(source);
-    return Boolean(stream && stream.getVideoTracks && stream.getVideoTracks().length > 0);
-  }
-
-  /**
-   * 判断某路源当前是否可渲染。
-   * 条件：stream 存在且 active，并且有视频轨。
-   * 具体的视频帧是否能绘制由 video.readyState 在渲染阶段判断。
-   *
-   * @param {Object} source - 内部 source 对象
-   * @returns {boolean} true=可渲染
-   */
-  isRenderable(source) {
-    var stream = this.getStream(source);
-    return Boolean(stream && stream.active && this.hasVideoTrack(source));
-  }
-
-  /**
-   * 判断对象是否具备 MediaStream 的基本接口。
-   *
-   * 这个私有方法会被构建脚本收集到保留名单里，避免压缩产物把调用点和定义名拆开。
-   *
-   * @param {*} stream - 待校验对象
-   * @returns {boolean} true=满足 MediaStream 基本接口
-   */
-  _isMediaStreamLike(stream) {
-    return Boolean(stream && typeof stream.getTracks === 'function' && typeof stream.getAudioTracks === 'function' && typeof stream.getVideoTracks === 'function');
-  }
-
-  /**
-   * 创建一个内部 source 对象。
-   *
-   * @param {MediaStream|HTMLVideoElement|Object} input - 原始输入
-   * @param {Object} options - 配置 { slot, gain, sourceMirror, aiBackground }
-   * @returns {Object} source 对象
-   * @throws {TypeError} 无效的 MediaStream
-   */
-  _createSource(input, options) {
-    var video;
-    var stream;
-    var ownedVideo = false;
-    if (input instanceof HTMLMediaElement) {
-      // 外部传入的 video 元素，混流器不接管生命周期
-      video = input;
-      stream = input.srcObject;
-    } else {
-      // MediaStream 或 { mediaStream } 包装，内部创建隐藏 video
-      stream = input && (input.mediaStream || input);
-      if (!this._isMediaStreamLike(stream)) {
-        throw new TypeError('Invalid MediaStream.');
-      }
-      video = this._createVideoElement(stream);
-      ownedVideo = true;
-    }
-    var source = {
-      id: this._createSourceId(stream, video),
-      stream: stream,
-      video: video,
-      slot: typeof options.slot === 'number' ? options.slot : null,
-      gain: this._normalizeGain(options.gain, this._getDefaultGain()),
-      mirrorX: typeof options.sourceMirror === 'boolean' ? options.sourceMirror : null,
-      aiBackground: options.aiBackground || null,
-      audioSourceNode: null,
-      // WebAudio 源节点（由 AudioMixer 连接时赋值）
-      masterGainNode: null,
-      // 每路输入唯一 fan-out 节点，避免 MediaStreamSource 直接扇出
-      gainNode: null,
-      // 默认全量混音音量节点（由 AudioMixer 连接时赋值）
-      outputGains: new Set(),
-      // 该源所有下游 gain，用于后续音量同步和安全清理
-      audioStream: null,
-      // 当前已连接的音频流引用
-      audioTrackId: null,
-      // 当前已连接的音频轨 id，用于判断是否真正换轨
-      audioTrackSignature: null,
-      // 音频轨身份签名（track 对象 + id）
-      ownedVideo: ownedVideo
-    };
-
-    // 未指定 slot 时自动分配最小编号空闲 slot
-    if (source.slot === null) {
-      source.slot = this._getNextSlot();
-    }
-    if (this._logger) {
-      var streamId = stream && stream.id ? stream.id : 'unknown';
-      this._logger.debug(`Source created: id=${source.id} stream=${streamId} slot=${source.slot} ownedVideo=${ownedVideo}`);
-    }
-    return source;
-  }
-
-  /**
-   * 为 source 生成唯一 ID。
-   * 优先使用 stream.id，冲突时追加自增序号确保唯一。
-   *
-   * @param {MediaStream} stream - 关联的 MediaStream
-   * @param {HTMLVideoElement} video - 关联的 video 元素
-   * @returns {string} 唯一 ID
-   */
-  _createSourceId(stream, video) {
-    var baseId = stream && stream.id || video.id || `composer-source-${this._sourceSeq + 1}`;
-    var sourceId = baseId;
-    while (this.sources.some(source => source.id === sourceId)) {
-      this._sourceSeq += 1;
-      sourceId = `${baseId}-${this._sourceSeq}`;
-    }
-    return sourceId;
-  }
-
-  /**
-   * 获取当前最小编号的空闲 slot。
-   * 从 0 开始递增查找，跳过已被占用的 slot 编号。
-   *
-   * @returns {number} 可用的 slot 编号
-   */
-  _getNextSlot() {
-    var slot = 0;
-    var occupiedSlots = this.sources.reduce((slots, source) => {
-      if (typeof source.slot === 'number') {
-        slots[source.slot] = true;
-      }
-      return slots;
-    }, {});
-    while (occupiedSlots[slot]) {
-      slot += 1;
-    }
-    return slot;
-  }
-
-  /**
-   * 将 sources 数组中的 video 元素同步到 videos 数组。
-   * 外部代码通过 this.videos 即可遍历所有 video 元素。
-   */
-  _syncVideos() {
-    this.videos.splice(0, this.videos.length);
-    this.sources.forEach(source => {
-      this.videos.push(source.video);
-    });
-    if (this._logger) {
-      this._logger.debug(`Videos synced: sources=${this.sources.length} videos=${this.videos.length}`);
-    }
-  }
-}
-function cloneSnapshotValue(value) {
-  if (value instanceof Array) {
-    return value.map(cloneSnapshotValue);
-  }
-  if (value && typeof value === 'object') {
-    return Object.keys(value).reduce((snapshot, key) => {
-      snapshot[key] = cloneSnapshotValue(value[key]);
-      return snapshot;
-    }, {});
-  }
-  return value === undefined ? null : value;
-}
-module.exports = Sources;
-},{}],51:[function(require,module,exports){
-"use strict";
-
-/**
- * Watermark — Composer 水印配置、加载和布局模块
- *
- * 负责将外部水印配置归一化为 renderer 可直接绘制的图片面，并按输出画布
- * 或每路 source 的 draw 区域计算最终绘制矩形。
- *
- * @module Watermark
- */
-
-var DEFAULT_TEXT_COLOR = '#fff';
-var DEFAULT_TEXT_BACKGROUND = 'rgba(0,0,0,0.45)';
-var DEFAULT_FONT_SIZE = 28;
-var DEFAULT_PADDING = 3;
-var DEFAULT_BACKGROUND_RADIUS = 3;
-var DEFAULT_MARGIN = 16;
-var MAX_WATERMARKS = 32;
-var MAX_TEXT_LENGTH = 256;
-var MAX_FONT_SIZE = 256;
-var MAX_SURFACE_DIMENSION = 4096;
-var MAX_SURFACE_PIXELS = 16777216;
-var IMAGE_LOAD_TIMEOUT_MS = 15000;
-class Watermark {
-  /**
-   * @param {Object} options
-   * @param {Object} options.logger - 日志记录器
-   */
-  constructor(options) {
-    options = options || {};
-    this._logger = options.logger;
-    this._onIssue = typeof options.onIssue === 'function' ? options.onIssue : null;
-    this._watermarks = [];
-    this._seq = 0;
-    this._generation = 0;
-    if (this._logger) {
-      this._logger.debug('Watermark constructed');
-    }
-  }
-
-  /**
-   * 内部异常报告方法。
-   *
-   * 上报水印管理过程中的各类问题，包括：
-   * - watermark-image-missing: 水印配置中缺少图片 URL
-   * - watermark-image-load: 水印图片加载失败
-   *
-   * 设计要点：
-   * - 水印加载失败不中断混流流程，混流器会跳过该水印继续处理
-   * - 因此默认 fallbackApplied=true, degraded=true
-   * - details 中包含 watermarkId、target、imageUrl 等信息，方便的排查具体是哪个水印出了什么问题
-   *
-   * @param {Object} [issue] - 问题描述对象
-   */
-  _reportIssue(issue) {
-    if (!this._onIssue) return;
-    try {
-      this._onIssue(Object.assign({
-        component: 'Watermark'
-      }, issue));
-    } catch (e) {
-      if (this._logger) this._logger.warn(`Watermark issue callback failed: ${e.message || String(e)}`);
-    }
-  }
-
-  /**
-   * 替换全部水印。图片 URL 会异步加载，加载失败只更新状态，不中断混流。
-   *
-   * @param {Array<Object>|Object|null} watermarks - 水印配置
-   * @returns {Promise<Array<Object>>} 当前水印快照
-   */
-  setWatermarks(watermarks) {
-    var list = this._normalizeWmList(watermarks).slice(0, MAX_WATERMARKS);
-    var generation = ++this._generation;
-    if (this._logger) {
-      this._logger.debug(`Setting watermarks: count=${list.length}`);
-    }
-    this._watermarks = list.map(watermark => this._normalizeWatermark(watermark));
-    var loads = this._watermarks.map(watermark => this._prepareWatermark(watermark, generation));
-    return Promise.all(loads).then(() => this.getWatermarks());
-  }
-
-  /**
-   * 按条件清除水印。不传 filter 时清空全部。
-   *
-   * @param {Object} [filter] - { id, target, slot, sourceId, streamId }
-   */
-  clearWatermarks(filter) {
-    if (this._logger) {
-      this._logger.debug(`Clearing watermarks: filter=${JSON.stringify(filter || null)}`);
-    }
-    if (!filter) {
-      this._generation += 1;
-      this._watermarks = [];
-      return;
-    }
-    this._watermarks = this._watermarks.filter(watermark => !this._matchesFilter(watermark, filter));
-  }
-
-  /**
-   * 返回当前水印只读快照。
-   *
-   * @returns {Array<Object>} 水印状态列表
-   */
-  getWatermarks() {
-    return this._watermarks.map(watermark => ({
-      id: watermark.id,
-      target: watermark.target,
-      type: watermark.type,
-      text: watermark.text,
-      slot: watermark.slot,
-      sourceId: watermark.sourceId,
-      streamId: watermark.streamId,
-      position: clonePosition(watermark.position),
-      opacity: watermark.opacity,
-      width: watermark.width,
-      height: watermark.height,
-      fontSize: watermark.fontSize,
-      color: watermark.color,
-      backgroundColor: watermark.backgroundColor,
-      padding: watermark.padding,
-      backgroundRadius: watermark.backgroundRadius,
-      margin: watermark.margin,
-      status: watermark.status,
-      reason: watermark.reason
-    }));
-  }
-
-  /**
-   * 根据当前渲染 payload 计算 output/source 两类水印绘制项。
-   *
-   * @param {Object} payload - { width, height, items }
-   * @returns {Object} { sourceWatermarks, outputWatermarks }
-   */
-  createRenderItems(payload) {
-    payload = payload || {};
-    var outputArea = {
-      x: 0,
-      y: 0,
-      width: payload.width || 1,
-      height: payload.height || 1
-    };
-    var sourceWatermarks = [];
-    var outputWatermarks = [];
-    this._watermarks.forEach(watermark => {
-      if (watermark.status !== 'ready' || !watermark.image) {
-        return;
-      }
-      if (watermark.target === 'source') {
-        (payload.items || []).forEach(item => {
-          if (!this._matchesSource(watermark, item)) {
-            return;
-          }
-          sourceWatermarks.push(this._createDrawItem(watermark, item.draw, item));
-        });
-        return;
-      }
-      outputWatermarks.push(this._createDrawItem(watermark, outputArea, null));
-    });
-    return {
-      sourceWatermarks: sourceWatermarks.filter(Boolean),
-      outputWatermarks: outputWatermarks.filter(Boolean)
-    };
-  }
-  _normalizeWmList(watermarks) {
-    if (!watermarks) {
-      return [];
-    }
-    if (watermarks instanceof Array) {
-      return watermarks;
-    }
-    return [watermarks];
-  }
-  _normalizeWatermark(input) {
-    input = input || {};
-    var type = input.type === 'image' || input.image ? 'image' : 'text';
-    var target = input.target === 'source' ? 'source' : 'output';
-    var id = typeof input.id === 'string' && input.id ? input.id : `watermark-${++this._seq}`;
-    var fontSize = normalizeBoundedInteger(input.fontSize, 1, MAX_FONT_SIZE, DEFAULT_FONT_SIZE);
-    var backgroundRadiusInput = input.backgroundRadius !== undefined ? input.backgroundRadius : input.borderRadius;
-    return {
-      id: id,
-      target: target,
-      type: type,
-      text: typeof input.text === 'string' ? input.text.slice(0, MAX_TEXT_LENGTH) : '',
-      imageInput: input.image || null,
-      image: null,
-      slot: normalizeSlot(input.slot),
-      sourceId: typeof input.sourceId === 'string' ? input.sourceId : null,
-      streamId: typeof input.streamId === 'string' ? input.streamId : null,
-      position: normalizePosition(input.position),
-      width: normalizeBoundedInteger(input.width, 1, MAX_SURFACE_DIMENSION, null),
-      height: normalizeBoundedInteger(input.height, 1, MAX_SURFACE_DIMENSION, null),
-      font: typeof input.font === 'string' && input.font ? input.font.slice(0, MAX_TEXT_LENGTH) : null,
-      fontSize: fontSize,
-      color: typeof input.color === 'string' ? input.color : DEFAULT_TEXT_COLOR,
-      backgroundColor: typeof input.backgroundColor === 'string' ? input.backgroundColor : DEFAULT_TEXT_BACKGROUND,
-      opacity: normalizeOpacity(input.opacity),
-      padding: normalizeNonNegativeInteger(input.padding, DEFAULT_PADDING),
-      backgroundRadius: normalizeNonNegativeInteger(backgroundRadiusInput, DEFAULT_BACKGROUND_RADIUS),
-      margin: normalizeNonNegativeInteger(input.margin, DEFAULT_MARGIN),
-      status: 'pending',
-      reason: ''
-    };
-  }
-  _prepareWatermark(watermark, generation) {
-    if (this._logger) {
-      this._logger.debug(`Preparing watermark: id=${watermark.id} type=${watermark.type} target=${watermark.target}`);
-    }
-    if (watermark.type === 'image') {
-      return this._prepareImageWm(watermark, generation);
-    }
-    watermark.image = this._createTextSurface(watermark);
-    watermark.status = watermark.image ? 'ready' : 'error';
-    watermark.reason = watermark.image ? '' : 'Canvas is unavailable';
-    return Promise.resolve(watermark);
-  }
-  _prepareImageWm(watermark, generation) {
-    var image = watermark.imageInput;
-    if (!image) {
-      watermark.status = 'error';
-      watermark.reason = 'Missing image';
-      this._reportIssue({
-        stage: 'watermark-image-missing',
-        message: watermark.reason,
-        details: {
-          watermarkId: watermark.id,
-          target: watermark.target
-        }
-      });
-      return Promise.resolve(watermark);
-    }
-    if (typeof image === 'string') {
-      if (this._logger) {
-        this._logger.debug(`Loading watermark image: id=${watermark.id} url=${image}`);
-      }
-      return this._loadImage(image).then(loadedImage => {
-        if (generation !== this._generation) {
-          return watermark;
-        }
-        watermark.image = loadedImage;
-        watermark.status = 'ready';
-        watermark.reason = '';
-        return watermark;
-      }).catch(error => {
-        if (generation !== this._generation) {
-          return watermark;
-        }
-        watermark.status = 'error';
-        watermark.reason = error.message || String(error);
-        if (this._logger) {
-          this._logger.warn(`Watermark image failed to load: id=${watermark.id} target=${watermark.target} reason=${watermark.reason} url=${image}`);
-        }
-        this._reportIssue({
-          stage: 'watermark-image-load',
-          message: watermark.reason,
-          details: {
-            watermarkId: watermark.id,
-            target: watermark.target,
-            imageUrl: image
-          }
-        });
-        return watermark;
-      });
-    }
-    var imageWidth = Number(image.width || image.videoWidth || image.naturalWidth);
-    var imageHeight = Number(image.height || image.videoHeight || image.naturalHeight);
-    if (!Number.isFinite(imageWidth) || !Number.isFinite(imageHeight) || imageWidth <= 0 || imageHeight <= 0 || imageWidth > MAX_SURFACE_DIMENSION || imageHeight > MAX_SURFACE_DIMENSION || imageWidth * imageHeight > MAX_SURFACE_PIXELS) {
-      watermark.status = 'error';
-      watermark.reason = 'Invalid or oversized image surface';
-      return Promise.resolve(watermark);
-    }
-    watermark.image = image;
-    watermark.status = 'ready';
-    watermark.reason = '';
-    if (this._logger) {
-      this._logger.debug(`Watermark image prepared from element: id=${watermark.id}`);
-    }
-    return Promise.resolve(watermark);
-  }
-  _loadImage(url) {
-    return new Promise((resolve, reject) => {
-      if (typeof Image === 'undefined') {
-        reject(new Error('Image constructor is unavailable'));
-        return;
-      }
-      var image = new Image();
-      var settled = false;
-      var timeoutId = setTimeout(() => {
-        if (settled) return;
-        settled = true;
-        image.onload = null;
-        image.onerror = null;
-        try {
-          image.src = '';
-        } catch (error) {}
-        reject(new Error(`Timed out loading image: ${url}`));
-      }, IMAGE_LOAD_TIMEOUT_MS);
-      var settle = callback => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timeoutId);
-        image.onload = null;
-        image.onerror = null;
-        callback();
-      };
-      image.crossOrigin = 'anonymous';
-      image.onload = () => settle(() => {
-        var width = Number(image.naturalWidth || image.width);
-        var height = Number(image.naturalHeight || image.height);
-        if (!width || !height || width > MAX_SURFACE_DIMENSION || height > MAX_SURFACE_DIMENSION || width * height > MAX_SURFACE_PIXELS) {
-          reject(new Error(`Invalid or oversized image: ${url}`));
-          return;
-        }
-        resolve(image);
-      });
-      image.onerror = () => settle(() => reject(new Error(`Failed to load image: ${url}`)));
-      image.src = url;
-    });
-  }
-  _createTextSurface(watermark) {
-    if (typeof document === 'undefined' || !document.createElement) {
-      return null;
-    }
-    var canvas = document.createElement('canvas');
-    var context = canvas.getContext && canvas.getContext('2d');
-    if (!context) {
-      return null;
-    }
-    var text = watermark.text || '';
-    var font = watermark.font || `bold ${watermark.fontSize}px sans-serif`;
-    context.font = font;
-    var metrics = context.measureText ? context.measureText(text) : null;
-    var measured = metrics ? metrics.width : text.length * watermark.fontSize * 0.6;
-    var ascent = metrics && Number.isFinite(metrics.actualBoundingBoxAscent) ? metrics.actualBoundingBoxAscent : watermark.fontSize * 0.8;
-    var descent = metrics && Number.isFinite(metrics.actualBoundingBoxDescent) ? metrics.actualBoundingBoxDescent : watermark.fontSize * 0.25;
-    var width = Math.min(MAX_SURFACE_DIMENSION, Math.max(1, Math.ceil(measured + watermark.padding * 2)));
-    var height = Math.min(MAX_SURFACE_DIMENSION, Math.max(1, Math.ceil(ascent + descent + watermark.padding * 2)));
-    if (width * height > MAX_SURFACE_PIXELS) {
-      var scale = Math.sqrt(MAX_SURFACE_PIXELS / (width * height));
-      width = Math.max(1, Math.floor(width * scale));
-      height = Math.max(1, Math.floor(height * scale));
-    }
-    canvas.width = width;
-    canvas.height = height;
-    context.font = font;
-    context.textBaseline = 'alphabetic';
-    context.textAlign = 'left';
-    if (watermark.backgroundColor) {
-      context.fillStyle = watermark.backgroundColor;
-      fillRoundedRect(context, 0, 0, width, height, watermark.backgroundRadius);
-    }
-    context.fillStyle = watermark.color;
-    if (context.fillText) {
-      context.fillText(text, watermark.padding, watermark.padding + ascent);
-    }
-    return canvas;
-  }
-  _createDrawItem(watermark, area, sourceItem) {
-    if (!area || !watermark.image) {
-      return null;
-    }
-    var imageWidth = watermark.image.width || watermark.image.videoWidth || 1;
-    var imageHeight = watermark.image.height || watermark.image.videoHeight || 1;
-    var size = this._resolveSize(watermark, imageWidth, imageHeight);
-    var draw = this._resolveDrawRect(watermark, area, size.width, size.height);
-    if (!draw || draw.width <= 0 || draw.height <= 0) {
-      return null;
-    }
-    return {
-      id: watermark.id,
-      target: watermark.target,
-      type: watermark.type,
-      image: watermark.image,
-      opacity: watermark.opacity,
-      draw: draw,
-      sourceId: sourceItem ? sourceItem.id : null,
-      slot: sourceItem ? sourceItem.slot : null,
-      streamId: sourceItem ? sourceItem.streamId : null
-    };
-  }
-  _resolveSize(watermark, imageWidth, imageHeight) {
-    var width = watermark.width;
-    var height = watermark.height;
-    if (width && !height) {
-      height = width * imageHeight / imageWidth;
-    } else if (!width && height) {
-      width = height * imageWidth / imageHeight;
-    } else if (!width && !height) {
-      width = imageWidth;
-      height = imageHeight;
-    }
-    return {
-      width: Math.max(1, width),
-      height: Math.max(1, height)
-    };
-  }
-  _resolveDrawRect(watermark, area, width, height) {
-    var position = watermark.position;
-    var x;
-    var y;
-    if (position && typeof position === 'object') {
-      x = area.x + position.x;
-      y = area.y + position.y;
-    } else {
-      var margin = watermark.margin;
-      switch (position) {
-        case 'top-left':
-          x = area.x + margin;
-          y = area.y + margin;
-          break;
-        case 'top-center':
-          x = area.x + (area.width - width) / 2;
-          y = area.y + margin;
-          break;
-        case 'top-right':
-          x = area.x + area.width - width - margin;
-          y = area.y + margin;
-          break;
-        case 'bottom-left':
-          x = area.x + margin;
-          y = area.y + area.height - height - margin;
-          break;
-        case 'bottom-center':
-          x = area.x + (area.width - width) / 2;
-          y = area.y + area.height - height - margin;
-          break;
-        case 'center':
-          x = area.x + (area.width - width) / 2;
-          y = area.y + (area.height - height) / 2;
-          break;
-        case 'bottom-right':
-        default:
-          x = area.x + area.width - width - margin;
-          y = area.y + area.height - height - margin;
-          break;
-      }
-    }
-    return {
-      x: Math.round(x),
-      y: Math.round(y),
-      width: Math.round(width),
-      height: Math.round(height)
-    };
-  }
-  _matchesSource(watermark, item) {
-    if (!item) {
-      return false;
-    }
-    if (watermark.sourceId) {
-      return watermark.sourceId === item.id;
-    }
-    if (watermark.streamId) {
-      return watermark.streamId === item.streamId;
-    }
-    if (typeof watermark.slot === 'number') {
-      return watermark.slot === item.slot;
-    }
-    return true;
-  }
-  _matchesFilter(watermark, filter) {
-    if (filter.id !== undefined && watermark.id !== filter.id) {
-      return false;
-    }
-    if (filter.target !== undefined && watermark.target !== filter.target) {
-      return false;
-    }
-    if (filter.slot !== undefined && watermark.slot !== filter.slot) {
-      return false;
-    }
-    if (filter.sourceId !== undefined && watermark.sourceId !== filter.sourceId) {
-      return false;
-    }
-    if (filter.streamId !== undefined && watermark.streamId !== filter.streamId) {
-      return false;
-    }
-    return true;
-  }
-}
-function normalizeBoundedInteger(value, min, max, fallback) {
-  var numberValue = Number(value);
-  if (Number.isFinite(numberValue) && numberValue >= min) {
-    return Math.min(max, Math.floor(numberValue));
-  }
-  return fallback;
-}
-function normalizeNonNegativeInteger(value, fallback) {
-  var numberValue = Number(value);
-  if (Number.isFinite(numberValue) && numberValue >= 0) {
-    return Math.floor(numberValue);
-  }
-  return fallback;
-}
-function normalizeOpacity(value) {
-  var numberValue = Number(value);
-  if (Number.isFinite(numberValue)) {
-    return Math.min(1, Math.max(0, numberValue));
-  }
-  return 1;
-}
-function normalizeSlot(value) {
-  var numberValue = Number(value);
-  if (Number.isFinite(numberValue) && numberValue >= 0) {
-    return Math.floor(numberValue);
-  }
-  return null;
-}
-function normalizePosition(value) {
-  if (typeof value === 'string') {
-    return value;
-  }
-  if (value && typeof value === 'object') {
-    var x = Number(value.x);
-    var y = Number(value.y);
-    if (Number.isFinite(x) && Number.isFinite(y)) {
-      return {
-        x,
-        y
-      };
-    }
-  }
-  return 'bottom-right';
-}
-function clonePosition(position) {
-  if (position && typeof position === 'object') {
-    return {
-      x: position.x,
-      y: position.y
-    };
-  }
-  return position;
-}
-function fillRoundedRect(context, x, y, width, height, radius) {
-  var safeRadius = Math.max(0, Math.min(radius || 0, width / 2, height / 2));
-  if (!safeRadius || typeof context.beginPath !== 'function') {
-    context.fillRect(x, y, width, height);
-    return;
-  }
-  if (typeof context.roundRect === 'function') {
-    context.beginPath();
-    context.roundRect(x, y, width, height, safeRadius);
-    context.fill();
-    return;
-  }
-  context.beginPath();
-  context.moveTo(x + safeRadius, y);
-  context.lineTo(x + width - safeRadius, y);
-  context.quadraticCurveTo(x + width, y, x + width, y + safeRadius);
-  context.lineTo(x + width, y + height - safeRadius);
-  context.quadraticCurveTo(x + width, y + height, x + width - safeRadius, y + height);
-  context.lineTo(x + safeRadius, y + height);
-  context.quadraticCurveTo(x, y + height, x, y + height - safeRadius);
-  context.lineTo(x, y + safeRadius);
-  context.quadraticCurveTo(x, y, x + safeRadius, y);
-  context.closePath();
-  context.fill();
-}
-module.exports = Watermark;
-},{}],52:[function(require,module,exports){
+},{"../MediaEffectsIssue":57,"./Renderers/MainCanvas2DRenderer":50,"./Renderers/MainWebGL2Renderer":51,"./Renderers/WorkerRenderer":53}],50:[function(require,module,exports){
 "use strict";
 
 /**
@@ -26751,7 +25796,7 @@ module.exports = class MainCanvas2DRenderer {
     this._canvas = null;
   }
 };
-},{"./RendererBase":54}],53:[function(require,module,exports){
+},{"./RendererBase":52}],51:[function(require,module,exports){
 "use strict";
 
 /**
@@ -27386,7 +26431,7 @@ module.exports = class MainWebGL2Renderer {
     this._aiVB = null;
   }
 };
-},{"./RendererBase":54}],54:[function(require,module,exports){
+},{"./RendererBase":52}],52:[function(require,module,exports){
 "use strict";
 
 /**
@@ -27431,7 +26476,7 @@ function createRendererBase(config, info) {
   };
 }
 module.exports = createRendererBase;
-},{}],55:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 "use strict";
 
 /**
@@ -28082,7 +27127,7 @@ module.exports = class WorkerRenderer {
     }
   }
 };
-},{"./RendererBase":54,"./WorkerScript":56}],56:[function(require,module,exports){
+},{"./RendererBase":52,"./WorkerScript":54}],54:[function(require,module,exports){
 "use strict";
 
 var SegmentationCommon = require('../AiVirtualBackground/AiVBSegmentationCommon');
@@ -29229,7 +28274,962 @@ exports.createWorkerScript = function () {
   var workerBody = workerSource.slice(workerSource.indexOf('{') + 1, workerSource.lastIndexOf('}'));
   return `var segmentationCommon=((${helperFactorySource}))();\n${workerBody}`;
 };
-},{"../AiVirtualBackground/AiVBSegmentationCommon":41}],57:[function(require,module,exports){
+},{"../AiVirtualBackground/AiVBSegmentationCommon":41}],55:[function(require,module,exports){
+"use strict";
+
+/**
+ * Sources — 混流器输入源注册表
+ *
+ * 管理所有参与混流的输入源（MediaStream / HTMLVideoElement）。
+ * 负责源的增删、ID 生成、slot 分配、状态查询等。
+ *
+ * @module Sources
+ */
+class Sources {
+  /**
+   * @param {Object} options
+   * @param {Object} options.logger - 日志记录器
+   * @param {Function} options.getDefaultGain - 返回默认音量增益的回调
+   * @param {Function} options.normalizeGain - 增益值归一化函数
+   * @param {Function} options.createVideoElement - 创建隐藏 video 元素的工厂函数
+   * @param {Function} options.onBeforeRemove - 源被移除前的回调（用于断开音频连接）
+   * @param {Function} options.onAfterRemove - 源被移除后的回调（用于清理渲染器、清空画布）
+   */
+  constructor(options) {
+    options = options || {};
+    this._logger = options.logger;
+    this._getDefaultGain = options.getDefaultGain;
+    this._normalizeGain = options.normalizeGain;
+    this._createVideoElement = options.createVideoElement;
+    this._onBeforeRemove = options.onBeforeRemove;
+    this._onAfterRemove = options.onAfterRemove;
+
+    /** @type {Array<Object>} 当前所有输入源对象列表 */
+    this.sources = [];
+
+    /** @type {Array<HTMLVideoElement>} 当前所有源对应的 video 元素列表（与 sources 同步） */
+    this.videos = [];
+
+    /** @type {number} 内部自增 ID 序列，用于生成唯一 source ID */
+    this._sourceSeq = 0;
+    if (this._logger) {
+      this._logger.debug('Sources constructed');
+    }
+  }
+
+  /**
+   * 添加一个新的输入源。
+   *
+   * 如果新源的 slot 已被占用，旧源会被替换（先移除旧源再添加新源）。
+   *
+   * @param {MediaStream|HTMLVideoElement|Object} input - 输入源
+   * @param {Object} [options={}] - 配置选项 { slot, gain, sourceMirror, aiBackground }
+   * @returns {Object} 新建的 source 对象
+   */
+  add(input, options) {
+    var source = this._createSource(input, options || {});
+
+    // 检查 slot 冲突，同 slot 旧源会被替换
+    if (typeof source.slot === 'number') {
+      var oldSource = this.sources.find(item => item.slot === source.slot);
+      if (oldSource) {
+        if (this._logger) {
+          this._logger.warn(`Slot ${source.slot} overwritten.`);
+        }
+        this.remove(oldSource);
+      }
+    }
+    this.sources.push(source);
+    this._syncVideos();
+    if (this._logger) {
+      var hasAudio = this.hasLiveAudioTrack(source);
+      var hasVideo = this.hasVideoTrack(source);
+      var trackLabel = hasAudio && hasVideo ? 'audio+video' : hasAudio ? 'audio' : hasVideo ? 'video' : 'none';
+      this._logger.debug(`Source added: id=${source.id} slot=${source.slot} tracks=${trackLabel} gain=${source.gain}`);
+    }
+    return source;
+  }
+
+  /**
+   * 移除所有输入源（遍历快照逐一移除）。
+   */
+  clear() {
+    if (this._logger) {
+      this._logger.debug(`Clearing all sources: count=${this.sources.length}`);
+    }
+    this.sources.slice().forEach(source => {
+      this.remove(source);
+    });
+  }
+
+  /**
+   * 按 MediaStream 对象、stream.id 或内部 source.id 查找源。
+   *
+   * @param {MediaStream|string|HTMLVideoElement} streamOrId - 查找依据
+   * @returns {Object|null} 找到的 source 对象，或 null
+   */
+  find(streamOrId) {
+    if (!streamOrId) {
+      return null;
+    }
+    if (typeof streamOrId === 'string') {
+      // 先匹配 source.id，再匹配 stream.id
+      return this.sources.find(source => {
+        var stream = this.getStream(source);
+        return source.id === streamOrId || stream && stream.id === streamOrId;
+      }) || null;
+    }
+
+    // 按 MediaStream 或 HTMLVideoElement 引用匹配
+    var stream = streamOrId.mediaStream || streamOrId;
+    return this.sources.find(source => {
+      return source.stream === stream || source.video === streamOrId;
+    }) || null;
+  }
+
+  /**
+   * 移除一个具体的 source 对象。
+   *
+   * 步骤：触发 onBeforeRemove（断开音频）→ 清理 ownedVideo（暂停、清空 srcObject、移除 DOM）→
+   * 从数组移除 → 同步 _videos → 触发 onAfterRemove（渲染器清理、画布清空）。
+   *
+   * @param {Object} source - 要移除的 source 对象
+   * @returns {boolean} true=成功移除；false=source 为空
+   */
+  remove(source) {
+    if (!source) {
+      return false;
+    }
+    if (this._logger) {
+      this._logger.debug(`Removing source: id=${source.id} slot=${source.slot}`);
+    }
+
+    // 先通知外部断开音频连接
+    if (this._onBeforeRemove) {
+      try {
+        this._onBeforeRemove(source);
+      } catch (error) {
+        if (this._logger) this._logger.warn(`Source before-remove cleanup failed: ${error.message || String(error)}`);
+      }
+    }
+
+    // 如果是 composer 内部创建的 video 元素，清理 DOM
+    if (source.ownedVideo && source.video) {
+      try {
+        source.video.pause();
+      } catch (error) {}
+      try {
+        source.video.srcObject = null;
+      } catch (error) {}
+      try {
+        source.video.remove();
+      } catch (error) {}
+    }
+    var index = this.sources.indexOf(source);
+    if (index !== -1) {
+      this.sources.splice(index, 1);
+    }
+    this._syncVideos();
+
+    // 通知外部源已移除（渲染器清理、画布清空等）
+    if (this._onAfterRemove) {
+      try {
+        this._onAfterRemove(source);
+      } catch (error) {
+        if (this._logger) this._logger.warn(`Source after-remove cleanup failed: ${error.message || String(error)}`);
+      }
+    }
+    if (this._logger) {
+      this._logger.debug(`Source removed: id=${source.id} remaining=${this.sources.length}`);
+    }
+    return true;
+  }
+
+  /**
+   * 返回当前所有源的快照。
+   * 返回新数组，外部修改不影响内部状态。
+   *
+   * @returns {Array<Object>} 源信息列表：{ id, streamId, slot, gain, sourceMirror, hasAudio, hasVideo }
+   */
+  getSnapshot() {
+    return this.sources.map(source => {
+      var stream = this.getStream(source);
+      return {
+        id: source.id,
+        streamId: stream ? stream.id : null,
+        slot: source.slot,
+        gain: source.gain,
+        sourceMirror: typeof source.mirrorX === 'boolean' ? source.mirrorX : null,
+        aiBackground: cloneSnapshotValue(source.aiBackground),
+        hasAudio: this.hasLiveAudioTrack(source),
+        hasVideo: this.hasVideoTrack(source)
+      };
+    });
+  }
+
+  /**
+   * 获取 source 当前关联的 MediaStream。
+   *
+   * 对于外部传入的 HTMLVideoElement，调用方可能后续替换 srcObject，
+   * 这里同步更新 source.stream 引用，确保后续操作使用最新流。
+   *
+   * @param {Object} source - 内部 source 对象
+   * @returns {MediaStream|null} 当前 MediaStream
+   */
+  getStream(source) {
+    var stream = source.video && !source.ownedVideo ? source.video.srcObject : source.stream;
+
+    // 同步 stream 引用（外部换源场景）
+    if (source.stream !== stream) {
+      source.stream = stream;
+    }
+    return stream;
+  }
+
+  /**
+   * 检测是否至少有一路源有 live（活跃）状态的音频轨。
+   *
+   * @returns {boolean} true=至少一路有活跃音频
+   */
+  hasLiveAudio() {
+    return this.sources.some(source => this.hasLiveAudioTrack(source));
+  }
+
+  /**
+   * 检测某路源是否有 live（活跃）状态的音频轨。
+   * 只混入 live 状态的音频轨，避免 ended track 导致 WebAudio 创建失败或无效混音。
+   *
+   * @param {Object} source - 内部 source 对象
+   * @returns {boolean} true=至少有一条 live 音频轨
+   */
+  hasLiveAudioTrack(source) {
+    var stream = this.getStream(source);
+    return Boolean(stream && stream.getAudioTracks && stream.getAudioTracks().some(track => track.readyState === 'live'));
+  }
+
+  /**
+   * 检测某路源是否有视频轨（不判断 readyState）。
+   * readyState 在绘制阶段才判断，刚加入但尚未出帧的源仍保留在布局中。
+   *
+   * @param {Object} source - 内部 source 对象
+   * @returns {boolean} true=至少有一条视频轨
+   */
+  hasVideoTrack(source) {
+    var stream = this.getStream(source);
+    return Boolean(stream && stream.getVideoTracks && stream.getVideoTracks().length > 0);
+  }
+
+  /**
+   * 判断某路源当前是否可渲染。
+   * 条件：stream 存在且 active，并且有视频轨。
+   * 具体的视频帧是否能绘制由 video.readyState 在渲染阶段判断。
+   *
+   * @param {Object} source - 内部 source 对象
+   * @returns {boolean} true=可渲染
+   */
+  isRenderable(source) {
+    var stream = this.getStream(source);
+    return Boolean(stream && stream.active && this.hasVideoTrack(source));
+  }
+
+  /**
+   * 判断对象是否具备 MediaStream 的基本接口。
+   *
+   * 这个私有方法会被构建脚本收集到保留名单里，避免压缩产物把调用点和定义名拆开。
+   *
+   * @param {*} stream - 待校验对象
+   * @returns {boolean} true=满足 MediaStream 基本接口
+   */
+  _isMediaStreamLike(stream) {
+    return Boolean(stream && typeof stream.getTracks === 'function' && typeof stream.getAudioTracks === 'function' && typeof stream.getVideoTracks === 'function');
+  }
+
+  /**
+   * 创建一个内部 source 对象。
+   *
+   * @param {MediaStream|HTMLVideoElement|Object} input - 原始输入
+   * @param {Object} options - 配置 { slot, gain, sourceMirror, aiBackground }
+   * @returns {Object} source 对象
+   * @throws {TypeError} 无效的 MediaStream
+   */
+  _createSource(input, options) {
+    var video;
+    var stream;
+    var ownedVideo = false;
+    if (input instanceof HTMLMediaElement) {
+      // 外部传入的 video 元素，混流器不接管生命周期
+      video = input;
+      stream = input.srcObject;
+    } else {
+      // MediaStream 或 { mediaStream } 包装，内部创建隐藏 video
+      stream = input && (input.mediaStream || input);
+      if (!this._isMediaStreamLike(stream)) {
+        throw new TypeError('Invalid MediaStream.');
+      }
+      video = this._createVideoElement(stream);
+      ownedVideo = true;
+    }
+    var source = {
+      id: this._createSourceId(stream, video),
+      stream: stream,
+      video: video,
+      slot: typeof options.slot === 'number' ? options.slot : null,
+      gain: this._normalizeGain(options.gain, this._getDefaultGain()),
+      mirrorX: typeof options.sourceMirror === 'boolean' ? options.sourceMirror : null,
+      aiBackground: options.aiBackground || null,
+      audioSourceNode: null,
+      // WebAudio 源节点（由 AudioMixer 连接时赋值）
+      masterGainNode: null,
+      // 每路输入唯一 fan-out 节点，避免 MediaStreamSource 直接扇出
+      gainNode: null,
+      // 默认全量混音音量节点（由 AudioMixer 连接时赋值）
+      outputGains: new Set(),
+      // 该源所有下游 gain，用于后续音量同步和安全清理
+      audioStream: null,
+      // 当前已连接的音频流引用
+      audioTrackId: null,
+      // 当前已连接的音频轨 id，用于判断是否真正换轨
+      audioTrackSignature: null,
+      // 音频轨身份签名（track 对象 + id）
+      ownedVideo: ownedVideo
+    };
+
+    // 未指定 slot 时自动分配最小编号空闲 slot
+    if (source.slot === null) {
+      source.slot = this._getNextSlot();
+    }
+    if (this._logger) {
+      var streamId = stream && stream.id ? stream.id : 'unknown';
+      this._logger.debug(`Source created: id=${source.id} stream=${streamId} slot=${source.slot} ownedVideo=${ownedVideo}`);
+    }
+    return source;
+  }
+
+  /**
+   * 为 source 生成唯一 ID。
+   * 优先使用 stream.id，冲突时追加自增序号确保唯一。
+   *
+   * @param {MediaStream} stream - 关联的 MediaStream
+   * @param {HTMLVideoElement} video - 关联的 video 元素
+   * @returns {string} 唯一 ID
+   */
+  _createSourceId(stream, video) {
+    var baseId = stream && stream.id || video.id || `composer-source-${this._sourceSeq + 1}`;
+    var sourceId = baseId;
+    while (this.sources.some(source => source.id === sourceId)) {
+      this._sourceSeq += 1;
+      sourceId = `${baseId}-${this._sourceSeq}`;
+    }
+    return sourceId;
+  }
+
+  /**
+   * 获取当前最小编号的空闲 slot。
+   * 从 0 开始递增查找，跳过已被占用的 slot 编号。
+   *
+   * @returns {number} 可用的 slot 编号
+   */
+  _getNextSlot() {
+    var slot = 0;
+    var occupiedSlots = this.sources.reduce((slots, source) => {
+      if (typeof source.slot === 'number') {
+        slots[source.slot] = true;
+      }
+      return slots;
+    }, {});
+    while (occupiedSlots[slot]) {
+      slot += 1;
+    }
+    return slot;
+  }
+
+  /**
+   * 将 sources 数组中的 video 元素同步到 videos 数组。
+   * 外部代码通过 this.videos 即可遍历所有 video 元素。
+   */
+  _syncVideos() {
+    this.videos.splice(0, this.videos.length);
+    this.sources.forEach(source => {
+      this.videos.push(source.video);
+    });
+    if (this._logger) {
+      this._logger.debug(`Videos synced: sources=${this.sources.length} videos=${this.videos.length}`);
+    }
+  }
+}
+function cloneSnapshotValue(value) {
+  if (value instanceof Array) {
+    return value.map(cloneSnapshotValue);
+  }
+  if (value && typeof value === 'object') {
+    return Object.keys(value).reduce((snapshot, key) => {
+      snapshot[key] = cloneSnapshotValue(value[key]);
+      return snapshot;
+    }, {});
+  }
+  return value === undefined ? null : value;
+}
+module.exports = Sources;
+},{}],56:[function(require,module,exports){
+"use strict";
+
+/**
+ * Watermark — Composer 水印配置、加载和布局模块
+ *
+ * 负责将外部水印配置归一化为 renderer 可直接绘制的图片面，并按输出画布
+ * 或每路 source 的 draw 区域计算最终绘制矩形。
+ *
+ * @module Watermark
+ */
+
+var DEFAULT_TEXT_COLOR = '#fff';
+var DEFAULT_TEXT_BACKGROUND = 'rgba(0,0,0,0.45)';
+var DEFAULT_FONT_SIZE = 28;
+var DEFAULT_PADDING = 3;
+var DEFAULT_BACKGROUND_RADIUS = 3;
+var DEFAULT_MARGIN = 16;
+var MAX_WATERMARKS = 32;
+var MAX_TEXT_LENGTH = 256;
+var MAX_FONT_SIZE = 256;
+var MAX_SURFACE_DIMENSION = 4096;
+var MAX_SURFACE_PIXELS = 16777216;
+var IMAGE_LOAD_TIMEOUT_MS = 15000;
+class Watermark {
+  /**
+   * @param {Object} options
+   * @param {Object} options.logger - 日志记录器
+   */
+  constructor(options) {
+    options = options || {};
+    this._logger = options.logger;
+    this._onIssue = typeof options.onIssue === 'function' ? options.onIssue : null;
+    this._watermarks = [];
+    this._seq = 0;
+    this._generation = 0;
+    if (this._logger) {
+      this._logger.debug('Watermark constructed');
+    }
+  }
+
+  /**
+   * 内部异常报告方法。
+   *
+   * 上报水印管理过程中的各类问题，包括：
+   * - watermark-image-missing: 水印配置中缺少图片 URL
+   * - watermark-image-load: 水印图片加载失败
+   *
+   * 设计要点：
+   * - 水印加载失败不中断混流流程，混流器会跳过该水印继续处理
+   * - 因此默认 fallbackApplied=true, degraded=true
+   * - details 中包含 watermarkId、target、imageUrl 等信息，方便的排查具体是哪个水印出了什么问题
+   *
+   * @param {Object} [issue] - 问题描述对象
+   */
+  _reportIssue(issue) {
+    if (!this._onIssue) return;
+    try {
+      this._onIssue(Object.assign({
+        component: 'Watermark'
+      }, issue));
+    } catch (e) {
+      if (this._logger) this._logger.warn(`Watermark issue callback failed: ${e.message || String(e)}`);
+    }
+  }
+
+  /**
+   * 替换全部水印。图片 URL 会异步加载，加载失败只更新状态，不中断混流。
+   *
+   * @param {Array<Object>|Object|null} watermarks - 水印配置
+   * @returns {Promise<Array<Object>>} 当前水印快照
+   */
+  setWatermarks(watermarks) {
+    var list = this._normalizeWmList(watermarks).slice(0, MAX_WATERMARKS);
+    var generation = ++this._generation;
+    if (this._logger) {
+      this._logger.debug(`Setting watermarks: count=${list.length}`);
+    }
+    this._watermarks = list.map(watermark => this._normalizeWatermark(watermark));
+    var loads = this._watermarks.map(watermark => this._prepareWatermark(watermark, generation));
+    return Promise.all(loads).then(() => this.getWatermarks());
+  }
+
+  /**
+   * 按条件清除水印。不传 filter 时清空全部。
+   *
+   * @param {Object} [filter] - { id, target, slot, sourceId, streamId }
+   */
+  clearWatermarks(filter) {
+    if (this._logger) {
+      this._logger.debug(`Clearing watermarks: filter=${JSON.stringify(filter || null)}`);
+    }
+    if (!filter) {
+      this._generation += 1;
+      this._watermarks = [];
+      return;
+    }
+    this._watermarks = this._watermarks.filter(watermark => !this._matchesFilter(watermark, filter));
+  }
+
+  /**
+   * 返回当前水印只读快照。
+   *
+   * @returns {Array<Object>} 水印状态列表
+   */
+  getWatermarks() {
+    return this._watermarks.map(watermark => ({
+      id: watermark.id,
+      target: watermark.target,
+      type: watermark.type,
+      text: watermark.text,
+      slot: watermark.slot,
+      sourceId: watermark.sourceId,
+      streamId: watermark.streamId,
+      position: clonePosition(watermark.position),
+      opacity: watermark.opacity,
+      width: watermark.width,
+      height: watermark.height,
+      fontSize: watermark.fontSize,
+      color: watermark.color,
+      backgroundColor: watermark.backgroundColor,
+      padding: watermark.padding,
+      backgroundRadius: watermark.backgroundRadius,
+      margin: watermark.margin,
+      status: watermark.status,
+      reason: watermark.reason
+    }));
+  }
+
+  /**
+   * 根据当前渲染 payload 计算 output/source 两类水印绘制项。
+   *
+   * @param {Object} payload - { width, height, items }
+   * @returns {Object} { sourceWatermarks, outputWatermarks }
+   */
+  createRenderItems(payload) {
+    payload = payload || {};
+    var outputArea = {
+      x: 0,
+      y: 0,
+      width: payload.width || 1,
+      height: payload.height || 1
+    };
+    var sourceWatermarks = [];
+    var outputWatermarks = [];
+    this._watermarks.forEach(watermark => {
+      if (watermark.status !== 'ready' || !watermark.image) {
+        return;
+      }
+      if (watermark.target === 'source') {
+        (payload.items || []).forEach(item => {
+          if (!this._matchesSource(watermark, item)) {
+            return;
+          }
+          sourceWatermarks.push(this._createDrawItem(watermark, item.draw, item));
+        });
+        return;
+      }
+      outputWatermarks.push(this._createDrawItem(watermark, outputArea, null));
+    });
+    return {
+      sourceWatermarks: sourceWatermarks.filter(Boolean),
+      outputWatermarks: outputWatermarks.filter(Boolean)
+    };
+  }
+  _normalizeWmList(watermarks) {
+    if (!watermarks) {
+      return [];
+    }
+    if (watermarks instanceof Array) {
+      return watermarks;
+    }
+    return [watermarks];
+  }
+  _normalizeWatermark(input) {
+    input = input || {};
+    var type = input.type === 'image' || input.image ? 'image' : 'text';
+    var target = input.target === 'source' ? 'source' : 'output';
+    var id = typeof input.id === 'string' && input.id ? input.id : `watermark-${++this._seq}`;
+    var fontSize = normalizeBoundedInteger(input.fontSize, 1, MAX_FONT_SIZE, DEFAULT_FONT_SIZE);
+    var backgroundRadiusInput = input.backgroundRadius !== undefined ? input.backgroundRadius : input.borderRadius;
+    return {
+      id: id,
+      target: target,
+      type: type,
+      text: typeof input.text === 'string' ? input.text.slice(0, MAX_TEXT_LENGTH) : '',
+      imageInput: input.image || null,
+      image: null,
+      slot: normalizeSlot(input.slot),
+      sourceId: typeof input.sourceId === 'string' ? input.sourceId : null,
+      streamId: typeof input.streamId === 'string' ? input.streamId : null,
+      position: normalizePosition(input.position),
+      width: normalizeBoundedInteger(input.width, 1, MAX_SURFACE_DIMENSION, null),
+      height: normalizeBoundedInteger(input.height, 1, MAX_SURFACE_DIMENSION, null),
+      font: typeof input.font === 'string' && input.font ? input.font.slice(0, MAX_TEXT_LENGTH) : null,
+      fontSize: fontSize,
+      color: typeof input.color === 'string' ? input.color : DEFAULT_TEXT_COLOR,
+      backgroundColor: typeof input.backgroundColor === 'string' ? input.backgroundColor : DEFAULT_TEXT_BACKGROUND,
+      opacity: normalizeOpacity(input.opacity),
+      padding: normalizeNonNegativeInteger(input.padding, DEFAULT_PADDING),
+      backgroundRadius: normalizeNonNegativeInteger(backgroundRadiusInput, DEFAULT_BACKGROUND_RADIUS),
+      margin: normalizeNonNegativeInteger(input.margin, DEFAULT_MARGIN),
+      status: 'pending',
+      reason: ''
+    };
+  }
+  _prepareWatermark(watermark, generation) {
+    if (this._logger) {
+      this._logger.debug(`Preparing watermark: id=${watermark.id} type=${watermark.type} target=${watermark.target}`);
+    }
+    if (watermark.type === 'image') {
+      return this._prepareImageWm(watermark, generation);
+    }
+    watermark.image = this._createTextSurface(watermark);
+    watermark.status = watermark.image ? 'ready' : 'error';
+    watermark.reason = watermark.image ? '' : 'Canvas is unavailable';
+    return Promise.resolve(watermark);
+  }
+  _prepareImageWm(watermark, generation) {
+    var image = watermark.imageInput;
+    if (!image) {
+      watermark.status = 'error';
+      watermark.reason = 'Missing image';
+      this._reportIssue({
+        stage: 'watermark-image-missing',
+        message: watermark.reason,
+        details: {
+          watermarkId: watermark.id,
+          target: watermark.target
+        }
+      });
+      return Promise.resolve(watermark);
+    }
+    if (typeof image === 'string') {
+      if (this._logger) {
+        this._logger.debug(`Loading watermark image: id=${watermark.id} url=${image}`);
+      }
+      return this._loadImage(image).then(loadedImage => {
+        if (generation !== this._generation) {
+          return watermark;
+        }
+        watermark.image = loadedImage;
+        watermark.status = 'ready';
+        watermark.reason = '';
+        return watermark;
+      }).catch(error => {
+        if (generation !== this._generation) {
+          return watermark;
+        }
+        watermark.status = 'error';
+        watermark.reason = error.message || String(error);
+        if (this._logger) {
+          this._logger.warn(`Watermark image failed to load: id=${watermark.id} target=${watermark.target} reason=${watermark.reason} url=${image}`);
+        }
+        this._reportIssue({
+          stage: 'watermark-image-load',
+          message: watermark.reason,
+          details: {
+            watermarkId: watermark.id,
+            target: watermark.target,
+            imageUrl: image
+          }
+        });
+        return watermark;
+      });
+    }
+    var imageWidth = Number(image.width || image.videoWidth || image.naturalWidth);
+    var imageHeight = Number(image.height || image.videoHeight || image.naturalHeight);
+    if (!Number.isFinite(imageWidth) || !Number.isFinite(imageHeight) || imageWidth <= 0 || imageHeight <= 0 || imageWidth > MAX_SURFACE_DIMENSION || imageHeight > MAX_SURFACE_DIMENSION || imageWidth * imageHeight > MAX_SURFACE_PIXELS) {
+      watermark.status = 'error';
+      watermark.reason = 'Invalid or oversized image surface';
+      return Promise.resolve(watermark);
+    }
+    watermark.image = image;
+    watermark.status = 'ready';
+    watermark.reason = '';
+    if (this._logger) {
+      this._logger.debug(`Watermark image prepared from element: id=${watermark.id}`);
+    }
+    return Promise.resolve(watermark);
+  }
+  _loadImage(url) {
+    return new Promise((resolve, reject) => {
+      if (typeof Image === 'undefined') {
+        reject(new Error('Image constructor is unavailable'));
+        return;
+      }
+      var image = new Image();
+      var settled = false;
+      var timeoutId = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        image.onload = null;
+        image.onerror = null;
+        try {
+          image.src = '';
+        } catch (error) {}
+        reject(new Error(`Timed out loading image: ${url}`));
+      }, IMAGE_LOAD_TIMEOUT_MS);
+      var settle = callback => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeoutId);
+        image.onload = null;
+        image.onerror = null;
+        callback();
+      };
+      image.crossOrigin = 'anonymous';
+      image.onload = () => settle(() => {
+        var width = Number(image.naturalWidth || image.width);
+        var height = Number(image.naturalHeight || image.height);
+        if (!width || !height || width > MAX_SURFACE_DIMENSION || height > MAX_SURFACE_DIMENSION || width * height > MAX_SURFACE_PIXELS) {
+          reject(new Error(`Invalid or oversized image: ${url}`));
+          return;
+        }
+        resolve(image);
+      });
+      image.onerror = () => settle(() => reject(new Error(`Failed to load image: ${url}`)));
+      image.src = url;
+    });
+  }
+  _createTextSurface(watermark) {
+    if (typeof document === 'undefined' || !document.createElement) {
+      return null;
+    }
+    var canvas = document.createElement('canvas');
+    var context = canvas.getContext && canvas.getContext('2d');
+    if (!context) {
+      return null;
+    }
+    var text = watermark.text || '';
+    var font = watermark.font || `bold ${watermark.fontSize}px sans-serif`;
+    context.font = font;
+    var metrics = context.measureText ? context.measureText(text) : null;
+    var measured = metrics ? metrics.width : text.length * watermark.fontSize * 0.6;
+    var ascent = metrics && Number.isFinite(metrics.actualBoundingBoxAscent) ? metrics.actualBoundingBoxAscent : watermark.fontSize * 0.8;
+    var descent = metrics && Number.isFinite(metrics.actualBoundingBoxDescent) ? metrics.actualBoundingBoxDescent : watermark.fontSize * 0.25;
+    var width = Math.min(MAX_SURFACE_DIMENSION, Math.max(1, Math.ceil(measured + watermark.padding * 2)));
+    var height = Math.min(MAX_SURFACE_DIMENSION, Math.max(1, Math.ceil(ascent + descent + watermark.padding * 2)));
+    if (width * height > MAX_SURFACE_PIXELS) {
+      var scale = Math.sqrt(MAX_SURFACE_PIXELS / (width * height));
+      width = Math.max(1, Math.floor(width * scale));
+      height = Math.max(1, Math.floor(height * scale));
+    }
+    canvas.width = width;
+    canvas.height = height;
+    context.font = font;
+    context.textBaseline = 'alphabetic';
+    context.textAlign = 'left';
+    if (watermark.backgroundColor) {
+      context.fillStyle = watermark.backgroundColor;
+      fillRoundedRect(context, 0, 0, width, height, watermark.backgroundRadius);
+    }
+    context.fillStyle = watermark.color;
+    if (context.fillText) {
+      context.fillText(text, watermark.padding, watermark.padding + ascent);
+    }
+    return canvas;
+  }
+  _createDrawItem(watermark, area, sourceItem) {
+    if (!area || !watermark.image) {
+      return null;
+    }
+    var imageWidth = watermark.image.width || watermark.image.videoWidth || 1;
+    var imageHeight = watermark.image.height || watermark.image.videoHeight || 1;
+    var size = this._resolveSize(watermark, imageWidth, imageHeight);
+    var draw = this._resolveDrawRect(watermark, area, size.width, size.height);
+    if (!draw || draw.width <= 0 || draw.height <= 0) {
+      return null;
+    }
+    return {
+      id: watermark.id,
+      target: watermark.target,
+      type: watermark.type,
+      image: watermark.image,
+      opacity: watermark.opacity,
+      draw: draw,
+      sourceId: sourceItem ? sourceItem.id : null,
+      slot: sourceItem ? sourceItem.slot : null,
+      streamId: sourceItem ? sourceItem.streamId : null
+    };
+  }
+  _resolveSize(watermark, imageWidth, imageHeight) {
+    var width = watermark.width;
+    var height = watermark.height;
+    if (width && !height) {
+      height = width * imageHeight / imageWidth;
+    } else if (!width && height) {
+      width = height * imageWidth / imageHeight;
+    } else if (!width && !height) {
+      width = imageWidth;
+      height = imageHeight;
+    }
+    return {
+      width: Math.max(1, width),
+      height: Math.max(1, height)
+    };
+  }
+  _resolveDrawRect(watermark, area, width, height) {
+    var position = watermark.position;
+    var x;
+    var y;
+    if (position && typeof position === 'object') {
+      x = area.x + position.x;
+      y = area.y + position.y;
+    } else {
+      var margin = watermark.margin;
+      switch (position) {
+        case 'top-left':
+          x = area.x + margin;
+          y = area.y + margin;
+          break;
+        case 'top-center':
+          x = area.x + (area.width - width) / 2;
+          y = area.y + margin;
+          break;
+        case 'top-right':
+          x = area.x + area.width - width - margin;
+          y = area.y + margin;
+          break;
+        case 'bottom-left':
+          x = area.x + margin;
+          y = area.y + area.height - height - margin;
+          break;
+        case 'bottom-center':
+          x = area.x + (area.width - width) / 2;
+          y = area.y + area.height - height - margin;
+          break;
+        case 'center':
+          x = area.x + (area.width - width) / 2;
+          y = area.y + (area.height - height) / 2;
+          break;
+        case 'bottom-right':
+        default:
+          x = area.x + area.width - width - margin;
+          y = area.y + area.height - height - margin;
+          break;
+      }
+    }
+    return {
+      x: Math.round(x),
+      y: Math.round(y),
+      width: Math.round(width),
+      height: Math.round(height)
+    };
+  }
+  _matchesSource(watermark, item) {
+    if (!item) {
+      return false;
+    }
+    if (watermark.sourceId) {
+      return watermark.sourceId === item.id;
+    }
+    if (watermark.streamId) {
+      return watermark.streamId === item.streamId;
+    }
+    if (typeof watermark.slot === 'number') {
+      return watermark.slot === item.slot;
+    }
+    return true;
+  }
+  _matchesFilter(watermark, filter) {
+    if (filter.id !== undefined && watermark.id !== filter.id) {
+      return false;
+    }
+    if (filter.target !== undefined && watermark.target !== filter.target) {
+      return false;
+    }
+    if (filter.slot !== undefined && watermark.slot !== filter.slot) {
+      return false;
+    }
+    if (filter.sourceId !== undefined && watermark.sourceId !== filter.sourceId) {
+      return false;
+    }
+    if (filter.streamId !== undefined && watermark.streamId !== filter.streamId) {
+      return false;
+    }
+    return true;
+  }
+}
+function normalizeBoundedInteger(value, min, max, fallback) {
+  var numberValue = Number(value);
+  if (Number.isFinite(numberValue) && numberValue >= min) {
+    return Math.min(max, Math.floor(numberValue));
+  }
+  return fallback;
+}
+function normalizeNonNegativeInteger(value, fallback) {
+  var numberValue = Number(value);
+  if (Number.isFinite(numberValue) && numberValue >= 0) {
+    return Math.floor(numberValue);
+  }
+  return fallback;
+}
+function normalizeOpacity(value) {
+  var numberValue = Number(value);
+  if (Number.isFinite(numberValue)) {
+    return Math.min(1, Math.max(0, numberValue));
+  }
+  return 1;
+}
+function normalizeSlot(value) {
+  var numberValue = Number(value);
+  if (Number.isFinite(numberValue) && numberValue >= 0) {
+    return Math.floor(numberValue);
+  }
+  return null;
+}
+function normalizePosition(value) {
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (value && typeof value === 'object') {
+    var x = Number(value.x);
+    var y = Number(value.y);
+    if (Number.isFinite(x) && Number.isFinite(y)) {
+      return {
+        x,
+        y
+      };
+    }
+  }
+  return 'bottom-right';
+}
+function clonePosition(position) {
+  if (position && typeof position === 'object') {
+    return {
+      x: position.x,
+      y: position.y
+    };
+  }
+  return position;
+}
+function fillRoundedRect(context, x, y, width, height, radius) {
+  var safeRadius = Math.max(0, Math.min(radius || 0, width / 2, height / 2));
+  if (!safeRadius || typeof context.beginPath !== 'function') {
+    context.fillRect(x, y, width, height);
+    return;
+  }
+  if (typeof context.roundRect === 'function') {
+    context.beginPath();
+    context.roundRect(x, y, width, height, safeRadius);
+    context.fill();
+    return;
+  }
+  context.beginPath();
+  context.moveTo(x + safeRadius, y);
+  context.lineTo(x + width - safeRadius, y);
+  context.quadraticCurveTo(x + width, y, x + width, y + safeRadius);
+  context.lineTo(x + width, y + height - safeRadius);
+  context.quadraticCurveTo(x + width, y + height, x + width - safeRadius, y + height);
+  context.lineTo(x + safeRadius, y + height);
+  context.quadraticCurveTo(x, y + height, x, y + height - safeRadius);
+  context.lineTo(x, y + safeRadius);
+  context.quadraticCurveTo(x, y, x + safeRadius, y);
+  context.closePath();
+  context.fill();
+}
+module.exports = Watermark;
+},{}],57:[function(require,module,exports){
 "use strict";
 
 function getErrorMessage(error) {
@@ -29498,7 +29498,7 @@ module.exports = class Message extends EventEmitter {
     });
   }
 };
-},{"./Constants":30,"./Exceptions":35,"./Logger":38,"./RequestSender":72,"./SIPMessage":73,"./URI":79,"./Utils":80,"events":84}],59:[function(require,module,exports){
+},{"./Constants":30,"./Exceptions":35,"./Logger":38,"./RequestSender":72,"./SIPMessage":73,"./URI":79,"./Utils":80,"events":87}],59:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -29567,6 +29567,7 @@ module.exports = class MetaHumanClient extends EventEmitter {
       iceServers: options.iceServers || [],
       avatar: options.avatar || 'default',
       flag: normalizeFlag(options.flag),
+      spk: options.spk,
       audioConstraints: createMetaHumanAudioConstraints(this._audioConstraintOverrides, aiNoiseSuppression),
       micDeviceId: options.micDeviceId || null,
       aiNoiseSuppression: aiNoiseSuppression
@@ -29670,6 +29671,7 @@ module.exports = class MetaHumanClient extends EventEmitter {
           sdp: offer.sdp,
           type: offer.type,
           flag: this._config.flag,
+          spk: this._config.spk,
           avatar: this._config.avatar
         }),
         headers: {
@@ -29951,7 +29953,7 @@ function stopStreamTracks(stream) {
     } catch (error) {}
   });
 }
-},{"./AiNoiseSuppression/AiNSEngine":2,"./Exceptions":35,"./Logger":38,"./MediaEffectsIssue":57,"events":84}],60:[function(require,module,exports){
+},{"./AiNoiseSuppression/AiNSEngine":2,"./Exceptions":35,"./Logger":38,"./MediaEffectsIssue":57,"events":87}],60:[function(require,module,exports){
 "use strict";
 
 var URI = require('./URI');
@@ -30246,7 +30248,7 @@ module.exports = class Options extends EventEmitter {
     });
   }
 };
-},{"./Constants":30,"./Exceptions":35,"./Logger":38,"./RequestSender":72,"./SIPMessage":73,"./Utils":80,"events":84}],62:[function(require,module,exports){
+},{"./Constants":30,"./Exceptions":35,"./Logger":38,"./RequestSender":72,"./SIPMessage":73,"./Utils":80,"events":87}],62:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -37171,7 +37173,7 @@ module.exports = class RTCSession extends EventEmitter {
     }
   }
 };
-},{"./BFCP/index":11,"./Constants":30,"./Dialog":32,"./Exceptions":35,"./Logger":38,"./MediaEffectsIssue":57,"./RTCSession/BFCPChannel":64,"./RTCSession/DTMF":65,"./RTCSession/Info":66,"./RTCSession/MediaPipeline":67,"./RTCSession/ReferNotifier":68,"./RTCSession/ReferSubscriber":69,"./RTCStatsMonitor":70,"./RequestSender":72,"./SIPMessage":73,"./Timers":75,"./Transactions":76,"./URI":79,"./Utils":80,"events":84,"sdp-transform":93}],64:[function(require,module,exports){
+},{"./BFCP/index":11,"./Constants":30,"./Dialog":32,"./Exceptions":35,"./Logger":38,"./MediaEffectsIssue":57,"./RTCSession/BFCPChannel":64,"./RTCSession/DTMF":65,"./RTCSession/Info":66,"./RTCSession/MediaPipeline":67,"./RTCSession/ReferNotifier":68,"./RTCSession/ReferSubscriber":69,"./RTCStatsMonitor":70,"./RequestSender":72,"./SIPMessage":73,"./Timers":75,"./Transactions":76,"./URI":79,"./Utils":80,"events":87,"sdp-transform":93}],64:[function(require,module,exports){
 (function (Buffer){(function (){
 "use strict";
 
@@ -38057,7 +38059,7 @@ module.exports = class BFCPChannel {
 };
 }).call(this)}).call(this,require("buffer").Buffer)
 
-},{"../BFCP/index":11,"../Constants":30,"../Logger":38,"../Utils":80,"buffer":85}],65:[function(require,module,exports){
+},{"../BFCP/index":11,"../Constants":30,"../Logger":38,"../Utils":80,"buffer":84}],65:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -38196,7 +38198,7 @@ module.exports = class DTMF extends EventEmitter {
  * Expose C object.
  */
 module.exports.C = C;
-},{"../Constants":30,"../Exceptions":35,"../Logger":38,"../Utils":80,"events":84}],66:[function(require,module,exports){
+},{"../Constants":30,"../Exceptions":35,"../Logger":38,"../Utils":80,"events":87}],66:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -38277,7 +38279,7 @@ module.exports = class Info extends EventEmitter {
     });
   }
 };
-},{"../Constants":30,"../Exceptions":35,"../Utils":80,"events":84}],67:[function(require,module,exports){
+},{"../Constants":30,"../Exceptions":35,"../Utils":80,"events":87}],67:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
@@ -39308,7 +39310,7 @@ module.exports = class ReferSubscriber extends EventEmitter {
     });
   }
 };
-},{"../Constants":30,"../Grammar":36,"../Logger":38,"../Utils":80,"events":84}],70:[function(require,module,exports){
+},{"../Constants":30,"../Grammar":36,"../Logger":38,"../Utils":80,"events":87}],70:[function(require,module,exports){
 "use strict";
 
 /* eslint-disable max-len */
@@ -41155,7 +41157,7 @@ function featureSnapshot(features) {
   });
   return result;
 }
-},{"./Logger":38,"events":84}],71:[function(require,module,exports){
+},{"./Logger":38,"events":87}],71:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -42843,7 +42845,7 @@ module.exports = {
   InviteServerTransaction,
   checkTransaction
 };
-},{"./Constants":30,"./Logger":38,"./SIPMessage":73,"./Timers":75,"events":84}],77:[function(require,module,exports){
+},{"./Constants":30,"./Logger":38,"./SIPMessage":73,"./Timers":75,"events":87}],77:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -44275,7 +44277,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":29,"./Constants":30,"./CryptoKey":31,"./Exceptions":35,"./Logger":38,"./Message":58,"./Options":61,"./Parser":62,"./RTCSession":63,"./Registrator":71,"./SIPMessage":73,"./Transactions":76,"./Transport":77,"./URI":79,"./Utils":80,"./sanityCheck":82,"events":84,"jsencrypt":89}],79:[function(require,module,exports){
+},{"./Config":29,"./Constants":30,"./CryptoKey":31,"./Exceptions":35,"./Logger":38,"./Message":58,"./Options":61,"./Parser":62,"./RTCSession":63,"./Registrator":71,"./SIPMessage":73,"./Transactions":76,"./Transport":77,"./URI":79,"./Utils":80,"./sanityCheck":82,"events":87,"jsencrypt":89}],79:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('./Constants');
@@ -46700,10 +46702,17 @@ function rfc3261_8_2_2_1() {
   }
 }
 function rfc3261_16_3_4() {
-  if (!message.to_tag) {
-    if (message.call_id.substr(0, 5) === ua.configuration.crtc_id) {
-      reply(482);
-      return false;
+  if (message.to_tag) {
+    return;
+  }
+  var transactions = message.method === CRTC_C.INVITE ? ua._transactions.ict : ua._transactions.nict;
+  for (var transaction in transactions) {
+    if (Object.prototype.hasOwnProperty.call(transactions, transaction)) {
+      var tr = transactions[transaction];
+      if (tr.request.call_id === message.call_id && tr.request.from_tag === message.from_tag && tr.request.cseq === message.cseq) {
+        reply(482);
+        return false;
+      }
     }
   }
 }
@@ -46970,531 +46979,6 @@ function fromByteArray (uint8) {
 }
 
 },{}],84:[function(require,module,exports){
-// Copyright Joyent, Inc. and other Node contributors.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-var objectCreate = Object.create || objectCreatePolyfill
-var objectKeys = Object.keys || objectKeysPolyfill
-var bind = Function.prototype.bind || functionBindPolyfill
-
-function EventEmitter() {
-  if (!this._events || !Object.prototype.hasOwnProperty.call(this, '_events')) {
-    this._events = objectCreate(null);
-    this._eventsCount = 0;
-  }
-
-  this._maxListeners = this._maxListeners || undefined;
-}
-module.exports = EventEmitter;
-
-// Backwards-compat with node 0.10.x
-EventEmitter.EventEmitter = EventEmitter;
-
-EventEmitter.prototype._events = undefined;
-EventEmitter.prototype._maxListeners = undefined;
-
-// By default EventEmitters will print a warning if more than 10 listeners are
-// added to it. This is a useful default which helps finding memory leaks.
-var defaultMaxListeners = 10;
-
-var hasDefineProperty;
-try {
-  var o = {};
-  if (Object.defineProperty) Object.defineProperty(o, 'x', { value: 0 });
-  hasDefineProperty = o.x === 0;
-} catch (err) { hasDefineProperty = false }
-if (hasDefineProperty) {
-  Object.defineProperty(EventEmitter, 'defaultMaxListeners', {
-    enumerable: true,
-    get: function() {
-      return defaultMaxListeners;
-    },
-    set: function(arg) {
-      // check whether the input is a positive number (whose value is zero or
-      // greater and not a NaN).
-      if (typeof arg !== 'number' || arg < 0 || arg !== arg)
-        throw new TypeError('"defaultMaxListeners" must be a positive number');
-      defaultMaxListeners = arg;
-    }
-  });
-} else {
-  EventEmitter.defaultMaxListeners = defaultMaxListeners;
-}
-
-// Obviously not all Emitters should be limited to 10. This function allows
-// that to be increased. Set to zero for unlimited.
-EventEmitter.prototype.setMaxListeners = function setMaxListeners(n) {
-  if (typeof n !== 'number' || n < 0 || isNaN(n))
-    throw new TypeError('"n" argument must be a positive number');
-  this._maxListeners = n;
-  return this;
-};
-
-function $getMaxListeners(that) {
-  if (that._maxListeners === undefined)
-    return EventEmitter.defaultMaxListeners;
-  return that._maxListeners;
-}
-
-EventEmitter.prototype.getMaxListeners = function getMaxListeners() {
-  return $getMaxListeners(this);
-};
-
-// These standalone emit* functions are used to optimize calling of event
-// handlers for fast cases because emit() itself often has a variable number of
-// arguments and can be deoptimized because of that. These functions always have
-// the same number of arguments and thus do not get deoptimized, so the code
-// inside them can execute faster.
-function emitNone(handler, isFn, self) {
-  if (isFn)
-    handler.call(self);
-  else {
-    var len = handler.length;
-    var listeners = arrayClone(handler, len);
-    for (var i = 0; i < len; ++i)
-      listeners[i].call(self);
-  }
-}
-function emitOne(handler, isFn, self, arg1) {
-  if (isFn)
-    handler.call(self, arg1);
-  else {
-    var len = handler.length;
-    var listeners = arrayClone(handler, len);
-    for (var i = 0; i < len; ++i)
-      listeners[i].call(self, arg1);
-  }
-}
-function emitTwo(handler, isFn, self, arg1, arg2) {
-  if (isFn)
-    handler.call(self, arg1, arg2);
-  else {
-    var len = handler.length;
-    var listeners = arrayClone(handler, len);
-    for (var i = 0; i < len; ++i)
-      listeners[i].call(self, arg1, arg2);
-  }
-}
-function emitThree(handler, isFn, self, arg1, arg2, arg3) {
-  if (isFn)
-    handler.call(self, arg1, arg2, arg3);
-  else {
-    var len = handler.length;
-    var listeners = arrayClone(handler, len);
-    for (var i = 0; i < len; ++i)
-      listeners[i].call(self, arg1, arg2, arg3);
-  }
-}
-
-function emitMany(handler, isFn, self, args) {
-  if (isFn)
-    handler.apply(self, args);
-  else {
-    var len = handler.length;
-    var listeners = arrayClone(handler, len);
-    for (var i = 0; i < len; ++i)
-      listeners[i].apply(self, args);
-  }
-}
-
-EventEmitter.prototype.emit = function emit(type) {
-  var er, handler, len, args, i, events;
-  var doError = (type === 'error');
-
-  events = this._events;
-  if (events)
-    doError = (doError && events.error == null);
-  else if (!doError)
-    return false;
-
-  // If there is no 'error' event listener then throw.
-  if (doError) {
-    if (arguments.length > 1)
-      er = arguments[1];
-    if (er instanceof Error) {
-      throw er; // Unhandled 'error' event
-    } else {
-      // At least give some kind of context to the user
-      var err = new Error('Unhandled "error" event. (' + er + ')');
-      err.context = er;
-      throw err;
-    }
-    return false;
-  }
-
-  handler = events[type];
-
-  if (!handler)
-    return false;
-
-  var isFn = typeof handler === 'function';
-  len = arguments.length;
-  switch (len) {
-      // fast cases
-    case 1:
-      emitNone(handler, isFn, this);
-      break;
-    case 2:
-      emitOne(handler, isFn, this, arguments[1]);
-      break;
-    case 3:
-      emitTwo(handler, isFn, this, arguments[1], arguments[2]);
-      break;
-    case 4:
-      emitThree(handler, isFn, this, arguments[1], arguments[2], arguments[3]);
-      break;
-      // slower
-    default:
-      args = new Array(len - 1);
-      for (i = 1; i < len; i++)
-        args[i - 1] = arguments[i];
-      emitMany(handler, isFn, this, args);
-  }
-
-  return true;
-};
-
-function _addListener(target, type, listener, prepend) {
-  var m;
-  var events;
-  var existing;
-
-  if (typeof listener !== 'function')
-    throw new TypeError('"listener" argument must be a function');
-
-  events = target._events;
-  if (!events) {
-    events = target._events = objectCreate(null);
-    target._eventsCount = 0;
-  } else {
-    // To avoid recursion in the case that type === "newListener"! Before
-    // adding it to the listeners, first emit "newListener".
-    if (events.newListener) {
-      target.emit('newListener', type,
-          listener.listener ? listener.listener : listener);
-
-      // Re-assign `events` because a newListener handler could have caused the
-      // this._events to be assigned to a new object
-      events = target._events;
-    }
-    existing = events[type];
-  }
-
-  if (!existing) {
-    // Optimize the case of one listener. Don't need the extra array object.
-    existing = events[type] = listener;
-    ++target._eventsCount;
-  } else {
-    if (typeof existing === 'function') {
-      // Adding the second element, need to change to array.
-      existing = events[type] =
-          prepend ? [listener, existing] : [existing, listener];
-    } else {
-      // If we've already got an array, just append.
-      if (prepend) {
-        existing.unshift(listener);
-      } else {
-        existing.push(listener);
-      }
-    }
-
-    // Check for listener leak
-    if (!existing.warned) {
-      m = $getMaxListeners(target);
-      if (m && m > 0 && existing.length > m) {
-        existing.warned = true;
-        var w = new Error('Possible EventEmitter memory leak detected. ' +
-            existing.length + ' "' + String(type) + '" listeners ' +
-            'added. Use emitter.setMaxListeners() to ' +
-            'increase limit.');
-        w.name = 'MaxListenersExceededWarning';
-        w.emitter = target;
-        w.type = type;
-        w.count = existing.length;
-        if (typeof console === 'object' && console.warn) {
-          console.warn('%s: %s', w.name, w.message);
-        }
-      }
-    }
-  }
-
-  return target;
-}
-
-EventEmitter.prototype.addListener = function addListener(type, listener) {
-  return _addListener(this, type, listener, false);
-};
-
-EventEmitter.prototype.on = EventEmitter.prototype.addListener;
-
-EventEmitter.prototype.prependListener =
-    function prependListener(type, listener) {
-      return _addListener(this, type, listener, true);
-    };
-
-function onceWrapper() {
-  if (!this.fired) {
-    this.target.removeListener(this.type, this.wrapFn);
-    this.fired = true;
-    switch (arguments.length) {
-      case 0:
-        return this.listener.call(this.target);
-      case 1:
-        return this.listener.call(this.target, arguments[0]);
-      case 2:
-        return this.listener.call(this.target, arguments[0], arguments[1]);
-      case 3:
-        return this.listener.call(this.target, arguments[0], arguments[1],
-            arguments[2]);
-      default:
-        var args = new Array(arguments.length);
-        for (var i = 0; i < args.length; ++i)
-          args[i] = arguments[i];
-        this.listener.apply(this.target, args);
-    }
-  }
-}
-
-function _onceWrap(target, type, listener) {
-  var state = { fired: false, wrapFn: undefined, target: target, type: type, listener: listener };
-  var wrapped = bind.call(onceWrapper, state);
-  wrapped.listener = listener;
-  state.wrapFn = wrapped;
-  return wrapped;
-}
-
-EventEmitter.prototype.once = function once(type, listener) {
-  if (typeof listener !== 'function')
-    throw new TypeError('"listener" argument must be a function');
-  this.on(type, _onceWrap(this, type, listener));
-  return this;
-};
-
-EventEmitter.prototype.prependOnceListener =
-    function prependOnceListener(type, listener) {
-      if (typeof listener !== 'function')
-        throw new TypeError('"listener" argument must be a function');
-      this.prependListener(type, _onceWrap(this, type, listener));
-      return this;
-    };
-
-// Emits a 'removeListener' event if and only if the listener was removed.
-EventEmitter.prototype.removeListener =
-    function removeListener(type, listener) {
-      var list, events, position, i, originalListener;
-
-      if (typeof listener !== 'function')
-        throw new TypeError('"listener" argument must be a function');
-
-      events = this._events;
-      if (!events)
-        return this;
-
-      list = events[type];
-      if (!list)
-        return this;
-
-      if (list === listener || list.listener === listener) {
-        if (--this._eventsCount === 0)
-          this._events = objectCreate(null);
-        else {
-          delete events[type];
-          if (events.removeListener)
-            this.emit('removeListener', type, list.listener || listener);
-        }
-      } else if (typeof list !== 'function') {
-        position = -1;
-
-        for (i = list.length - 1; i >= 0; i--) {
-          if (list[i] === listener || list[i].listener === listener) {
-            originalListener = list[i].listener;
-            position = i;
-            break;
-          }
-        }
-
-        if (position < 0)
-          return this;
-
-        if (position === 0)
-          list.shift();
-        else
-          spliceOne(list, position);
-
-        if (list.length === 1)
-          events[type] = list[0];
-
-        if (events.removeListener)
-          this.emit('removeListener', type, originalListener || listener);
-      }
-
-      return this;
-    };
-
-EventEmitter.prototype.removeAllListeners =
-    function removeAllListeners(type) {
-      var listeners, events, i;
-
-      events = this._events;
-      if (!events)
-        return this;
-
-      // not listening for removeListener, no need to emit
-      if (!events.removeListener) {
-        if (arguments.length === 0) {
-          this._events = objectCreate(null);
-          this._eventsCount = 0;
-        } else if (events[type]) {
-          if (--this._eventsCount === 0)
-            this._events = objectCreate(null);
-          else
-            delete events[type];
-        }
-        return this;
-      }
-
-      // emit removeListener for all listeners on all events
-      if (arguments.length === 0) {
-        var keys = objectKeys(events);
-        var key;
-        for (i = 0; i < keys.length; ++i) {
-          key = keys[i];
-          if (key === 'removeListener') continue;
-          this.removeAllListeners(key);
-        }
-        this.removeAllListeners('removeListener');
-        this._events = objectCreate(null);
-        this._eventsCount = 0;
-        return this;
-      }
-
-      listeners = events[type];
-
-      if (typeof listeners === 'function') {
-        this.removeListener(type, listeners);
-      } else if (listeners) {
-        // LIFO order
-        for (i = listeners.length - 1; i >= 0; i--) {
-          this.removeListener(type, listeners[i]);
-        }
-      }
-
-      return this;
-    };
-
-function _listeners(target, type, unwrap) {
-  var events = target._events;
-
-  if (!events)
-    return [];
-
-  var evlistener = events[type];
-  if (!evlistener)
-    return [];
-
-  if (typeof evlistener === 'function')
-    return unwrap ? [evlistener.listener || evlistener] : [evlistener];
-
-  return unwrap ? unwrapListeners(evlistener) : arrayClone(evlistener, evlistener.length);
-}
-
-EventEmitter.prototype.listeners = function listeners(type) {
-  return _listeners(this, type, true);
-};
-
-EventEmitter.prototype.rawListeners = function rawListeners(type) {
-  return _listeners(this, type, false);
-};
-
-EventEmitter.listenerCount = function(emitter, type) {
-  if (typeof emitter.listenerCount === 'function') {
-    return emitter.listenerCount(type);
-  } else {
-    return listenerCount.call(emitter, type);
-  }
-};
-
-EventEmitter.prototype.listenerCount = listenerCount;
-function listenerCount(type) {
-  var events = this._events;
-
-  if (events) {
-    var evlistener = events[type];
-
-    if (typeof evlistener === 'function') {
-      return 1;
-    } else if (evlistener) {
-      return evlistener.length;
-    }
-  }
-
-  return 0;
-}
-
-EventEmitter.prototype.eventNames = function eventNames() {
-  return this._eventsCount > 0 ? Reflect.ownKeys(this._events) : [];
-};
-
-// About 1.5x faster than the two-arg version of Array#splice().
-function spliceOne(list, index) {
-  for (var i = index, k = i + 1, n = list.length; k < n; i += 1, k += 1)
-    list[i] = list[k];
-  list.pop();
-}
-
-function arrayClone(arr, n) {
-  var copy = new Array(n);
-  for (var i = 0; i < n; ++i)
-    copy[i] = arr[i];
-  return copy;
-}
-
-function unwrapListeners(arr) {
-  var ret = new Array(arr.length);
-  for (var i = 0; i < ret.length; ++i) {
-    ret[i] = arr[i].listener || arr[i];
-  }
-  return ret;
-}
-
-function objectCreatePolyfill(proto) {
-  var F = function() {};
-  F.prototype = proto;
-  return new F;
-}
-function objectKeysPolyfill(obj) {
-  var keys = [];
-  for (var k in obj) if (Object.prototype.hasOwnProperty.call(obj, k)) {
-    keys.push(k);
-  }
-  return k;
-}
-function functionBindPolyfill(context) {
-  var fn = this;
-  return function () {
-    return fn.apply(context, arguments);
-  };
-}
-
-},{}],85:[function(require,module,exports){
 (function (Buffer){(function (){
 /*!
  * The buffer module from node.js, for the browser.
@@ -49276,7 +48760,7 @@ function numberIsNaN (obj) {
 
 }).call(this)}).call(this,require("buffer").Buffer)
 
-},{"base64-js":83,"buffer":85,"ieee754":88}],86:[function(require,module,exports){
+},{"base64-js":83,"buffer":84,"ieee754":88}],85:[function(require,module,exports){
 (function (process){(function (){
 /* eslint-env browser */
 
@@ -49553,7 +49037,7 @@ formatters.j = function (v) {
 
 }).call(this)}).call(this,require('_process'))
 
-},{"./common":87,"_process":91}],87:[function(require,module,exports){
+},{"./common":86,"_process":91}],86:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -49847,7 +49331,532 @@ function setup(env) {
 
 module.exports = setup;
 
-},{"ms":90}],88:[function(require,module,exports){
+},{"ms":90}],87:[function(require,module,exports){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+var objectCreate = Object.create || objectCreatePolyfill
+var objectKeys = Object.keys || objectKeysPolyfill
+var bind = Function.prototype.bind || functionBindPolyfill
+
+function EventEmitter() {
+  if (!this._events || !Object.prototype.hasOwnProperty.call(this, '_events')) {
+    this._events = objectCreate(null);
+    this._eventsCount = 0;
+  }
+
+  this._maxListeners = this._maxListeners || undefined;
+}
+module.exports = EventEmitter;
+
+// Backwards-compat with node 0.10.x
+EventEmitter.EventEmitter = EventEmitter;
+
+EventEmitter.prototype._events = undefined;
+EventEmitter.prototype._maxListeners = undefined;
+
+// By default EventEmitters will print a warning if more than 10 listeners are
+// added to it. This is a useful default which helps finding memory leaks.
+var defaultMaxListeners = 10;
+
+var hasDefineProperty;
+try {
+  var o = {};
+  if (Object.defineProperty) Object.defineProperty(o, 'x', { value: 0 });
+  hasDefineProperty = o.x === 0;
+} catch (err) { hasDefineProperty = false }
+if (hasDefineProperty) {
+  Object.defineProperty(EventEmitter, 'defaultMaxListeners', {
+    enumerable: true,
+    get: function() {
+      return defaultMaxListeners;
+    },
+    set: function(arg) {
+      // check whether the input is a positive number (whose value is zero or
+      // greater and not a NaN).
+      if (typeof arg !== 'number' || arg < 0 || arg !== arg)
+        throw new TypeError('"defaultMaxListeners" must be a positive number');
+      defaultMaxListeners = arg;
+    }
+  });
+} else {
+  EventEmitter.defaultMaxListeners = defaultMaxListeners;
+}
+
+// Obviously not all Emitters should be limited to 10. This function allows
+// that to be increased. Set to zero for unlimited.
+EventEmitter.prototype.setMaxListeners = function setMaxListeners(n) {
+  if (typeof n !== 'number' || n < 0 || isNaN(n))
+    throw new TypeError('"n" argument must be a positive number');
+  this._maxListeners = n;
+  return this;
+};
+
+function $getMaxListeners(that) {
+  if (that._maxListeners === undefined)
+    return EventEmitter.defaultMaxListeners;
+  return that._maxListeners;
+}
+
+EventEmitter.prototype.getMaxListeners = function getMaxListeners() {
+  return $getMaxListeners(this);
+};
+
+// These standalone emit* functions are used to optimize calling of event
+// handlers for fast cases because emit() itself often has a variable number of
+// arguments and can be deoptimized because of that. These functions always have
+// the same number of arguments and thus do not get deoptimized, so the code
+// inside them can execute faster.
+function emitNone(handler, isFn, self) {
+  if (isFn)
+    handler.call(self);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].call(self);
+  }
+}
+function emitOne(handler, isFn, self, arg1) {
+  if (isFn)
+    handler.call(self, arg1);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].call(self, arg1);
+  }
+}
+function emitTwo(handler, isFn, self, arg1, arg2) {
+  if (isFn)
+    handler.call(self, arg1, arg2);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].call(self, arg1, arg2);
+  }
+}
+function emitThree(handler, isFn, self, arg1, arg2, arg3) {
+  if (isFn)
+    handler.call(self, arg1, arg2, arg3);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].call(self, arg1, arg2, arg3);
+  }
+}
+
+function emitMany(handler, isFn, self, args) {
+  if (isFn)
+    handler.apply(self, args);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].apply(self, args);
+  }
+}
+
+EventEmitter.prototype.emit = function emit(type) {
+  var er, handler, len, args, i, events;
+  var doError = (type === 'error');
+
+  events = this._events;
+  if (events)
+    doError = (doError && events.error == null);
+  else if (!doError)
+    return false;
+
+  // If there is no 'error' event listener then throw.
+  if (doError) {
+    if (arguments.length > 1)
+      er = arguments[1];
+    if (er instanceof Error) {
+      throw er; // Unhandled 'error' event
+    } else {
+      // At least give some kind of context to the user
+      var err = new Error('Unhandled "error" event. (' + er + ')');
+      err.context = er;
+      throw err;
+    }
+    return false;
+  }
+
+  handler = events[type];
+
+  if (!handler)
+    return false;
+
+  var isFn = typeof handler === 'function';
+  len = arguments.length;
+  switch (len) {
+      // fast cases
+    case 1:
+      emitNone(handler, isFn, this);
+      break;
+    case 2:
+      emitOne(handler, isFn, this, arguments[1]);
+      break;
+    case 3:
+      emitTwo(handler, isFn, this, arguments[1], arguments[2]);
+      break;
+    case 4:
+      emitThree(handler, isFn, this, arguments[1], arguments[2], arguments[3]);
+      break;
+      // slower
+    default:
+      args = new Array(len - 1);
+      for (i = 1; i < len; i++)
+        args[i - 1] = arguments[i];
+      emitMany(handler, isFn, this, args);
+  }
+
+  return true;
+};
+
+function _addListener(target, type, listener, prepend) {
+  var m;
+  var events;
+  var existing;
+
+  if (typeof listener !== 'function')
+    throw new TypeError('"listener" argument must be a function');
+
+  events = target._events;
+  if (!events) {
+    events = target._events = objectCreate(null);
+    target._eventsCount = 0;
+  } else {
+    // To avoid recursion in the case that type === "newListener"! Before
+    // adding it to the listeners, first emit "newListener".
+    if (events.newListener) {
+      target.emit('newListener', type,
+          listener.listener ? listener.listener : listener);
+
+      // Re-assign `events` because a newListener handler could have caused the
+      // this._events to be assigned to a new object
+      events = target._events;
+    }
+    existing = events[type];
+  }
+
+  if (!existing) {
+    // Optimize the case of one listener. Don't need the extra array object.
+    existing = events[type] = listener;
+    ++target._eventsCount;
+  } else {
+    if (typeof existing === 'function') {
+      // Adding the second element, need to change to array.
+      existing = events[type] =
+          prepend ? [listener, existing] : [existing, listener];
+    } else {
+      // If we've already got an array, just append.
+      if (prepend) {
+        existing.unshift(listener);
+      } else {
+        existing.push(listener);
+      }
+    }
+
+    // Check for listener leak
+    if (!existing.warned) {
+      m = $getMaxListeners(target);
+      if (m && m > 0 && existing.length > m) {
+        existing.warned = true;
+        var w = new Error('Possible EventEmitter memory leak detected. ' +
+            existing.length + ' "' + String(type) + '" listeners ' +
+            'added. Use emitter.setMaxListeners() to ' +
+            'increase limit.');
+        w.name = 'MaxListenersExceededWarning';
+        w.emitter = target;
+        w.type = type;
+        w.count = existing.length;
+        if (typeof console === 'object' && console.warn) {
+          console.warn('%s: %s', w.name, w.message);
+        }
+      }
+    }
+  }
+
+  return target;
+}
+
+EventEmitter.prototype.addListener = function addListener(type, listener) {
+  return _addListener(this, type, listener, false);
+};
+
+EventEmitter.prototype.on = EventEmitter.prototype.addListener;
+
+EventEmitter.prototype.prependListener =
+    function prependListener(type, listener) {
+      return _addListener(this, type, listener, true);
+    };
+
+function onceWrapper() {
+  if (!this.fired) {
+    this.target.removeListener(this.type, this.wrapFn);
+    this.fired = true;
+    switch (arguments.length) {
+      case 0:
+        return this.listener.call(this.target);
+      case 1:
+        return this.listener.call(this.target, arguments[0]);
+      case 2:
+        return this.listener.call(this.target, arguments[0], arguments[1]);
+      case 3:
+        return this.listener.call(this.target, arguments[0], arguments[1],
+            arguments[2]);
+      default:
+        var args = new Array(arguments.length);
+        for (var i = 0; i < args.length; ++i)
+          args[i] = arguments[i];
+        this.listener.apply(this.target, args);
+    }
+  }
+}
+
+function _onceWrap(target, type, listener) {
+  var state = { fired: false, wrapFn: undefined, target: target, type: type, listener: listener };
+  var wrapped = bind.call(onceWrapper, state);
+  wrapped.listener = listener;
+  state.wrapFn = wrapped;
+  return wrapped;
+}
+
+EventEmitter.prototype.once = function once(type, listener) {
+  if (typeof listener !== 'function')
+    throw new TypeError('"listener" argument must be a function');
+  this.on(type, _onceWrap(this, type, listener));
+  return this;
+};
+
+EventEmitter.prototype.prependOnceListener =
+    function prependOnceListener(type, listener) {
+      if (typeof listener !== 'function')
+        throw new TypeError('"listener" argument must be a function');
+      this.prependListener(type, _onceWrap(this, type, listener));
+      return this;
+    };
+
+// Emits a 'removeListener' event if and only if the listener was removed.
+EventEmitter.prototype.removeListener =
+    function removeListener(type, listener) {
+      var list, events, position, i, originalListener;
+
+      if (typeof listener !== 'function')
+        throw new TypeError('"listener" argument must be a function');
+
+      events = this._events;
+      if (!events)
+        return this;
+
+      list = events[type];
+      if (!list)
+        return this;
+
+      if (list === listener || list.listener === listener) {
+        if (--this._eventsCount === 0)
+          this._events = objectCreate(null);
+        else {
+          delete events[type];
+          if (events.removeListener)
+            this.emit('removeListener', type, list.listener || listener);
+        }
+      } else if (typeof list !== 'function') {
+        position = -1;
+
+        for (i = list.length - 1; i >= 0; i--) {
+          if (list[i] === listener || list[i].listener === listener) {
+            originalListener = list[i].listener;
+            position = i;
+            break;
+          }
+        }
+
+        if (position < 0)
+          return this;
+
+        if (position === 0)
+          list.shift();
+        else
+          spliceOne(list, position);
+
+        if (list.length === 1)
+          events[type] = list[0];
+
+        if (events.removeListener)
+          this.emit('removeListener', type, originalListener || listener);
+      }
+
+      return this;
+    };
+
+EventEmitter.prototype.removeAllListeners =
+    function removeAllListeners(type) {
+      var listeners, events, i;
+
+      events = this._events;
+      if (!events)
+        return this;
+
+      // not listening for removeListener, no need to emit
+      if (!events.removeListener) {
+        if (arguments.length === 0) {
+          this._events = objectCreate(null);
+          this._eventsCount = 0;
+        } else if (events[type]) {
+          if (--this._eventsCount === 0)
+            this._events = objectCreate(null);
+          else
+            delete events[type];
+        }
+        return this;
+      }
+
+      // emit removeListener for all listeners on all events
+      if (arguments.length === 0) {
+        var keys = objectKeys(events);
+        var key;
+        for (i = 0; i < keys.length; ++i) {
+          key = keys[i];
+          if (key === 'removeListener') continue;
+          this.removeAllListeners(key);
+        }
+        this.removeAllListeners('removeListener');
+        this._events = objectCreate(null);
+        this._eventsCount = 0;
+        return this;
+      }
+
+      listeners = events[type];
+
+      if (typeof listeners === 'function') {
+        this.removeListener(type, listeners);
+      } else if (listeners) {
+        // LIFO order
+        for (i = listeners.length - 1; i >= 0; i--) {
+          this.removeListener(type, listeners[i]);
+        }
+      }
+
+      return this;
+    };
+
+function _listeners(target, type, unwrap) {
+  var events = target._events;
+
+  if (!events)
+    return [];
+
+  var evlistener = events[type];
+  if (!evlistener)
+    return [];
+
+  if (typeof evlistener === 'function')
+    return unwrap ? [evlistener.listener || evlistener] : [evlistener];
+
+  return unwrap ? unwrapListeners(evlistener) : arrayClone(evlistener, evlistener.length);
+}
+
+EventEmitter.prototype.listeners = function listeners(type) {
+  return _listeners(this, type, true);
+};
+
+EventEmitter.prototype.rawListeners = function rawListeners(type) {
+  return _listeners(this, type, false);
+};
+
+EventEmitter.listenerCount = function(emitter, type) {
+  if (typeof emitter.listenerCount === 'function') {
+    return emitter.listenerCount(type);
+  } else {
+    return listenerCount.call(emitter, type);
+  }
+};
+
+EventEmitter.prototype.listenerCount = listenerCount;
+function listenerCount(type) {
+  var events = this._events;
+
+  if (events) {
+    var evlistener = events[type];
+
+    if (typeof evlistener === 'function') {
+      return 1;
+    } else if (evlistener) {
+      return evlistener.length;
+    }
+  }
+
+  return 0;
+}
+
+EventEmitter.prototype.eventNames = function eventNames() {
+  return this._eventsCount > 0 ? Reflect.ownKeys(this._events) : [];
+};
+
+// About 1.5x faster than the two-arg version of Array#splice().
+function spliceOne(list, index) {
+  for (var i = index, k = i + 1, n = list.length; k < n; i += 1, k += 1)
+    list[i] = list[k];
+  list.pop();
+}
+
+function arrayClone(arr, n) {
+  var copy = new Array(n);
+  for (var i = 0; i < n; ++i)
+    copy[i] = arr[i];
+  return copy;
+}
+
+function unwrapListeners(arr) {
+  var ret = new Array(arr.length);
+  for (var i = 0; i < ret.length; ++i) {
+    ret[i] = arr[i].listener || arr[i];
+  }
+  return ret;
+}
+
+function objectCreatePolyfill(proto) {
+  var F = function() {};
+  F.prototype = proto;
+  return new F;
+}
+function objectKeysPolyfill(obj) {
+  var keys = [];
+  for (var k in obj) if (Object.prototype.hasOwnProperty.call(obj, k)) {
+    keys.push(k);
+  }
+  return k;
+}
+function functionBindPolyfill(context) {
+  var fn = this;
+  return function () {
+    return fn.apply(context, arguments);
+  };
+}
+
+},{}],88:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
