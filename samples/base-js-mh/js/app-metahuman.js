@@ -414,5 +414,5 @@ window.addEventListener('beforeunload', function()
 
 function normalizeMetaHumanFlag(value)
 {
-  return Number(value) === 1 ? 1 : 0;
+  return Number(value) === 1 ? 1 : Number(value) === 2 ? 2 : 0;
 }

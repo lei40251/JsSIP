@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.6-beta.20268181531
+ * CRTC v2.0.6-beta.20269101447
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -4371,7 +4371,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.6-beta.405216363062 (Web)',
+  USER_AGENT: 'UA/2.0.6-beta.405218202894 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17625,8 +17625,9 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var RTCStatsMonitor = require('./RTCStatsMonitor');
 var MediaEffectsComposer = require('./MediaEffectsComposer/MediaEffectsComposer');
+var AiNoiseSuppression = require('./AiNoiseSuppression/AiNSEngine');
 var MetaHumanClient = require('./MetaHumanClient');
-debug('version %s', '2.0.6-beta.405216363062');
+debug('version %s', '2.0.6-beta.405218202894');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17656,6 +17657,7 @@ module.exports = {
   WebSocketInterface,
   MediaEffectsComposer,
   Mixer: MediaEffectsComposer,
+  AiNoiseSuppression,
   MetaHumanClient,
   Grammar,
   // 保留历史公开名称；新旧入口共用同一套统计实现，避免两套逻辑产生不同结果。
@@ -17667,10 +17669,10 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.6-beta.405216363062';
+    return '2.0.6-beta.405218202894';
   }
 };
-},{"./Constants":30,"./Exceptions":35,"./Grammar":36,"./MediaEffectsComposer/MediaEffectsComposer":47,"./MetaHumanClient":59,"./NameAddrHeader":60,"./RTCStatsMonitor":70,"./UA":78,"./URI":79,"./Utils":80,"./WebSocketInterface":81,"debug":85}],38:[function(require,module,exports){
+},{"./AiNoiseSuppression/AiNSEngine":2,"./Constants":30,"./Exceptions":35,"./Grammar":36,"./MediaEffectsComposer/MediaEffectsComposer":47,"./MetaHumanClient":59,"./NameAddrHeader":60,"./RTCStatsMonitor":70,"./UA":78,"./URI":79,"./Utils":80,"./WebSocketInterface":81,"debug":85}],38:[function(require,module,exports){
 "use strict";
 
 var debugFactory = require('debug');
@@ -29936,7 +29938,7 @@ function normalizeFlag(value) {
   if (value === undefined || value === null || value === '') {
     return 0;
   }
-  return Number(value) === 1 ? 1 : 0;
+  return Number(value) === 1 ? 1 : Number(value) === 2 ? 2 : 0;
 }
 function createAbortError() {
   var error = new Error('MetaHumanClient connect aborted');
@@ -34411,7 +34413,11 @@ module.exports = class RTCSession extends EventEmitter {
           if (Utils.is5GService(this._ua)) {
             // 删除多余 extmap，保留必需的 RTP 头扩展
             if (media.ext) {
-              var keptExtmaps = ['params:rtp-hdrext:sdes:mid', 'abs-send-time', 'transport-wide-cc', 'video-orientation'];
+              var keptExtmaps = [
+              // 'params:rtp-hdrext:sdes:mid',
+              // 'abs-send-time',
+              // 'transport-wide-cc',
+              'video-orientation'];
               media.ext = media.ext.filter(ext => {
                 return typeof ext.uri === 'string' && keptExtmaps.some(item => ext.uri.includes(item));
               });
@@ -35716,10 +35722,10 @@ module.exports = class RTCSession extends EventEmitter {
           }
 
           /**
-               * 音视频切换相关
-               * 根据sdp判断用户Answer的通话模式，并触发mode事件
-               * @author: lei
-               */
+                 * 音视频切换相关
+                 * 根据sdp判断用户Answer的通话模式，并触发mode事件
+                 * @author: lei
+                 */
           var sdp = sdp_transform.parse(response.body);
           this._remoteToAudio = true;
           this._remoteToVideo = false;
