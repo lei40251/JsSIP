@@ -110,8 +110,11 @@ export class MetaHumanClient extends EventEmitter {
   /** 获取当前 AiNS 控制器 */
   getAiNoiseSuppression(): MetaHumanAiNoiseSuppressionController | null;
 
-  /** 发起连接，返回 Promise */
-  connect(): Promise<void>;
+  /** 发起连接。可传入外部音频流（仍应用已配置的 AiNS），省略时采集麦克风。
+   * 使用第一条存活音频轨道的克隆；关闭连接不会停止原始轨道。
+   * 无存活音频轨道时 Promise 以 TypeError 拒绝。
+   */
+  connect(mediaStream?: MediaStream): Promise<void>;
 
   /** 关闭连接，释放资源 */
   close(): void;

@@ -19,6 +19,12 @@ console.warn(mhEnv);
 console.warn(mhServer, mhICEServer);
 // 当前 MetaHumanClient 实例
 let mh = null;
+// 这里有两条独立的连接：
+// ① mh：浏览器 ↔ 数字人服务；发送通话对端的声音，接收数字人的音视频。
+// ② rtcSession：浏览器 ↔ 通话对端；发送数字人的音视频，接收对端的声音。
+// mhCallAudio 保存“通话对端声音 → 数字人服务”这一路的 Web Audio 节点。
+// 数字人接听、启用 AI 的数字人外呼使用它；预览和普通数字人外呼保持 null。
+let mhCallAudio = null;
 
 /**
  * 释放当前数字人连接，并清理预览画面。
@@ -29,6 +35,20 @@ function releaseMetaHuman()
   {
     mh.close();
     mh = null;
+  }
+
+  if (mhCallAudio)
+  {
+    // 接通后才有 source；如果外呼未接通就取消，这里还没有远端音源。
+    // disconnect() 只断开送往数字人的音频线路，不停止 SIP 的原始接收轨道。
+    mhCallAudio.source && mhCallAudio.source.disconnect();
+    // 静音发生器、输出音轨和 AudioContext 都由本 Demo 创建，在这里一起释放。
+    // mh.close() 已释放 SDK 持有的克隆轨道，这里释放 Demo 自己的原始输出轨道。
+    mhCallAudio.silence.stop();
+    mhCallAudio.silence.disconnect();
+    mhCallAudio.destination.stream.getTracks().forEach((track) => track.stop());
+    mhCallAudio.context.close();
+    mhCallAudio = null;
   }
 
   const screenVideo = document.getElementById('screen');
@@ -145,7 +165,7 @@ function buildMetaHumanOptions()
  * @param {boolean} [options.answerCurrentSession=false] - 为 true 时用数字人流接听当前来电
  * @param {boolean} [options.previewOnly=false] - 为 true 时仅本地预览，不发起 SIP 通话
  */
-function startMetaHumanFlow(options = {})
+async function startMetaHumanFlow(options = {})
 {
   const answerCurrentSession = Boolean(options.answerCurrentSession);
   const previewOnly = Boolean(options.previewOnly);
@@ -164,14 +184,30 @@ function startMetaHumanFlow(options = {})
     return;
   }
 
+  const clientOptions = buildMetaHumanOptions();
+  // flag === 2 对应页面的“启用 AI”，保留 AI 外呼已有的降噪配置。
+  const aiOutbound = !previewOnly && !answerCurrentSession && clientOptions.flag === 2;
+  // 数字人接听始终使用来电方声音；外呼则在启用 AI 时使用被叫方声音。
+  const useRemoteAudio = !previewOnly && (answerCurrentSession || aiOutbound);
+
   releaseMetaHuman();
 
-  mh = new CRTC.MetaHumanClient(buildMetaHumanOptions());
+  // 当前示例在这一路强制关闭 AiNS：即“被叫声音 → 数字人”的额外降噪。
+  // 这是独立的降噪配置选择，不是静音切换所必需的逻辑；
+  // null 表示禁用 AiNS，不表示静音，也不会关闭数字人 AI（flag === 2）。
+  if (aiOutbound)
+  {
+    clientOptions.aiNoiseSuppression = null;
+  }
+
+  mh = new CRTC.MetaHumanClient(clientOptions);
 
   let handled = false;
 
   mh.on('track', function(evt)
   {
+    // 此处的 remoteStream 来自数字人服务，是数字人生成的音视频。
+    // 注意：它不是 app-call.js 的 confirmed 事件中“通话对端”的远端流。
     const remoteStream = evt.stream;
 
     if (handled || !remoteStream || remoteStream.getVideoTracks().length === 0)
@@ -196,6 +232,8 @@ function startMetaHumanFlow(options = {})
     {
       try
       {
+        // 将数字人的音视频发送给来电方；接听确认后，confirmed 中会把来电方声音
+        // 接回数字人输入，形成“来电方说话 → 数字人处理 → 音视频返回来电方”。
         rtcSession.answer({
           mediaConstraints    : { audio: true, video: true },
           pcConfig            : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
@@ -212,7 +250,11 @@ function startMetaHumanFlow(options = {})
       return;
     }
 
-    call(null, null, remoteStream);
+    // 先获得数字人的画面，再把数字人音视频作为 SIP 外呼的发送流。
+    // 第三个参数 mediaStream 交给 ua.call()，因此被叫看到/听到的是数字人。
+    // markMetaHumanMediaStream() 只加标记，让 call() 不再给该发送流套 SIP 侧 AiNS；
+    // 它本身不修改音轨，也不负责把被叫声音送回数字人。
+    call(null, null, aiOutbound ? markMetaHumanMediaStream(remoteStream) : remoteStream);
   });
 
   mh.on('error', function(evt)
@@ -230,7 +272,34 @@ function startMetaHumanFlow(options = {})
     setStatus(`数字人音频处理降级: ${evt.message}`);
   });
 
-  mh.connect()
+  let inputStream;
+
+  if (useRemoteAudio)
+  {
+    // 外呼或接听前，先给数字人提供静音音轨，等通话确认接通后再接入对端声音。
+    // 这里生成静音，不申请麦克风；空的 new MediaStream() 没有音轨，不能替代它。
+    // 初始线路：silence（值为 0）→ destination.stream → mh.connect()。
+    const context = new AudioContext();
+    // destination 是“输出到 MediaStream”的节点，不是播放到本地扬声器。
+    // 后面只改变接到它的音源，destination.stream 的音轨保持不变。
+    const destination = context.createMediaStreamDestination();
+    const silence = context.createConstantSource();
+
+    // ConstantSource 默认输出常量；设为 0 才是静音，start() 开始输出。
+    silence.offset.value = 0;
+    silence.connect(destination);
+    silence.start();
+    // source 先留空，等 app-call.js 的 confirmed 事件中再创建对端音源。
+    // 保存这些节点，让接通处理和挂断清理能使用同一条音频线路。
+    mhCallAudio = { context, destination, silence, source: null };
+    inputStream = destination.stream;
+    // 在用户点击外呼或数字人接听按钮时启动音频处理，等待后再连接数字人。
+    await context.resume();
+  }
+
+  // 数字人接听和 AI 外呼传入静音输出流；预览和普通外呼仍使用麦克风。
+  // 接通后不用再次调用 connect()：同一输出流里的内容会随输入音源变化。
+  mh.connect(inputStream)
     .catch((error) =>
     {
       setStatus(`数字人连接失败: ${error && error.message ? error.message : error}`);
@@ -304,6 +373,63 @@ function syncMetaHumanMicSelection(deviceId)
   if (mh)
   {
     mh.updateConfig({ micDeviceId: deviceId || null });
+  }
+}
+
+/**
+ * 从数字人服务查询可用音色，刷新页面上的“音色”下拉框 #spk。
+ *
+ * 接口：GET {server}/voice/map
+ * 响应：{ code: 0, message: 'success', data: [{ code: 'male_young', name: '职业男声' }] }
+ * 其中 data[].code 作为 MetaHumanClient 的 spk 参数。
+ *
+ * 查询失败时保留 index.html 中内置的音色选项，保证 Demo 仍可正常发起数字人通话。
+ */
+async function loadMetaHumanVoiceOptions()
+{
+  const spkSelect = document.querySelector('#spk');
+
+  if (!spkSelect)
+  {
+    return;
+  }
+
+  try
+  {
+    const response = await fetch(`${mhServer}/voice/map`, {
+      headers : { 'Content-Type': 'application/json' },
+      method  : 'GET'
+    });
+
+    if (!response.ok)
+    {
+      throw new Error(`服务器返回错误: ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    if (!result || Number(result.code) !== 0 || !Array.isArray(result.data) || result.data.length === 0)
+    {
+      throw new Error(`音色列表为空: ${result && result.message ? result.message : 'empty data'}`);
+    }
+
+    spkSelect.innerHTML = '';
+
+    result.data.forEach((voice) =>
+    {
+      const option = document.createElement('option');
+
+      option.value = voice.code;
+      option.textContent = voice.name;
+      spkSelect.appendChild(option);
+    });
+
+    // 服务端音色列表可能不含原默认值，下拉框会回落到第一项，这里同步回全局变量。
+    spk = spkSelect.value;
+  }
+  catch (error)
+  {
+    console.warn('[MetaHuman] 获取音色列表失败，继续使用内置音色', error);
   }
 }
 
@@ -406,6 +532,7 @@ document.querySelector('#videoMetaHuman').onclick = function()
 };
 
 syncMetaHumanConfigFromUI();
+loadMetaHumanVoiceOptions();
 
 window.addEventListener('beforeunload', function()
 {

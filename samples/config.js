@@ -21,7 +21,7 @@ const defaulteEnv_no = {
 // const metaHumanIceServers = [ { urls: 'turn:106.74.22.5:30844', username: 'test', credential: 'test' } ];
 const mh_envs = {
   env_dev : {
-    mhServer    : 'https://dev.vsbc.com:9090',
+    mhServer    : 'https://pro.vsbc.com/x7t',
     mhICEServer : [ { urls: 'turn:dev.vsbc.com:9001?transport=udp', username: 'test', credential: 'test' } ]
   },
   env_freedev : {

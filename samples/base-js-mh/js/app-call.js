@@ -1398,6 +1398,19 @@ ua.on('newRTCSession', function(e)
     // 获取远端媒体流
     const remoteStream = CRTC.Utils.getStreams(e.session.connection, 'remote');
 
+    // 这里已进入 SIP confirmed（通话确认）事件：外呼时是被叫方，接听时是来电方的流。
+    // 不在早期媒体的 ontrack 里接入，避免接通前把回铃音送给数字人 AI。
+    // AI 外呼和数字人接听共用这段逻辑，mhCallAudio 是之前创建的“静音 → 数字人”线路。
+    if (mhCallAudio)
+    {
+      // 把通话对端的 audioStream 转成 Web Audio 输入节点，只取声音，不取视频。
+      mhCallAudio.source = mhCallAudio.context.createMediaStreamSource(remoteStream.audioStream);
+      // 接到通话前创建的同一个输出节点：对端声音 → destination.stream → 数字人。
+      // 原来的静音仍是 0，与对端声音相加不会增加声音，无须特意移除。
+      // 因为输出音轨没变，这里没有 replaceTrack()，也不重新建立数字人连接。
+      mhCallAudio.source.connect(mhCallAudio.destination);
+    }
+
     // ---- 录音逻辑 ----
     // rec 参数为录音时长（秒），由 URL 查询参数传入
     if (rec)

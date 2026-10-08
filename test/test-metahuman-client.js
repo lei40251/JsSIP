@@ -238,6 +238,59 @@ async function testApplyAiNoiseSuppressionEmitsFallbackIssueOnFailure()
   assert.strictEqual(MockAiNSEngine.destroyCalls, 1);
 }
 
+async function testExternalAudioOwnership()
+{
+  const MetaHumanClient = require('../lib/MetaHumanClient');
+  const original = new MockMediaStreamTrack('audio');
+  const cloned = new MockMediaStreamTrack('audio');
+  const stream = new MockMediaStream([ original, new MockMediaStreamTrack('video') ]);
+  let sentTrack;
+
+  original.clone = () => cloned;
+  global.navigator.mediaDevices.getUserMedia = () => { throw new Error('must not capture microphone'); };
+  global.fetch = () => Promise.resolve({ ok: true, json: () => Promise.resolve({ type: 'answer' }) });
+  const client = new MetaHumanClient({ server: 'https://example.com' });
+
+  client._createPC = () =>
+  {
+    client._pc = {
+      addTrack : (track, input) =>
+      {
+        sentTrack = track;
+        assert.strictEqual(input.getVideoTracks().length, 0);
+      },
+      createOffer          : () => Promise.resolve({ type: 'offer' }),
+      setLocalDescription  : () => Promise.resolve(),
+      setRemoteDescription : () => Promise.resolve(),
+      localDescription     : { type: 'offer' },
+      close                : () => {}
+    };
+  };
+  await client.connect(stream);
+  assert.strictEqual(sentTrack, cloned);
+  client.close();
+  assert.strictEqual(cloned.readyState, 'ended');
+  assert.strictEqual(original.readyState, 'live');
+}
+
+async function testExternalAudioCancellationAndValidation()
+{
+  const MetaHumanClient = require('../lib/MetaHumanClient');
+  const client = new MetaHumanClient({ server: 'https://example.com' });
+  const original = new MockMediaStreamTrack('audio');
+  const cloned = new MockMediaStreamTrack('audio');
+
+  original.clone = () => cloned;
+  await expectRejected(client.connect(new MockMediaStream()), '外部媒体流必须包含存活的音频轨道');
+  assert.strictEqual(client.state, 'idle');
+  const pending = client.connect(new MockMediaStream([ original ]));
+
+  client.close();
+  await pending;
+  assert.strictEqual(cloned.readyState, 'ended');
+  assert.strictEqual(original.readyState, 'live');
+}
+
 async function run()
 {
   let restoreGlobals = null;
@@ -265,6 +318,8 @@ async function run()
         restoreModules = loadMetaHumanClientWithMockAiNS();
       },
       tests : [
+        { name: 'testExternalAudioOwnership', fn: testExternalAudioOwnership },
+        { name: 'testExternalAudioCancellationAndValidation', fn: testExternalAudioCancellationAndValidation },
         { name: 'testConnectDisablesNativeNoiseSuppressionForAiNS', fn: testConnectDisablesNativeNoiseSuppressionForAiNS },
         { name: 'testConnectKeepsExplicitMetaHumanAudioDefaultsWithoutAiNS', fn: testConnectKeepsExplicitMetaHumanAudioDefaultsWithoutAiNS },
         { name: 'testUpdateConfigRecomputesAudioConstraintsForAiNS', fn: testUpdateConfigRecomputesAudioConstraintsForAiNS },

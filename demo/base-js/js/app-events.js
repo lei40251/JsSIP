@@ -176,6 +176,18 @@ document.querySelector('#callVideoSend').onclick = function()
   callVideoOnly();
 };
 
+// 发起纯视频呼叫（无音频、sendonly）
+document.querySelector('#callVideoSendOnly').onclick = function()
+{
+  callVideoOnly('sendonly');
+};
+
+// 发起纯视频呼叫（无音频、recvonly）
+document.querySelector('#callVideoRecvOnly').onclick = function()
+{
+  callVideoOnly('recvonly');
+};
+
 // =============================================================================
 // 设备、通话选项与页面生命周期
 // =============================================================================

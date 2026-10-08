@@ -401,7 +401,47 @@ async function testToggleModeToVideoAppliesSenderBitrateFromSdpAs()
   assert.strictEqual(setParametersCalls[0].encodings[0].maxBitrate, 2378 * 1000);
 }
 
+function testSdpConstraintsPreserveReceiveOnlyNegotiation()
+{
+  const Utils = require('../lib/Utils');
+  const sdp = 'v=0\r\nm=audio 9 RTP/AVP 0\r\na=sendonly\r\nm=video 9 RTP/AVP 96\r\na=sendonly\r\na=x-custom:keep\r\n';
+  const constraints = { audio: false, video: false };
+  const answer = sdp.replace(/sendonly/g, 'recvonly');
+
+  assert.strictEqual(Utils.updateSdpByConstraints(sdp, constraints), sdp);
+  assert.strictEqual(Utils.updateSdpByConstraints(answer, constraints, 'answer'), answer);
+  assert.strictEqual(Utils.updateSdpByConstraints(sdp), sdp);
+  assert.strictEqual(Utils.updateSdpByConstraints(answer, {}), answer);
+  assert.strictEqual(Utils.updateSdpByConstraints(sdp.replace(/ 9 /g, ' 0 '), constraints), sdp.replace(/ 9 /g, ' 0 '));
+
+  // 方向可继承会话级属性，媒体级属性优先；未知属性和换行必须保留。
+  const inherited = 'v=0\r\na=sendonly\r\nm=video 9 RTP/AVP 96\r\na=x-custom:keep\r\n';
+
+  assert.strictEqual(Utils.updateSdpByConstraints(inherited, constraints), inherited);
+  const overridden = `${inherited}a=sendrecv\r\n`;
+
+  assert.strictEqual(Utils.updateSdpByConstraints(overridden, constraints), overridden.replace('m=video 9', 'm=video 0').replace('a=sendrecv', 'a=inactive'));
+
+  // 双向视频仍按显式 false 拒绝；不能因为未填写音频约束而禁用音频。
+  const duplex = sdp.replace(/sendonly/g, 'sendrecv');
+  const expected = duplex.replace('m=video 9', 'm=video 0').replace('a=sendrecv\r\na=x-custom', 'a=inactive\r\na=x-custom');
+
+  assert.strictEqual(Utils.updateSdpByConstraints(duplex, { video: false }), expected);
+  assert.strictEqual(Utils.updateSdpByConstraints(duplex.replace(/\r\n/g, '\n'), { video: false }), expected.replace(/\r\n/g, '\n'));
+  assert.ok(Utils.updateSdpByConstraints(answer, constraints).includes('m=video 0'));
+  assert.ok(Utils.updateSdpByConstraints(sdp, constraints, 'answer').includes('m=video 0'));
+
+  const inactive = 'v=0\r\nm=video 9 RTP/AVP 96\r\na=inactive\r\n';
+
+  assert.strictEqual(Utils.updateSdpByConstraints(inactive, constraints), inactive.replace('m=video 9', 'm=video 0'));
+  const noDirection = 'v=0\r\nm=video 9 RTP/AVP 96\r\n';
+
+  assert.strictEqual(Utils.updateSdpByConstraints(noDirection, constraints), `${noDirection.replace('m=video 9', 'm=video 0')}a=inactive\r\n`);
+  assert.strictEqual(Utils.updateSdpByConstraints(noDirection.replace(/\r\n/g, '\n'), constraints), `${noDirection.replace('m=video 9', 'm=video 0').replace(/\r\n/g, '\n')}a=inactive\n`);
+}
+
 const TESTS = [
+  { name: 'testSdpConstraintsPreserveReceiveOnlyNegotiation', fn: testSdpConstraintsPreserveReceiveOnlyNegotiation },
   { name: 'testCreateLocalDescriptionAppends720pGoogleBitrateFmtpOnlyForLocalDescription', fn: testCreateLocalDescriptionAppends720pGoogleBitrateFmtpOnlyForLocalDescription },
   { name: 'testCreateLocalDescriptionAnswerUsesRemoteAsFor720pGoogleBitrateFmtp', fn: testCreateLocalDescriptionAnswerUsesRemoteAsFor720pGoogleBitrateFmtp },
   { name: 'testCreateLocalDescriptionAnswerPrefersRemoteAsForNon720p', fn: testCreateLocalDescriptionAnswerPrefersRemoteAsForNon720p },

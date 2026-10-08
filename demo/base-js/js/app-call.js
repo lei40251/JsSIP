@@ -1667,13 +1667,57 @@ function onSession(e)
         audio : false, // 不采集音频
         video : getVideoOpts()
       },
-      pcConfig            : getAnswerPc(),
-      extraHeaders        : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
-      rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
-      extraFeatures       : features
+      pcConfig             : getAnswerPc(),
+      extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
+      rtcAnswerConstraints : { offerToReceiveAudio: false, offerToReceiveVideo: true },
+      extraFeatures        : features
     });
 
-    setStatus('video answer');
+    setStatus('ansVideoSendRecv video answer');
+  };
+
+  /**
+   * ansVideoRecvOnly — 单视频接听（无音频采集）
+   *
+   * 仅采集视频，不采集麦克风。设置 videoOnly 标志。
+   */
+  document.querySelector('#ansVideoRecvOnly').onclick = async function()
+  {
+    videoOnly = true;
+    e.session.answer({
+      mediaConstraints : {
+        audio : false, // 不采集音频
+        video : false
+      },
+      pcConfig             : getAnswerPc(),
+      extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
+      rtcAnswerConstraints : { offerToReceiveVideo: true },
+      extraFeatures        : features
+    });
+
+    setStatus('ansVideoRecvOnly video answer');
+  };
+
+  /**
+   * ansVideoSendOnly — 单视频接听（无音频采集）
+   *
+   * 仅采集视频，不采集麦克风。设置 videoOnly 标志。
+   */
+  document.querySelector('#ansVideoSendOnly').onclick = async function()
+  {
+    videoOnly = true;
+    e.session.answer({
+      mediaConstraints : {
+        audio : false, // 不采集音频
+        video : getVideoOpts()
+      },
+      pcConfig             : getAnswerPc(),
+      extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
+      rtcAnswerConstraints : { offerToReceiveAudio: false, offerToReceiveVideo: false },
+      extraFeatures        : features
+    });
+
+    setStatus('ansVideoSendOnly video answer');
   };
 
   /**
@@ -2351,6 +2395,20 @@ async function call(type, direction, mediaStream)
   if (type === 'onlyVideo')
   {
     options.mediaConstraints.audio = false;
+  }
+
+  // 单向只接收
+  if (direction === 'recvonly')
+  {
+    // 仅发送模式：不接收远端视频
+    options.rtcOfferConstraints = { offerToReceiveAudio: true, offerToReceiveVideo: true };
+    // 纯视频 + 仅发送：音频也不接收
+    if (type === 'onlyVideo')
+    {
+      options.rtcOfferConstraints = { offerToReceiveAudio: false, offerToReceiveVideo: true };
+    }
+    options.mediaConstraints ={ audio: false, video: false };
+    delete options.mediastream;
   }
 
   console.log('op: ', options);

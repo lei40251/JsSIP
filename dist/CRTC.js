@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.6-beta.20269101447
+ * CRTC v2.0.6-beta.20261081550
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -4371,7 +4371,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.6-beta.405218202894 (Web)',
+  USER_AGENT: 'UA/2.0.6-beta.405220163100 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17627,7 +17627,7 @@ var RTCStatsMonitor = require('./RTCStatsMonitor');
 var MediaEffectsComposer = require('./MediaEffectsComposer/MediaEffectsComposer');
 var AiNoiseSuppression = require('./AiNoiseSuppression/AiNSEngine');
 var MetaHumanClient = require('./MetaHumanClient');
-debug('version %s', '2.0.6-beta.405218202894');
+debug('version %s', '2.0.6-beta.405220163100');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17669,7 +17669,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.6-beta.405218202894';
+    return '2.0.6-beta.405220163100';
   }
 };
 },{"./AiNoiseSuppression/AiNSEngine":2,"./Constants":30,"./Exceptions":35,"./Grammar":36,"./MediaEffectsComposer/MediaEffectsComposer":47,"./MetaHumanClient":59,"./NameAddrHeader":60,"./RTCStatsMonitor":70,"./UA":78,"./URI":79,"./Utils":80,"./WebSocketInterface":81,"debug":85}],38:[function(require,module,exports){
@@ -29625,13 +29625,22 @@ module.exports = class MetaHumanClient extends EventEmitter {
   /**
    * 发起与数字人后端的 WebRTC 连接
    *
-   * 流程：采集麦克风 →（可选 AI 降噪）→ 创建 PeerConnection → 发送 Offer → 接收 Answer
+   * 流程：外部音频 / 采集麦克风 →（可选 AI 降噪）→ 创建 PeerConnection → 发送 Offer → 接收 Answer
    *
+   * @param {MediaStream} [mediaStream] - 外部音频流；省略时采集麦克风。
+   * 只使用第一条存活的音频轨道并克隆，关闭连接不会停止调用方的原始轨道。
+   * 外部音频同样经过已配置的 AiNS；无需处理时请禁用 AiNS。
    * @returns {Promise<void>}
    */
-  connect() {
+  connect(mediaStream) {
     if (this._state === 'connecting') {
       return Promise.reject(new Exceptions.InvalidStateError('connecting'));
+    }
+
+    // 传入外部流时只取第一条仍存活的音频轨道，忽略视频；不传则使用下面的麦克风采集。
+    var inputTrack = mediaStream && mediaStream.getAudioTracks().find(track => track.readyState === 'live');
+    if (mediaStream && !inputTrack) {
+      return Promise.reject(new TypeError('外部媒体流必须包含存活的音频轨道'));
     }
     var connectSeq = ++this._connectSeq;
     this._closePC();
@@ -29646,9 +29655,15 @@ module.exports = class MetaHumanClient extends EventEmitter {
         exact: this._config.micDeviceId
       };
     }
-    return navigator.mediaDevices.getUserMedia({
+
+    // 克隆轨道是为了让 SDK 管理自己的 stop() 生命周期，不把调用方的原始轨道停掉。
+    // clone() 仍读取同一个实时音源，不是复制一段固定声音；因此 Demo 接入被叫声音后，
+    // 这里的克隆轨道也会收到声音，不必再次 connect() 或替换发送轨道。
+    // 两个分支都返回 Promise，后面的 AiNS、addTrack 和 Offer/Answer 流程保持共用。
+    var input = inputTrack ? Promise.resolve().then(() => new MediaStream([inputTrack.clone()])) : navigator.mediaDevices.getUserMedia({
       audio: audioConstraints
-    }).then(stream => {
+    });
+    return input.then(stream => {
       this._ensureActiveConnect(connectSeq, stream);
       this._localStream = stream;
       return stream;
@@ -31644,9 +31659,8 @@ module.exports = class RTCSession extends EventEmitter {
         throw new Error('terminated');
       }
       if (!mediaConstraints.video && desc) {
-        // desc = desc.replace(/(m=video) \d+ (.*\r?\n([\s\S]*?\r?\n)*?a=)recvonly/, '$1 0 $2inactive');
-        desc = desc.replace(/(m=video) \d+ ([\s\S]*?a=)recvonly/g, '$1 0 $2inactive');
-        desc = Utils.updateSdpByConstraints(desc, options.mediaConstraints);
+        // recvonly 不需要本地摄像头，不能因未采集视频而拒绝远端媒体。
+        desc = Utils.updateSdpByConstraints(desc, options.mediaConstraints, this._late_sdp ? 'offer' : 'answer');
       }
       if (this._bfcp.enabled) {
         // BFCP SDP 应答属性注入（floorctrl / floorid / mstrm / confid / userid）
@@ -34416,7 +34430,7 @@ module.exports = class RTCSession extends EventEmitter {
               var keptExtmaps = [
               // 'params:rtp-hdrext:sdes:mid',
               // 'abs-send-time',
-              // 'transport-wide-cc',
+              // 'transport-wide-cc', 
               'video-orientation'];
               media.ext = media.ext.filter(ext => {
                 return typeof ext.uri === 'string' && keptExtmaps.some(item => ext.uri.includes(item));
@@ -46416,32 +46430,40 @@ exports.isVideoTrackHealthy = mediastream => {
 };
 
 /**
- * 根据约束条件修改 SDP：禁用对应媒体的端口（设为 0）并设为 inactive。
+ * 根据本地采集约束修改 SDP，保留只接收远端媒体的协商。
  *
- * 根据传入的 constraints 对象中的 audio/video 布尔值，
- * 将对应 m-section 的端口置 0 并将方向属性改为 inactive。
+ * 显式 false 保留历史上的媒体拒绝行为，但远端 offer 的 sendonly、
+ * 本地 answer 的 recvonly 不需要本地采集，不应因此被拒绝。
+ * 未指定的约束不改写 SDP；媒体方向优先使用媒体级属性，再继承会话级属性。
  *
  * @param {string} sdp - 原始 SDP 字符串。
- * @param {{ audio?: boolean, video?: boolean }} constraints - 媒体约束。
+ * @param {MediaStreamConstraints} [constraints={}] - 本地音视频采集约束。
+ * @param {'offer'|'answer'} [type='offer'] - 远端 offer 或本地 answer。
  * @returns {string} 修改后的 SDP 字符串。
  */
-exports.updateSdpByConstraints = (sdp, constraints) => {
-  return sdp.split(/(?=m=)/).map(section => {
+exports.updateSdpByConstraints = (sdp, constraints = {}, type = 'offer') => {
+  var sections = sdp.split(/(?=^m=)/m);
+  var directionPattern = /^a=(sendrecv|sendonly|recvonly|inactive)(?=\r?$)/m;
+  var sessionDirection = sections[0].startsWith('m=') ? null : sections[0].match(directionPattern);
+  return sections.map(section => {
     // 判断当前段是音频还是视频
     var isAudio = section.startsWith('m=audio');
     var isVideo = section.startsWith('m=video');
+    var direction = section.match(directionPattern) || sessionDirection;
+    var receiveOnly = direction && direction[1] === (type === 'answer' ? 'recvonly' : 'sendonly');
 
-    // 如果当前媒体类型在约束中被禁用 (false)
-    if (isAudio && !constraints.audio || isVideo && !constraints.video) {
+    // 不采集本地媒体不等于拒绝接收；已拒绝的端口也不在此恢复。
+    if (!receiveOnly && (isAudio && constraints.audio === false || isVideo && constraints.video === false)) {
       // 1. 将 m= 行的端口号 (第二个参数) 替换为 0
       section = section.replace(/^(m=[a-z]+)\s+\d+/, '$1 0');
 
       // 2. 修改方向属性：如果有 sendrecv/sendonly 等则替换，没有则追加
-      if (/a=(sendrecv|sendonly|recvonly)/.test(section)) {
-        return section.replace(/a=(sendrecv|sendonly|recvonly)/g, 'a=inactive');
+      if (directionPattern.test(section)) {
+        return section.replace(directionPattern, 'a=inactive');
       } else {
         // 注意处理换行符，确保格式正确
-        return `${section.trimEnd()}\r\na=inactive\r\n`;
+        var eol = section.includes('\r\n') ? '\r\n' : '\n';
+        return `${section.trimEnd()}${eol}a=inactive${eol}`;
       }
     }
     return section;

@@ -221,6 +221,7 @@ data 字段
 | getSpeakers()           | 返回音频输出设备列表表                                                                                   |
 | getStreams<sup>1</sup>(pc, type<sup>2</sup>) | 获取音视频流（音频流、视频流或媒体流）。<br>pc - RTCPeerConnection 实例<br>type - 流类型<br>return - 返回包含音频流、视频流和媒体流的对象或null
 |isVideoTrackHealthy|视频轨道分辨率是否异常|
+| updateSdpByConstraints(sdp, constraints?, type?) | 根据本地采集约束过滤 SDP。仅显式 `audio/video: false` 拒绝对应媒体；远端 offer 的 `sendonly` 和本地 answer 的 `recvonly` 保留，以支持不采集本地设备时接收远端媒体。`type` 默认 `'offer'`，处理本地应答时传 `'answer'`。返回 SDP 字符串。 |
 
 标注 1：
 

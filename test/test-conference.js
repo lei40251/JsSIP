@@ -1514,6 +1514,57 @@ module.exports = {
       });
   },
 
+  'answer preserves remote sendonly and local recvonly without local capture' : function(test)
+  {
+    const Utils = require('../lib/Utils');
+    const offer = 'v=0\r\nm=audio 9 RTP/AVP 0\r\na=sendonly\r\nm=video 9 RTP/AVP 96\r\na=sendonly\r\n';
+    const answer = offer.replace(/sendonly/g, 'recvonly');
+    const previousDescription = global.RTCSessionDescription;
+    let remoteSdp;
+
+    global.RTCSessionDescription = function(description) { return description; };
+    const session = createAnswerSession({
+      _late_sdp : false,
+      _createRTCConnection : function()
+      {
+        this._connection = {
+          setRemoteDescription : function(description)
+          {
+            remoteSdp = description.sdp;
+
+            return Promise.resolve();
+          }
+        };
+      },
+      _sdpAddMid : function(sdp) { return sdp; },
+      emit : function() {},
+      _createLocalDescription : function(type)
+      {
+        test.strictEqual(type, 'answer');
+
+        return Promise.resolve(answer);
+      },
+      _handleSessionTimersInIncomingRequest : function() {}
+    });
+
+    session._request.body = offer;
+    session._request.parseSDP = function() { return { media: [ { type: 'audio', direction: 'sendonly' }, { type: 'video', direction: 'sendonly' } ] }; };
+    RTCSession.prototype.answer.call(session, { mediaConstraints: { audio: false, video: false } });
+
+    setImmediate(function()
+    {
+      if (previousDescription === undefined) delete global.RTCSessionDescription;
+      else global.RTCSessionDescription = previousDescription;
+      test.strictEqual(remoteSdp, offer);
+      test.strictEqual(session.replies[0][0], 200);
+      test.strictEqual(session.replies[0][3], answer);
+      test.strictEqual(session.failedCause, undefined);
+      // 原有音频接听仍拒绝 sendrecv 视频。
+      test.ok(Utils.updateSdpByConstraints(offer.replace(/sendonly/g, 'sendrecv'), { audio: true, video: false }).includes('m=video 0'));
+      test.done();
+    });
+  },
+
   'answer synchronous peer connection failure closes INVITE' : function(test)
   {
     const session = createAnswerSession({

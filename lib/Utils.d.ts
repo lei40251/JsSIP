@@ -67,7 +67,7 @@ export function getEnvironmentId(): string;
 
 export function isVideoTrackHealthy(object): boolean;
 
-export function updateSdpByConstraints(string, object): string;
+export function updateSdpByConstraints(sdp: string, constraints?: { audio?: boolean | MediaTrackConstraints; video?: boolean | MediaTrackConstraints }, type?: 'offer' | 'answer'): string;
 
 export function fixVideoInactive(string): string;
 
